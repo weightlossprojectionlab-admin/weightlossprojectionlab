@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import type { Household, HouseholdFormData } from '@/types/household'
+import { getMaxMembersPerHousehold, getMaxHouseholds } from '@/lib/feature-gates'
 
 /**
  * GET /api/households
@@ -120,6 +121,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'A household must have at least one member' },
         { status: 400 }
+      )
+    }
+
+    // Plan-cap gates — read caregiver's plan from their user doc,
+    // resolve canonical caps via lib/feature-gates.PLAN_CAPS.
+    const userDoc = await adminDb.collection('users').doc(caregiverId).get()
+    const plan: string = userDoc.data()?.subscription?.plan ?? 'free'
+    const maxMembersPerHousehold = getMaxMembersPerHousehold(plan)
+    const maxHouseholds = getMaxHouseholds(plan)
+
+    // Gate 1: Per-household member cap. The new household being
+    // created can't exceed `maxMembersPerHousehold` for this plan.
+    if (memberIds.length > maxMembersPerHousehold) {
+      return NextResponse.json(
+        {
+          error: 'HOUSEHOLD_MEMBER_CAP',
+          message: `Your ${plan} plan allows up to ${maxMembersPerHousehold} member${maxMembersPerHousehold === 1 ? '' : 's'} per household. You picked ${memberIds.length}.`,
+          plan,
+          cap: maxMembersPerHousehold,
+          attempted: memberIds.length,
+        },
+        { status: 403 }
+      )
+    }
+
+    // Gate 2: Per-account household count. New household must not
+    // push the caregiver over `maxHouseholds`. Query active
+    // households they own (exclude soft-deleted).
+    const existingHouseholdsSnap = await adminDb
+      .collection('households')
+      .where('primaryCaregiverId', '==', caregiverId)
+      .where('isActive', '==', true)
+      .get()
+    if (existingHouseholdsSnap.size >= maxHouseholds) {
+      return NextResponse.json(
+        {
+          error: 'HOUSEHOLD_COUNT_CAP',
+          message: `Your ${plan} plan allows up to ${maxHouseholds} household${maxHouseholds === 1 ? '' : 's'}. You already have ${existingHouseholdsSnap.size}.`,
+          plan,
+          cap: maxHouseholds,
+          current: existingHouseholdsSnap.size,
+        },
+        { status: 403 }
       )
     }
 

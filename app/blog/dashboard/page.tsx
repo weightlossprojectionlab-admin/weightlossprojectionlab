@@ -358,7 +358,7 @@ export default function DashboardBlogPage() {
               <div className="space-y-4">
                 {[
                   'Shows EVERYONE&apos;s data from one intelligent view',
-                  'One login — unlimited family members',
+                  'One login — up to 20 family members per household',
                   'Self-teaching system detects patterns across the entire household',
                   'Smart alerts for every person you care about',
                   'Built-in care coordination and task management',

@@ -12,6 +12,7 @@ import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { checkHouseholdAccess } from '@/lib/household-access'
 import { logger } from '@/lib/logger'
 import type { Household } from '@/types/household'
+import { getMaxMembersPerHousehold } from '@/lib/feature-gates'
 
 interface RouteParams {
   params: Promise<{
@@ -164,6 +165,25 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // household stores a memberIds[] array.
     if (body.memberIds !== undefined) {
       const requestedIds = body.memberIds as string[]
+
+      // Plan-cap gate: per-household member cap. Use the caregiver's
+      // plan (read from user doc) and reject if the requested set
+      // would exceed it. Removal-only edits stay allowed even at cap.
+      const userDoc = await adminDb.collection('users').doc(userId).get()
+      const plan: string = userDoc.data()?.subscription?.plan ?? 'free'
+      const cap = getMaxMembersPerHousehold(plan)
+      if (requestedIds.length > cap) {
+        return NextResponse.json(
+          {
+            error: 'HOUSEHOLD_MEMBER_CAP',
+            message: `Your ${plan} plan allows up to ${cap} member${cap === 1 ? '' : 's'} per household. You picked ${requestedIds.length}.`,
+            plan,
+            cap,
+            attempted: requestedIds.length,
+          },
+          { status: 403 }
+        )
+      }
 
       // Read the actual current membership from the patient side.
       const currentMembersSnap = await adminDb

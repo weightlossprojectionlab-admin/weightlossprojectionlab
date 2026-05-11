@@ -73,8 +73,13 @@ export const POST_TRIAL_POLICY = {
 } as const
 
 /**
- * Plan-specific trial configurations
- * Each plan gets a 7-day free trial with full features
+ * Plan-specific trial configurations. Each plan gets a 7-day free
+ * trial with full features.
+ *
+ * Cap values (maxSeats / maxCaregivers / maxHouseholds) are DERIVED
+ * from the canonical `PLAN_CAPS` in `lib/feature-gates.ts` — single
+ * source of truth (2026-05-11 reconciliation). To change a plan's
+ * caps, edit PLAN_CAPS, not here.
  */
 export interface PlanTrialConfig {
   plan: SubscriptionPlan
@@ -88,74 +93,32 @@ export interface PlanTrialConfig {
   }
 }
 
+import { PLAN_CAPS, getMaxPatients } from './feature-gates'
+
+function buildTrialConfig(plan: SubscriptionPlan): PlanTrialConfig {
+  const caps = PLAN_CAPS[plan]
+  return {
+    plan,
+    trialDays: 7,
+    requiresPaymentMethod: false,
+    features: {
+      fullAccess: true,
+      // maxSeats here = total patient count (members/household × households).
+      maxSeats: getMaxPatients(plan),
+      maxCaregivers: caps?.maxCaregivers ?? 0,
+      maxHouseholds: caps?.maxHouseholds ?? 1,
+    },
+  }
+}
+
 export const PLAN_TRIAL_CONFIGS: Record<SubscriptionPlan, PlanTrialConfig> = {
-  free: {
-    plan: 'free',
-    trialDays: 7,
-    requiresPaymentMethod: false,
-    features: {
-      fullAccess: true,
-      maxSeats: 1,
-      maxCaregivers: 0,
-      maxHouseholds: 1,
-    },
-  },
-  single: {
-    plan: 'single',
-    trialDays: 7,
-    requiresPaymentMethod: false,
-    features: {
-      fullAccess: true,
-      maxSeats: 1,
-      maxCaregivers: 0,
-      maxHouseholds: 1,
-    },
-  },
-  single_plus: {
-    plan: 'single_plus',
-    trialDays: 7,
-    requiresPaymentMethod: false,
-    features: {
-      fullAccess: true,
-      maxSeats: 1,
-      maxCaregivers: 3,
-      maxHouseholds: 2,
-    },
-  },
-  family_basic: {
-    plan: 'family_basic',
-    trialDays: 7,
-    requiresPaymentMethod: false,
-    features: {
-      fullAccess: true,
-      maxSeats: 5,
-      maxCaregivers: 5,
-      maxHouseholds: 3,
-    },
-  },
-  family_plus: {
-    plan: 'family_plus',
-    trialDays: 7,
-    requiresPaymentMethod: false,
-    features: {
-      fullAccess: true,
-      maxSeats: 10,
-      maxCaregivers: 10,
-      maxHouseholds: 5,
-    },
-  },
-  family_premium: {
-    plan: 'family_premium',
-    trialDays: 7,
-    requiresPaymentMethod: false,
-    features: {
-      fullAccess: true,
-      maxSeats: 999,
-      maxCaregivers: 999,
-      maxHouseholds: 999,
-    },
-  },
-} as const
+  free: buildTrialConfig('free'),
+  single: buildTrialConfig('single'),
+  single_plus: buildTrialConfig('single_plus'),
+  family_basic: buildTrialConfig('family_basic'),
+  family_plus: buildTrialConfig('family_plus'),
+  family_premium: buildTrialConfig('family_premium'),
+}
 
 /**
  * Check if user is in trial period

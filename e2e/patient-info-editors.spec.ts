@@ -125,7 +125,9 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await cell.locator('select').selectOption('A+')
     await cell.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByText('Blood type updated')).toBeVisible({ timeout: 10_000 })
+    // 25s tolerates the first cold-compile of PUT /api/patients/[patientId]
+    // under Turbopack — this is the spec's first PUT to that route.
+    await expect(page.getByText('Blood type updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     expect(data.bloodType, 'bloodType persisted to Firestore').toBe('A+')
@@ -386,7 +388,7 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await cell.locator('select').selectOption('')
     await cell.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByText('Blood type updated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Blood type updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     // Whatever the mechanism (null write or FieldValue.delete on

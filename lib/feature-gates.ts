@@ -280,38 +280,77 @@ export function canAccessFeature(user: User | null, feature: string): boolean {
 }
 
 /**
- * Canonical patient cap by plan name. Source of truth — the
- * `subscription.maxPatients` field stored on user docs is
- * informational (records what the user signed up with) but the
- * runtime check derives the cap from this map keyed by plan id.
+ * ============================================================
+ * PLAN_CAPS — canonical plan-cap lookup (single source of truth)
+ * ============================================================
  *
- * Why: changing a plan's cap (e.g., Family Premium 999 → 20)
- * shouldn't require a Firestore backfill on every existing
- * subscription doc. Reading by plan name means the new cap
- * applies to all current and future subscriptions immediately,
- * with the stored field as a safety fallback for unrecognized
- * plans.
+ * Each plan declares the per-household and per-account structural
+ * limits. Total patient count is the product where applicable:
+ *
+ *   total patients ≤ maxMembersPerHousehold × maxHouseholds
+ *
+ * The structure mirrors the data model we shipped in the
+ * 2026-05-11 household restructure: households are the residential
+ * primitive; patients live in households. A flat "max seats"
+ * collapses that structure dishonestly.
+ *
+ * Marketing copy in `lib/plan-details.ts` IS this table.
+ * `subscription.maxPatients`/`maxSeats` fields stored on user docs
+ * are informational (records what the user signed up with); the
+ * runtime check reads from THIS map so cap tightening (e.g.,
+ * Premium 999 → 200) takes effect immediately for all users,
+ * including stale subscriptions written before the change.
  */
-const PLAN_PATIENT_LIMITS: Record<string, number> = {
-  free: 1,
-  single: 1,
-  single_plus: 1,
-  family_basic: 5,
-  family_plus: 10,
-  family_premium: 20,
+export interface PlanCaps {
+  /** Max patients living in one household. */
+  maxMembersPerHousehold: number
+  /** Max households the caregiver can manage on the account. */
+  maxHouseholds: number
+  /** Max external caregivers (people invited to help, not patients). */
+  maxCaregivers: number
+}
+
+export const PLAN_CAPS: Record<string, PlanCaps> = {
+  free: { maxMembersPerHousehold: 1, maxHouseholds: 1, maxCaregivers: 0 },
+  single: { maxMembersPerHousehold: 1, maxHouseholds: 1, maxCaregivers: 0 },
+  single_plus: { maxMembersPerHousehold: 1, maxHouseholds: 1, maxCaregivers: 3 },
+  family_basic: { maxMembersPerHousehold: 5, maxHouseholds: 1, maxCaregivers: 5 },
+  family_plus: { maxMembersPerHousehold: 10, maxHouseholds: 1, maxCaregivers: 10 },
+  family_premium: { maxMembersPerHousehold: 20, maxHouseholds: 10, maxCaregivers: 50 },
+}
+
+/** Total patient cap for a plan = members/household × households. */
+export function getMaxPatients(plan: string): number {
+  const caps = PLAN_CAPS[plan]
+  if (!caps) return 1
+  return caps.maxMembersPerHousehold * caps.maxHouseholds
+}
+
+/** Max patients allowed in one household for a plan. */
+export function getMaxMembersPerHousehold(plan: string): number {
+  return PLAN_CAPS[plan]?.maxMembersPerHousehold ?? 1
+}
+
+/** Max households allowed on the account for a plan. */
+export function getMaxHouseholds(plan: string): number {
+  return PLAN_CAPS[plan]?.maxHouseholds ?? 1
+}
+
+/** Max external caregivers for a plan. */
+export function getMaxCaregivers(plan: string): number {
+  return PLAN_CAPS[plan]?.maxCaregivers ?? 0
 }
 
 /**
- * Resolve the patient cap for a given subscription. Prefers the
- * canonical plan-name lookup; falls back to stored
- * maxPatients/maxSeats for forward-compat with plans that haven't
- * been added to the map yet (e.g., a future Practitioner /
- * White-label tier).
+ * Resolve the *total* patient cap for a subscription. Prefers the
+ * canonical PLAN_CAPS lookup; falls back to stored
+ * maxPatients/maxSeats for forward-compat with plans not yet in the
+ * map (e.g., a future Practitioner / White-label tier).
  */
 function resolveMaxPatients(subscription: UserSubscription): number {
   const planName = subscription.plan
-  if (planName && PLAN_PATIENT_LIMITS[planName] !== undefined) {
-    return PLAN_PATIENT_LIMITS[planName]
+  if (planName && PLAN_CAPS[planName] !== undefined) {
+    return getMaxPatients(planName)
   }
   return subscription.maxPatients ?? subscription.maxSeats ?? 1
 }

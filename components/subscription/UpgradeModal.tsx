@@ -206,8 +206,9 @@ export function UpgradeModal({
       seats: SEAT_LIMITS.family_premium,
       externalCaregivers: EXTERNAL_CAREGIVER_LIMITS.family_premium,
       features: [
-        'Unlimited family members',
-        'Unlimited external caregivers',
+        'Up to 20 family members per household',
+        'Up to 10 households',
+        'Up to 50 external caregivers',
         'All premium features',
         'White-glove support',
         'Early access to features'
@@ -306,8 +307,7 @@ export function UpgradeModal({
                     )}
                   </div>
                   <div className="mt-3 text-xs text-muted-foreground">
-                    {plan.seats === 999 ? 'Unlimited' : plan.seats} {plan.seats === 1 ? 'seat' : 'seats'} • {' '}
-                    {plan.externalCaregivers === 999 ? 'Unlimited' : plan.externalCaregivers} caregivers
+                    {plan.seats} {plan.seats === 1 ? 'seat' : 'seats'} • {plan.externalCaregivers} caregivers
                   </div>
                 </div>
 

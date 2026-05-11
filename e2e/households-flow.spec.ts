@@ -200,13 +200,54 @@ test.describe('Households flow — single-source-of-truth invariant @households'
     await btn.click()
   }
 
-  test.afterAll(async ({ firestore, ownerUserId }) => {
-    if (process.env.KEEP_DATA === '1') {
-      console.log('[households-flow] KEEP_DATA=1 — leaving resources behind:', created)
-      return
+  // Hard-reset the test user's household state at the top of every
+  // battery run. Past runs left orphans (failed tests that crashed
+  // before findHouseholdByName tracked the doc into `created`) — once
+  // the plan-cap reconciliation introduced HOUSEHOLD_COUNT_CAP, those
+  // orphans started blocking new creates at the 10-household ceiling.
+  // Hard-deleting also flushes patients still pointing at deleted
+  // households, since membership lives on the patient (Patient.householdId).
+  test.beforeAll(async ({ firestore, ownerUserId }) => {
+    const existing = await firestore
+      .collection('households')
+      .where('primaryCaregiverId', '==', ownerUserId)
+      .get()
+    if (!existing.empty) {
+      console.log(`[households-flow] pre-cleanup: deleting ${existing.size} leftover household(s)`)
+      const batch = firestore.batch()
+      for (const doc of existing.docs) batch.delete(doc.ref)
+      await batch.commit()
     }
-    for (const id of created.householdIds) {
-      await firestore.collection('households').doc(id).delete().catch(() => {})
+    const orphanedPatients = await firestore
+      .collection('users').doc(ownerUserId)
+      .collection('patients')
+      .where('householdId', '!=', null)
+      .get()
+    if (!orphanedPatients.empty) {
+      const batch = firestore.batch()
+      for (const doc of orphanedPatients.docs) {
+        batch.update(doc.ref, { householdId: null })
+      }
+      await batch.commit()
+    }
+  })
+
+  // afterEach (not afterAll) is required: each test creates a fresh
+  // household and these accumulate across the spec. By the 11th test
+  // the spec hits family_premium's 10-household cap (HOUSEHOLD_COUNT_CAP).
+  // Each test is independent of others, so per-test cleanup is safe.
+  // Blanket-delete every household for this user instead of tracking ids
+  // — catches mid-test failures that didn't reach findHouseholdByName.
+  test.afterEach(async ({ firestore, ownerUserId }) => {
+    if (process.env.KEEP_DATA === '1') return
+    const allHouseholds = await firestore
+      .collection('households')
+      .where('primaryCaregiverId', '==', ownerUserId)
+      .get()
+    if (!allHouseholds.empty) {
+      const batch = firestore.batch()
+      for (const doc of allHouseholds.docs) batch.delete(doc.ref)
+      await batch.commit()
     }
     for (const id of created.patientIds) {
       await firestore
@@ -214,6 +255,8 @@ test.describe('Households flow — single-source-of-truth invariant @households'
         .collection('patients').doc(id)
         .delete().catch(() => {})
     }
+    created.householdIds = []
+    created.patientIds = []
   })
 
   test('creates a household with one member — Patient.householdId is set, no memberIds[] on doc', async ({
@@ -295,7 +338,12 @@ test.describe('Households flow — single-source-of-truth invariant @households'
 
     await fillHouseholdName(page, houseB)
     await submitAddHousehold(page)
-    await expect(page.getByText(/household added/i)).toBeVisible({ timeout: 15_000 })
+    // Wait for the dialog to close — the generic "household added"
+    // toast can be stale from house A's success a few seconds earlier
+    // (react-hot-toast default duration overlaps the flow). Dialog
+    // closure is a per-submit signal that's not fooled by stale toasts.
+    // 25s tolerates the added latency of the plan-cap gate Firestore reads.
+    await expect(page.getByRole('dialog')).toBeHidden({ timeout: 25_000 })
 
     const householdB = await findHouseholdByName(firestore, ownerUserId, houseB)
     expect(householdB.id, 'A and B are distinct households').not.toBe(householdA.id)
