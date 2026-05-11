@@ -46,8 +46,11 @@ export interface Household {
 
 export interface HouseholdFormData {
   name: string
-  nickname?: string
-  address?: HouseholdAddress
+  /** `null` in edit mode signals "clear this field" — server uses
+   *  `FieldValue.delete()` to remove it from the stored doc.
+   *  `undefined` means "don't touch this field." `string` means set. */
+  nickname?: string | null
+  address?: HouseholdAddress | null
   /** Ephemeral input only — server uses this to cascade
    *  `Patient.householdId` writes on create/update. Not persisted on
    *  the Household doc. */

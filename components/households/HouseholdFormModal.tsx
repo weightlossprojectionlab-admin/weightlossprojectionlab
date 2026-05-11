@@ -147,7 +147,7 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
       )
       const trimmedNickname = formData.nickname?.trim() ?? ''
 
-      const payload: HouseholdFormData & { nickname?: string | null; address?: any } = {
+      const payload: HouseholdFormData = {
         name: formData.name.trim(),
         nickname: trimmedNickname
           ? trimmedNickname
