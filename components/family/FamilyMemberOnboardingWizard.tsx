@@ -573,23 +573,11 @@ export default function FamilyMemberOnboardingWizard() {
       // 'Newborn' (preserves the existing newborn UX strings); pet
       // defaults to 'Pet'. Adult humans leave relationship empty —
       // user picks via the Info tab editor post-create.
-      if (data.memberType === 'pet') {
-        setData({ ...data, relationship: 'Pet' })
-      } else if (data.memberType === 'newborn') {
-        // Newborn auto-configs that previously fired when the user
-        // picked 'Newborn' from the relationship dropdown. Now they
-        // fire when the user picks the Newborn type button.
-        const updates: Partial<FamilyMemberData> = {
-          relationship: 'Newborn',
-          weightUnit: 'lbs',
-        }
-        if (!data.primaryCaregivers?.length && user) {
-          updates.primaryCaregivers = [
-            { name: user.displayName || user.email || 'Account Owner', relationship: 'Parent', userId: user.uid },
-          ]
-        }
-        setData({ ...data, ...updates })
-      }
+      // Type-selection auto-config moved to the buttons' onClick
+      // handlers (handleNext is never called for type_selection
+      // because the wizard auto-advances off it when memberType is
+      // picked). Keeping this block empty so the validation gate
+      // above still runs.
     }
 
     if (currentStepData.id === 'basic_info') {
@@ -637,8 +625,15 @@ export default function FamilyMemberOnboardingWizard() {
             return
           }
         }
-      } else if (data.relationship === 'Newborn') {
-        // Newborns: birth weight and feeding preference required
+      } else if (isNewborn) {
+        // Newborns: birth weight and feeding preference required.
+        // Uses the canonical isNewborn (defined once at the top of
+        // the component) — earlier this branch keyed off
+        // `data.relationship === 'Newborn'` directly, which drifted
+        // out of sync with the new memberType='newborn' path. The
+        // single-source-of-truth `isNewborn` derived variable is
+        // semantically the right primitive: "is this patient a
+        // newborn?" is one question, not two.
         if (!data.currentWeight) {
           toast.error('Please enter birth weight')
           return
@@ -778,8 +773,8 @@ export default function FamilyMemberOnboardingWizard() {
         // Add human-specific fields
         if (data.gender) patientData.gender = data.gender
 
-        // Add newborn-specific fields
-        if (data.relationship === 'Newborn') {
+        // Add newborn-specific fields (canonical isNewborn check)
+        if (isNewborn) {
           patientData.isNewborn = true
           patientData.lifeStage = 'newborn'
           if (data.feedingPreference) patientData.feedingPreference = data.feedingPreference
@@ -1030,12 +1025,32 @@ export default function FamilyMemberOnboardingWizard() {
 
           {/* Newborn Option — distinct from generic Human because
               newborns trigger a richer birth-data flow (gestation,
-              NICU, feeding, pediatrician). Picking this is the gate
-              for that subform, replacing the legacy
-              `relationship === 'Newborn'` keying. */}
+              NICU, feeding, pediatrician). Setting memberType='newborn'
+              alone is enough — every downstream check reads `isNewborn`
+              (which is defined OR-of memberType + legacy relationship
+              string at the top of the component). The auto-config for
+              lbs weight unit + account-owner primary caregiver MUST
+              fire on click because the wizard auto-advances off
+              type-selection, so handleNext is never invoked for this
+              step. */}
           <button
             type="button"
-            onClick={() => setData({ ...data, memberType: 'newborn' })}
+            onClick={() => {
+              const updates: Partial<FamilyMemberData> = {
+                memberType: 'newborn',
+                weightUnit: 'lbs',
+              }
+              if (!data.primaryCaregivers?.length && user) {
+                updates.primaryCaregivers = [
+                  {
+                    name: user.displayName || user.email || 'Account Owner',
+                    relationship: 'Parent',
+                    userId: user.uid,
+                  },
+                ]
+              }
+              setData({ ...data, ...updates })
+            }}
             className={`
               p-8 rounded-2xl border-2 transition-all text-center
               ${data.memberType === 'newborn'
@@ -1054,7 +1069,7 @@ export default function FamilyMemberOnboardingWizard() {
           {/* Pet Option */}
           <button
             type="button"
-            onClick={() => setData({ ...data, memberType: 'pet' })}
+            onClick={() => setData({ ...data, memberType: 'pet', relationship: 'Pet' })}
             className={`
               p-8 rounded-2xl border-2 transition-all text-center
               ${data.memberType === 'pet'
@@ -1422,8 +1437,8 @@ export default function FamilyMemberOnboardingWizard() {
   function renderVitalsStep() {
     const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
 
-    // For newborns, show pediatric-specific vitals
-    if (data.relationship === 'Newborn') {
+    // For newborns, show pediatric-specific vitals (canonical isNewborn)
+    if (isNewborn) {
       return renderNewbornVitalsStep()
     }
 
@@ -2182,7 +2197,7 @@ export default function FamilyMemberOnboardingWizard() {
           )}
 
           {/* Newborn-specific review */}
-          {data.relationship === 'Newborn' && (
+          {isNewborn && (
             <div className="pt-4 border-t border-white/20">
               <h3 className="font-semibold mb-2 text-white">Newborn Details</h3>
               <div className="space-y-1 text-sm text-white/90">

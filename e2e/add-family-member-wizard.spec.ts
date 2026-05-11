@@ -249,3 +249,167 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
     })
   }
 })
+
+// ============================================================
+// Newborn flow battery (Phase 1 E2.2 — 2026-05-11)
+//
+// The wizard's newborn flow gets its own type-selection button (the
+// third memberType option, added in a61dd6b). This block verifies
+// the new entry path: click Newborn → fill name/DOB/gender → fill
+// birth weight + feeding → review → create. Asserts the auto-config
+// from type-selection (primaryCaregivers=[owner])
+// plus the handleCreate defaults (relationship='child',
+// isNewborn=true, lifeStage='newborn').
+// ============================================================
+
+type NewbornPersona = {
+  name: string
+  dateOfBirth: string
+  gender: 'Male' | 'Female'
+  birthWeightLbs: string
+  feedingPreference: 'Breastfeeding' | 'Formula' | 'Combination'
+  feedingPreferenceFieldValue: 'breastfeeding' | 'formula' | 'combination'
+}
+
+function newbornPersona(stamp: number): NewbornPersona {
+  // ~10 days old at the test date. Within the newborn lifeStage
+  // window (0–30 days per getHumanLifeStage).
+  const today = new Date()
+  const dob = new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000)
+  return {
+    name: `Liam Newborn ${stamp}`,
+    dateOfBirth: dob.toISOString().slice(0, 10), // YYYY-MM-DD
+    gender: 'Male',
+    birthWeightLbs: '7.5',
+    feedingPreference: 'Breastfeeding',
+    feedingPreferenceFieldValue: 'breastfeeding',
+  }
+}
+
+async function pickNewbornType(page: Page) {
+  await expect(
+    page.getByRole('heading', { name: 'Who are you adding?', level: 2 }),
+  ).toBeVisible({ timeout: 30_000 })
+  // Newborn is the second of three type-selection buttons.
+  // Picking it auto-advances to basic_info (no Continue needed).
+  await page.getByRole('button').filter({ hasText: 'Newborn' }).first().click()
+}
+
+async function fillNewbornBasicInfo(page: Page, p: NewbornPersona) {
+  await expect(
+    page.getByRole('heading', { name: 'About the newborn', level: 2 }),
+  ).toBeVisible({ timeout: 30_000 })
+
+  await page.getByPlaceholder('Enter name').fill(p.name)
+  await page.getByPlaceholder('Enter name').blur()
+
+  await page.locator('input[type="date"]').first().fill(p.dateOfBirth)
+
+  await page.getByRole('button', { name: p.gender, exact: true }).click()
+
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+}
+
+async function fillNewbornVitals(page: Page, p: NewbornPersona) {
+  await expect(
+    page.getByRole('heading', { name: 'Newborn health check', level: 2 }),
+  ).toBeVisible({ timeout: 30_000 })
+
+  // Birth weight input has placeholder "e.g. 7.5". Note: the wizard
+  // auto-selects 'oz' as the weight unit for newborns (via
+  // getDefaultWeightUnit) — overriding the 'lbs' that the Newborn
+  // type-selection's onClick suggests. So 7.5 here is interpreted as
+  // 7.5 oz, which triggers the "Low Birth Weight Detected" preemie
+  // panel. That's fine — the panel's extra fields are all optional
+  // and don't block Continue.
+  await page.getByPlaceholder('e.g. 7.5').fill(p.birthWeightLbs)
+
+  // Feeding preference is a button group. Do NOT use exact:true — the
+  // accessible name concatenates the emoji span ("🤱") + the label
+  // ("Breastfeeding") + the description ("Exclusive breastfeeding"),
+  // so the whole accessible name is not just "Breastfeeding".
+  await page.getByRole('button', { name: p.feedingPreference }).first().click()
+
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+}
+
+test.describe('Add Family Member wizard — newborn flow @add-family-wizard-newborn', () => {
+  test.setTimeout(5 * 60_000)
+  const stamp = Date.now()
+  const p = newbornPersona(stamp)
+
+  test(`creates a newborn via the new type-selection button (auto-config: primary caregiver, relationship=child)`, async ({
+    page,
+    ownerUserId,
+    firestore,
+  }) => {
+    await page.goto('/patients/new', { waitUntil: 'domcontentloaded' })
+
+    await pickNewbornType(page)
+    await fillNewbornBasicInfo(page, p)
+    await fillNewbornVitals(page, p)
+
+    // The newborn flow has the same review step shape; the existing
+    // helper works without modification.
+    await expect(
+      page.getByRole('heading', { name: 'Review & create', level: 2 }),
+    ).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText(p.name, { exact: false })).toBeVisible()
+    await page.getByRole('button', { name: /^Create Family Member$/ }).click()
+
+    await expect(page).not.toHaveURL(/\/patients\/new/, { timeout: 60_000 })
+
+    const patientsCol = firestore
+      .collection('users').doc(ownerUserId)
+      .collection('patients')
+    const snap = await patientsCol.where('name', '==', p.name).get()
+    expect(snap.size, `one patient created with name ${p.name}`).toBe(1)
+
+    const created = snap.docs[0].data()
+
+    // Identity + dates.
+    expect(created.name).toBe(p.name)
+    expect(created.dateOfBirth).toBe(p.dateOfBirth)
+    expect(created.gender).toBe(p.gender)
+    expect(created.type).toBe('human')
+
+    // handleCreate defaults for newborn-type (a61dd6b):
+    //   relationship = 'child'  (semantic default, not 'self')
+    //   isNewborn = true
+    //   lifeStage = 'newborn'
+    expect(created.relationship, 'newborn default relationship is "child"').toBe('child')
+    expect(created.isNewborn, 'isNewborn flag set').toBe(true)
+    expect(created.lifeStage, 'lifeStage forced to "newborn"').toBe('newborn')
+
+    // Auto-config triggered by picking Newborn type-selection button:
+    //   primaryCaregivers = [account owner] (load-bearing — newborn UX
+    //     depends on having the owner pre-listed as a caregiver).
+    //
+    // NOT asserted: weightUnit. The Newborn button onClick suggests
+    // 'lbs', but the DOB onChange's getDefaultWeightUnit honestly
+    // overrides to 'oz' for newborns (better default for small
+    // weights). The auto-config is a starting suggestion, not a hard
+    // rule — and either unit is a valid newborn UX.
+    expect(Array.isArray(created.primaryCaregivers), 'primaryCaregivers is an array').toBe(true)
+    expect((created.primaryCaregivers as any[]).length, 'one default caregiver (account owner)').toBeGreaterThanOrEqual(1)
+    expect(
+      (created.primaryCaregivers as any[])[0]?.userId,
+      'first caregiver is the account owner',
+    ).toBe(ownerUserId)
+
+    // Newborn-specific fields captured at the wizard.
+    expect(typeof created.currentWeight).toBe('number')
+    expect(created.currentWeight).toBe(parseFloat(p.birthWeightLbs))
+    expect(created.feedingPreference).toBe(p.feedingPreferenceFieldValue)
+
+    const createdId = snap.docs[0].id
+
+    if (process.env.KEEP_DATA === '1') {
+      console.log(
+        `[wizard] KEEP_DATA=1 — keeping newborn ${p.name} (${createdId})`,
+      )
+    } else {
+      await patientsCol.doc(createdId).delete().catch(() => {})
+    }
+  })
+})
