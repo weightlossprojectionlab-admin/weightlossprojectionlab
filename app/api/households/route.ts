@@ -104,45 +104,51 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body: HouseholdFormData = await request.json()
 
-    // Validate required fields
-    if (!body.name || !body.address?.street || !body.address?.city || !body.address?.state) {
+    // Validation: a household needs a name and at least one resident.
+    // Address is optional — kitchen/shopping logic works on the
+    // household + its members; the address is informational metadata
+    // for future geo-aware shopping. Empty households are not a thing
+    // (semantically a vacant building).
+    if (!body.name || !body.name.trim()) {
       return NextResponse.json(
-        { error: 'Missing required fields: name and complete address required' },
+        { error: 'Household name is required' },
+        { status: 400 }
+      )
+    }
+    const memberIds = body.memberIds ?? []
+    if (memberIds.length === 0) {
+      return NextResponse.json(
+        { error: 'A household must have at least one member' },
         { status: 400 }
       )
     }
 
-    // Verify caregiver has access to all specified patients.
-    // Patients live at users/{ownerUserId}/patients/{patientId} (nested,
-    // see /api/patients). If a patient doc exists at the caregiver's
-    // nested path, ownership is implicit.
-    if (body.memberIds && body.memberIds.length > 0) {
-      for (const patientId of body.memberIds) {
-        const patientDoc = await adminDb
-          .collection('users').doc(caregiverId)
-          .collection('patients').doc(patientId)
-          .get()
+    // Verify caregiver owns each declared member. Patients live at
+    // users/{ownerUserId}/patients/{patientId} (nested) — if a doc
+    // exists at the caregiver's nested path, ownership is implicit.
+    for (const patientId of memberIds) {
+      const patientDoc = await adminDb
+        .collection('users').doc(caregiverId)
+        .collection('patients').doc(patientId)
+        .get()
 
-        if (!patientDoc.exists) {
-          return NextResponse.json(
-            { error: `Patient not found: ${patientId}` },
-            { status: 404 }
-          )
-        }
+      if (!patientDoc.exists) {
+        return NextResponse.json(
+          { error: `Patient not found: ${patientId}` },
+          { status: 404 }
+        )
       }
     }
 
-    // Create household
+    // Create household doc. Note: no memberIds, no primaryResidentId.
+    // Membership is a property of the patient (Patient.householdId),
+    // not the household. "Who lives here?" is a patient query.
     const householdRef = adminDb.collection('households').doc()
     const now = new Date().toISOString()
 
-    const household: Household = {
+    const householdDoc: any = {
       id: householdRef.id,
-      name: body.name,
-      nickname: body.nickname,
-      address: body.address,
-      memberIds: body.memberIds || [],
-      primaryResidentId: body.primaryResidentId,
+      name: body.name.trim(),
       primaryCaregiverId: caregiverId,
       kitchenConfig: body.kitchenConfig || {
         hasSharedInventory: true,
@@ -153,40 +159,39 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
       isActive: true
     }
-
-    // Remove undefined values before saving to Firestore
-    const cleanedHousehold: any = {}
-    for (const [key, value] of Object.entries(household)) {
-      if (value !== undefined) {
-        cleanedHousehold[key] = value
-      }
+    if (body.nickname) householdDoc.nickname = body.nickname.trim()
+    if (body.address?.street || body.address?.city || body.address?.state) {
+      householdDoc.address = body.address
     }
 
-    await householdRef.set(cleanedHousehold)
+    await householdRef.set(householdDoc)
 
-    // Cascade householdId onto each member patient's nested doc.
+    // Cascade Patient.householdId onto each new member. Single-field
+    // assignment naturally enforces single-residence-per-patient: any
+    // patient previously in another household has their householdId
+    // overwritten here, atomically moving them. No cleanup of an old
+    // memberIds[] array is needed because that array no longer exists.
     const batch = adminDb.batch()
-    for (const patientId of household.memberIds) {
+    for (const patientId of memberIds) {
       const patientRef = adminDb
         .collection('users').doc(caregiverId)
         .collection('patients').doc(patientId)
       batch.update(patientRef, {
-        householdId: household.id,
-        residenceType: 'full_time',
+        householdId: householdRef.id,
         lastModified: now
       })
     }
     await batch.commit()
 
     logger.info('[Households API] Created household', {
-      householdId: household.id,
+      householdId: householdRef.id,
       caregiverId,
-      memberCount: household.memberIds.length
+      memberCount: memberIds.length
     })
 
     return NextResponse.json({
       success: true,
-      household
+      household: householdDoc
     }, { status: 201 })
   } catch (error: any) {
     logger.error('[API /households POST] Error creating household', error as Error)

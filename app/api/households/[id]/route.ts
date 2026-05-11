@@ -7,6 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { checkHouseholdAccess } from '@/lib/household-access'
 import { logger } from '@/lib/logger'
@@ -54,9 +55,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
     const household = { id: householdId, ...access.household } as Household
 
-    // Get patients in household. Patients live at
-    // users/{primaryCaregiverId}/patients/{id} (nested) — querying the
-    // top-level `patients` collection finds nothing.
+    // Members are derived from Patient.householdId (single source of
+    // truth). The household doc itself stores no memberIds array.
     const patientsQuery = await adminDb
       .collection('users').doc(household.primaryCaregiverId)
       .collection('patients')
@@ -125,39 +125,58 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Parse updates
     const body = await request.json()
-    const allowedUpdates = ['name', 'nickname', 'address', 'kitchenConfig', 'preferences', 'memberIds', 'primaryResidentId']
+    // Note: `memberIds` is ephemeral (used to cascade Patient.householdId)
+    // and is NOT persisted on the household doc. `primaryResidentId` no
+    // longer exists.
+    const allowedUpdates = ['name', 'nickname', 'address', 'kitchenConfig', 'preferences']
 
     const now = new Date().toISOString()
     const updates: any = {
       updatedAt: now
     }
 
+    // Three states per optional field:
+    //   - body[key] === undefined  → caller doesn't want to touch it
+    //   - body[key] === null       → caller wants to CLEAR it (delete field)
+    //   - body[key] === <value>    → set new value
+    // This matters for nickname and address (and would matter for
+    // kitchenConfig if we ever expose its blanking). Without explicit
+    // null-handling, a blanked-out form field can't clear the prior
+    // stored value.
     for (const key of allowedUpdates) {
-      if (body[key] !== undefined) {
-        updates[key] = body[key]
+      if (!(key in body)) continue
+      const value = body[key]
+      if (value === undefined) continue
+      if (value === null) {
+        updates[key] = FieldValue.delete()
+      } else {
+        updates[key] = value
       }
     }
 
-    // Remove any nested undefined values
-    const cleanedUpdates: any = {}
-    for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
-        cleanedUpdates[key] = value
-      }
-    }
+    const cleanedUpdates = updates
 
-    // If memberIds is being updated, cascade to each patient's
-    // householdId field. Two sides of the link must stay in sync:
-    // newly-added patients get the household pinned, removed patients
-    // get it cleared. Patients live in the primary caregiver's nested
-    // collection.
+    // Membership update: if `memberIds` is in the body, diff against
+    // the *actual* current members (patients with householdId == this
+    // household) and cascade Patient.householdId writes. Setting a
+    // patient's householdId to this household atomically moves them
+    // from any prior household — no other cleanup needed because no
+    // household stores a memberIds[] array.
     if (body.memberIds !== undefined) {
-      const oldMemberIds = household.memberIds || []
-      const newMemberIds = body.memberIds as string[]
-      const added = newMemberIds.filter(id => !oldMemberIds.includes(id))
-      const removed = oldMemberIds.filter(id => !newMemberIds.includes(id))
+      const requestedIds = body.memberIds as string[]
 
-      // Verify ownership of newly-added patients before any writes
+      // Read the actual current membership from the patient side.
+      const currentMembersSnap = await adminDb
+        .collection('users').doc(userId)
+        .collection('patients')
+        .where('householdId', '==', householdId)
+        .get()
+      const currentIds = currentMembersSnap.docs.map(d => d.id)
+
+      const added = requestedIds.filter(id => !currentIds.includes(id))
+      const removed = currentIds.filter(id => !requestedIds.includes(id))
+
+      // Verify ownership of newly-added patients before any writes.
       for (const patientId of added) {
         const patientDoc = await adminDb
           .collection('users').doc(userId)
@@ -178,7 +197,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           .collection('patients').doc(patientId)
         memberBatch.update(patientRef, {
           householdId,
-          residenceType: 'full_time',
           lastModified: now
         })
       }
@@ -188,7 +206,6 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           .collection('patients').doc(patientId)
         memberBatch.update(patientRef, {
           householdId: null,
-          residenceType: null,
           lastModified: now
         })
       }
@@ -267,20 +284,26 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       updatedAt: new Date().toISOString()
     })
 
-    // Remove householdId from all patients (nested path).
-    const batch = adminDb.batch()
+    // Clear Patient.householdId on every patient who lived here.
+    // Members are derived from the patient query — no household-side
+    // memberIds[] to consult.
     const now = new Date().toISOString()
-    for (const patientId of household.memberIds) {
-      const patientRef = adminDb
-        .collection('users').doc(userId)
-        .collection('patients').doc(patientId)
-      batch.update(patientRef, {
-        householdId: null,
-        residenceType: null,
-        lastModified: now
-      })
+    const membersSnap = await adminDb
+      .collection('users').doc(userId)
+      .collection('patients')
+      .where('householdId', '==', householdId)
+      .get()
+
+    if (!membersSnap.empty) {
+      const batch = adminDb.batch()
+      for (const doc of membersSnap.docs) {
+        batch.update(doc.ref, {
+          householdId: null,
+          lastModified: now
+        })
+      }
+      await batch.commit()
     }
-    await batch.commit()
 
     logger.info('[Households API] Deleted household', {
       householdId,

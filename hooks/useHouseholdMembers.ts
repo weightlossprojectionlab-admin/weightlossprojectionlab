@@ -1,17 +1,20 @@
 /**
  * useHouseholdMembers Hook
  *
- * Real-time hook to fetch and monitor household members
- * Uses onSnapshot for live updates when members are added/removed
+ * Returns the patients whose `householdId` points to the given
+ * household. `Patient.householdId` is the single source of truth —
+ * household docs do NOT store a membership array.
+ *
+ * Loads all patients via /api/patients (which respects RBAC + caregiver
+ * permissions) and filters client-side. The filtering is cheap; the
+ * API endpoint is the one source of truth for "patients this user can
+ * see," so we delegate to it rather than duplicating that logic here.
  */
 
 import { useState, useEffect } from 'react'
-import { doc, onSnapshot } from 'firebase/firestore'
-import { db, auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import { apiClient } from '@/lib/api-client'
 import type { PatientProfile } from '@/types/medical'
-import type { Household } from '@/types/household'
 
 export function useHouseholdMembers(householdId: string) {
   const [members, setMembers] = useState<PatientProfile[]>([])
@@ -20,83 +23,35 @@ export function useHouseholdMembers(householdId: string) {
 
   useEffect(() => {
     if (!householdId) {
+      setMembers([])
       setLoading(false)
       return
     }
 
-    // Set up real-time listener for household document
-    const householdRef = doc(db, 'households', householdId)
+    let cancelled = false
+    setLoading(true)
 
-    const unsubscribe = onSnapshot(
-      householdRef,
-      async (snapshot) => {
-        if (!snapshot.exists()) {
-          logger.warn('[useHouseholdMembers] Household not found', { householdId })
-          setError('Household not found')
-          setMembers([])
-          setLoading(false)
-          return
-        }
-
-        const householdData = snapshot.data() as Household
-        const memberIds = householdData.memberIds || []
-
-        logger.info('[useHouseholdMembers] Household data received', {
+    apiClient.get<PatientProfile[]>('/patients')
+      .then(allPatients => {
+        if (cancelled) return
+        const householdMembers = (allPatients || []).filter(
+          patient => patient.householdId === householdId,
+        )
+        setMembers(householdMembers)
+        setError(null)
+      })
+      .catch(err => {
+        if (cancelled) return
+        logger.error('[useHouseholdMembers] Failed to fetch patients', err as Error, {
           householdId,
-          memberIds,
-          memberCount: memberIds.length,
-          householdData
         })
+        setError('Failed to load members')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
 
-        if (memberIds.length === 0) {
-          logger.info('[useHouseholdMembers] No members in household', { householdId })
-          setMembers([])
-          setLoading(false)
-          return
-        }
-
-        try {
-          // Fetch member details using API (which handles auth and permissions)
-          const allPatients = await apiClient.get<PatientProfile[]>('/patients')
-
-          logger.info('[useHouseholdMembers] All patients fetched', {
-            householdId,
-            totalPatients: allPatients.length,
-            patientIds: allPatients.map(p => p.id)
-          })
-
-          // Filter to only members in this household
-          const householdMembers = allPatients.filter(patient =>
-            memberIds.includes(patient.id)
-          )
-
-          logger.info('[useHouseholdMembers] Filtered household members', {
-            householdId,
-            memberIds,
-            foundMembers: householdMembers.length,
-            members: householdMembers.map(m => ({ id: m.id, name: m.name }))
-          })
-
-          setMembers(householdMembers)
-          setError(null)
-        } catch (err) {
-          logger.error('[useHouseholdMembers] Failed to fetch members', err as Error, {
-            householdId,
-            memberCount: memberIds.length
-          })
-          setError('Failed to load members')
-        } finally {
-          setLoading(false)
-        }
-      },
-      (err) => {
-        logger.error('[useHouseholdMembers] Snapshot error', err as Error, { householdId })
-        setError('Failed to monitor household changes')
-        setLoading(false)
-      }
-    )
-
-    return () => unsubscribe()
+    return () => { cancelled = true }
   }, [householdId])
 
   return { members, loading, error }
