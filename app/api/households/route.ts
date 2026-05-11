@@ -112,23 +112,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify caregiver has access to all specified patients
+    // Verify caregiver has access to all specified patients.
+    // Patients live at users/{ownerUserId}/patients/{patientId} (nested,
+    // see /api/patients). If a patient doc exists at the caregiver's
+    // nested path, ownership is implicit.
     if (body.memberIds && body.memberIds.length > 0) {
       for (const patientId of body.memberIds) {
-        const patientDoc = await adminDb.collection('patients').doc(patientId).get()
+        const patientDoc = await adminDb
+          .collection('users').doc(caregiverId)
+          .collection('patients').doc(patientId)
+          .get()
 
         if (!patientDoc.exists) {
           return NextResponse.json(
             { error: `Patient not found: ${patientId}` },
             { status: 404 }
-          )
-        }
-
-        const patientData = patientDoc.data()
-        if (patientData?.userId !== caregiverId) {
-          return NextResponse.json(
-            { error: `Unauthorized: You do not have access to patient ${patientId}` },
-            { status: 403 }
           )
         }
       }
@@ -166,13 +164,15 @@ export async function POST(request: NextRequest) {
 
     await householdRef.set(cleanedHousehold)
 
-    // Update patient profiles with householdId
+    // Cascade householdId onto each member patient's nested doc.
     const batch = adminDb.batch()
     for (const patientId of household.memberIds) {
-      const patientRef = adminDb.collection('patients').doc(patientId)
+      const patientRef = adminDb
+        .collection('users').doc(caregiverId)
+        .collection('patients').doc(patientId)
       batch.update(patientRef, {
         householdId: household.id,
-        residenceType: patientId === body.primaryResidentId ? 'full_time' : 'full_time',
+        residenceType: 'full_time',
         lastModified: now
       })
     }

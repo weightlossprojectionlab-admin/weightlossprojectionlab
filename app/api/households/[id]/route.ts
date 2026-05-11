@@ -54,8 +54,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
     const household = { id: householdId, ...access.household } as Household
 
-    // Get patients in household
+    // Get patients in household. Patients live at
+    // users/{primaryCaregiverId}/patients/{id} (nested) — querying the
+    // top-level `patients` collection finds nothing.
     const patientsQuery = await adminDb
+      .collection('users').doc(household.primaryCaregiverId)
       .collection('patients')
       .where('householdId', '==', householdId)
       .get()
@@ -124,8 +127,9 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const allowedUpdates = ['name', 'nickname', 'address', 'kitchenConfig', 'preferences', 'memberIds', 'primaryResidentId']
 
+    const now = new Date().toISOString()
     const updates: any = {
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     }
 
     for (const key of allowedUpdates) {
@@ -140,6 +144,55 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       if (value !== undefined) {
         cleanedUpdates[key] = value
       }
+    }
+
+    // If memberIds is being updated, cascade to each patient's
+    // householdId field. Two sides of the link must stay in sync:
+    // newly-added patients get the household pinned, removed patients
+    // get it cleared. Patients live in the primary caregiver's nested
+    // collection.
+    if (body.memberIds !== undefined) {
+      const oldMemberIds = household.memberIds || []
+      const newMemberIds = body.memberIds as string[]
+      const added = newMemberIds.filter(id => !oldMemberIds.includes(id))
+      const removed = oldMemberIds.filter(id => !newMemberIds.includes(id))
+
+      // Verify ownership of newly-added patients before any writes
+      for (const patientId of added) {
+        const patientDoc = await adminDb
+          .collection('users').doc(userId)
+          .collection('patients').doc(patientId)
+          .get()
+        if (!patientDoc.exists) {
+          return NextResponse.json(
+            { error: `Patient not found: ${patientId}` },
+            { status: 404 }
+          )
+        }
+      }
+
+      const memberBatch = adminDb.batch()
+      for (const patientId of added) {
+        const patientRef = adminDb
+          .collection('users').doc(userId)
+          .collection('patients').doc(patientId)
+        memberBatch.update(patientRef, {
+          householdId,
+          residenceType: 'full_time',
+          lastModified: now
+        })
+      }
+      for (const patientId of removed) {
+        const patientRef = adminDb
+          .collection('users').doc(userId)
+          .collection('patients').doc(patientId)
+        memberBatch.update(patientRef, {
+          householdId: null,
+          residenceType: null,
+          lastModified: now
+        })
+      }
+      await memberBatch.commit()
     }
 
     await adminDb.collection('households').doc(householdId).update(cleanedUpdates)
@@ -214,14 +267,17 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       updatedAt: new Date().toISOString()
     })
 
-    // Remove householdId from all patients
+    // Remove householdId from all patients (nested path).
     const batch = adminDb.batch()
+    const now = new Date().toISOString()
     for (const patientId of household.memberIds) {
-      const patientRef = adminDb.collection('patients').doc(patientId)
+      const patientRef = adminDb
+        .collection('users').doc(userId)
+        .collection('patients').doc(patientId)
       batch.update(patientRef, {
         householdId: null,
         residenceType: null,
-        lastModified: new Date().toISOString()
+        lastModified: now
       })
     }
     await batch.commit()
