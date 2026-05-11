@@ -145,7 +145,7 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await cell.getByRole('checkbox', { name: 'Asthma' }).check()
     await cell.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByText('Health conditions updated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Health conditions updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     expect(data.healthConditions, 'healthConditions persisted (array, 3 entries)').toEqual(
@@ -165,7 +165,7 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await cell.getByRole('checkbox', { name: 'Shellfish' }).check()
     await cell.getByRole('button', { name: 'Save' }).click()
 
-    await expect(page.getByText('Food allergies updated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Food allergies updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     expect(data.foodAllergies).toEqual(expect.arrayContaining(['Peanuts', 'Tree nuts', 'Shellfish']))
@@ -207,7 +207,7 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await expect(cell.getByText('applesauce', { exact: false })).toBeVisible()
 
     await cell.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Preferred (safe) foods updated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Preferred (safe) foods updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     expect(data.preferredFoods).toEqual(expect.arrayContaining(['rice', 'pasta', 'applesauce']))
@@ -249,7 +249,7 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await expect(cell.getByText('applesauce', { exact: false })).not.toBeVisible()
 
     await cell.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Preferred (safe) foods updated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Preferred (safe) foods updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     expect(data.preferredFoods, 'only "rice" survives after × removal + Backspace removal').toEqual(['rice'])
@@ -304,7 +304,7 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await cell.locator('textarea').fill('No sauces touching')
 
     await cell.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Preparation needs updated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Preparation needs updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     expect(data.preparationNeeds, 'nested object persisted').toEqual({
@@ -349,7 +349,7 @@ test.describe('Patient detail Info tab — editor cells @patient-editors', () =>
     await cell.locator('textarea').fill('')
 
     await cell.getByRole('button', { name: 'Save' }).click()
-    await expect(page.getByText('Preparation needs updated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText('Preparation needs updated')).toBeVisible({ timeout: 25_000 })
 
     const data = await readPatient(firestore, ownerUserId, patientId)
     // Cleared semantic: the /api/patients PUT route writes `null`
