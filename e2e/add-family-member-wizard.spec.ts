@@ -249,6 +249,14 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       if (p.bloodType) expect(created.bloodType).toBe(p.bloodType)
       expect(typeof created.currentWeight).toBe('number')
       expect(created.currentWeight).toBe(parseFloat(p.weightLbs))
+
+      // Household assignment is intentionally NOT asserted on the
+      // wizard path — household creation/assignment lives on
+      // /family-admin/households (canonical Household type in
+      // types/household.ts) and the caregiver picks/creates one
+      // explicitly. The persona's `household` field above is
+      // documentation-only metadata.
+
       // Conditions: the wizard stores selected condition keys on
       // healthConditions. Each selected condition should appear.
       if (p.conditions?.length) {

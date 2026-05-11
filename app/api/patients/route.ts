@@ -259,9 +259,17 @@ export async function POST(request: NextRequest) {
         })()
       : undefined
 
+    // Household assignment is the caregiver's choice — handled via
+    // /api/households (canonical model in types/household.ts).
+    // Patients can exist unassigned until the caregiver picks/creates
+    // a household. Honour an explicit householdId if the request
+    // included one.
+    const householdId = (profileData as any).householdId
+
     const newPatient: PatientProfile = {
       id: patientId,
       userId,
+      ...(householdId ? { householdId } : {}),
       ...profileData,
       // Unified Family Member + Caregiver Model
       accountStatus: 'owner', // First patient is always the account owner

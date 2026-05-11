@@ -30,56 +30,16 @@ export interface AuthorizationResult {
  */
 export type FamilyRole = 'account_owner' | 'co_admin' | 'caregiver' | 'viewer'
 
-// ==================== HOUSEHOLD ====================
-
-/**
- * Household — operational unit of care. A user's nuclear household
- * (themselves + spouse + kids + pets) is operationally distinct
- * from their parents' household (Mom + Dad in their own home) or
- * grandparents' household. The owner subscribes once (Family
- * Premium covers up to 10 households × 20 patients) and patients
- * are grouped by which household they operationally belong to.
- *
- * Stored at users/{ownerUserId}/households/{id}. Patients reference
- * a household via PatientProfile.householdId.
- *
- * Household creation is lazy: the first patient assigned to a
- * household type triggers the household-doc creation. Most users
- * will have just one (Nuclear). Caregivers managing aging parents
- * will accumulate Parents / Grandparents households over time.
- */
-export type HouseholdType =
-  | 'nuclear' // Self, spouse, kids, pets — the user's primary household
-  | 'parents' // User's mother / father — cross-household caregiver
-  | 'grandparents' // User's grandparents — cross-household caregiver
-  | 'kids' // Adult children with their own homes
-  | 'extended' // Aunts, uncles, in-laws, siblings in their own homes
-  | 'other'
-
-export interface Household {
-  id: string
-  userId: string // Owner's Firebase Auth UID (the subscriber)
-  /** Display name. Defaults derived from type (e.g., "Nuclear Household",
-   *  "Parents' Household") but the user can rename. */
-  name: string
-  /** Bucket — drives default sort order on /patients list and
-   *  determines which relationships auto-suggest this household. */
-  type: HouseholdType
-  /** Free-form notes (e.g., "Mom + Dad in Phoenix"). */
-  notes?: string
-  createdAt: string // ISO 8601
-  createdBy: string // userId
-}
-
 // ==================== PATIENT PROFILE ====================
 
 export interface PatientProfile {
   id: string
   userId: string // Owner's Firebase Auth UID
-  /** Which household this patient operationally belongs to. Lazily
-   *  derived from relationship on patient creation (see
-   *  lib/household.ts). Optional for backward-compat with patients
-   *  created before the household model landed. */
+  /** Physical residence this patient belongs to (kitchen inventory,
+   *  shopping list scope). Canonical Household type lives in
+   *  types/household.ts; written by /api/households when the
+   *  caregiver assigns members. Optional — patients can exist
+   *  unassigned until the caregiver creates / picks a household. */
   householdId?: string
   type: 'human' | 'pet'
   name: string
