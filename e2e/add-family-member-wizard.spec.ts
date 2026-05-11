@@ -140,62 +140,35 @@ async function fillAdultBasicInfo(page: Page, p: AdultPersona) {
   // The single date input on basic_info is DOB.
   await page.locator('input[type="date"]').first().fill(p.dateOfBirth)
 
-  // First select on basic_info is relationship; second is bloodType.
+  // Relationship select (the only remaining select on basic_info
+  // after the 2026-05-11 slim — bloodType was moved to the
+  // patient detail page Info tab editor).
   await page.locator('select').first().selectOption(p.relationship)
 
   await page.getByRole('button', { name: p.gender, exact: true }).click()
-
-  if (p.bloodType) {
-    await page.locator('select').nth(1).selectOption(p.bloodType)
-  }
 
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
 }
 
 async function fillAdultVitals(page: Page, p: AdultPersona) {
   await expect(
-    page.getByRole('heading', { name: 'Health vitals', level: 2 }),
+    page.getByRole('heading', { name: 'Current weight', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
-  // Height (imperial) + weight.
-  await page.getByPlaceholder('5', { exact: true }).fill(p.heightFeet)
-  await page.getByPlaceholder('8', { exact: true }).fill(p.heightInches)
+  // Slim vitals step: only currentWeight is collected at the wizard.
+  // Height, activity level, weight goal, target weight all moved to
+  // the patient detail page Info tab (PatientFieldEditor) — edited
+  // post-onboarding when the caregiver has time to fill them in.
   await page.getByPlaceholder('150', { exact: true }).fill(p.weightLbs)
 
-  // Activity Level. Note the select order on this step:
-  //   .nth(0) → weight-unit selector beside the weight input
-  //   .nth(1) → Activity Level
-  //   .nth(2) → Weight Goal (when showGoals=true)
-  await page.locator('select').nth(1).selectOption(p.activityLevel)
-
-  // Optional Goals subsection — only shown for humans (showGoals=true).
-  if (p.weightGoal) {
-    await page.locator('select').nth(2).selectOption(p.weightGoal)
-
-    // Target Weight only renders when weightGoal != maintain-weight.
-    if (p.targetWeightLbs && p.weightGoal !== 'maintain-weight') {
-      // Target weight input has placeholder "140" (for lbs). Use
-      // exact match so it doesn't collide with the current-weight
-      // placeholder "150".
-      await page.getByPlaceholder('140', { exact: true }).fill(p.targetWeightLbs)
-    }
-  }
-
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
 }
 
-async function pickConditionsOrSkip(page: Page, p: AdultPersona) {
-  await expect(
-    page.getByRole('heading', { name: 'Health conditions', level: 2 }),
-  ).toBeVisible({ timeout: 30_000 })
-
-  for (const condition of p.conditions ?? []) {
-    // Conditions render as toggle buttons with the condition text.
-    await page.getByRole('button', { name: condition, exact: true }).click()
-  }
-
-  await page.getByRole('button', { name: 'Continue', exact: true }).click()
-}
+// The conditions step was removed from the wizard in the 2026-05-11
+// slim. Health conditions are now edited via the multi-select cell
+// on the patient detail page Info tab. The personas' `conditions`
+// metadata stays in the fixture (documents semantic intent) but is
+// no longer asserted as wizard-captured.
 
 async function reviewAndCreate(page: Page, p: AdultPersona) {
   await expect(
@@ -227,7 +200,8 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       await pickHumanType(page)
       await fillAdultBasicInfo(page, p)
       await fillAdultVitals(page, p)
-      await pickConditionsOrSkip(page, p)
+      // conditions step removed 2026-05-11 (Phase 1 E2.1) — wizard
+      // now advances directly from vitals to review.
       await reviewAndCreate(page, p)
 
       // After Create the wizard redirects (typically to /patients
@@ -246,26 +220,18 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       expect(created.gender).toBe(p.gender)
       expect(created.relationship).toBe(p.relationship)
       expect(created.type).toBe('human')
-      if (p.bloodType) expect(created.bloodType).toBe(p.bloodType)
       expect(typeof created.currentWeight).toBe('number')
       expect(created.currentWeight).toBe(parseFloat(p.weightLbs))
 
-      // Household assignment is intentionally NOT asserted on the
-      // wizard path — household creation/assignment lives on
-      // /family-admin/households (canonical Household type in
-      // types/household.ts) and the caregiver picks/creates one
-      // explicitly. The persona's `household` field above is
-      // documentation-only metadata.
-
-      // Conditions: the wizard stores selected condition keys on
-      // healthConditions. Each selected condition should appear.
-      if (p.conditions?.length) {
-        for (const c of p.conditions) {
-          expect(created.healthConditions, `${c} in healthConditions`).toEqual(
-            expect.arrayContaining([c]),
-          )
-        }
-      }
+      // Fields NOT asserted (intentionally — wizard no longer collects):
+      //  - bloodType: moved to patient detail Info tab editor.
+      //  - healthConditions: same.
+      //  - height / activityLevel / weightGoal / targetWeight: same.
+      //  - householdId: assignment lives on /family-admin/households,
+      //    not the family-member wizard. Persona's `household` field
+      //    is documentation-only metadata.
+      // See project_household_deferred.md A4-A4e for the wizard-slim
+      // design rationale.
 
       const createdId = snap.docs[0].id
 

@@ -57,18 +57,15 @@ const getWizardSteps = (isPet: boolean, isNewborn: boolean, hasSelectedType: boo
   // Step 2: Vitals
   steps.push({
     id: 'vitals',
-    title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Health vitals',
-    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Height and weight for health tracking'
+    title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Current weight',
+    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Just the seed weight — height, goals, and conditions live on the patient profile after creation.'
   });
 
-  // Step 3: Conditions
-  steps.push({
-    id: 'conditions',
-    title: isPet ? 'Pet health conditions' : isNewborn ? 'Newborn health concerns' : 'Health conditions',
-    subtitle: isPet ? 'Common pet health issues' : isNewborn ? 'Any known conditions or concerns' : 'Confirm AI-detected conditions'
-  });
+  // Conditions step removed 2026-05-11 (Phase 1 E2.1) — conditions are
+  // now edited post-onboarding via the patient detail page Info tab
+  // (PatientFieldEditor) rather than gating wizard completion.
 
-  // Step 4: Review
+  // Step 3: Review
   steps.push({
     id: 'review',
     title: 'Review & create',
@@ -626,19 +623,12 @@ export default function FamilyMemberOnboardingWizard() {
           return
         }
       } else {
-        // For humans, weight is required
+        // For humans, the slim wizard collects only currentWeight as
+        // the seed for the vitals timeline. Height, goals, activity
+        // level, and target weight are now edited post-create via the
+        // patient detail page Info tab (PatientFieldEditor).
         if (!data.currentWeight) {
           toast.error('Please enter current weight')
-          return
-        }
-
-        // Height is required for humans
-        if (data.heightUnit === 'imperial' && !data.heightFeet) {
-          toast.error('Please enter height')
-          return
-        }
-        if (data.heightUnit === 'metric' && !data.heightCm) {
-          toast.error('Please enter height')
           return
         }
       }
@@ -963,8 +953,11 @@ export default function FamilyMemberOnboardingWizard() {
         return renderBasicInfoStep()
       case 'vitals':
         return renderVitalsStep()
-      case 'conditions':
-        return renderConditionsStep()
+      // 'conditions' case removed 2026-05-11 — see getWizardSteps note.
+      // The renderConditionsStep function and its support state remain
+      // in this file for now (referenced by getPediatricConditions and
+      // shared types) but are no longer reachable through the wizard.
+      // Cleanup pass can remove them after the slim ships green.
       case 'review':
         return renderReviewStep()
       default:
@@ -1566,7 +1559,12 @@ export default function FamilyMemberOnboardingWizard() {
       );
     }
 
-    // For humans, use the standard vitals form
+    // For adult humans, the slim wizard shows ONLY the seed weight.
+    // Height, activity level, weight goal, and target weight all live
+    // on the patient detail page Info tab as PatientFieldEditor cells
+    // post-onboarding. VitalsFormSection's existing flags
+    // (showGoals=false, hideHeight=true) achieve the slim view
+    // without forking the component.
     return (
       <VitalsFormSection
         data={{
@@ -1578,12 +1576,12 @@ export default function FamilyMemberOnboardingWizard() {
           heightUnit: data.heightUnit,
           activityLevel: data.activityLevel,
           targetWeight: data.targetWeight,
-          weightGoal: data.weightGoal
+          weightGoal: data.weightGoal,
         }}
         onChange={(updates) => setData({ ...data, ...updates })}
         required={true}
-        showGoals={!isPet}
-        hideHeight={isPet}
+        showGoals={false}
+        hideHeight={true}
       />
     )
   }
@@ -1994,28 +1992,9 @@ export default function FamilyMemberOnboardingWizard() {
           </div>
         )}
 
-        {/* Blood type — optional for humans + pets. Useful for
-            emergency identification. 'Unknown' is a valid stored
-            value (the user genuinely doesn't know). */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Blood Type (optional)</label>
-          <select
-            value={data.bloodType || ''}
-            onChange={(e) => setData({ ...data, bloodType: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
-          >
-            <option value="">— Skip —</option>
-            <option value="A+">A+</option>
-            <option value="A-">A−</option>
-            <option value="B+">B+</option>
-            <option value="B-">B−</option>
-            <option value="AB+">AB+</option>
-            <option value="AB-">AB−</option>
-            <option value="O+">O+</option>
-            <option value="O-">O−</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </div>
+        {/* Blood type removed from wizard 2026-05-11 (Phase 1 E2.1) —
+            now edited post-onboarding via the patient detail page Info
+            tab (PatientFieldEditor). Minimizing wizard friction. */}
 
         {/* Option: Scan Driver's License (only for 17+) */}
         {!isPet && (() => {
