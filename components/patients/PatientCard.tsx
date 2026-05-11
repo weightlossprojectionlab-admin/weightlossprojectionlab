@@ -164,8 +164,11 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
     checkOverdueActions()
   }, [patient.id, patient.weightCheckInFrequency])
 
-  // Get relationship badge color
-  const getRelationshipColor = (relationship: string): string => {
+  // Get relationship badge color. Accepts undefined for patients
+  // created via the slim onboarding wizard (relationship is set
+  // post-create via the patient detail page Info tab).
+  const getRelationshipColor = (relationship: string | undefined): string => {
+    if (!relationship) return 'bg-muted text-foreground font-bold'
     const colors: Record<string, string> = {
       'self': 'bg-primary-light text-primary-dark font-bold',
       'spouse': 'bg-pink-100 text-pink-900 border-pink-400 font-bold',
@@ -277,9 +280,15 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 {patient.name}
               </h3>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
-                  {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
-                </span>
+                {patient.relationship ? (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
+                    {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground italic">
+                    Relationship not set
+                  </span>
+                )}
                 {patient.type === 'pet' && patient.species && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground">
                     {patient.species}
@@ -467,9 +476,15 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 {patient.name}
               </h3>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
-                  {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
-                </span>
+                {patient.relationship ? (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
+                    {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
+                  </span>
+                ) : (
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground italic">
+                    Relationship not set
+                  </span>
+                )}
                 {patient.type === 'pet' && patient.species && (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-foreground">
                     {patient.species}

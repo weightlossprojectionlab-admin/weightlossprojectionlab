@@ -140,10 +140,9 @@ async function fillAdultBasicInfo(page: Page, p: AdultPersona) {
   // The single date input on basic_info is DOB.
   await page.locator('input[type="date"]').first().fill(p.dateOfBirth)
 
-  // Relationship select (the only remaining select on basic_info
-  // after the 2026-05-11 slim — bloodType was moved to the
-  // patient detail page Info tab editor).
-  await page.locator('select').first().selectOption(p.relationship)
+  // Relationship dropdown removed 2026-05-11 (Phase 1 E2.2) — adult
+  // humans don't set relationship at wizard time. Set via the Info
+  // tab editor post-create.
 
   await page.getByRole('button', { name: p.gender, exact: true }).click()
 
@@ -218,7 +217,12 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       expect(created.name).toBe(p.name)
       expect(created.dateOfBirth).toBe(p.dateOfBirth)
       expect(created.gender).toBe(p.gender)
-      expect(created.relationship).toBe(p.relationship)
+      // Relationship is NOT set at wizard create-time for adult
+      // humans (Phase 1 E2.2). The PatientProfile.relationship field
+      // stays absent on the doc until the caregiver edits it via the
+      // patient detail page Info tab. Persona `relationship` field
+      // remains as documentation-only metadata.
+      expect(created.relationship, 'adult human created without relationship').toBeUndefined()
       expect(created.type).toBe('human')
       expect(typeof created.currentWeight).toBe('number')
       expect(created.currentWeight).toBe(parseFloat(p.weightLbs))

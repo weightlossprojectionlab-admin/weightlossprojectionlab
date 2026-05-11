@@ -48,7 +48,14 @@ export interface PatientProfile {
   dateOfBirth: string // ISO 8601
   age?: number // Computed age in years
   lifeStage?: string // Computed: "newborn", "infant", "toddler", "child", "teen", "adult", "senior", "puppy", "kitten", etc.
-  relationship: 'self' | 'spouse' | 'parent' | 'child' | 'sibling' | 'grandparent' | 'pet'
+  /** Relationship to the account owner. Optional because the
+   *  onboarding wizard intentionally skips it (we don't always know
+   *  the relationship at create time — see project_household_deferred
+   *  A4-A4e for the "we add the person first, fill in relational
+   *  context later" rationale). Set post-create via the patient
+   *  detail page Info tab (PatientFieldEditor). Pets and newborns
+   *  do get a sensible default (`'pet'` / `'child'`) at create-time. */
+  relationship?: 'self' | 'spouse' | 'parent' | 'child' | 'sibling' | 'grandparent' | 'pet'
 
   // Pet-specific fields
   species?: string // 'dog', 'cat', 'bird', etc.

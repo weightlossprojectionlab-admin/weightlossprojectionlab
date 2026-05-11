@@ -46,7 +46,7 @@ export const patientProfileSchema = z.object({
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
   photo: z.string().url('Invalid photo URL').optional(),
   dateOfBirth: z.string().datetime('Invalid date format'),
-  relationship: z.enum(['self', 'spouse', 'parent', 'child', 'sibling', 'grandparent', 'pet']),
+  relationship: z.enum(['self', 'spouse', 'parent', 'child', 'sibling', 'grandparent', 'pet']).optional(),
 
   // Pet-specific fields
   species: z.string().optional(),
