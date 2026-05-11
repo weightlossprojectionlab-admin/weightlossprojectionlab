@@ -37,6 +37,7 @@ import ImmunizationForm from '@/components/patients/ImmunizationForm'
 import MedicalEquipmentForm from '@/components/patients/MedicalEquipmentForm'
 import FamilyHistoryForm from '@/components/patients/FamilyHistoryForm'
 import { PatientFieldEditor, type FieldOption } from '@/components/patients/PatientFieldEditor'
+import { PreparationNeedsEditor } from '@/components/patients/PreparationNeedsEditor'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
@@ -2220,132 +2221,59 @@ function PatientDetailContent() {
                   exist. Family-meal PRD fields all live on
                   PatientProfile (foundation in c6f76ba) — this is
                   the at-a-glance display surface. */}
-              {(() => {
-                const preferred = patient.preferredFoods ?? []
-                const aversions = patient.aversions ?? []
-                const prep = patient.preparationNeeds
-                const hasAnyPrep =
-                  !!prep && (prep.texture || prep.cutSize || prep.temperature || prep.separated || prep.notes)
-                // `isEmpty` checks the display-only fields only —
-                // allergies are handled by the editor above, so
-                // they're never part of this empty-state.
-                const isEmpty =
-                  preferred.length === 0 &&
-                  aversions.length === 0 &&
-                  !hasAnyPrep
-
-                return (
-                  <div className="mt-6 pt-6 border-t border-border">
-                    <h3 className="font-semibold text-foreground mb-3">
-                      Food Profile
-                    </h3>
-
-                    {/* Editable: food allergies via Big-9 multi-select.
-                        Free-text preferred foods / aversions / prep
-                        needs stay display-only here (richer editor
-                        patterns deferred — see project_household_
-                        deferred.md E1 follow-up). */}
-                    <PatientFieldEditor
-                      patientId={patientId}
-                      field="foodAllergies"
-                      label="Food allergies"
-                      type="multi-select"
-                      options={FOOD_ALLERGEN_OPTIONS}
-                      value={patient.foodAllergies}
-                      canEdit={canEditProfile}
-                      emptyLabel="None recorded"
-                      onUpdated={(v) => setPatient({ ...patient, foodAllergies: v })}
-                    />
-
-                    {isEmpty ? (
-                      <p className="text-sm text-muted-foreground mt-4">
-                        No food preferences, aversions, or prep needs set yet.
-                        {isOwner ? ' Edit profile to add them.' : ''}
-                      </p>
-                    ) : (
-                      <div className="space-y-4 text-sm">
-                        {/* Food allergies are rendered by the
-                            PatientFieldEditor above; this section
-                            covers the remaining display-only fields. */}
-                        {preferred.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                              Preferred (safe foods)
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {preferred.map((f) => (
-                                <span
-                                  key={f}
-                                  className="text-xs bg-success/10 text-success border border-success/30 px-2 py-1 rounded"
-                                >
-                                  {f}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {aversions.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                              Avoid
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {aversions.map((a) => (
-                                <span
-                                  key={a}
-                                  className="text-xs bg-muted text-foreground border border-border px-2 py-1 rounded"
-                                >
-                                  {a}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {hasAnyPrep && prep && (
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                              Prep Needs
-                            </p>
-                            <div className="space-y-1 text-foreground">
-                              {prep.texture && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Texture:</span>
-                                  <span className="font-medium capitalize">{prep.texture}</span>
-                                </div>
-                              )}
-                              {prep.cutSize && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Cut size:</span>
-                                  <span className="font-medium capitalize">
-                                    {prep.cutSize.replace(/-/g, ' ')}
-                                  </span>
-                                </div>
-                              )}
-                              {prep.temperature && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Temperature:</span>
-                                  <span className="font-medium capitalize">{prep.temperature}</span>
-                                </div>
-                              )}
-                              {prep.separated && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Separation:</span>
-                                  <span className="font-medium">Foods kept apart on plate</span>
-                                </div>
-                              )}
-                              {prep.notes && (
-                                <p className="text-muted-foreground italic mt-1">
-                                  &ldquo;{prep.notes}&rdquo;
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
+              {/* Food Profile section — every field here is now
+                  editable inline via PatientFieldEditor cells (Phase
+                  1 E1.1 completed the editor coverage). The earlier
+                  display-only blocks were removed since the editors
+                  render the same tag/value display when not editing. */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <h3 className="font-semibold text-foreground mb-3">
+                  Food Profile
+                </h3>
+                <div className="space-y-3">
+                  <PatientFieldEditor
+                    patientId={patientId}
+                    field="foodAllergies"
+                    label="Food allergies"
+                    type="multi-select"
+                    options={FOOD_ALLERGEN_OPTIONS}
+                    value={patient.foodAllergies}
+                    canEdit={canEditProfile}
+                    emptyLabel="None recorded"
+                    onUpdated={(v) => setPatient({ ...patient, foodAllergies: v })}
+                  />
+                  <PatientFieldEditor
+                    patientId={patientId}
+                    field="preferredFoods"
+                    label="Preferred (safe) foods"
+                    type="tag-input"
+                    tone="positive"
+                    placeholder="Type a food and press Enter…"
+                    value={patient.preferredFoods}
+                    canEdit={canEditProfile}
+                    emptyLabel="None recorded"
+                    onUpdated={(v) => setPatient({ ...patient, preferredFoods: v })}
+                  />
+                  <PatientFieldEditor
+                    patientId={patientId}
+                    field="aversions"
+                    label="Aversions / foods to avoid"
+                    type="tag-input"
+                    tone="negative"
+                    placeholder="Type a food and press Enter…"
+                    value={patient.aversions}
+                    canEdit={canEditProfile}
+                    emptyLabel="None recorded"
+                    onUpdated={(v) => setPatient({ ...patient, aversions: v })}
+                  />
+                  <PreparationNeedsEditor
+                    patientId={patientId}
+                    value={patient.preparationNeeds}
+                    canEdit={canEditProfile}
+                    onUpdated={(v) => setPatient({ ...patient, preparationNeeds: v ?? undefined })}
+                  />
+                </div>
+              </div>
 
               {/* Set as Primary Button */}
               {isOwner && (

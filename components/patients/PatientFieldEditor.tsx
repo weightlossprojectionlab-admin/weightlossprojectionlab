@@ -22,7 +22,7 @@ import toast from 'react-hot-toast'
 
 export type FieldOption = { value: string; label: string }
 
-type EditorType = 'text' | 'number' | 'select' | 'multi-select'
+type EditorType = 'text' | 'number' | 'select' | 'multi-select' | 'tag-input'
 
 interface BaseProps {
   patientId: string
@@ -62,7 +62,18 @@ interface MultiSelectProps extends BaseProps {
   options: FieldOption[]
 }
 
-type Props = TextProps | NumberProps | SelectProps | MultiSelectProps
+interface TagInputProps extends BaseProps {
+  type: 'tag-input'
+  value: string[] | undefined
+  /** Placeholder text inside the input. */
+  placeholder?: string
+  /** Optional tone hint — `'positive'` (green chips, for liked things)
+   *  vs `'negative'` (red chips, for avoid lists) vs `'neutral'`
+   *  (default muted chips). Pure cosmetic. */
+  tone?: 'positive' | 'negative' | 'neutral'
+}
+
+type Props = TextProps | NumberProps | SelectProps | MultiSelectProps | TagInputProps
 
 export function PatientFieldEditor(props: Props) {
   const { patientId, field, label, canEdit, emptyLabel = 'Not recorded', onUpdated } = props
@@ -72,7 +83,10 @@ export function PatientFieldEditor(props: Props) {
   const [draft, setDraft] = useState<any>(props.value)
 
   const startEdit = () => {
-    setDraft(props.value ?? (props.type === 'multi-select' ? [] : ''))
+    const initial = props.type === 'multi-select' || props.type === 'tag-input'
+      ? (props.value ?? [])
+      : (props.value ?? '')
+    setDraft(initial)
     setEditing(true)
   }
   const cancelEdit = () => {
@@ -97,6 +111,17 @@ export function PatientFieldEditor(props: Props) {
     } else if (props.type === 'text' || props.type === 'select') {
       payloadValue = typeof draft === 'string' ? draft.trim() : draft
       if (payloadValue === '') payloadValue = null
+    } else if (props.type === 'tag-input') {
+      // Deduplicate + trim + drop empties. Order-preserving.
+      const seen = new Set<string>()
+      const cleaned: string[] = []
+      for (const t of (Array.isArray(draft) ? draft : [])) {
+        const trimmed = typeof t === 'string' ? t.trim() : ''
+        if (!trimmed || seen.has(trimmed)) continue
+        seen.add(trimmed)
+        cleaned.push(trimmed)
+      }
+      payloadValue = cleaned
     }
     // multi-select: keep as array (may be empty)
 
@@ -143,6 +168,29 @@ export function PatientFieldEditor(props: Props) {
               </span>
             )
           })}
+        </div>
+      )
+    }
+    if (props.type === 'tag-input') {
+      const arr = (props.value as string[] | undefined) ?? []
+      if (arr.length === 0) {
+        return <span className="text-muted-foreground italic">{emptyLabel}</span>
+      }
+      // Tone-based chip styling: positive = green (safe foods),
+      // negative = red (avoid lists), neutral = muted default.
+      const chipClass =
+        props.tone === 'positive'
+          ? 'bg-success/10 text-success border-success/30'
+          : props.tone === 'negative'
+            ? 'bg-error/10 text-error border-error/30'
+            : 'bg-muted text-foreground border-border'
+      return (
+        <div className="flex flex-wrap gap-1.5">
+          {arr.map(v => (
+            <span key={v} className={`text-xs ${chipClass} border px-2 py-1 rounded`}>
+              {props.tone === 'negative' ? '⚠ ' : ''}{v}
+            </span>
+          ))}
         </div>
       )
     }
@@ -265,6 +313,68 @@ export function PatientFieldEditor(props: Props) {
               })}
             </div>
           )}
+
+          {props.type === 'tag-input' && (() => {
+            // Tag chips + add-input. Enter or comma commits a new tag.
+            // Backspace on empty input removes the last tag (standard
+            // tag-input behavior).
+            const tags = draft as string[]
+            const chipClass =
+              props.tone === 'positive'
+                ? 'bg-success/10 text-success border-success/30'
+                : props.tone === 'negative'
+                  ? 'bg-error/10 text-error border-error/30'
+                  : 'bg-muted text-foreground border-border'
+            const addTag = (raw: string) => {
+              const trimmed = raw.trim().replace(/,$/, '').trim()
+              if (!trimmed) return
+              if (tags.includes(trimmed)) return
+              setDraft([...tags, trimmed])
+            }
+            const removeTag = (t: string) => setDraft(tags.filter(x => x !== t))
+            return (
+              <div className="border border-border bg-background rounded-lg p-2">
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {tags.map(t => (
+                    <span key={t} className={`inline-flex items-center gap-1 text-xs ${chipClass} border px-2 py-1 rounded`}>
+                      {props.tone === 'negative' ? '⚠ ' : ''}{t}
+                      <button
+                        type="button"
+                        onClick={() => removeTag(t)}
+                        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full px-1 leading-none"
+                        aria-label={`Remove ${t}`}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder={props.placeholder ?? 'Type and press Enter…'}
+                  onKeyDown={e => {
+                    const target = e.currentTarget
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault()
+                      addTag(target.value)
+                      target.value = ''
+                    } else if (e.key === 'Backspace' && target.value === '' && tags.length > 0) {
+                      e.preventDefault()
+                      setDraft(tags.slice(0, -1))
+                    }
+                  }}
+                  onBlur={e => {
+                    if (e.target.value.trim()) {
+                      addTag(e.target.value)
+                      e.target.value = ''
+                    }
+                  }}
+                  autoFocus
+                  className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            )
+          })()}
 
           <div className="flex items-center gap-2 mt-2">
             <button
