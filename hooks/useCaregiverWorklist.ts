@@ -27,11 +27,13 @@ import { useMemo } from 'react'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useOwnerNames } from '@/hooks/useOwnerNames'
 import { usePatients } from '@/hooks/usePatients'
+import { useMyAssignedDuties } from '@/hooks/useMyAssignedDuties'
 
 export type WorklistUrgency = 'overdue' | 'due_now' | 'soon'
 
 export type WorklistKind =
-  | 'check_in'        // generic "look at this patient" — the P1 stub
+  | 'duty'            // family-assigned household_duties task — first real source
+  | 'check_in'        // generic "look at this patient" — fallback stub
   | 'vital_log'       // overdue or scheduled vital reading
   | 'medication'      // due med dose
   | 'appointment'     // upcoming appointment
@@ -79,6 +81,10 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
   // caregiver-accessed patients. We use it as the canonical name source
   // so every worklist surface renders the same name a patient page does.
   const { patients, loading: patientsLoading } = usePatients()
+  // Duties assigned by the family across every household the caller is
+  // in. First real worklist source — replaces the check_in stub for
+  // households that have actively assigned work.
+  const { duties, loading: dutiesLoading } = useMyAssignedDuties()
 
   const patientNamesById = useMemo(() => {
     const m = new Map<string, string>()
@@ -118,27 +124,93 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
   // is what matters here — the UI in P2 binds to it; later phases
   // replace this generator with real sources without touching the
   // consumer.
-  const items: WorklistItem[] = useMemo(() => {
-    if (!profile) return []
-    return ownerPatients.map(({ ownerId, patientId }) => {
-      const patientName = patientNamesById.get(patientId) || 'this patient'
+  // Classify a duty by its nextDueDate vs today. Pure: no clock skew
+  // tolerance, no timezone gymnastics — the duty's nextDueDate is the
+  // ISO string the family entered.
+  const todayStart = useMemo(() => {
+    const d = new Date()
+    d.setHours(0, 0, 0, 0)
+    return d.getTime()
+  }, [])
+  const todayEnd = useMemo(() => todayStart + 86_400_000, [todayStart])
+
+  function urgencyFor(dueIso: string | undefined | null): WorklistUrgency {
+    if (!dueIso) return 'soon'
+    const due = Date.parse(dueIso)
+    if (!Number.isFinite(due)) return 'soon'
+    if (due < todayStart) return 'overdue'
+    if (due < todayEnd) return 'due_now'
+    return 'soon'
+  }
+
+  const dutyItems: WorklistItem[] = useMemo(() => {
+    if (!duties || duties.length === 0) return []
+    return duties.map((duty) => {
+      const ownerId = duty.userId // account owner who created the duty
+      const patientId = duty.forPatientId || ''
+      const patientName = patientId
+        ? patientNamesById.get(patientId) || 'a patient'
+        : ''
+      // Title leads with the action. Tagging WHICH patient when set lets
+      // the caregiver scan duty cards across households without opening
+      // each one.
+      const title = patientName ? `${duty.name} — ${patientName}` : duty.name
       return {
-        id: makeItemId('check_in', ownerId, patientId),
-        kind: 'check_in' as const,
-        urgency: 'soon' as const,
+        id: makeItemId('duty', ownerId, patientId || duty.id, duty.id),
+        kind: 'duty' as const,
+        urgency: urgencyFor(duty.nextDueDate),
         ownerId,
         ownerName: ownerNames[ownerId] || 'Family',
         patientId,
         patientName,
-        title: `Check in on ${patientName}`,
-        dueAt: null,
-        href: `/patients/${patientId}`,
+        title,
+        dueAt: duty.nextDueDate || null,
+        // No deep-link for an individual duty yet — route to the
+        // owner's Household Duties tab for now. Deep-link is a small
+        // follow-up.
+        href: '/family/dashboard?tab=duties',
       }
     })
-  }, [profile, ownerPatients, ownerNames, patientNamesById])
+  }, [duties, ownerNames, patientNamesById, todayStart, todayEnd])
+
+  // Households that already have duty items — we skip emitting check_in
+  // stubs for them so the caregiver sees the REAL work, not placeholder
+  // "Check in" cards alongside it. Households with NO duties still get
+  // check_ins (a navigation anchor for the caregiver to open a patient).
+  const ownersWithDuties = useMemo(() => {
+    const s = new Set<string>()
+    for (const item of dutyItems) s.add(item.ownerId)
+    return s
+  }, [dutyItems])
+
+  const checkInItems: WorklistItem[] = useMemo(() => {
+    if (!profile) return []
+    return ownerPatients
+      .filter(({ ownerId }) => !ownersWithDuties.has(ownerId))
+      .map(({ ownerId, patientId }) => {
+        const patientName = patientNamesById.get(patientId) || 'this patient'
+        return {
+          id: makeItemId('check_in', ownerId, patientId),
+          kind: 'check_in' as const,
+          urgency: 'soon' as const,
+          ownerId,
+          ownerName: ownerNames[ownerId] || 'Family',
+          patientId,
+          patientName,
+          title: `Check in on ${patientName}`,
+          dueAt: null,
+          href: `/patients/${patientId}`,
+        }
+      })
+  }, [profile, ownerPatients, ownerNames, patientNamesById, ownersWithDuties])
+
+  // Duties first, then check_ins for households without any duties.
+  // Within each kind, preserve the source's natural order (duty list
+  // already sorted by the endpoint; check_ins follow ownerPatients order).
+  const items = useMemo(() => [...dutyItems, ...checkInItems], [dutyItems, checkInItems])
 
   return {
     items,
-    loading: profileLoading || namesLoading || patientsLoading,
+    loading: profileLoading || namesLoading || patientsLoading || dutiesLoading,
   }
 }
