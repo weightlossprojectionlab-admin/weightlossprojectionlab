@@ -37,6 +37,37 @@ function mergePermissions(
   return out
 }
 
+/**
+ * Collapse a caregiverOf array so that entries sharing accountOwnerId are
+ * merged into a single entry per owner. Same union/OR semantics as the
+ * write-time upserts in S2 — kept here so the live UI merge, S2 upserts,
+ * and the S4 migration script can all share one definition.
+ *
+ * Order is preserved: the first occurrence of each accountOwnerId keeps
+ * its position; subsequent occurrences fold into that slot.
+ */
+export function mergeCaregiverContexts(
+  entries: CaregiverContextInput[] | undefined | null,
+): CaregiverContextInput[] {
+  if (!entries || entries.length === 0) return []
+  const byOwner = new Map<string, CaregiverContextInput>()
+  for (const ctx of entries) {
+    if (!ctx?.accountOwnerId) continue
+    const existing = byOwner.get(ctx.accountOwnerId)
+    if (!existing) {
+      byOwner.set(ctx.accountOwnerId, { ...ctx })
+      continue
+    }
+    byOwner.set(ctx.accountOwnerId, {
+      ...existing,
+      ...ctx,
+      patientsAccess: unionArrays(existing.patientsAccess, ctx.patientsAccess),
+      permissions: mergePermissions(existing.permissions, ctx.permissions),
+    })
+  }
+  return Array.from(byOwner.values())
+}
+
 export interface CaregiverContextInput {
   accountOwnerId: string
   accountOwnerName: string
