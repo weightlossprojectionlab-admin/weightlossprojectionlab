@@ -5,14 +5,14 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { usePatients } from '@/hooks/usePatients'
 import { PatientCard } from '@/components/patients/PatientCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
+import OwnerOnlyGuard from '@/components/auth/OwnerOnlyGuard'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { useSubscription } from '@/hooks/useSubscription'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
@@ -40,13 +40,14 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { useVitals } from '@/hooks/useVitals'
 import { VitalSign } from '@/types/medical'
 import { useVitalSchedules } from '@/hooks/useVitalSchedules'
-import { isCaregiverOnly } from '@/lib/user-role'
 import toast from 'react-hot-toast'
 
 export default function PatientsPage() {
   return (
     <AuthGuard>
-      <PatientsContent />
+      <OwnerOnlyGuard>
+        <PatientsContent />
+      </OwnerOnlyGuard>
     </AuthGuard>
   )
 }
@@ -82,28 +83,6 @@ function PatientsContent() {
   const { subscription, isAdmin } = useSubscription()
   const { current, max, canAdd, percentage } = usePatientLimit(safePatients.length)
   const { profile: userProfile } = useUserProfile()
-  const router = useRouter()
-
-  // Caregiver-only users have no business on the family-admin /patients
-  // surface — no plan cap, no upgrade CTA, no Family Admin banner. Bounce
-  // them to their caregiver dashboard. Predicate is centralized in
-  // lib/user-role.ts so this stays in lockstep with the auth router.
-  useEffect(() => {
-    console.log('[PatientsPage caregiver-check]', {
-      hasProfile: !!userProfile,
-      userMode: (userProfile as any)?.preferences?.userMode,
-      caregiverOfLen: (userProfile as any)?.caregiverOf?.length ?? 0,
-      onboardingCompleted: (userProfile as any)?.profile?.onboardingCompleted,
-      isCaregiverOnly: userProfile ? isCaregiverOnly(userProfile as any) : null,
-      firstOwner: (userProfile as any)?.caregiverOf?.[0]?.accountOwnerId,
-    })
-    if (!userProfile) return
-    if (!isCaregiverOnly(userProfile as any)) return
-    const firstOwner = (userProfile as any).caregiverOf?.[0]?.accountOwnerId
-    if (!firstOwner) return
-    logger.info('[PatientsPage] Caregiver-only user — redirecting to caregiver dashboard', { firstOwner })
-    router.replace(`/caregiver/${firstOwner}`)
-  }, [userProfile, router])
 
   // Load vitals for the selected patient (for quick view modal)
   const { vitals, loading: vitalsLoading, refetch: refetchVitals } = useVitals({
