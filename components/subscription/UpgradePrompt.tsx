@@ -10,6 +10,8 @@
 import { useState } from 'react'
 import { SubscriptionPlan } from '@/types'
 import { UpgradeModal } from './UpgradeModal'
+import { useUserProfile } from '@/hooks/useUserProfile'
+import { isCaregiverOnly } from '@/lib/user-role'
 
 interface UpgradePromptProps {
   /** Feature that requires upgrade */
@@ -44,6 +46,17 @@ export function UpgradePrompt({
   variant = 'card'
 }: UpgradePromptProps) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const { profile: userProfile } = useUserProfile()
+
+  // Semantic intent: don't tell a caregiver to upgrade. A caregiver-only
+  // user is operating on someone else's household — they have no plan to
+  // upgrade for THIS purpose, and the feature gate (when it matters) is
+  // the household OWNER's subscription. Hide the prompt entirely so the
+  // surface doesn't mislead the caregiver into thinking they can act.
+  // Server-side feature gating remains authoritative; this is UI cleanup.
+  if (userProfile && isCaregiverOnly(userProfile as any)) {
+    return null
+  }
 
   const defaultMessage = message || `Upgrade your plan to unlock ${featureName || feature}`
 
