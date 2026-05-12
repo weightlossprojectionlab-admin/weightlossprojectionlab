@@ -1,19 +1,23 @@
 /**
- * Caregiver Shift View (P0 placeholder)
+ * Caregiver Shift View
  *
- * Semantic caregiver dashboard: worklist on top, vertical workspaces below,
- * handoff log as cross-cutting spine. Built phased behind CAREGIVER_SHIFT_VIEW.
+ * Semantic caregiver dashboard: a flat worklist of what's due across
+ * every household the caregiver helps, with a handoff-log spine landing
+ * in P3–P4. Built phased behind CAREGIVER_SHIFT_VIEW.
  *
- * P0: placeholder + back link. P1 wires useCaregiverWorklist. P2 renders worklist.
+ * The [accountOwnerId] URL segment is currently a context anchor for
+ * coming-from-which-owner navigation — the worklist itself spans ALL
+ * owners the caregiver has access to (multi-household by design).
  */
 
 'use client'
 
-import { use } from 'react'
+import { use, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { isFeatureEnabled } from '@/lib/featureFlags'
+import { useCaregiverWorklist, type WorklistItem } from '@/hooks/useCaregiverWorklist'
 
 interface CaregiverShiftPageProps {
   params: Promise<{
@@ -32,6 +36,26 @@ export default function CaregiverShiftPage({ params }: CaregiverShiftPageProps) 
 function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
   const router = useRouter()
   const { accountOwnerId } = use(params)
+  const { items, loading } = useCaregiverWorklist()
+
+  // Group worklist items by owner so the UI can render one section per
+  // household. Stable order: first occurrence in `items` wins.
+  const groups = useMemo(() => {
+    const byOwner = new Map<string, { ownerId: string; ownerName: string; items: WorklistItem[] }>()
+    for (const item of items) {
+      const existing = byOwner.get(item.ownerId)
+      if (!existing) {
+        byOwner.set(item.ownerId, {
+          ownerId: item.ownerId,
+          ownerName: item.ownerName,
+          items: [item],
+        })
+      } else {
+        existing.items.push(item)
+      }
+    }
+    return Array.from(byOwner.values())
+  }, [items])
 
   if (!isFeatureEnabled('CAREGIVER_SHIFT_VIEW')) {
     return (
@@ -61,16 +85,63 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
 
       <PageHeader
         title="Your shift"
-        subtitle="What's due in your window — worklist coming in the next phase."
+        subtitle="What's due across every household you help."
       />
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="bg-card rounded-lg border-2 border-border p-8 text-center">
-          <h2 className="text-lg font-semibold text-foreground mb-2">Worklist arrives next</h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            P1 wires the &quot;what&apos;s due in my window&quot; predicate. P2 renders it here.
-            Handoff log spine lands in P3–P4.
-          </p>
+      <main className="container mx-auto px-4 py-8" data-testid="shift-worklist">
+        {loading ? (
+          <div className="bg-card rounded-lg border-2 border-border p-8 text-center">
+            <p className="text-sm text-muted-foreground">Loading your shift…</p>
+          </div>
+        ) : groups.length === 0 ? (
+          <div className="bg-card rounded-lg border-2 border-border p-8 text-center">
+            <h2 className="text-lg font-semibold text-foreground mb-2">All clear</h2>
+            <p className="text-sm text-muted-foreground">
+              No households or patients on your access list right now. When someone invites
+              you to caregive, their household appears here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-8">
+            {groups.map((group) => (
+              <section key={group.ownerId} data-testid={`shift-group-${group.ownerId}`}>
+                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+                  {group.ownerName}&apos;s Family
+                </h2>
+                <ul className="space-y-2">
+                  {group.items.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        onClick={() => router.push(item.href)}
+                        data-testid={`shift-item-${item.id}`}
+                        className="w-full text-left bg-card rounded-lg border-2 border-border p-4 hover:border-primary transition-colors flex items-center justify-between gap-3"
+                      >
+                        <div>
+                          <p className="font-medium text-foreground">{item.title}</p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {item.kind.replace(/_/g, ' ')}
+                            {item.urgency !== 'soon' ? ` · ${item.urgency.replace(/_/g, ' ')}` : ''}
+                          </p>
+                        </div>
+                        <svg
+                          className="w-5 h-5 text-muted-foreground flex-shrink-0"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-10 text-center">
           <button
             type="button"
             onClick={() => router.push(`/caregiver/${accountOwnerId}`)}
