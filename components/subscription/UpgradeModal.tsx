@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { SubscriptionPlan, BillingInterval, SUBSCRIPTION_PRICING, SEAT_LIMITS, EXTERNAL_CAREGIVER_LIMITS } from '@/types'
 import { createCheckoutSession } from '@/lib/stripe-client'
 import { useSubscription } from '@/hooks/useSubscription'
+import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
 import { getPlanRelationship } from '@/lib/subscription-utils'
 import toast from 'react-hot-toast'
 
@@ -31,12 +32,18 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const [billingInterval, setBillingInterval] = useState<BillingInterval>(currentBillingInterval)
   const [loading, setLoading] = useState<string | null>(null) // Track which plan is loading
+  // Defense in depth — UpgradePrompt/FeatureLockedState already hide
+  // the buttons that open this modal for caregivers, but a direct call
+  // path (e.g. menu link) could still surface it. Refuse to render.
+  const caregiverOnly = useIsCaregiverOnly()
   // Live subscription state — the canonical source of truth for the
   // user-to-plan relationship. The `currentPlan` prop is a display
   // hint, not a gate; using the hook here keeps the gate consistent
   // with /pricing without requiring every caller to thread status
   // through as a prop.
   const { subscription } = useSubscription()
+
+  if (caregiverOnly) return null
 
   const handleUpgrade = async (planId: SubscriptionPlan) => {
     // Only block when the user is actively subscribed to this plan.

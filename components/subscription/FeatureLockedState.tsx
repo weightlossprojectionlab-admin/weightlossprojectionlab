@@ -6,8 +6,7 @@
 
 'use client'
 
-import { useUserProfile } from '@/hooks/useUserProfile'
-import { isCaregiverOnly } from '@/lib/user-role'
+import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
 
 interface FeatureLockedStateProps {
   feature: string
@@ -20,13 +19,8 @@ interface FeatureLockedStateProps {
 }
 
 export function FeatureLockedState({ feature, requiredUpgrade, onUpgrade }: FeatureLockedStateProps) {
-  // Same caregiver-mode suppression as UpgradePrompt: a caregiver-only
-  // user has no plan to upgrade for this purpose. Don't render the
-  // locked-state UI to them — server-side gates remain authoritative.
-  const { profile: userProfile } = useUserProfile()
-  if (userProfile && isCaregiverOnly(userProfile as any)) {
-    return null
-  }
+  // Caregiver-only viewers see no subscription UI. Hook in hooks/useIsCaregiverOnly.
+  if (useIsCaregiverOnly()) return null
 
   // Action label names the actual upgrade rather than the generic
   // "Unlock Feature". The CTA verb varies because the action does:
