@@ -24,6 +24,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0'
 
 import { initializeApp, cert } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
+import { getFirestore } from 'firebase-admin/firestore'
 import * as path from 'path'
 import * as fs from 'fs'
 import * as dotenv from 'dotenv'
@@ -44,6 +45,7 @@ function findServiceAccountPath(): string {
 
 initializeApp({ credential: cert(require(findServiceAccountPath())) })
 const auth = getAuth()
+const db = getFirestore()
 
 const BASE_URL = process.env.E2E_BASE_URL || 'https://localhost:3003'
 const TEST_EMAIL = process.env.E2E_TEST_USER_EMAIL
@@ -175,6 +177,106 @@ async function main() {
     expect(r.status).toBe(403)
   })
 
+  // ── /api/me/duties — real-world fixture: create 4 duties around the
+  //    test user, hit the endpoint, assert which ones surface. ──────────
+  const stamp = Date.now()
+  const testHouseholdId = `__test_household_duties_${stamp}`
+  const strangerUid = `__test_stranger_${stamp}`
+  const dutyDocs = {
+    mine_active_pending: `__test_duty_mine_active_pending_${stamp}`,
+    mine_active_completed: `__test_duty_mine_active_completed_${stamp}`,
+    mine_inactive: `__test_duty_mine_inactive_${stamp}`,
+    not_mine: `__test_duty_not_mine_${stamp}`,
+  }
+
+  const baseDuty = {
+    householdId: testHouseholdId,
+    userId: ownerUserId, // account owner who created it = test user
+    category: 'medication',
+    name: '',
+    isCustom: true,
+    assignedBy: ownerUserId,
+    assignedAt: new Date().toISOString(),
+    frequency: 'daily',
+    priority: 'medium',
+    completionCount: 0,
+    skipCount: 0,
+    notifyOnCompletion: true,
+    notifyOnOverdue: true,
+    reminderEnabled: false,
+    createdAt: new Date().toISOString(),
+    createdBy: ownerUserId,
+    lastModified: new Date().toISOString(),
+  }
+
+  // Seed fixtures before the assertions run.
+  await Promise.all([
+    db.collection('household_duties').doc(dutyDocs.mine_active_pending).set({
+      ...baseDuty,
+      name: 'TEST: Should appear in worklist',
+      assignedTo: [ownerUserId],
+      status: 'pending',
+      isActive: true,
+      nextDueDate: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    }),
+    db.collection('household_duties').doc(dutyDocs.mine_active_completed).set({
+      ...baseDuty,
+      name: 'TEST: Should NOT appear (completed)',
+      assignedTo: [ownerUserId],
+      status: 'completed',
+      isActive: true,
+    }),
+    db.collection('household_duties').doc(dutyDocs.mine_inactive).set({
+      ...baseDuty,
+      name: 'TEST: Should NOT appear (inactive)',
+      assignedTo: [ownerUserId],
+      status: 'pending',
+      isActive: false,
+    }),
+    db.collection('household_duties').doc(dutyDocs.not_mine).set({
+      ...baseDuty,
+      name: 'TEST: Should NOT appear (assigned to stranger)',
+      assignedTo: [strangerUid],
+      status: 'pending',
+      isActive: true,
+    }),
+  ])
+
+  test('me/duties: returns 200 with an items array', async () => {
+    const r = await callApi(idToken, '/api/me/duties')
+    expect(r.status).toBe(200)
+    expect(Array.isArray(r.body?.items)).toBe(true)
+  })
+
+  test('me/duties: surfaces a duty assigned to caller that is active + pending', async () => {
+    const r = await callApi(idToken, '/api/me/duties')
+    const ids = (r.body?.items as any[]).map((d) => d.id)
+    expect(ids.includes(dutyDocs.mine_active_pending)).toBe(true)
+  })
+
+  test('me/duties: does NOT surface completed duties even when assigned to caller', async () => {
+    const r = await callApi(idToken, '/api/me/duties')
+    const ids = (r.body?.items as any[]).map((d) => d.id)
+    expect(ids.includes(dutyDocs.mine_active_completed)).toBe(false)
+  })
+
+  test('me/duties: does NOT surface inactive duties even when assigned to caller', async () => {
+    const r = await callApi(idToken, '/api/me/duties')
+    const ids = (r.body?.items as any[]).map((d) => d.id)
+    expect(ids.includes(dutyDocs.mine_inactive)).toBe(false)
+  })
+
+  test('me/duties: does NOT leak duties assigned to other users', async () => {
+    const r = await callApi(idToken, '/api/me/duties')
+    const ids = (r.body?.items as any[]).map((d) => d.id)
+    expect(ids.includes(dutyDocs.not_mine)).toBe(false)
+  })
+
+  test('me/duties: 401 when no auth token', async () => {
+    const res = await fetch(`${BASE_URL}/api/me/duties`)
+    expect(res.status).toBe(401)
+  })
+
   // ── Run ─────────────────────────────────────────────────────────────
   let passed = 0
   let failed = 0
@@ -191,6 +293,14 @@ async function main() {
   }
 
   console.log(`\n${passed} passed, ${failed} failed`)
+
+  // Cleanup fixtures — best-effort, runs whether assertions passed or not.
+  await Promise.all(
+    Object.values(dutyDocs).map((id) =>
+      db.collection('household_duties').doc(id).delete().catch(() => {}),
+    ),
+  )
+
   if (failed > 0) process.exit(1)
 }
 
