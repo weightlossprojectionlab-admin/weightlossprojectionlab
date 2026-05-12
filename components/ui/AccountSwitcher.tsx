@@ -59,18 +59,34 @@ export function AccountSwitcher() {
     loadOwnDoc()
   }, [user])
 
-  // Step 2: resolve each owner's *live* display name from THEIR user doc.
+  // Step 2: dedupe caregiverOf by accountOwnerId. Semantic intent — an entry
+  // in the switcher represents an OWNER SCOPE, not a caregiver relationship.
+  // Duplicates can occur from re-accepting an invite or from backfill scripts,
+  // and they trip React's "two children with the same key" warning. One owner,
+  // one row. First entry wins (good enough until we need to merge permissions).
+  const uniqueCaregiverEntries = useMemo(() => {
+    const seen = new Set<string>()
+    const out: CaregiverContext[] = []
+    for (const ctx of caregiverEntries) {
+      if (seen.has(ctx.accountOwnerId)) continue
+      seen.add(ctx.accountOwnerId)
+      out.push(ctx)
+    }
+    return out
+  }, [caregiverEntries])
+
+  // Step 3: resolve each owner's *live* display name from THEIR user doc.
   // The accountOwnerName field on caregiverOf is denormalized and can be
   // stale ("Account Owner" is the giveaway). Source of truth lives on the
-  // owner's user doc; useOwnerNames reads it there.
+  // owner's user doc; useOwnerNames reads it there via a server endpoint.
   const caregiverOwnerIds = useMemo(
-    () => caregiverEntries.map((c) => c.accountOwnerId),
-    [caregiverEntries],
+    () => uniqueCaregiverEntries.map((c) => c.accountOwnerId),
+    [uniqueCaregiverEntries],
   )
   const { names: ownerNames } = useOwnerNames(caregiverOwnerIds)
 
-  // Step 3: assemble the final contexts list — own account first (if any),
-  // then one entry per caregiver relationship using the live owner name.
+  // Step 4: assemble the final contexts list — own account first (if any),
+  // then one entry per unique owner using the live owner name.
   const contexts: AccountContext[] = useMemo(() => {
     const list: AccountContext[] = []
     if (hasOwnAccount && user) {
@@ -81,7 +97,7 @@ export function AccountSwitcher() {
         userMode: ownUserMode,
       })
     }
-    caregiverEntries.forEach((ctx) => {
+    uniqueCaregiverEntries.forEach((ctx) => {
       const liveName = ownerNames[ctx.accountOwnerId] || ctx.accountOwnerName || 'Family'
       list.push({
         type: 'caregiver',
@@ -90,9 +106,9 @@ export function AccountSwitcher() {
       })
     })
     return list
-  }, [hasOwnAccount, ownUserMode, caregiverEntries, ownerNames, user])
+  }, [hasOwnAccount, ownUserMode, uniqueCaregiverEntries, ownerNames, user])
 
-  // Step 4: pick the active context from the URL — caregiver path picks
+  // Step 5: pick the active context from the URL — caregiver path picks
   // that owner, anything else falls back to the own context.
   const currentContext: AccountContext | null = useMemo(() => {
     if (contexts.length === 0) return null
