@@ -29,7 +29,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { adminAuth, adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 
 interface RouteParams {
@@ -65,23 +65,44 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    // 3. Read the owner doc, compose display name from the best available field
+    // 3. Try both sources of truth: Firestore first (preferred — that's
+    //    where the user actively edits their profile), then Firebase Auth
+    //    (where signup providers — Google, email — populated displayName
+    //    and email). Some legacy or partially-onboarded owners have the
+    //    Auth record but no Firestore name fields; falling through ensures
+    //    we surface SOMETHING real instead of the "Family" sentinel.
     const ownerDoc = await adminDb.collection('users').doc(ownerId).get()
-    if (!ownerDoc.exists) {
+    const firestoreData = ownerDoc.exists ? (ownerDoc.data() || {}) : null
+
+    let authData: { displayName?: string | null; email?: string | null } | null = null
+    try {
+      const authUser = await adminAuth.getUser(ownerId)
+      authData = { displayName: authUser.displayName, email: authUser.email }
+    } catch {
+      // No Auth record for this UID. That's OK if Firestore has data;
+      // if neither source has anything we 404 below.
+    }
+
+    if (!firestoreData && !authData) {
       return NextResponse.json({ error: 'Owner not found' }, { status: 404 })
     }
-    const data = ownerDoc.data() || {}
 
     const composedFromParts =
-      data.firstName && data.lastName
-        ? `${data.firstName} ${data.lastName}`
-        : data.firstName || data.lastName || ''
-    const fromEmail = typeof data.email === 'string' ? data.email.split('@')[0] : ''
+      firestoreData?.firstName && firestoreData?.lastName
+        ? `${firestoreData.firstName} ${firestoreData.lastName}`
+        : firestoreData?.firstName || firestoreData?.lastName || ''
+    const firestoreFromEmail =
+      typeof firestoreData?.email === 'string' ? firestoreData.email.split('@')[0] : ''
+    const authFromEmail =
+      typeof authData?.email === 'string' ? authData.email.split('@')[0] : ''
+
     const displayName =
-      data.name ||
-      data.displayName ||
+      firestoreData?.name ||
+      firestoreData?.displayName ||
       composedFromParts ||
-      fromEmail ||
+      firestoreFromEmail ||
+      authData?.displayName ||
+      authFromEmail ||
       'Family'
 
     return NextResponse.json({ id: ownerId, displayName })
