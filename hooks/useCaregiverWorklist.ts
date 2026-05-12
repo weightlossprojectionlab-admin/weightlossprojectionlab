@@ -26,6 +26,7 @@
 import { useMemo } from 'react'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useOwnerNames } from '@/hooks/useOwnerNames'
+import { usePatients } from '@/hooks/usePatients'
 
 export type WorklistUrgency = 'overdue' | 'due_now' | 'soon'
 
@@ -47,6 +48,8 @@ export interface WorklistItem {
   ownerId: string
   ownerName: string
   patientId: string
+  /** Patient's display name; "this patient" when the name hasn't loaded yet. */
+  patientName: string
 
   /** Headline copy the UI renders. Concrete and action-shaped. */
   title: string
@@ -72,6 +75,18 @@ function makeItemId(kind: WorklistKind, ownerId: string, patientId: string, suff
 
 export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
   const { profile, loading: profileLoading } = useUserProfile()
+  // usePatients returns everything the caller can see — own family +
+  // caregiver-accessed patients. We use it as the canonical name source
+  // so every worklist surface renders the same name a patient page does.
+  const { patients, loading: patientsLoading } = usePatients()
+
+  const patientNamesById = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const p of patients || []) {
+      if (p?.id && p?.name) m.set(p.id, p.name)
+    }
+    return m
+  }, [patients])
 
   // Pull every (ownerId, patientId) pair the caregiver has access to.
   // caregiverOf entries are the post-S4 merged shape: one entry per
@@ -105,21 +120,25 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
   // consumer.
   const items: WorklistItem[] = useMemo(() => {
     if (!profile) return []
-    return ownerPatients.map(({ ownerId, patientId }) => ({
-      id: makeItemId('check_in', ownerId, patientId),
-      kind: 'check_in' as const,
-      urgency: 'soon' as const,
-      ownerId,
-      ownerName: ownerNames[ownerId] || 'Family',
-      patientId,
-      title: 'Check in',
-      dueAt: null,
-      href: `/patients/${patientId}`,
-    }))
-  }, [profile, ownerPatients, ownerNames])
+    return ownerPatients.map(({ ownerId, patientId }) => {
+      const patientName = patientNamesById.get(patientId) || 'this patient'
+      return {
+        id: makeItemId('check_in', ownerId, patientId),
+        kind: 'check_in' as const,
+        urgency: 'soon' as const,
+        ownerId,
+        ownerName: ownerNames[ownerId] || 'Family',
+        patientId,
+        patientName,
+        title: `Check in on ${patientName}`,
+        dueAt: null,
+        href: `/patients/${patientId}`,
+      }
+    })
+  }, [profile, ownerPatients, ownerNames, patientNamesById])
 
   return {
     items,
-    loading: profileLoading || namesLoading,
+    loading: profileLoading || namesLoading || patientsLoading,
   }
 }
