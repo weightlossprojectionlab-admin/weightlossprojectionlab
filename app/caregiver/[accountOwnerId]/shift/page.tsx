@@ -105,36 +105,62 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
           <div className="space-y-8">
             {groups.map((group) => (
               <section key={group.ownerId} data-testid={`shift-group-${group.ownerId}`}>
-                <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                  {group.ownerName}&apos;s Family
-                </h2>
+                <div className="flex items-baseline justify-between mb-3">
+                  <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                    {group.ownerName}&apos;s Family
+                  </h2>
+                  <span className="text-xs text-muted-foreground">
+                    {group.items.length} {group.items.length === 1 ? 'patient' : 'patients'}
+                  </span>
+                </div>
                 <ul className="space-y-2">
-                  {group.items.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        type="button"
-                        onClick={() => router.push(item.href)}
-                        data-testid={`shift-item-${item.id}`}
-                        className="w-full text-left bg-card rounded-lg border-2 border-border p-4 hover:border-primary transition-colors flex items-center justify-between gap-3"
-                      >
-                        <div>
-                          <p className="font-medium text-foreground">{item.title}</p>
-                          <p className="text-xs text-muted-foreground capitalize">
-                            {item.kind.replace(/_/g, ' ')}
-                            {item.urgency !== 'soon' ? ` · ${item.urgency.replace(/_/g, ' ')}` : ''}
-                          </p>
-                        </div>
-                        <svg
-                          className="w-5 h-5 text-muted-foreground flex-shrink-0"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
+                  {group.items.map((item) => {
+                    const initial = (item.patientName?.[0] || '?').toUpperCase()
+                    const actionLabel = item.kind.replace(/_/g, ' ')
+                    const urgencyLabel =
+                      item.urgency === 'overdue'
+                        ? 'Overdue'
+                        : item.urgency === 'due_now'
+                          ? 'Due now'
+                          : null
+                    const urgencyClass =
+                      item.urgency === 'overdue'
+                        ? 'bg-error-light text-error-dark'
+                        : item.urgency === 'due_now'
+                          ? 'bg-warning-light text-warning-dark'
+                          : null
+                    return (
+                      <li key={item.id}>
+                        <button
+                          type="button"
+                          onClick={() => router.push(item.href)}
+                          data-testid={`shift-item-${item.id}`}
+                          className="w-full text-left bg-card rounded-lg border-2 border-border p-4 hover:border-primary transition-colors flex items-center gap-4"
                         >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    </li>
-                  ))}
+                          <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center flex-shrink-0">
+                            <span className="text-primary font-semibold text-lg">{initial}</span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground truncate">{item.patientName}</p>
+                            <p className="text-xs text-muted-foreground capitalize">{actionLabel}</p>
+                          </div>
+                          {urgencyLabel && urgencyClass && (
+                            <span className={`text-xs font-medium px-2 py-1 rounded ${urgencyClass} flex-shrink-0`}>
+                              {urgencyLabel}
+                            </span>
+                          )}
+                          <svg
+                            className="w-5 h-5 text-muted-foreground flex-shrink-0"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                      </li>
+                    )
+                  })}
                 </ul>
               </section>
             ))}
