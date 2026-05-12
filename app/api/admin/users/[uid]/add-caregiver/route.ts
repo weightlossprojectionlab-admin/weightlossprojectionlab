@@ -11,6 +11,11 @@ import { logAdminAction } from '@/lib/admin/audit'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 import { PERMISSION_PRESETS } from '@/lib/family-permissions'
+import {
+  upsertCaregiverOf,
+  upsertFamilyMember,
+  upsertPatientFamilyMember,
+} from '@/lib/caregiver-relationship'
 
 export async function POST(
   request: NextRequest,
@@ -114,52 +119,44 @@ export async function POST(
       addedByAdminEmail: adminEmail
     }
 
-    const memberRef = await adminDb
-      .collection('users')
-      .doc(accountOwnerId)
-      .collection('familyMembers')
-      .add(familyMemberData)
+    // 1. Idempotent upsert of the family-member record on the owner's doc.
+    // Re-running admin-add for the same caregiver email no longer creates
+    // duplicates — it extends the existing relationship instead.
+    const familyMemberId = await upsertFamilyMember(
+      accountOwnerId,
+      {
+        userId: caregiverUserId,
+        email: caregiverEmail,
+        name: caregiverName || caregiverEmail.split('@')[0],
+        permissions: fullPermissions,
+        patientsAccess: patientIds,
+      },
+      familyMemberData,
+    )
 
-    // 2. Create patient-level records
-    if (patientIds.length > 0) {
-      const batch = adminDb.batch()
-
-      for (const patientId of patientIds) {
-        const patientFamilyMemberRef = adminDb
-          .collection('users')
-          .doc(accountOwnerId)
-          .collection('patients')
-          .doc(patientId)
-          .collection('familyMembers')
-          .doc(memberRef.id)
-
-        batch.set(patientFamilyMemberRef, {
-          userId: caregiverUserId,
-          email: caregiverEmail,
-          name: caregiverName || caregiverEmail.split('@')[0],
-          relationship: 'family',
-          permissions: fullPermissions,
-          status: 'accepted',
-          addedAt: acceptedAt,
-          addedBy: accountOwnerId,
-          lastModified: acceptedAt,
-          addedByAdmin: true
-        })
-      }
-
-      await batch.commit()
+    // 2. Per-patient family-member docs — keyed off the (now stable)
+    // familyMemberId so subsequent calls merge into the same doc.
+    for (const patientId of patientIds) {
+      await upsertPatientFamilyMember(accountOwnerId, patientId, familyMemberId, {
+        userId: caregiverUserId,
+        email: caregiverEmail,
+        name: caregiverName || caregiverEmail.split('@')[0],
+        relationship: 'family',
+        permissions: fullPermissions,
+        status: 'accepted',
+        addedAt: acceptedAt,
+        addedBy: accountOwnerId,
+        lastModified: acceptedAt,
+        addedByAdmin: true,
+      })
     }
 
-    // 3. Add caregiverOf context to caregiver's profile
-    const caregiverUserRef = adminDb.collection('users').doc(caregiverUserId)
-    const caregiverDoc = await caregiverUserRef.get()
-    const caregiverData = caregiverDoc.data()
-
+    // 3. Add or extend caregiverOf entry on caregiver's profile.
     const ownerDoc = await adminDb.collection('users').doc(accountOwnerId).get()
     const ownerData = ownerDoc.data()
     const ownerName = ownerData?.name || ownerData?.displayName || ownerData?.email || 'Account Owner'
 
-    const caregiverContext = {
+    await upsertCaregiverOf(caregiverUserId, {
       accountOwnerId,
       accountOwnerName: ownerName,
       accountOwnerEmail: ownerData?.email || null,
@@ -168,13 +165,8 @@ export async function POST(
       permissions: fullPermissions,
       addedAt: acceptedAt,
       familyPlan: true,
-      addedByAdmin: true
-    }
-
-    const existingCaregiverOf = caregiverData?.caregiverOf || []
-    await caregiverUserRef.set({
-      caregiverOf: [...existingCaregiverOf, caregiverContext]
-    }, { merge: true })
+      addedByAdmin: true,
+    })
 
     // Log admin action
     await logAdminAction({
@@ -196,7 +188,7 @@ export async function POST(
       success: true,
       message: 'Caregiver added successfully',
       data: {
-        familyMemberId: memberRef.id,
+        familyMemberId,
         caregiverUserId,
         accountOwnerId,
         patientsCount: patientIds.length
