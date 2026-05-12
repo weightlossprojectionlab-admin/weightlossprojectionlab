@@ -18,6 +18,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { isFeatureEnabled } from '@/lib/featureFlags'
 import { useCaregiverWorklist, type WorklistItem } from '@/hooks/useCaregiverWorklist'
+import { HandoffNotes } from '@/components/caregiver/HandoffNotes'
 
 interface CaregiverShiftPageProps {
   params: Promise<{
@@ -162,6 +163,8 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
                     )
                   })}
                 </ul>
+                {/* Per-household handoff log: composer + recent feed. */}
+                <HandoffNotes ownerId={group.ownerId} ownerName={group.ownerName} />
               </section>
             ))}
           </div>
