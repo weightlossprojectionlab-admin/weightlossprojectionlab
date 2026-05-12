@@ -59,20 +59,48 @@ export function AccountSwitcher() {
     loadOwnDoc()
   }, [user])
 
-  // Step 2: dedupe caregiverOf by accountOwnerId. Semantic intent — an entry
-  // in the switcher represents an OWNER SCOPE, not a caregiver relationship.
-  // Duplicates can occur from re-accepting an invite or from backfill scripts,
-  // and they trip React's "two children with the same key" warning. One owner,
-  // one row. First entry wins (good enough until we need to merge permissions).
+  // Step 2: MERGE caregiverOf entries by accountOwnerId. Semantic intent — a
+  // switcher row represents an OWNER SCOPE, not a single invite. Real data
+  // has multiple entries per owner (one per invite / per admin-add) and each
+  // grants a DIFFERENT slice of patients with its OWN permissions. "First
+  // wins" silently drops patient access and granted perms; merge keeps them.
+  //
+  //   patientsAccess  → union (Set of patientIds across entries)
+  //   permissions     → OR'd booleans (granted in ANY entry = granted here)
+  //   role / etc.     → first entry's value (all 'caregiver' in practice)
+  //
+  // NOTE: there is a deeper bug — admin-added and invite-added entries use
+  // DIFFERENT permission key schemas (viewRecords vs viewMedicalRecords).
+  // This merge does NOT normalize the schema; the API check still sees the
+  // wrong names on admin-added entries. Tracked separately as a diagnose-
+  // and-plan task; this merge is the correct shape regardless.
   const uniqueCaregiverEntries = useMemo(() => {
-    const seen = new Set<string>()
-    const out: CaregiverContext[] = []
+    const byOwner = new Map<string, CaregiverContext>()
     for (const ctx of caregiverEntries) {
-      if (seen.has(ctx.accountOwnerId)) continue
-      seen.add(ctx.accountOwnerId)
-      out.push(ctx)
+      const existing = byOwner.get(ctx.accountOwnerId)
+      if (!existing) {
+        byOwner.set(ctx.accountOwnerId, { ...ctx })
+        continue
+      }
+      const patientsAccess = Array.from(
+        new Set([
+          ...((existing as any).patientsAccess || []),
+          ...((ctx as any).patientsAccess || []),
+        ]),
+      )
+      const mergedPerms: Record<string, boolean> = {
+        ...((existing as any).permissions || {}),
+      }
+      for (const [k, v] of Object.entries((ctx as any).permissions || {})) {
+        mergedPerms[k] = !!(mergedPerms[k] || v)
+      }
+      byOwner.set(ctx.accountOwnerId, {
+        ...existing,
+        patientsAccess,
+        permissions: mergedPerms,
+      } as any)
     }
-    return out
+    return Array.from(byOwner.values())
   }, [caregiverEntries])
 
   // Step 3: resolve each owner's *live* display name from THEIR user doc.
