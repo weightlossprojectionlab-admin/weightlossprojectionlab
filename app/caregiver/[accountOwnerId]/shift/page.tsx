@@ -81,18 +81,18 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
   return (
     <div className="min-h-screen bg-background">
       <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white py-2 px-4 text-center text-sm font-medium">
-        Beta — Shift View
+        Beta — Today
       </div>
 
       <PageHeader
-        title="Your shift"
+        title="Today"
         subtitle="What's due across every household you help."
       />
 
       <main className="container mx-auto px-4 py-8" data-testid="shift-worklist">
         {loading ? (
           <div className="bg-card rounded-lg border-2 border-border p-8 text-center">
-            <p className="text-sm text-muted-foreground">Loading your shift…</p>
+            <p className="text-sm text-muted-foreground">Loading today's care…</p>
           </div>
         ) : groups.length === 0 ? (
           <div className="bg-card rounded-lg border-2 border-border p-8 text-center">

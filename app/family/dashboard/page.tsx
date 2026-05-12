@@ -198,7 +198,7 @@ function FamilyDashboardContent() {
                 : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
             }`}
           >
-            📝 Handoff Notes
+            📝 Care Log
           </button>
         </div>
 

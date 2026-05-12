@@ -532,10 +532,10 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
           >
             <div>
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-                Try the new Shift View
+                Try the new Today view
               </p>
               <p className="text-xs text-amber-800 dark:text-amber-200">
-                Worklist of what&apos;s due in your window, with a handoff log. Beta.
+                What&apos;s due across your households, plus a shared care log. Beta.
               </p>
             </div>
             <svg className="w-5 h-5 text-amber-700 dark:text-amber-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">

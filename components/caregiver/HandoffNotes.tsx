@@ -1,24 +1,18 @@
 'use client'
 
 /**
- * HandoffNotes — per-household composer + recent feed for the shift view.
+ * HandoffNotes — per-household care-log composer + feed.
  *
- * Semantic intent: "what happened on my shift / what does the next person
- * need to know?" A caregiver leaves a short note; the next caregiver and
- * the household owner read the same ledger. One component per household
- * section on the shift view.
+ * Semantic intent: "what's happening with this household's care?" A
+ * shared, team-wide journal. Anyone with access to the household (owner,
+ * caregivers in parallel) reads the same ledger; the notification bell
+ * fan-out (P4.6) keeps everyone aware in real time.
  *
- * UX shape (minimal P4 cut):
- *   - Composer: textarea + Post button. Disabled when empty or while
- *     posting. Submit clears the field.
- *   - Feed: last N notes (default 5 shown; see component prop).
- *     Each item: author name, relative time, body.
- *
- * Future polish (deferred):
- *   - "Flag for owner" toggle (data layer ready in P3, UI not wired yet)
- *   - Per-patient tags
- *   - Edit / delete own notes
- *   - View-all link expanding the feed
+ * Naming note: the COMPONENT is named "HandoffNotes" for historical
+ * reasons (originated in shift-handoff thinking) but the visible UX is
+ * "Care log" — the team-wide journal model that fits family-style
+ * parallel caregiving by default. An opt-in "shift" mode that swaps
+ * back to handoff terminology is deferred.
  */
 
 import { useState } from 'react'
@@ -78,21 +72,21 @@ export function HandoffNotes({ ownerId, ownerName, visibleCount = 5 }: HandoffNo
       data-testid={`handoff-notes-${ownerId}`}
     >
       <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-sm font-semibold text-foreground">Handoff notes</h3>
+        <h3 className="text-sm font-semibold text-foreground">Care log</h3>
         <span className="text-xs text-muted-foreground">
-          {notes.length > 0 ? `${notes.length} recent` : 'no notes yet'}
+          {notes.length > 0 ? `${notes.length} recent` : 'no entries yet'}
         </span>
       </div>
 
       <div className="mb-4">
         <label htmlFor={`handoff-composer-${ownerId}`} className="sr-only">
-          Leave a note for {ownerName}&apos;s family
+          Add to {ownerName}&apos;s family care log
         </label>
         <textarea
           id={`handoff-composer-${ownerId}`}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder={`Leave a note for the next person caring for ${ownerName}'s family…`}
+          placeholder={`Share what's happening with ${ownerName}'s family care…`}
           maxLength={2000}
           rows={3}
           className="w-full px-3 py-2 text-sm border-2 border-border bg-background rounded-md focus:border-primary focus:outline-none resize-y"
@@ -109,7 +103,7 @@ export function HandoffNotes({ ownerId, ownerName, visibleCount = 5 }: HandoffNo
             className="px-3 py-1.5 text-sm font-medium rounded-md bg-primary text-white hover:bg-primary-hover disabled:opacity-50 disabled:cursor-not-allowed min-h-[36px]"
             data-testid={`handoff-composer-submit-${ownerId}`}
           >
-            {posting ? 'Posting…' : 'Post note'}
+            {posting ? 'Posting…' : 'Add to log'}
           </button>
         </div>
         {error && (
@@ -118,17 +112,17 @@ export function HandoffNotes({ ownerId, ownerName, visibleCount = 5 }: HandoffNo
       </div>
 
       {loading && notes.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Loading notes…</p>
+        <p className="text-xs text-muted-foreground">Loading care log…</p>
       ) : visible.length === 0 ? (
         <p className="text-xs text-muted-foreground italic">
-          No notes yet. The next caregiver will see what you write here.
+          No entries yet. Share what&apos;s happening — everyone on the care team will see it.
         </p>
       ) : (
         <ul className="space-y-2">
           {visible.map((note) => <NoteRow key={note.id} note={note} />)}
           {more > 0 && (
             <li className="text-xs text-muted-foreground text-center pt-1">
-              +{more} older note{more === 1 ? '' : 's'}
+              +{more} older {more === 1 ? 'entry' : 'entries'}
             </li>
           )}
         </ul>

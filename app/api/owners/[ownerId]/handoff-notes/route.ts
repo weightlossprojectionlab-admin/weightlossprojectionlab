@@ -220,15 +220,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           recordInAppNotification({
             userId: r.userId,
             type: 'handoff_note',
-            // Flag bumps priority for the owner only — caregivers see
-            // every note at normal priority.
+            // Flag bumps priority for the owner only — other care-team
+            // members get every entry at normal priority.
             priority: flaggedForOwner && r.isOwner ? 'high' : 'normal',
             title: r.isOwner && flaggedForOwner
-              ? `${auth.authorName} flagged a note for you`
-              : `${auth.authorName} left a handoff note`,
+              ? `${auth.authorName} flagged a care log entry for you`
+              : `${auth.authorName} added to the care log`,
             message: excerpt,
             actionUrl: r.isOwner ? '/family/dashboard?tab=notes' : `/caregiver/${ownerId}`,
-            actionLabel: 'Read note',
+            actionLabel: 'Read',
             metadata: baseMetadata,
             expiresInDays: 30,
           }).catch((err) => {
