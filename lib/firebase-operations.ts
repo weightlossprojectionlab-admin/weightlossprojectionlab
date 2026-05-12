@@ -432,6 +432,14 @@ export const userProfileOperations = {
     return makeAuthenticatedRequest('/api/user-profile')
   },
 
+  // Get an account owner's display name. Used by caregivers (via the
+  // useOwnerNames hook) to render the right name in the AccountSwitcher,
+  // shift view, handoff log, etc. The endpoint enforces that the caller
+  // has caregiver access to the owner.
+  async getOwnerDisplayName(ownerId: string) {
+    return makeAuthenticatedRequest(`/api/owners/${ownerId}/display-name`)
+  },
+
   // Update user profile (including onboarding data)
   async updateUserProfile(data: Partial<{
     profile?: Partial<UserProfile>

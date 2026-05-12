@@ -23,8 +23,7 @@
  * live updates — consumers won't have to change.
  */
 import { useEffect, useState } from 'react'
-import { doc, getDoc } from 'firebase/firestore'
-import { db } from '@/lib/firebase'
+import { userProfileOperations } from '@/lib/firebase-operations'
 
 export function useOwnerNames(ownerIds: string[]) {
   const [names, setNames] = useState<Record<string, string>>({})
@@ -47,11 +46,13 @@ export function useOwnerNames(ownerIds: string[]) {
     Promise.all(
       ownerIds.map(async (id) => {
         try {
-          const snap = await getDoc(doc(db, 'users', id))
-          const data = snap.data()
-          const name = data?.name || data?.displayName || 'Family'
+          // Server endpoint composes the display name from name / displayName /
+          // firstName+lastName / email and enforces caregiver-access auth.
+          const response = await userProfileOperations.getOwnerDisplayName(id)
+          const name = (response as any)?.displayName || 'Family'
           return [id, name] as const
-        } catch {
+        } catch (err) {
+          // Fail soft — UI still has something to render.
           return [id, 'Family'] as const
         }
       }),
