@@ -22,6 +22,7 @@ import { TransferOwnershipModal } from '@/components/family/TransferOwnershipMod
 import { HouseholdManager } from '@/components/households/HouseholdManager'
 import { DutyListView } from '@/components/household/DutyListView'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { HandoffNotes } from '@/components/caregiver/HandoffNotes'
 import { ROLE_LABELS } from '@/lib/family-roles'
 import type { FamilyMember, FamilyInvitation } from '@/types/medical'
 import type { CaregiverProfile } from '@/types/caregiver'
@@ -43,9 +44,9 @@ function FamilyDashboardContent() {
 
   // Check URL for tab parameter
   const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const initialTab = (searchParams?.get('tab') as 'members' | 'invitations' | 'access' | 'households' | 'duties') || 'members'
+  const initialTab = (searchParams?.get('tab') as 'members' | 'invitations' | 'access' | 'households' | 'duties' | 'notes') || 'members'
 
-  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access' | 'households' | 'duties'>(initialTab)
+  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access' | 'households' | 'duties' | 'notes'>(initialTab)
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [selectedHouseholdForDuties, setSelectedHouseholdForDuties] = useState<string | null>(null)
@@ -188,6 +189,16 @@ function FamilyDashboardContent() {
             }`}
           >
             🏠 Household Duties
+          </button>
+          <button
+            onClick={() => setActiveTab('notes')}
+            className={`px-4 py-3 font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === 'notes'
+                ? 'border-primary text-primary dark:text-purple-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
+            }`}
+          >
+            📝 Handoff Notes
           </button>
         </div>
 
@@ -504,6 +515,18 @@ function FamilyDashboardContent() {
                   </>
                 )}
               </div>
+            )}
+
+            {/* Handoff Notes Tab — owner reads (and writes) what caregivers
+                left for the household. Composer + feed share the same
+                component the caregiver-side shift view uses (P4); scope is
+                this owner's UID since this is THEIR household dashboard. */}
+            {activeTab === 'notes' && user && (
+              <HandoffNotes
+                ownerId={user.uid}
+                ownerName={user.displayName || user.email || 'your'}
+                visibleCount={50}
+              />
             )}
           </>
         )}
