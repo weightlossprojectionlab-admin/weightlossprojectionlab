@@ -10,6 +10,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
 import { isSuperAdmin } from '@/lib/admin/permissions'
 import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
+import { PERMISSION_PRESETS } from '@/lib/family-permissions'
 
 export async function POST(
   request: NextRequest,
@@ -64,21 +65,17 @@ export async function POST(
       }
     }
 
-    // Default full permissions if none provided
+    // Default full permissions if none provided.
+    // Canonical schema lives in lib/family-permissions.ts so admin-add
+    // writes the SAME shape as invite-accept. Previously this file
+    // hardcoded an old vocabulary (viewRecords / editRecords / viewVitals
+    // pairs) that the API permission checks no longer recognize — those
+    // entries silently failed authorization because the API looks for
+    // viewMedicalRecords / etc. Caller-supplied `permissions` still
+    // overrides the preset; partial overrides merge on top.
     const fullPermissions = {
-      viewRecords: true,
-      editRecords: true,
-      viewVitals: true,
-      editVitals: true,
-      viewMedications: true,
-      editMedications: true,
-      viewAppointments: true,
-      editAppointments: true,
-      viewDocuments: true,
-      uploadDocuments: true,
-      manageFamily: true,
-      viewBilling: true,
-      ...permissions // Override with provided permissions
+      ...PERMISSION_PRESETS.FULL_ACCESS,
+      ...permissions,
     }
 
     const acceptedAt = new Date().toISOString()
