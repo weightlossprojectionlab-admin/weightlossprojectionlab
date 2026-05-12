@@ -17,6 +17,7 @@ import { logger } from '@/lib/logger'
 import { User } from 'firebase/auth'
 import { userProfileOperations } from './firebase-operations'
 import { medicalOperations } from './medical-operations'
+import { isCaregiverOnly as detectCaregiverOnly } from './user-role'
 
 export type UserDestination =
   | { type: 'auth', reason?: string }
@@ -117,8 +118,10 @@ export async function determineUserDestination(
       caregiverOf: profile.caregiverOf?.length || 0
     })
 
-    // Step 3.5: Check if user is ONLY a caregiver (no personal account)
-    const isCaregiverOnly = !profile.profile?.onboardingCompleted && profile.caregiverOf && profile.caregiverOf.length > 0
+    // Step 3.5: Check if user is ONLY a caregiver (no personal account).
+    // Single source of truth lives in lib/user-role.ts so /patients,
+    // subscription-UI gates, and other consumers stay in sync.
+    const isCaregiverOnly = detectCaregiverOnly(profile)
 
     if (isCaregiverOnly) {
       // User is a caregiver but has not created their own account
