@@ -7,11 +7,12 @@
 
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { useOwnerNames } from '@/hooks/useOwnerNames'
 import type { CaregiverContext } from '@/types'
 
 interface AccountContext {
@@ -26,68 +27,84 @@ export function AccountSwitcher() {
   const router = useRouter()
   const pathname = usePathname()
   const [isOpen, setIsOpen] = useState(false)
-  const [contexts, setContexts] = useState<AccountContext[]>([])
-  const [currentContext, setCurrentContext] = useState<AccountContext | null>(null)
+  const [hasOwnAccount, setHasOwnAccount] = useState(false)
+  const [ownUserMode, setOwnUserMode] = useState<string | undefined>(undefined)
+  const [caregiverEntries, setCaregiverEntries] = useState<CaregiverContext[]>([])
   const [loading, setLoading] = useState(true)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Step 1: pull this user's own doc — establishes own-account flag and the
+  // list of caregiver relationships (IDs only; names are stale here).
   useEffect(() => {
     if (!user) return
 
-    const loadContexts = async () => {
+    const loadOwnDoc = async () => {
       try {
         const userDoc = await getDoc(doc(db, 'users', user.uid))
         const userData = userDoc.data()
-
-        if (!userData) return
-
-        const availableContexts: AccountContext[] = []
-
-        // Check if user has their own account
-        const hasOwnAccount = userData.profile?.onboardingCompleted === true
-        if (hasOwnAccount) {
-          availableContexts.push({
-            type: 'own',
-            id: user.uid,
-            name: 'My Account',
-            userMode: userData.preferences?.userMode
-          })
+        if (!userData) {
+          setLoading(false)
+          return
         }
-
-        // Add caregiver contexts
-        const caregiverOf = (userData.caregiverOf || []) as CaregiverContext[]
-        caregiverOf.forEach((ctx) => {
-          availableContexts.push({
-            type: 'caregiver',
-            id: ctx.accountOwnerId,
-            name: `${ctx.accountOwnerName}'s Family`
-          })
-        })
-
-        setContexts(availableContexts)
-
-        // Determine current context based on URL
-        if (pathname.startsWith('/caregiver/')) {
-          const accountOwnerId = pathname.split('/')[2]
-          const caregiverContext = availableContexts.find(
-            (ctx) => ctx.type === 'caregiver' && ctx.id === accountOwnerId
-          )
-          setCurrentContext(caregiverContext || availableContexts[0])
-        } else {
-          // Default to own account if on other pages
-          const ownContext = availableContexts.find((ctx) => ctx.type === 'own')
-          setCurrentContext(ownContext || availableContexts[0])
-        }
-
-        setLoading(false)
+        setHasOwnAccount(userData.profile?.onboardingCompleted === true)
+        setOwnUserMode(userData.preferences?.userMode)
+        setCaregiverEntries((userData.caregiverOf || []) as CaregiverContext[])
       } catch (error) {
         console.error('Error loading account contexts:', error)
+      } finally {
         setLoading(false)
       }
     }
 
-    loadContexts()
-  }, [user, pathname])
+    loadOwnDoc()
+  }, [user])
+
+  // Step 2: resolve each owner's *live* display name from THEIR user doc.
+  // The accountOwnerName field on caregiverOf is denormalized and can be
+  // stale ("Account Owner" is the giveaway). Source of truth lives on the
+  // owner's user doc; useOwnerNames reads it there.
+  const caregiverOwnerIds = useMemo(
+    () => caregiverEntries.map((c) => c.accountOwnerId),
+    [caregiverEntries],
+  )
+  const { names: ownerNames } = useOwnerNames(caregiverOwnerIds)
+
+  // Step 3: assemble the final contexts list — own account first (if any),
+  // then one entry per caregiver relationship using the live owner name.
+  const contexts: AccountContext[] = useMemo(() => {
+    const list: AccountContext[] = []
+    if (hasOwnAccount && user) {
+      list.push({
+        type: 'own',
+        id: user.uid,
+        name: 'My Account',
+        userMode: ownUserMode,
+      })
+    }
+    caregiverEntries.forEach((ctx) => {
+      const liveName = ownerNames[ctx.accountOwnerId] || ctx.accountOwnerName || 'Family'
+      list.push({
+        type: 'caregiver',
+        id: ctx.accountOwnerId,
+        name: `${liveName}'s Family`,
+      })
+    })
+    return list
+  }, [hasOwnAccount, ownUserMode, caregiverEntries, ownerNames, user])
+
+  // Step 4: pick the active context from the URL — caregiver path picks
+  // that owner, anything else falls back to the own context.
+  const currentContext: AccountContext | null = useMemo(() => {
+    if (contexts.length === 0) return null
+    if (pathname.startsWith('/caregiver/')) {
+      const accountOwnerId = pathname.split('/')[2]
+      return (
+        contexts.find((ctx) => ctx.type === 'caregiver' && ctx.id === accountOwnerId) ||
+        contexts[0]
+      )
+    }
+    return contexts.find((ctx) => ctx.type === 'own') || contexts[0]
+  }, [contexts, pathname])
 
   // Close dropdown when clicking outside
   useEffect(() => {
