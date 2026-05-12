@@ -41,6 +41,9 @@ export type NotificationType =
   | 'episode_updated'
   | 'weight_approval_needed'
   | 'weight_approval_result'
+  // Caregiver handoff log — a new note posted to a household's ledger
+  // fans out to the owner + all accepted caregivers (except the author).
+  | 'handoff_note'
   // Engagement nudges (fired by app/api/cron/nudges)
   | 'meal_reminder'
   | 're_engagement'
@@ -185,6 +188,25 @@ export interface FamilyMetadata {
 }
 
 /**
+ * HandoffNoteMetadata — context for a notification fired when someone
+ * posts to a household's handoff log. The link in the notification points
+ * to the recipient's natural reading surface (owner → /family/dashboard
+ * Handoff Notes tab; caregiver → /caregiver/{ownerId} shift view).
+ */
+export interface HandoffNoteMetadata {
+  noteId: string
+  ownerId: string
+  /** Who wrote the note. */
+  authorId: string
+  authorName: string
+  /** Excerpt of the note body (first ~140 chars) so the bell preview
+   *  surfaces context without us having to fetch the full doc. */
+  bodyExcerpt: string
+  /** Was the note flagged for owner attention? */
+  flaggedForOwner?: boolean
+}
+
+/**
  * PatientMetadata - Context for patient profile events
  */
 export interface PatientMetadata {
@@ -269,6 +291,7 @@ export type NotificationMetadata =
   | DutyMetadata
   | EpisodeMetadata
   | WeightApprovalMetadata
+  | HandoffNoteMetadata
 
 // ==================== NOTIFICATION INTERFACE ====================
 
@@ -370,6 +393,10 @@ export interface NotificationPreferences {
   duty_overdue: NotificationChannelPreferences
   duty_completed: NotificationChannelPreferences
 
+  // Caregiver handoff log — fires when someone posts a note to a
+  // household ledger this user is a member of.
+  handoff_note: NotificationChannelPreferences
+
   // Engagement nudges (fired by app/api/cron/nudges)
   meal_reminder: NotificationChannelPreferences
   re_engagement: NotificationChannelPreferences
@@ -418,6 +445,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   duty_reminder: { email: true, push: true, inApp: true },
   duty_overdue: { email: true, push: true, inApp: true },
   duty_completed: { email: false, push: false, inApp: true },
+  handoff_note: { email: false, push: true, inApp: true },
   meal_reminder: { email: false, push: true, inApp: true },
   re_engagement: { email: false, push: true, inApp: true },
   milestone: { email: false, push: true, inApp: true },

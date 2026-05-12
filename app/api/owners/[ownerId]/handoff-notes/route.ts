@@ -25,7 +25,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import { recordInAppNotification } from '@/lib/notifications/dispatch'
 import type { HandoffNote, CreateHandoffNoteInput } from '@/types/handoff'
+import type { HandoffNoteMetadata } from '@/types/notifications'
 
 interface RouteParams {
   params: Promise<{ ownerId: string }>
@@ -177,6 +179,74 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .add(noteData)
 
     const note: HandoffNote = { id: ref.id, ...noteData }
+
+    // Fan out in-app notifications to every other household member so
+    // the bell badge ticks for them. Audience = owner + all accepted
+    // familyMembers minus the author. Each recipient gets a link to
+    // THEIR natural reading surface:
+    //   - owner          → /family/dashboard?tab=notes
+    //   - caregiver/etc. → /caregiver/{ownerId}
+    // Best-effort: failures are logged but never block the POST response.
+    try {
+      const familyMembersSnap = await adminDb
+        .collection('users')
+        .doc(ownerId)
+        .collection('familyMembers')
+        .where('status', '==', 'accepted')
+        .get()
+
+      const recipients: Array<{ userId: string; isOwner: boolean }> = []
+      if (auth.callerUid !== ownerId) {
+        recipients.push({ userId: ownerId, isOwner: true })
+      }
+      for (const doc of familyMembersSnap.docs) {
+        const memberUserId = doc.data()?.userId
+        if (!memberUserId || memberUserId === auth.callerUid) continue
+        recipients.push({ userId: memberUserId, isOwner: false })
+      }
+
+      const excerpt = body.length > 140 ? body.slice(0, 137) + '…' : body
+      const baseMetadata: HandoffNoteMetadata = {
+        noteId: ref.id,
+        ownerId,
+        authorId: auth.callerUid,
+        authorName: auth.authorName,
+        bodyExcerpt: excerpt,
+        ...(flaggedForOwner ? { flaggedForOwner: true } : {}),
+      }
+
+      await Promise.all(
+        recipients.map((r) =>
+          recordInAppNotification({
+            userId: r.userId,
+            type: 'handoff_note',
+            // Flag bumps priority for the owner only — caregivers see
+            // every note at normal priority.
+            priority: flaggedForOwner && r.isOwner ? 'high' : 'normal',
+            title: r.isOwner && flaggedForOwner
+              ? `${auth.authorName} flagged a note for you`
+              : `${auth.authorName} left a handoff note`,
+            message: excerpt,
+            actionUrl: r.isOwner ? '/family/dashboard?tab=notes' : `/caregiver/${ownerId}`,
+            actionLabel: 'Read note',
+            metadata: baseMetadata,
+            expiresInDays: 30,
+          }).catch((err) => {
+            logger.warn('[handoff-notes POST] notification dispatch failed', {
+              recipient: r.userId,
+              noteId: ref.id,
+              error: err?.message,
+            })
+          }),
+        ),
+      )
+    } catch (notifyError: any) {
+      logger.warn('[handoff-notes POST] notification fan-out failed', {
+        noteId: ref.id,
+        error: notifyError?.message,
+      })
+    }
+
     return NextResponse.json({ note }, { status: 201 })
   } catch (error: any) {
     logger.error('[API /owners/[id]/handoff-notes POST] Error', error)
