@@ -16,6 +16,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useHouseholdDuties } from '@/hooks/useHouseholdDuties'
+import { isFeatureEnabled } from '@/lib/featureFlags'
 import type { CaregiverContext } from '@/types'
 import type { PatientProfile } from '@/types/medical'
 import type { HouseholdDuty, DutyStatus, DutyPriority } from '@/types/household-duties'
@@ -521,6 +522,28 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
       />
 
       <main className="container mx-auto px-4 py-8">
+        {/* Beta CTA: new caregiver shift view (gated by CAREGIVER_SHIFT_VIEW) */}
+        {isFeatureEnabled('CAREGIVER_SHIFT_VIEW') && (
+          <button
+            type="button"
+            onClick={() => router.push(`/caregiver/${accountOwnerId}/shift`)}
+            data-testid="caregiver-shift-cta"
+            className="w-full mb-6 flex items-center justify-between gap-3 px-5 py-4 rounded-lg border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 hover:border-amber-500 transition-colors text-left"
+          >
+            <div>
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Try the new Shift View
+              </p>
+              <p className="text-xs text-amber-800 dark:text-amber-200">
+                Worklist of what&apos;s due in your window, with a handoff log. Beta.
+              </p>
+            </div>
+            <svg className="w-5 h-5 text-amber-700 dark:text-amber-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+
         {/* Access Summary Card */}
         <div className="bg-card rounded-lg border-2 border-border p-6 mb-8">
           <h2 className="text-lg font-semibold text-foreground mb-4">Your Access</h2>
