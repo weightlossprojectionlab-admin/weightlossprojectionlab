@@ -45,6 +45,10 @@ const db = getFirestore()
 const CAREGIVER_EMAIL = 'percyrice@gmail.com'
 // Stable across this Firestore — the existing duties live here too.
 const HOUSEHOLD_ID = '29GCzfnQ9GvJ58QQo1DB'
+// Weight Loss Project owner — the household this seed lands in. Used as
+// duty.userId so useCaregiverWorklist groups under the right household
+// section instead of spawning a phantom "FAMILY'S FAMILY" group.
+const HOUSEHOLD_OWNER_UID = 'Y8wSTgymg3YXWU94iJVjzoGxsMI2'
 const SEED_TAG = 'shift-view-seed-2026-05-12'
 
 const NOW = Date.now()
@@ -145,13 +149,16 @@ async function main() {
       id,
       data: {
         householdId: HOUSEHOLD_ID,
-        userId: caregiverUid, // (account owner of duty creation; using caregiver for the seed test)
+        // Owner of the duty's household — groups it under the right
+        // section on the caregiver's Today view (Weight Loss Project's
+        // Family), not under a phantom group keyed off the caregiver.
+        userId: HOUSEHOLD_OWNER_UID,
         category: s.category,
         name: s.name,
         description: (s as any).description,
         isCustom: true,
         assignedTo: [caregiverUid],
-        assignedBy: caregiverUid,
+        assignedBy: HOUSEHOLD_OWNER_UID,
         assignedAt: acceptedAt,
         frequency: 'daily',
         priority: s.priority,
@@ -161,7 +168,7 @@ async function main() {
         notifyOnOverdue: false,
         reminderEnabled: false,
         createdAt: acceptedAt,
-        createdBy: caregiverUid,
+        createdBy: HOUSEHOLD_OWNER_UID,
         lastModified: acceptedAt,
         isActive: true,
         status: 'pending',
