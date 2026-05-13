@@ -179,9 +179,14 @@ test('clicking a duty card opens the inline action sheet — URL stays on /shift
 
   const startUrl = page.url()
 
-  // Stable invariants of seed-caregiver-duties.ts. If the seed changes,
-  // update this regex.
-  const dutyNameRe = /Pick up medications|Vacuum living room|Help Dad with breakfast|Prep Grandma Sue/i
+  // Use a NON-shopping-category duty so the action sheet path
+  // applies. Shopping-ish duties (grocery_shopping, errands,
+  // medication, medication_pickup) route to /shopping/active
+  // instead of opening the sheet — covered by the
+  // shopping-active-sort spec. The candidates here are vacuum
+  // (household), breakfast (meals), and lunch (meals) — all stable
+  // seed entries.
+  const dutyNameRe = /Vacuum living room|Help Dad with breakfast|Prep Grandma Sue/i
   const dutyCard = page.getByRole('button', { name: dutyNameRe }).first()
   await expect(dutyCard).toBeVisible()
 

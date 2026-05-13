@@ -69,6 +69,11 @@ import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
 import { playStepDoneChime } from '@/lib/cook-chime'
 import { shoppingSessionManager } from '@/lib/shopping-session-manager'
+import {
+  comparePerishability,
+  compareWaitCounter,
+  compareFragility,
+} from '@/lib/perishability-tiers'
 import type { ShoppingItem } from '@/types/shopping'
 import { ScanItemCard } from './ScanItemCard'
 import { ReceiptCaptureSurface } from './ReceiptCaptureSurface'
@@ -196,34 +201,6 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
     return map
   }, [items])
 
-  // Walk-the-store category order. Items group into sections by
-  // category, with sections ordered to minimize backtracking on a
-  // typical store layout: perimeter (fresh) first, interior aisles
-  // (shelf-stable) middle, far-back / non-food last. Categories
-  // missing from this list fall through to the end via Infinity.
-  const STORE_LAYOUT_ORDER: Record<string, number> = useMemo(
-    () => ({
-      produce: 0,
-      bakery: 1,
-      deli: 2,
-      meat: 3,
-      seafood: 4,
-      dairy: 5,
-      eggs: 6,
-      herbs: 7,
-      frozen: 8,
-      spices: 9,
-      condiments: 10,
-      pantry: 11,
-      beverages: 12,
-      baby: 13,
-      'pet-food': 14,
-      'pet-supplies': 15,
-      other: 99,
-    }),
-    []
-  )
-
   // Sort: pending items first (in original order), found items last
   // and visually distinct. Done in a memo so the order doesn't churn
   // every render.
@@ -260,10 +237,20 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
   const foundCount = orderedSessionRows.found.length
 
   // Group pending items by category so the shopper walks the store
-  // section by section instead of zig-zagging across aisles. Sections
-  // emerge in STORE_LAYOUT_ORDER; categories not in the map fall to
-  // the end. Within a section, items keep their original session
-  // order (avoids reshuffling under the user's finger mid-trip).
+  // section by section instead of zig-zagging across aisles. Section
+  // order comes from the centralized rule chain in
+  // lib/perishability-tiers.ts — same rules the owner-side smartSort
+  // applies on /shopping:
+  //
+  //   1) Perishability tier — frozen LAST (universal cold-chain floor)
+  //   2) Wait-counter — deli + seafood EARLIER within their tier
+  //      (place the order first, retrieve near checkout)
+  //   3) Fragility — bakery + eggs LATER within their tier
+  //      (top-of-cart, less likely to crush)
+  //   4) Category name — deterministic alphabetical tie-break
+  //
+  // Within a section, items keep their original session order (avoids
+  // reshuffling under the user's finger mid-trip).
   const pendingByCategory = useMemo(() => {
     const groups = new Map<string, ShoppingItem[]>()
     for (const it of orderedSessionRows.pending) {
@@ -272,11 +259,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
       groups.get(cat)!.push(it)
     }
     return Array.from(groups.entries()).sort(([a], [b]) => {
-      const oa = STORE_LAYOUT_ORDER[a] ?? 100
-      const ob = STORE_LAYOUT_ORDER[b] ?? 100
-      return oa - ob
+      const pa = { category: a as ShoppingItem['category'] }
+      const pb = { category: b as ShoppingItem['category'] }
+      const tier = comparePerishability(pa, pb)
+      if (tier !== 0) return tier
+      const wc = compareWaitCounter(pa, pb)
+      if (wc !== 0) return wc
+      const fg = compareFragility(pa, pb)
+      if (fg !== 0) return fg
+      return a.localeCompare(b)
     })
-  }, [orderedSessionRows.pending, STORE_LAYOUT_ORDER])
+  }, [orderedSessionRows.pending])
 
   const activeItem = activeItemId ? liveItemsById.get(activeItemId) ?? null : null
 
@@ -1162,7 +1155,10 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
                         fall to the end. */}
                     {pendingByCategory.map(([cat, catItems]) => (
                       <Fragment key={cat}>
-                        <li className="px-4 py-2 bg-muted/30">
+                        <li
+                          className="px-4 py-2 bg-muted/30"
+                          data-testid={`category-section-${cat}`}
+                        >
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                             {formatCategoryLabel(cat)}
                           </p>
