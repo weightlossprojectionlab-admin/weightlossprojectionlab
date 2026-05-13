@@ -53,7 +53,7 @@ import { mergeIngredients } from '@/lib/shopping-diff'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
 import type { Store } from '@/types/shopping'
 import { COLLECTIONS } from '@/constants/firestore'
-import { comparePerishability } from '@/lib/perishability-tiers'
+import { comparePerishability, compareFragility } from '@/lib/perishability-tiers'
 
 const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
@@ -289,15 +289,18 @@ export function useShopping(targetUserId?: string) {
    *      stable FIRST. Holds within an aisle AND as the primary key
    *      when no aisle data exists. See lib/perishability-tiers.ts
    *      for the semantic intent + future ML upgrade path.
-   *   3. Item priority (high → low) — caregiver-set urgency.
-   *   4. Category name alphabetical — deterministic final tie-break.
+   *   3. Fragility — within the same tier, fragile items (bakery,
+   *      eggs) sort LATER so they end up on TOP of the cart when
+   *      loaded. Cross-tier order still belongs to perishability;
+   *      this only breaks ties WITHIN a tier.
+   *   4. Item priority (high → low) — caregiver-set urgency.
+   *   5. Category name alphabetical — deterministic final tie-break.
    *
-   * The "frozen last" invariant survives even when aisle order
-   * disagrees: aisle places items in walk-order, but if two items
-   * fall in the same aisle bucket, the perishability comparator
-   * orders cold-chain items after stable goods. Cold-chain safety
-   * is a rule, not a preference — ML upgrades override aisle order
-   * for THIS store, not the tier table.
+   * The "frozen last" invariant survives every other dimension:
+   * aisle places items in walk-order, but if two items fall in the
+   * same aisle bucket the perishability comparator wins. Cold-chain
+   * safety is a rule, not a preference — ML upgrades override aisle
+   * order for THIS store, not the tier table.
    */
   const smartSort = useCallback((
     itemsToSort: ShoppingItem[],
@@ -328,11 +331,17 @@ export function useShopping(targetUserId?: string) {
       const tierDiff = comparePerishability(a, b)
       if (tierDiff !== 0) return tierDiff
 
-      // 3) Priority — high urgency first within the same tier.
+      // 3) Fragility — within the same tier, fragile items LATER
+      //    (top-of-cart). Bakery sorts after produce within tier 2;
+      //    eggs after deli within tier 3.
+      const fragDiff = compareFragility(a, b)
+      if (fragDiff !== 0) return fragDiff
+
+      // 4) Priority — high urgency first within the same tier.
       const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
       if (priorityDiff !== 0) return priorityDiff
 
-      // 4) Stable deterministic tie-break.
+      // 5) Stable deterministic tie-break.
       return a.category.localeCompare(b.category)
     })
   }, [stores])

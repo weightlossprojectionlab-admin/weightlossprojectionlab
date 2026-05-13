@@ -12,6 +12,9 @@
 import {
   PERISHABILITY_TIER,
   comparePerishability,
+  compareFragility,
+  isFragile,
+  FRAGILE_CATEGORIES,
 } from '../lib/perishability-tiers'
 import type { ProductCategory } from '../types/shopping'
 
@@ -99,6 +102,42 @@ test('comparePerishability: pantry comes BEFORE everything except other tier-1',
 test('comparePerishability: dairy comes AFTER produce (cold-chain after fresh)', () => {
   const cmp = comparePerishability({ category: 'dairy' }, { category: 'produce' })
   expect(cmp).toBeGreaterThan(0)
+})
+
+test('FRAGILE_CATEGORIES: bakery + eggs are flagged fragile', () => {
+  expect(isFragile('bakery')).toBe(true)
+  expect(isFragile('eggs')).toBe(true)
+  expect(FRAGILE_CATEGORIES.size).toBe(2)
+})
+
+test('non-fragile categories: produce, dairy, frozen are NOT flagged fragile', () => {
+  expect(isFragile('produce')).toBe(false)
+  expect(isFragile('dairy')).toBe(false)
+  expect(isFragile('frozen')).toBe(false)
+  expect(isFragile('meat')).toBe(false)
+  expect(isFragile('pantry')).toBe(false)
+})
+
+test('compareFragility: non-fragile sorts BEFORE fragile within same tier', () => {
+  // produce (tier 2 non-fragile) vs bakery (tier 2 fragile): produce first
+  expect(compareFragility({ category: 'produce' }, { category: 'bakery' })).toBe(-1)
+  // bakery vs produce: bakery later
+  expect(compareFragility({ category: 'bakery' }, { category: 'produce' })).toBe(1)
+  // deli (tier 3 non-fragile) vs eggs (tier 3 fragile): deli first
+  expect(compareFragility({ category: 'deli' }, { category: 'eggs' })).toBe(-1)
+})
+
+test('compareFragility returns 0 for same-fragility pairs', () => {
+  expect(compareFragility({ category: 'produce' }, { category: 'herbs' })).toBe(0)
+  expect(compareFragility({ category: 'bakery' }, { category: 'eggs' })).toBe(0)
+})
+
+test('full chain: perishability dominates fragility — bakery (tier 2 fragile) still sorts BEFORE frozen (tier 5)', () => {
+  // Tier comparison: tier 2 - tier 5 = -3 (bakery first)
+  // Fragility comparison would say bakery is fragile (1) vs frozen (0), suggesting bakery LATER
+  // But tier wins because it's checked first.
+  const tierCmp = comparePerishability({ category: 'bakery' }, { category: 'frozen' })
+  expect(tierCmp).toBeLessThan(0) // bakery before frozen
 })
 
 test('mixed-cart sort: frozen sorts last, pantry first', () => {

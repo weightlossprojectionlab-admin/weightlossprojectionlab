@@ -90,3 +90,45 @@ export function comparePerishability(
 ): number {
   return PERISHABILITY_TIER[a.category] - PERISHABILITY_TIER[b.category]
 }
+
+/**
+ * Fragility — categories whose items get crushed under heavier
+ * groceries. Picked LATER within the same perishability tier so they
+ * end up on TOP of the cart when loaded. Cross-tier ordering still
+ * belongs to perishability (frozen always last); this only breaks
+ * ties WITHIN a tier.
+ *
+ * Currently:
+ *   - `bakery`  (tier 2) — soft fresh bread + pastries crush easily;
+ *     sorts AFTER produce + herbs within tier 2.
+ *   - `eggs`    (tier 3) — self-explanatory; sorts AFTER deli within
+ *     tier 3.
+ *
+ * Adjacent signals captured for future rule iterations (see
+ * [[project-shopping-phase-0b]] memory) — weight (heavy EARLY,
+ * bottom of cart), bulk size (LATE, when cart space known),
+ * quantity-by-weight clustering. Ship piecemeal.
+ */
+export const FRAGILE_CATEGORIES: ReadonlySet<ProductCategory> = new Set<ProductCategory>([
+  'bakery',
+  'eggs',
+])
+
+export function isFragile(category: ProductCategory): boolean {
+  return FRAGILE_CATEGORIES.has(category)
+}
+
+/**
+ * Within-tier comparator: non-fragile items sort BEFORE fragile items.
+ * Returns -1 when `a` is non-fragile and `b` is fragile (pick `a` first),
+ * +1 when reversed, 0 when both have the same fragility class.
+ * Chains AFTER comparePerishability so frozen-last invariant wins.
+ */
+export function compareFragility(
+  a: { category: ProductCategory },
+  b: { category: ProductCategory },
+): number {
+  const af = isFragile(a.category) ? 1 : 0
+  const bf = isFragile(b.category) ? 1 : 0
+  return af - bf
+}
