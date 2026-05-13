@@ -56,6 +56,8 @@ export async function GET(request: NextRequest) {
         duty_overdue: { email: true, push: true, inApp: true },
         duty_completed: { email: false, push: false, inApp: true },
         handoff_note: { email: false, push: true, inApp: true },
+        shopping_started: { email: false, push: false, inApp: true },
+        shopping_done: { email: false, push: false, inApp: true },
         meal_reminder: { email: false, push: true, inApp: true },
         re_engagement: { email: false, push: true, inApp: true },
         milestone: { email: false, push: true, inApp: true },

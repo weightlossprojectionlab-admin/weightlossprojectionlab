@@ -68,6 +68,7 @@ import {
 import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
 import { playStepDoneChime } from '@/lib/cook-chime'
+import { shoppingSessionManager } from '@/lib/shopping-session-manager'
 import type { ShoppingItem } from '@/types/shopping'
 import { ScanItemCard } from './ScanItemCard'
 import { ReceiptCaptureSurface } from './ReceiptCaptureSurface'
@@ -93,6 +94,26 @@ interface ActiveShoppingModeProps {
    * the failure is logged, but the trip exit still proceeds.
    */
   dutyId?: string
+  /**
+   * Active shopping_sessions doc id. Set by the page wrapper after
+   * shoppingSessionManager.startSession resolves. Drives:
+   *   • the announce-done bell fan-out (carries the sessionId in
+   *     ShoppingDoneMetadata for the family's notification)
+   *   • the endSession call after Confirm Purchase, which flips the
+   *     session status to 'completed' and stamps endedAt
+   * Null while the session is still being created OR if the caller
+   * didn't wire one — in either case the fan-out / endSession steps
+   * skip gracefully.
+   */
+  sessionId?: string | null
+  /**
+   * Owner uid this trip is FOR. Distinct from the actor: when a
+   * caregiver shops on the owner's behalf, ownerId is the owner's uid
+   * while auth.currentUser.uid is the caregiver's. Used to target the
+   * /api/owners/[ownerId]/shopping/done endpoint. When unset, the trip
+   * is solo-owner and no fan-out fires.
+   */
+  ownerId?: string
 }
 
 interface PendingConfirm {
@@ -101,7 +122,7 @@ interface PendingConfirm {
   itemBarcode?: string
 }
 
-export function ActiveShoppingMode({ isOpen, onClose, items, dutyId }: ActiveShoppingModeProps) {
+export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, ownerId }: ActiveShoppingModeProps) {
   // Feature-access gates — terminated subscribers can view the trip
   // but can't scan, snap a receipt, or invoke AI features.
   const scanBarcodeLock = useLockedAction()
@@ -689,7 +710,66 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId }: ActiveSho
         `Purchase confirmed — ${foundCount} item${foundCount > 1 ? 's' : ''} added to inventory`,
       )
 
-      // 4) If this trip was tied to a household duty (caregiver tapped a
+      // 4) Fan out a 'shopping_done' bell notification to the owner +
+      //    other household members. Only fires when ownerId is set
+      //    (caregiver-on-behalf-of-owner trips); solo-owner trips don't
+      //    need a self-announcement. Best-effort: any failure is logged
+      //    but never blocks the trip exit.
+      if (ownerId && sessionId && userId) {
+        try {
+          const user = auth.currentUser
+          if (user) {
+            const token = await user.getIdToken()
+            const skippedCount = orderedSessionRows.pending.filter(
+              (it) => it.needed && !it.foundInStore,
+            ).length
+            await fetch(`/api/owners/${ownerId}/shopping/done`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                sessionId,
+                itemsFound: foundCount,
+                ...(skippedCount > 0 ? { itemsSkipped: skippedCount } : {}),
+                ...(summaryStoreName.trim()
+                  ? { storeName: summaryStoreName.trim() }
+                  : {}),
+                ...(dutyId ? { fromDutyId: dutyId } : {}),
+              }),
+            }).catch((err) => {
+              logger.warn('[ActiveShopping] announce-done failed', {
+                sessionId,
+                error: (err as Error).message,
+              })
+            })
+          }
+        } catch (err) {
+          logger.warn('[ActiveShopping] announce-done threw', {
+            sessionId,
+            error: (err as Error).message,
+          })
+        }
+      }
+
+      // 5) End the shopping_sessions doc — flips status to 'completed'
+      //    and stamps endedAt. Done AFTER the announce-done fetch so
+      //    the server can still read the session for duration calc.
+      //    Best-effort: failures are logged; the session manager has
+      //    its own timeout-based safety net (2-hour absolute max).
+      if (sessionId) {
+        try {
+          await shoppingSessionManager.endSession()
+        } catch (err) {
+          logger.warn('[ActiveShopping] endSession failed', {
+            sessionId,
+            error: (err as Error).message,
+          })
+        }
+      }
+
+      // 6) If this trip was tied to a household duty (caregiver tapped a
       //    grocery / errand / med-pickup card on the Today view, which
       //    routes here with ?dutyId=…), close that duty automatically.
       //    The shopping session IS how a shopping duty completes — no

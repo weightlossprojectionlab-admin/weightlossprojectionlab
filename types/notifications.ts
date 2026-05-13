@@ -44,6 +44,12 @@ export type NotificationType =
   // Caregiver handoff log — a new note posted to a household's ledger
   // fans out to the owner + all accepted caregivers (except the author).
   | 'handoff_note'
+  // Caregiver shopping bookends — fired when a caregiver opens an
+  // in-store shopping session on the owner's behalf (start) and when
+  // they finish at the register (done). The pair gives the family a
+  // time window to plan dinner / when to be home for the goods.
+  | 'shopping_started'
+  | 'shopping_done'
   // Engagement nudges (fired by app/api/cron/nudges)
   | 'meal_reminder'
   | 're_engagement'
@@ -207,6 +213,52 @@ export interface HandoffNoteMetadata {
 }
 
 /**
+ * ShoppingStartedMetadata — context for the bell when a caregiver kicks
+ * off an in-store shopping session for the owner. Pairs with
+ * ShoppingDoneMetadata; the family uses the two timestamps to plan
+ * around the caregiver's expected return.
+ */
+export interface ShoppingStartedMetadata {
+  sessionId: string
+  ownerId: string
+  shopperId: string
+  shopperName: string
+  /** Optional store name (set when the session captured a storeLocation
+   *  OR when ?dutyId= → the duty's description mentioned one). Used to
+   *  enrich the bell title ("Sarah started shopping at Walgreens"). */
+  storeName?: string
+  /** Linked duty when the trip was kicked off from the Today worklist.
+   *  Lets the owner click through to the duty for context. */
+  fromDutyId?: string
+  fromDutyName?: string
+  startedAt: string
+}
+
+/**
+ * ShoppingDoneMetadata — context for the bell when a caregiver finishes
+ * their shopping trip (Confirm Purchase). Carries the actionable bits
+ * the family wants to see at a glance: how many items, what store,
+ * how long the trip took.
+ */
+export interface ShoppingDoneMetadata {
+  sessionId: string
+  ownerId: string
+  shopperId: string
+  shopperName: string
+  storeName?: string
+  fromDutyId?: string
+  fromDutyName?: string
+  itemsFound: number
+  itemsSkipped?: number
+  startedAt: string
+  endedAt: string
+  /** Duration in minutes, pre-computed so the bell can read
+   *  "Sarah finished — 12 items, 32 min at Walgreens" without doing
+   *  date math at render time. */
+  durationMinutes: number
+}
+
+/**
  * PatientMetadata - Context for patient profile events
  */
 export interface PatientMetadata {
@@ -292,6 +344,8 @@ export type NotificationMetadata =
   | EpisodeMetadata
   | WeightApprovalMetadata
   | HandoffNoteMetadata
+  | ShoppingStartedMetadata
+  | ShoppingDoneMetadata
 
 // ==================== NOTIFICATION INTERFACE ====================
 
@@ -397,6 +451,13 @@ export interface NotificationPreferences {
   // household ledger this user is a member of.
   handoff_note: NotificationChannelPreferences
 
+  // Caregiver shopping bookends — fires when a caregiver starts /
+  // finishes an in-store trip on a household's behalf. Default to
+  // in-app only (the bell badge) so the owner sees the heads-up
+  // without push-notification noise — push remains opt-in.
+  shopping_started: NotificationChannelPreferences
+  shopping_done: NotificationChannelPreferences
+
   // Engagement nudges (fired by app/api/cron/nudges)
   meal_reminder: NotificationChannelPreferences
   re_engagement: NotificationChannelPreferences
@@ -446,6 +507,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   duty_overdue: { email: true, push: true, inApp: true },
   duty_completed: { email: false, push: false, inApp: true },
   handoff_note: { email: false, push: true, inApp: true },
+  shopping_started: { email: false, push: false, inApp: true },
+  shopping_done: { email: false, push: false, inApp: true },
   meal_reminder: { email: false, push: true, inApp: true },
   re_engagement: { email: false, push: true, inApp: true },
   milestone: { email: false, push: true, inApp: true },

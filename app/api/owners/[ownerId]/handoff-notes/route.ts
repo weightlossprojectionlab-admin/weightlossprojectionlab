@@ -23,9 +23,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
+import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { recordInAppNotification } from '@/lib/notifications/dispatch'
+import { requireHouseholdAccess } from '@/lib/api/household-access'
 import type { HandoffNote, CreateHandoffNoteInput } from '@/types/handoff'
 import type { HandoffNoteMetadata } from '@/types/notifications'
 
@@ -36,58 +37,6 @@ interface RouteParams {
 const BODY_MAX = 2000
 const DEFAULT_LIMIT = 20
 const MAX_LIMIT = 100
-
-interface AuthorContext {
-  callerUid: string
-  authorName: string
-}
-
-/**
- * Verify the caller is authenticated AND has access to this household.
- * Returns the caller context on success, or a Response on failure.
- */
-async function requireHouseholdAccess(
-  request: NextRequest,
-  ownerId: string,
-): Promise<AuthorContext | Response> {
-  const authHeader = request.headers.get('authorization')
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return NextResponse.json({ error: 'Missing or invalid authorization header' }, { status: 401 })
-  }
-  const idToken = authHeader.split('Bearer ')[1]
-
-  let callerUid: string
-  try {
-    const decoded = await verifyIdToken(idToken)
-    callerUid = decoded.uid
-  } catch {
-    return NextResponse.json({ error: 'Token verification failed' }, { status: 401 })
-  }
-
-  // Owner always allowed.
-  let authorName = 'Family member'
-  if (callerUid === ownerId) {
-    const ownerDoc = await adminDb.collection('users').doc(callerUid).get()
-    authorName = ownerDoc.data()?.name || ownerDoc.data()?.displayName || 'Account owner'
-    return { callerUid, authorName }
-  }
-
-  // Otherwise, must have an accepted familyMembers entry on this owner.
-  const memberQuery = await adminDb
-    .collection('users')
-    .doc(ownerId)
-    .collection('familyMembers')
-    .where('userId', '==', callerUid)
-    .where('status', '==', 'accepted')
-    .limit(1)
-    .get()
-  if (memberQuery.empty) {
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  }
-  const memberData = memberQuery.docs[0].data() || {}
-  authorName = memberData.name || memberData.email || 'Caregiver'
-  return { callerUid, authorName }
-}
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {

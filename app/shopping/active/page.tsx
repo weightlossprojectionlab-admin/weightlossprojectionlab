@@ -17,16 +17,30 @@
  *           from (typically /shopping). Browser-back is also wired
  *           naturally because this is a real route.
  *
+ * Session lifecycle (Phase 2):
+ *   On mount we kick off shoppingSessionManager.startSession so that
+ *   (a) the active-shopper pill on /family/dashboard (Phase 3) knows
+ *   who is in-store right now, and (b) the bell fan-out endpoint
+ *   (/api/owners/[ownerId]/shopping/start) has a sessionId to attach
+ *   the notification metadata to. The session ends inside
+ *   ActiveShoppingMode after Confirm Purchase succeeds — the same
+ *   place the duty auto-close fires.
+ *
  * Empty-state behavior: if the user has no needed items, the
  * ActiveShoppingMode list view shows its own "no items" message —
  * no special handling here.
  */
 
+import { useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useShopping } from '@/hooks/useShopping'
 import { Spinner } from '@/components/ui/Spinner'
+import { auth } from '@/lib/firebase'
+import { shoppingSessionManager } from '@/lib/shopping-session-manager'
+import { generateDeviceId } from '@/types/shopping-session'
+import { logger } from '@/lib/logger'
 
 const ActiveShoppingMode = dynamic(
   () =>
@@ -59,6 +73,68 @@ function ActiveShoppingPageContent() {
   const dutyIdParam = searchParams.get('dutyId') || undefined
   const { items: allItems, loading } = useShopping(ownerIdParam)
 
+  // Session id captured from shoppingSessionManager.startSession. Drives
+  // the bell fan-out (start + done) and is passed through to
+  // ActiveShoppingMode so handleConfirmPurchase has it for done.
+  const [sessionId, setSessionId] = useState<string | null>(null)
+  // Guard against React 18 strict-mode double-invocation creating two
+  // sessions on first render. The ref flips after the FIRST startSession
+  // call kicks off.
+  const startedRef = useRef(false)
+
+  useEffect(() => {
+    if (startedRef.current) return
+    const user = auth.currentUser
+    if (!user) return
+    startedRef.current = true
+
+    const householdId = ownerIdParam || user.uid
+    const userName = user.displayName || user.email || 'Shopper'
+    const userRole = ownerIdParam && ownerIdParam !== user.uid ? 'caregiver' : 'owner'
+
+    ;(async () => {
+      try {
+        const id = await shoppingSessionManager.startSession({
+          householdId,
+          userId: user.uid,
+          userName,
+          userRole,
+          deviceId: generateDeviceId(),
+        })
+        setSessionId(id)
+
+        // Best-effort: announce the start to the owner + other
+        // accepted family members. Failures don't block the trip.
+        if (ownerIdParam) {
+          try {
+            const token = await user.getIdToken()
+            await fetch(`/api/owners/${ownerIdParam}/shopping/start`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                sessionId: id,
+                ...(dutyIdParam ? { fromDutyId: dutyIdParam } : {}),
+              }),
+            })
+          } catch (err) {
+            logger.warn('[ActiveShoppingPage] announce-start failed', {
+              error: (err as Error).message,
+            })
+          }
+        }
+      } catch (err) {
+        logger.warn('[ActiveShoppingPage] startSession failed', {
+          error: (err as Error).message,
+        })
+        // Reset the guard so a manual page refresh can retry.
+        startedRef.current = false
+      }
+    })()
+  }, [ownerIdParam, dutyIdParam])
+
   if (loading) {
     return (
       <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
@@ -78,6 +154,8 @@ function ActiveShoppingPageContent() {
       onClose={() => router.back()}
       items={neededItems}
       dutyId={dutyIdParam}
+      sessionId={sessionId}
+      ownerId={ownerIdParam}
     />
   )
 }
