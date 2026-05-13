@@ -15,6 +15,9 @@ import {
   compareFragility,
   isFragile,
   FRAGILE_CATEGORIES,
+  compareWaitCounter,
+  isWaitCounter,
+  WAIT_COUNTER_CATEGORIES,
 } from '../lib/perishability-tiers'
 import type { ProductCategory } from '../types/shopping'
 
@@ -138,6 +141,57 @@ test('full chain: perishability dominates fragility — bakery (tier 2 fragile) 
   // But tier wins because it's checked first.
   const tierCmp = comparePerishability({ category: 'bakery' }, { category: 'frozen' })
   expect(tierCmp).toBeLessThan(0) // bakery before frozen
+})
+
+test('WAIT_COUNTER_CATEGORIES: deli + seafood are flagged wait-counter', () => {
+  expect(isWaitCounter('deli')).toBe(true)
+  expect(isWaitCounter('seafood')).toBe(true)
+  expect(WAIT_COUNTER_CATEGORIES.size).toBe(2)
+})
+
+test('non-wait-counter: dairy, meat, produce, pantry are NOT flagged', () => {
+  expect(isWaitCounter('dairy')).toBe(false)
+  expect(isWaitCounter('meat')).toBe(false)
+  expect(isWaitCounter('produce')).toBe(false)
+  expect(isWaitCounter('pantry')).toBe(false)
+  expect(isWaitCounter('frozen')).toBe(false)
+})
+
+test('compareWaitCounter: wait-counter sorts BEFORE non-wait-counter within tier', () => {
+  // Tier 4: seafood (wait-counter) vs dairy (not): seafood first.
+  expect(compareWaitCounter({ category: 'seafood' }, { category: 'dairy' })).toBe(-1)
+  // Reverse: dairy after seafood.
+  expect(compareWaitCounter({ category: 'dairy' }, { category: 'seafood' })).toBe(1)
+  // Tier 3: deli (wait-counter) vs eggs (not): deli first.
+  expect(compareWaitCounter({ category: 'deli' }, { category: 'eggs' })).toBe(-1)
+})
+
+test('compareWaitCounter returns 0 for same-class pairs', () => {
+  // Two wait-counter items
+  expect(compareWaitCounter({ category: 'deli' }, { category: 'seafood' })).toBe(0)
+  // Two non-wait-counter items
+  expect(compareWaitCounter({ category: 'pantry' }, { category: 'dairy' })).toBe(0)
+})
+
+test('full chain: tier 4 within-tier order — seafood (wait-counter) BEFORE dairy + meat', () => {
+  // Within tier 4, the chain is: wait-counter → fragility → name.
+  // seafood (wait-counter) vs dairy + meat (non-wait, non-fragile).
+  // Tier comparator returns 0 (same tier 4); wait-counter wins.
+  const seafood = { category: 'seafood' as ProductCategory }
+  const dairy = { category: 'dairy' as ProductCategory }
+  const meat = { category: 'meat' as ProductCategory }
+  // Same tier, so comparePerishability is 0; compareWaitCounter decides.
+  expect(comparePerishability(seafood, dairy)).toBe(0)
+  expect(compareWaitCounter(seafood, dairy)).toBe(-1) // seafood first
+  expect(comparePerishability(seafood, meat)).toBe(0)
+  expect(compareWaitCounter(seafood, meat)).toBe(-1) // seafood first
+})
+
+test('cross-tier: wait-counter does NOT yank seafood ahead of pantry', () => {
+  // seafood is tier 4, pantry is tier 1. Tier dominates.
+  expect(comparePerishability({ category: 'seafood' }, { category: 'pantry' })).toBeGreaterThan(0)
+  // Even though seafood is wait-counter and pantry isn't, tier wins
+  // because the smartSort checks perishability before wait-counter.
 })
 
 test('mixed-cart sort: frozen sorts last, pantry first', () => {

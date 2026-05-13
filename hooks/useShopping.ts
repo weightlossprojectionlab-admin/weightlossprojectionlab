@@ -53,7 +53,11 @@ import { mergeIngredients } from '@/lib/shopping-diff'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
 import type { Store } from '@/types/shopping'
 import { COLLECTIONS } from '@/constants/firestore'
-import { comparePerishability, compareFragility } from '@/lib/perishability-tiers'
+import {
+  comparePerishability,
+  compareFragility,
+  compareWaitCounter,
+} from '@/lib/perishability-tiers'
 
 const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
@@ -289,12 +293,17 @@ export function useShopping(targetUserId?: string) {
    *      stable FIRST. Holds within an aisle AND as the primary key
    *      when no aisle data exists. See lib/perishability-tiers.ts
    *      for the semantic intent + future ML upgrade path.
-   *   3. Fragility — within the same tier, fragile items (bakery,
+   *   3. Wait-counter — within the same tier, counter-order categories
+   *      (deli, seafood) sort EARLIER so the caregiver places the
+   *      order at the start of the tier-pass and the staff prep it
+   *      while the rest of the trip happens. Seafood sorts before
+   *      dairy + meat within tier 4.
+   *   4. Fragility — within the same tier, fragile items (bakery,
    *      eggs) sort LATER so they end up on TOP of the cart when
    *      loaded. Cross-tier order still belongs to perishability;
    *      this only breaks ties WITHIN a tier.
-   *   4. Item priority (high → low) — caregiver-set urgency.
-   *   5. Category name alphabetical — deterministic final tie-break.
+   *   5. Item priority (high → low) — caregiver-set urgency.
+   *   6. Category name alphabetical — deterministic final tie-break.
    *
    * The "frozen last" invariant survives every other dimension:
    * aisle places items in walk-order, but if two items fall in the
@@ -331,17 +340,24 @@ export function useShopping(targetUserId?: string) {
       const tierDiff = comparePerishability(a, b)
       if (tierDiff !== 0) return tierDiff
 
-      // 3) Fragility — within the same tier, fragile items LATER
+      // 3) Wait-counter — within the same tier, counter-order items
+      //    EARLIER. Place the order first; staff prep while the rest
+      //    of the trip happens. Seafood sorts before dairy + meat
+      //    within tier 4.
+      const counterDiff = compareWaitCounter(a, b)
+      if (counterDiff !== 0) return counterDiff
+
+      // 4) Fragility — within the same tier, fragile items LATER
       //    (top-of-cart). Bakery sorts after produce within tier 2;
       //    eggs after deli within tier 3.
       const fragDiff = compareFragility(a, b)
       if (fragDiff !== 0) return fragDiff
 
-      // 4) Priority — high urgency first within the same tier.
+      // 5) Priority — high urgency first within the same tier.
       const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
       if (priorityDiff !== 0) return priorityDiff
 
-      // 5) Stable deterministic tie-break.
+      // 6) Stable deterministic tie-break.
       return a.category.localeCompare(b.category)
     })
   }, [stores])

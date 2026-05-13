@@ -92,6 +92,63 @@ export function comparePerishability(
 }
 
 /**
+ * Wait-counter categories — items the caregiver ORDERS at a counter
+ * (deli slicing, seafood selection + cleaning) and the staff prepare
+ * while the caregiver shops the rest of the store. Picked EARLIER
+ * within their perishability tier so the order is in flight by the
+ * time the cold-chain pass finishes — staff hand it off as the
+ * caregiver heads toward checkout.
+ *
+ * Cross-tier ordering still belongs to perishability — wait-counter
+ * doesn't yank seafood (tier 4) ahead of pantry (tier 1). The signal
+ * only matters within a tier: among tier-4 items {dairy, meat,
+ * seafood}, seafood sorts first because its counter prep has lead
+ * time the others don't.
+ *
+ * Currently:
+ *   - `deli`    (tier 3 non-fragile) — already first in its tier
+ *     before this rule (deli vs. eggs within tier 3); adding the
+ *     signal here keeps the right answer if a future tier-3 entry
+ *     is added that would otherwise compete.
+ *   - `seafood` (tier 4) — sorts BEFORE dairy + meat within tier 4.
+ *     New behavior introduced by this rule.
+ *
+ * NOT a tier modifier — wait-counter items stay in their natural
+ * perishability tier (seafood is still cold-chain; counter prep
+ * doesn't change that). The signal only nudges within-tier order.
+ *
+ * Future extension: pharmacy-Rx counter (caregiver drops off
+ * prescription) lives in DutyCategory, not ProductCategory, so it's
+ * handled separately when the duty-side flow lands per-item store
+ * pickup support.
+ */
+export const WAIT_COUNTER_CATEGORIES: ReadonlySet<ProductCategory> = new Set<ProductCategory>([
+  'deli',
+  'seafood',
+])
+
+export function isWaitCounter(category: ProductCategory): boolean {
+  return WAIT_COUNTER_CATEGORIES.has(category)
+}
+
+/**
+ * Within-tier comparator: wait-counter items sort BEFORE non-wait-counter.
+ * Returns -1 when `a` is a counter-order category and `b` is not,
+ * +1 when reversed, 0 when both are same class. Chains AFTER
+ * comparePerishability and BEFORE compareFragility — temporal
+ * strategy (counter prep starts) takes precedence over cart-loading
+ * strategy (fragile on top) at the within-tier level.
+ */
+export function compareWaitCounter(
+  a: { category: ProductCategory },
+  b: { category: ProductCategory },
+): number {
+  const aw = isWaitCounter(a.category) ? 0 : 1
+  const bw = isWaitCounter(b.category) ? 0 : 1
+  return aw - bw
+}
+
+/**
  * Fragility — categories whose items get crushed under heavier
  * groceries. Picked LATER within the same perishability tier so they
  * end up on TOP of the cart when loaded. Cross-tier ordering still
