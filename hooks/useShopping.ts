@@ -53,6 +53,7 @@ import { mergeIngredients } from '@/lib/shopping-diff'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
 import type { Store } from '@/types/shopping'
 import { COLLECTIONS } from '@/constants/firestore'
+import { comparePerishability } from '@/lib/perishability-tiers'
 
 const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
@@ -280,32 +281,59 @@ export function useShopping(targetUserId?: string) {
   }, [items, neededItems])
 
   /**
-   * Smart sort shopping items by store aisle order
+   * Smart sort shopping items.
+   *
+   * Sort priorities (in order):
+   *   1. Aisle order (when the store has one set) — physical walk path.
+   *   2. Perishability tier — frozen LAST, refrigerated LATE, shelf-
+   *      stable FIRST. Holds within an aisle AND as the primary key
+   *      when no aisle data exists. See lib/perishability-tiers.ts
+   *      for the semantic intent + future ML upgrade path.
+   *   3. Item priority (high → low) — caregiver-set urgency.
+   *   4. Category name alphabetical — deterministic final tie-break.
+   *
+   * The "frozen last" invariant survives even when aisle order
+   * disagrees: aisle places items in walk-order, but if two items
+   * fall in the same aisle bucket, the perishability comparator
+   * orders cold-chain items after stable goods. Cold-chain safety
+   * is a rule, not a preference — ML upgrades override aisle order
+   * for THIS store, not the tier table.
    */
   const smartSort = useCallback((
     itemsToSort: ShoppingItem[],
     storeId?: string
   ): ShoppingItem[] => {
     const store = stores.find(s => s.id === storeId)
+    const priorityOrder = { high: 3, medium: 2, low: 1 } as const
 
-    if (!store || !store.aisleOrder) {
-      return [...itemsToSort].sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 }
-        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
-        if (priorityDiff !== 0) return priorityDiff
-        return a.category.localeCompare(b.category)
-      })
+    const aisleOrder = store?.aisleOrder
+    const aisleIndex = (cat: ShoppingItem['category']): number => {
+      if (!aisleOrder) return 0
+      const i = aisleOrder.indexOf(cat)
+      // Categories not present in this store's aisle order sort to the
+      // end of the aisle pass; perishability + priority decide their
+      // order among themselves.
+      return i === -1 ? Number.MAX_SAFE_INTEGER : i
     }
 
     return [...itemsToSort].sort((a, b) => {
-      const aIndex = store.aisleOrder!.indexOf(a.category)
-      const bIndex = store.aisleOrder!.indexOf(b.category)
+      // 1) Aisle order — only matters when the store has aisleOrder.
+      if (aisleOrder) {
+        const ai = aisleIndex(a.category)
+        const bi = aisleIndex(b.category)
+        if (ai !== bi) return ai - bi
+      }
 
-      if (aIndex === -1 && bIndex === -1) return 0
-      if (aIndex === -1) return 1
-      if (bIndex === -1) return -1
+      // 2) Perishability — frozen LAST.
+      const tierDiff = comparePerishability(a, b)
+      if (tierDiff !== 0) return tierDiff
 
-      return aIndex - bIndex
+      // 3) Priority — high urgency first within the same tier.
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
+      if (priorityDiff !== 0) return priorityDiff
+
+      // 4) Stable deterministic tie-break.
+      return a.category.localeCompare(b.category)
     })
   }, [stores])
 
