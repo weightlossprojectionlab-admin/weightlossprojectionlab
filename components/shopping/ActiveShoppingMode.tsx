@@ -85,6 +85,14 @@ interface ActiveShoppingModeProps {
   isOpen: boolean
   onClose: () => void
   items: ShoppingItem[]
+  /**
+   * Optional duty this shopping trip is fulfilling. When set, completing
+   * the trip (Confirm Purchase) auto-fires the duty-complete endpoint so
+   * the caregiver doesn't have to mark the duty done as a second step.
+   * Threaded through from /shopping/active?dutyId=<id>. Best-effort —
+   * the failure is logged, but the trip exit still proceeds.
+   */
+  dutyId?: string
 }
 
 interface PendingConfirm {
@@ -93,7 +101,7 @@ interface PendingConfirm {
   itemBarcode?: string
 }
 
-export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingModeProps) {
+export function ActiveShoppingMode({ isOpen, onClose, items, dutyId }: ActiveShoppingModeProps) {
   // Feature-access gates — terminated subscribers can view the trip
   // but can't scan, snap a receipt, or invoke AI features.
   const scanBarcodeLock = useLockedAction()
@@ -680,6 +688,46 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       toast.success(
         `Purchase confirmed — ${foundCount} item${foundCount > 1 ? 's' : ''} added to inventory`,
       )
+
+      // 4) If this trip was tied to a household duty (caregiver tapped a
+      //    grocery / errand / med-pickup card on the Today view, which
+      //    routes here with ?dutyId=…), close that duty automatically.
+      //    The shopping session IS how a shopping duty completes — no
+      //    second tap. Best-effort: failure is logged + a soft toast so
+      //    the caregiver can manually mark it from the worklist if
+      //    needed, but the trip still exits cleanly.
+      if (dutyId && userId) {
+        try {
+          const user = auth.currentUser
+          if (user) {
+            const token = await user.getIdToken()
+            const res = await fetch(`/api/household-duties/${dutyId}/complete`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                feedback: `Completed via in-store shopping (${foundCount} item${foundCount === 1 ? '' : 's'})`,
+              }),
+            })
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}))
+              logger.warn('[ActiveShopping] auto duty-complete failed', {
+                dutyId,
+                status: res.status,
+                error: body?.error,
+              })
+              toast.error("Couldn't auto-close the duty — mark it done from your Today list.")
+            }
+          }
+        } catch (err) {
+          logger.warn('[ActiveShopping] auto duty-complete threw', {
+            dutyId,
+            error: (err as Error).message,
+          })
+        }
+      }
     } finally {
       setSummarySaving(false)
       // Auto-open the receipt capture surface — the receipt is fresh in

@@ -140,28 +140,74 @@ export async function upsertFamilyMember(
   extraFields: Record<string, any> = {},
 ): Promise<string> {
   const col = adminDb.collection('users').doc(ownerId).collection('familyMembers')
-  const existingQuery = await col.where('userId', '==', member.userId).limit(1).get()
 
-  if (existingQuery.empty) {
-    const newDoc = await col.add({
-      ...member,
-      ...extraFields,
-    })
-    return newDoc.id
+  // Keyed by the caregiver's uid — NOT a random Firestore ID. The
+  // firestore.rules `isHouseholdMember` helper calls
+  //   exists(/users/{ownerId}/familyMembers/{request.auth.uid})
+  // so the doc id MUST equal the caregiver's uid for the rule's
+  // path-based exists() check to succeed. The legacy `.add()` flow
+  // produced random IDs and silently broke caregiver access to
+  // shopping_items / stores at the rule layer (queries via .where
+  // 'userId' still worked at the API layer, which masked the bug).
+  // Existing random-id docs are normalized by
+  // scripts/migrate-rekey-familymembers.ts.
+  const memberRef = col.doc(member.userId)
+
+  // Old random-id doc may still exist for the same caregiver — query
+  // by userId field to find it, merge its data, then delete it after
+  // writing to the new deterministic doc.
+  const existingByField = await col
+    .where('userId', '==', member.userId)
+    .limit(2)
+    .get()
+
+  const existingDeterministicSnap = await memberRef.get()
+  const existingDataParts: Record<string, any>[] = []
+  if (existingDeterministicSnap.exists) {
+    existingDataParts.push(existingDeterministicSnap.data() || {})
+  }
+  for (const d of existingByField.docs) {
+    if (d.id === member.userId) continue
+    existingDataParts.push(d.data() || {})
   }
 
-  const existingDoc = existingQuery.docs[0]
-  const existingData = existingDoc.data()
+  if (existingDataParts.length === 0) {
+    await memberRef.set({ ...member, ...extraFields })
+    return member.userId
+  }
+
+  // Merge: deterministic-doc data first, then any stale random-id
+  // doc data, then incoming. Patient access + permissions are unioned.
+  const base = existingDataParts.reduce<Record<string, any>>(
+    (acc, part) => ({
+      ...acc,
+      ...part,
+      patientsAccess: unionArrays(acc.patientsAccess, part.patientsAccess),
+      permissions: mergePermissions(acc.permissions, part.permissions),
+    }),
+    {},
+  )
   const merged = {
-    ...existingData,
+    ...base,
     ...extraFields,
-    name: member.name || existingData.name,
-    email: member.email || existingData.email,
-    patientsAccess: unionArrays(existingData.patientsAccess, member.patientsAccess),
-    permissions: mergePermissions(existingData.permissions, member.permissions),
+    name: member.name || base.name,
+    email: member.email || base.email,
+    patientsAccess: unionArrays(base.patientsAccess, member.patientsAccess),
+    permissions: mergePermissions(base.permissions, member.permissions),
+    userId: member.userId,
   }
-  await existingDoc.ref.set(merged, { merge: true })
-  return existingDoc.id
+  await memberRef.set(merged, { merge: true })
+
+  // Best-effort cleanup of stale random-id docs (don't block on failure).
+  for (const d of existingByField.docs) {
+    if (d.id === member.userId) continue
+    try {
+      await d.ref.delete()
+    } catch {
+      // Ignore — migration script will catch it later.
+    }
+  }
+  return member.userId
 }
 
 /**

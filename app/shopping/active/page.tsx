@@ -22,7 +22,7 @@
  * no special handling here.
  */
 
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { useShopping } from '@/hooks/useShopping'
@@ -45,7 +45,19 @@ const ActiveShoppingMode = dynamic(
 
 function ActiveShoppingPageContent() {
   const router = useRouter()
-  const { items: allItems, loading } = useShopping()
+  const searchParams = useSearchParams()
+  // ?ownerId=<uid> — caregiver shopping on behalf of an owner they have
+  // household access to. Undefined means "shop my own list" (owner path).
+  // The Firestore rule's userId-as-owner branch gates the cross-account
+  // read; if the caregiver isn't a familyMember of that owner, the
+  // listener errors and the page falls back to the loading/empty state.
+  const ownerIdParam = searchParams.get('ownerId') || undefined
+  // ?dutyId=<id> — caregiver tapped a shopping-ish duty on the Today
+  // view. ActiveShoppingMode fires the duty-complete endpoint on
+  // Confirm Purchase so the caregiver doesn't have to mark it done
+  // as a second step.
+  const dutyIdParam = searchParams.get('dutyId') || undefined
+  const { items: allItems, loading } = useShopping(ownerIdParam)
 
   if (loading) {
     return (
@@ -65,6 +77,7 @@ function ActiveShoppingPageContent() {
       isOpen
       onClose={() => router.back()}
       items={neededItems}
+      dutyId={dutyIdParam}
     />
   )
 }

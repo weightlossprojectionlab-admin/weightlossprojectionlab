@@ -6,6 +6,22 @@
  * Real-time hook for managing shopping list and store visits.
  * Subscribes to `shopping_items` via Firestore onSnapshot so the list stays
  * in sync with /inventory and across devices/tabs.
+ *
+ * Multi-account scope:
+ *   useShopping()                — defaults to the signed-in user's own
+ *                                  bucket. Owner-context behavior, unchanged.
+ *   useShopping(targetUserId)    — reads the bucket of `targetUserId`.
+ *                                  Used when a caregiver opens
+ *                                  /shopping/active?ownerId=<owner> to
+ *                                  shop on behalf of an owner they have
+ *                                  household access to. The Firestore
+ *                                  rule's userId-as-owner branch (see
+ *                                  firestore.rules) gates the read.
+ *
+ * Audit chain stays correct: the bucket userId identifies WHICH list
+ * this item lives on; callers (ActiveShoppingMode etc.) still pass
+ * `purchasedBy: auth.currentUser.uid` as a separate field to record the
+ * actor. ShoppingItem.userId is the bucket, not the actor.
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -13,7 +29,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   onSnapshot
 } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
@@ -41,13 +56,16 @@ import { COLLECTIONS } from '@/constants/firestore'
 
 const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
-export function useShopping() {
+export function useShopping(targetUserId?: string) {
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const userId = auth.currentUser?.uid
+  // Bucket scope: the userId whose shopping_items we read/write. Defaults
+  // to the signed-in user (own list); overridden when a caregiver passes
+  // an ownerId to shop on someone else's behalf.
+  const userId = targetUserId ?? auth.currentUser?.uid
 
   // Derive needed items from the live `items` snapshot — single source of truth.
   const neededItems = useMemo(
@@ -58,24 +76,48 @@ export function useShopping() {
   // Real-time subscription to the user's shopping items.
   // Replaces what used to be two one-shot fetches (getAllShoppingItems +
   // getNeededItems). One listener, derived state for `needed`.
+  //
+  // Filtered on `householdId` (not `userId`) so the same query works for
+  // both owner-self and caregiver-on-behalf paths:
+  //   • For owners, householdId == auth.uid (single-user) or owner uid.
+  //   • For caregivers (passing targetUserId), householdId == owner uid.
+  // The shopping_items firestore.rules permit a caregiver familyMember
+  // when the query filter matches `resource.data.householdId` — Firestore's
+  // static query analyzer can prove that branch from the query alone,
+  // unlike a userId-filtered query which combines a value-mismatch on
+  // resource.data.userId with a cross-doc isHouseholdMember() check that
+  // the analyzer refuses to prove statically. See
+  // scripts/migrate-backfill-shopping-householdid.ts which normalized
+  // every existing item to set householdId == userId.
   useEffect(() => {
     if (!userId) {
       setLoading(false)
       return
     }
 
+    // No orderBy — that would need a composite index on
+    // (householdId asc, updatedAt desc) which doesn't exist. Items are
+    // small in scale (≤ a few hundred per household) and every consumer
+    // sorts client-side anyway (smartSort by aisle order, /shopping/active
+    // segments by needed/found, etc.), so we sort here by updatedAt desc
+    // after the snapshot lands. Same end result, no new index, no deploy.
     const q = query(
       collection(db, SHOPPING_ITEMS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('updatedAt', 'desc')
+      where('householdId', '==', userId)
     )
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const all = snapshot.docs.map(doc =>
-          convertTimestamps({ id: doc.id, ...doc.data() }) as ShoppingItem
-        )
+        const all = snapshot.docs
+          .map(doc =>
+            convertTimestamps({ id: doc.id, ...doc.data() }) as ShoppingItem
+          )
+          .sort((a, b) => {
+            const aTs = (a.updatedAt instanceof Date ? a.updatedAt.getTime() : 0)
+            const bTs = (b.updatedAt instanceof Date ? b.updatedAt.getTime() : 0)
+            return bTs - aTs
+          })
         setItems(all)
         setLoading(false)
         setError(null)

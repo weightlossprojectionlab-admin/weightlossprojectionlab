@@ -58,6 +58,10 @@ export interface WorklistItem {
   /** Optional category passthrough — duties use this to pick an icon/color
    *  per kind of task (medication, meals, household, etc.). */
   category?: string
+  /** Backing duty when kind === 'duty'. Lets per-item action sheets
+   *  open with full context (description, subtasks, due date) without
+   *  re-fetching. */
+  duty?: any
 
   /** ISO date — null when the item is "anytime soon" with no specific deadline. */
   dueAt: string | null
@@ -69,6 +73,10 @@ export interface WorklistItem {
 interface UseCaregiverWorklistReturn {
   items: WorklistItem[]
   loading: boolean
+  /** Force re-fetch of the underlying duty stream. Call after a duty
+   *  action (complete / skip) so the just-finished item drops out of
+   *  the worklist without a full page reload. */
+  refresh: () => Promise<void>
 }
 
 /**
@@ -77,6 +85,29 @@ interface UseCaregiverWorklistReturn {
 function makeItemId(kind: WorklistKind, ownerId: string, patientId: string, suffix = ''): string {
   return `${kind}:${ownerId}:${patientId}${suffix ? ':' + suffix : ''}`
 }
+
+/**
+ * Shopping-ish duty categories — these route the caregiver straight to
+ * /shopping/active (the in-store mode) instead of opening the generic
+ * "Mark complete" sheet. Semantic intent: a grocery duty IS a Start
+ * Shopping action; the existing scan/IN/OUT/checkout pipeline IS the
+ * way the caregiver completes it.
+ *
+ * Includes both the canonical DutyCategory enum values
+ * (types/household-duties.ts) and the legacy/informal labels that the
+ * seed scripts + older duties use. A duty's `category` string is matched
+ * against this set without snake/space normalization, so labels here
+ * must mirror what's stored in Firestore.
+ */
+const SHOPPING_DUTY_CATEGORIES: ReadonlySet<string> = new Set([
+  // Canonical enum
+  'shopping',
+  'grocery_shopping',
+  'medication_pickup',
+  // Legacy / informal labels (seeded duties, older categories)
+  'medication',
+  'errands',
+])
 
 export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
   const { profile, loading: profileLoading } = useUserProfile()
@@ -87,7 +118,7 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
   // Duties assigned by the family across every household the caller is
   // in. First real worklist source — replaces the check_in stub for
   // households that have actively assigned work.
-  const { duties, loading: dutiesLoading } = useMyAssignedDuties()
+  const { duties, loading: dutiesLoading, refetch: refetchDuties } = useMyAssignedDuties()
 
   const patientNamesById = useMemo(() => {
     const m = new Map<string, string>()
@@ -158,6 +189,17 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
       // the caregiver scan duty cards across households without opening
       // each one.
       const title = patientName ? `${duty.name} — ${patientName}` : duty.name
+      // Shopping-ish duties (grocery, errands, medication pickup) route
+      // straight to /shopping/active — the in-store flow IS how the
+      // caregiver completes them. Everything else opens the inline
+      // action sheet (Mark complete / Cancel). Empty href is the
+      // signal the renderer uses to suppress navigation and open
+      // the sheet instead.
+      const categoryKey = (duty.category || '').toLowerCase()
+      const isShoppingDuty = SHOPPING_DUTY_CATEGORIES.has(categoryKey)
+      const href = isShoppingDuty
+        ? `/shopping/active?ownerId=${encodeURIComponent(ownerId)}&dutyId=${encodeURIComponent(duty.id)}`
+        : ''
       return {
         id: makeItemId('duty', ownerId, patientId || duty.id, duty.id),
         kind: 'duty' as const,
@@ -168,11 +210,9 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
         patientName,
         title,
         category: duty.category,
+        duty,
         dueAt: duty.nextDueDate || null,
-        // No deep-link for an individual duty yet — route to the
-        // owner's Household Duties tab for now. Deep-link is a small
-        // follow-up.
-        href: '/family/dashboard?tab=duties',
+        href,
       }
     })
   }, [duties, ownerNames, patientNamesById, todayStart, todayEnd])
@@ -216,5 +256,6 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
   return {
     items,
     loading: profileLoading || namesLoading || patientsLoading || dutiesLoading,
+    refresh: refetchDuties,
   }
 }

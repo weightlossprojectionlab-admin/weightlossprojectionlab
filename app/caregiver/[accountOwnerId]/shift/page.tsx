@@ -12,13 +12,15 @@
 
 'use client'
 
-import { use, useMemo } from 'react'
+import { use, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { isFeatureEnabled } from '@/lib/featureFlags'
 import { useCaregiverWorklist, type WorklistItem } from '@/hooks/useCaregiverWorklist'
 import { HandoffNotes } from '@/components/caregiver/HandoffNotes'
+import { DutyActionSheet } from '@/components/caregiver/DutyActionSheet'
+import type { HouseholdDuty } from '@/types/household-duties'
 
 interface CaregiverShiftPageProps {
   params: Promise<{
@@ -127,7 +129,17 @@ function prettyCategory(category: string): string {
 function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
   const router = useRouter()
   const { accountOwnerId } = use(params)
-  const { items, loading } = useCaregiverWorklist()
+  const { items, loading, refresh } = useCaregiverWorklist()
+
+  // Selected duty drives the inline action sheet. Stored alongside the
+  // ownerName so the sheet header reads "for X · Y's Family" without
+  // re-deriving from items after the duty disappears from the worklist
+  // (refresh triggers a refetch that may remove it before close animates).
+  const [selectedDuty, setSelectedDuty] = useState<{
+    duty: HouseholdDuty
+    ownerName: string
+    patientName?: string
+  } | null>(null)
 
   // Group worklist items by owner so the UI can render one section per
   // household. Stable order: first occurrence in `items` wins.
@@ -240,11 +252,37 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
                           : item.urgency === 'due_now'
                             ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
                             : null
+                      // Duty card routing — two paths governed by the
+                      // worklist hook:
+                      //
+                      //   • Shopping-ish duty (grocery, errands, med
+                      //     pickup) — useCaregiverWorklist sets a real
+                      //     href to /shopping/active?ownerId=…&dutyId=….
+                      //     We navigate; the in-store flow IS how this
+                      //     duty completes.
+                      //
+                      //   • Other duty — useCaregiverWorklist sets href
+                      //     to '' (sentinel). We open the inline action
+                      //     sheet for Mark complete / Cancel.
+                      //
+                      // Non-duty items (check_in, future kinds) just
+                      // route to their href.
+                      const onClick = () => {
+                        if (item.kind === 'duty' && item.duty && !item.href) {
+                          setSelectedDuty({
+                            duty: item.duty as HouseholdDuty,
+                            ownerName: item.ownerName,
+                            patientName: item.patientName || undefined,
+                          })
+                          return
+                        }
+                        if (item.href) router.push(item.href)
+                      }
                       return (
                         <li key={item.id}>
                           <button
                             type="button"
-                            onClick={() => router.push(item.href)}
+                            onClick={onClick}
                             data-testid={`shift-item-${item.id}`}
                             className="w-full text-left bg-white dark:bg-card rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-4 flex items-center gap-4"
                           >
@@ -293,6 +331,19 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
           </button>
         </div>
       </main>
+
+      {selectedDuty && (
+        <DutyActionSheet
+          duty={selectedDuty.duty}
+          ownerName={selectedDuty.ownerName}
+          patientName={selectedDuty.patientName}
+          onClose={() => setSelectedDuty(null)}
+          onCompleted={() => {
+            setSelectedDuty(null)
+            void refresh()
+          }}
+        />
+      )}
     </div>
   )
 }

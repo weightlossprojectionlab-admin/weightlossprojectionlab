@@ -9,8 +9,9 @@
 
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useFamilyRoles, getCurrentUserRole, useIsAccountOwner } from '@/hooks/useFamilyRoles'
 import { useInvitations } from '@/hooks/useInvitations'
 import { usePatients } from '@/hooks/usePatients'
@@ -42,11 +43,29 @@ function FamilyDashboardContent() {
   const { patients, loading: patientsLoading } = usePatients()
   const { households, loading: householdsLoading } = useHouseholds()
 
-  // Check URL for tab parameter
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const initialTab = (searchParams?.get('tab') as 'members' | 'invitations' | 'access' | 'households' | 'duties' | 'notes') || 'members'
+  // Read ?tab=... via Next.js's useSearchParams so it works on both
+  // server and client renders. The prior pattern (typeof window !==
+  // 'undefined' ? ... : null) read null on the server render, defaulted
+  // to 'members', and useState never re-initialised on hydration — so
+  // a link to /family/dashboard?tab=duties landed on the Caregivers tab.
+  const searchParams = useSearchParams()
+  type Tab = 'members' | 'invitations' | 'access' | 'households' | 'duties' | 'notes'
+  const VALID_TABS: Tab[] = ['members', 'invitations', 'access', 'households', 'duties', 'notes']
+  const tabFromUrl = (searchParams?.get('tab') ?? 'members') as Tab
+  const initialTab: Tab = VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'members'
 
-  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access' | 'households' | 'duties' | 'notes'>(initialTab)
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab)
+
+  // If the user navigates between tab=... values without remounting
+  // (e.g. clicking a different in-app link to /family/dashboard?tab=X),
+  // sync the active tab to the new query string.
+  useEffect(() => {
+    const next = (searchParams?.get('tab') ?? 'members') as Tab
+    if (VALID_TABS.includes(next) && next !== activeTab) {
+      setActiveTab(next)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [selectedHouseholdForDuties, setSelectedHouseholdForDuties] = useState<string | null>(null)
