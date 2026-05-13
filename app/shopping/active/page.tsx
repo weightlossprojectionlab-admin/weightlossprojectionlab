@@ -86,6 +86,11 @@ function ActiveShoppingPageContent() {
   // Confirm Purchase so the caregiver doesn't have to mark it done
   // as a second step.
   const dutyIdParam = searchParams.get('dutyId') || undefined
+  // ?store=<catalog-id> — Phase 0b. Caregiver picked a store from
+  // the household roster; we filter the visible items to those
+  // assigned to that store + unassigned ("any store"). When unset
+  // OR 'any', the caregiver sees the full list.
+  const storeIdParam = searchParams.get('store') || undefined
   const { items: allItems, loading } = useShopping(ownerIdParam)
 
   // Session id captured from shoppingSessionManager.startSession. Drives
@@ -100,14 +105,34 @@ function ActiveShoppingPageContent() {
   // Store-picker gating. Caregiver mode shows the picker; the picked
   // store (or explicit skip) flips `pickerResolved` and the session-
   // start effect proceeds. Owner-self mode skips the picker entirely.
+  //
+  // If ?store= was already on the URL (deep-link from the duty card
+  // pre-tagged with a store, or shared link), the picker is already
+  // resolved — no modal flash. The caregiver still sees the correct
+  // filtered list.
   const isCaregiverMode = !!ownerIdParam && ownerIdParam !== auth.currentUser?.uid
-  const [pickerResolved, setPickerResolved] = useState<boolean>(!isCaregiverMode)
+  const [pickerResolved, setPickerResolved] = useState<boolean>(!isCaregiverMode || !!storeIdParam)
   const [pickedStoreName, setPickedStoreName] = useState<string | null>(null)
+  // Phase 0b — track the picked catalog id so we can:
+  //   (a) thread it into shoppingSessionManager.startSession's storeId
+  //   (b) filter the items the caregiver sees in ActiveShoppingMode
+  //   (c) reflect it back into the URL so a refresh stays scoped
+  const [pickedStoreId, setPickedStoreId] = useState<string | null>(
+    storeIdParam ?? null,
+  )
 
-  const handlePickStore = useCallback((_id: string | null, name: string | null) => {
+  const handlePickStore = useCallback((id: string | null, name: string | null) => {
+    setPickedStoreId(id)
     setPickedStoreName(name)
     setPickerResolved(true)
-  }, [])
+    // Reflect into the URL so a refresh / deep-link stays scoped.
+    // Skip when the URL already matches (avoids a no-op replace).
+    if (id && id !== storeIdParam) {
+      const next = new URLSearchParams(searchParams.toString())
+      next.set('store', id)
+      router.replace(`/shopping/active?${next.toString()}`)
+    }
+  }, [router, searchParams, storeIdParam])
   const handleEmptyRoster = useCallback(() => {
     // Roster has no entries — nothing to pick from; proceed without
     // a storeLocation. Same outcome as Skip, no modal flash.
@@ -143,6 +168,12 @@ function ActiveShoppingPageContent() {
           ...(pickedStoreName
             ? { storeLocation: { name: pickedStoreName, latitude: 0, longitude: 0 } }
             : {}),
+          // Phase 0b — canonical catalog id (joins against
+          // ShoppingItem.assignedStoreId for filtering). Distinct
+          // from storeLocation.name (free text). Receipt OCR may
+          // overwrite this post-checkout if the caregiver ended up
+          // somewhere different.
+          ...(pickedStoreId ? { storeId: pickedStoreId } : {}),
         })
         setSessionId(id)
 
@@ -203,7 +234,21 @@ function ActiveShoppingPageContent() {
   // The component takes the full set of items; it filters to needed
   // internally (and snapshots on open). Same prop shape as before
   // when it was an overlay — only the parent surface changed.
-  const neededItems = allItems.filter((item) => item.needed)
+  //
+  // Phase 0b — when ?store=<catalog-id> is set (either from the
+  // picker pass-through or a deep-link), filter to items assigned
+  // to that store PLUS unassigned ("any store") items. Unassigned
+  // items show in every store's view since they're "buy wherever
+  // convenient"; getting picked off at one store removes them from
+  // the next store's needed list automatically (needed flips false).
+  const activeStoreId = pickedStoreId || storeIdParam || null
+  const neededItems = allItems.filter((item) => {
+    if (!item.needed) return false
+    if (!activeStoreId) return true // no filter — show everything
+    const assigned = item.assignedStoreId
+    if (!assigned || assigned.length === 0) return true // any-store
+    return assigned === activeStoreId
+  })
 
   return (
     <ActiveShoppingMode
@@ -213,6 +258,7 @@ function ActiveShoppingPageContent() {
       dutyId={dutyIdParam}
       sessionId={sessionId}
       ownerId={ownerIdParam}
+      storeName={pickedStoreName ?? undefined}
     />
   )
 }

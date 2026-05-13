@@ -26,6 +26,7 @@ import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
 import { getCategoryMetadata, detectCategory, formatQuantityDisplay } from '@/lib/product-categories'
 import { ExpirationPicker } from '@/components/shopping/ExpirationPicker'
 import { SwipeableShoppingItem } from '@/components/shopping/SwipeableShoppingItem'
+import { ItemStoreChip } from '@/components/shopping/ItemStoreChip'
 import { ShareListButton } from '@/components/shopping/ShareListButton'
 import { SearchFilter } from '@/components/shopping/SearchFilter'
 import { StorePicker } from '@/components/shopping/StorePicker'
@@ -681,6 +682,25 @@ function ShoppingListContent() {
   }
 
   /**
+   * Phase 0b — set / clear the per-item store assignment from the
+   * row chip. `storeId === null` clears (back to "Any store").
+   */
+  const handleAssignStore = async (itemId: string, storeId: string | null) => {
+    try {
+      // Empty string sentinel — Firestore deleteField via undefined
+      // would be cleaner but updateItem's signature accepts Partial
+      // and undefined gets stripped at write time, leaving the field
+      // untouched. Setting to null lets us preserve the "clear"
+      // semantics while staying in the existing API shape.
+      await updateItem(itemId, { assignedStoreId: storeId ?? '' })
+      toast.success(storeId ? 'Store assigned' : 'Set to Any store')
+    } catch (err) {
+      logger.error('[handleAssignStore] write failed', err as Error, { itemId, storeId })
+      toast.error('Failed to update store')
+    }
+  }
+
+  /**
    * Delete item - show confirmation modal. Gated for terminated
    * subs: tapping the trash icon prompts reactivation rather than
    * letting them remove their accumulated list data.
@@ -1044,6 +1064,7 @@ function ShoppingListContent() {
                         onToggle={handleToggleNeeded}
                         onDelete={(id) => handleDeleteItem(id, item.productName)}
                         onClick={handleItemClick}
+                        onAssignStore={handleAssignStore}
                         showDebugInfo={true}
                         onFixOrphaned={handleFixOrphanedItem}
                         searchQuery={searchQuery}
@@ -1103,6 +1124,7 @@ function ShoppingListContent() {
                           onToggle={handleToggleNeeded}
                           onDelete={(id) => handleDeleteItem(id, item.productName)}
                           onClick={handleItemClick}
+                          onAssignStore={handleAssignStore}
                           showDebugInfo={showDebugMode}
                           searchQuery={searchQuery}
                           getMemberName={getMemberName}
@@ -1131,6 +1153,7 @@ function ShoppingListContent() {
                           onToggle={handleToggleNeeded}
                           onDelete={(id) => handleDeleteItem(id, item.productName)}
                           onClick={handleItemClick}
+                          onAssignStore={handleAssignStore}
                           showDebugInfo={showDebugMode}
                           searchQuery={searchQuery}
                           getMemberName={getMemberName}
@@ -1331,6 +1354,7 @@ function ShoppingItemCard({
   onToggle,
   onDelete,
   onClick,
+  onAssignStore,
   showDebugInfo,
   onFixOrphaned,
   searchQuery,
@@ -1341,6 +1365,8 @@ function ShoppingItemCard({
   onToggle: (id: string, current: boolean) => void
   onDelete: (id: string) => void
   onClick?: (item: ShoppingItem) => void
+  /** Phase 0b — set / clear the item's assignedStoreId. */
+  onAssignStore?: (itemId: string, storeId: string | null) => void | Promise<void>
   showDebugInfo?: boolean
   onFixOrphaned?: (itemId: string, itemName: string) => void
   searchQuery?: string
@@ -1436,6 +1462,15 @@ function ShoppingItemCard({
             addedBy={item.addedBy}
             getMemberName={getMemberName}
           />
+          {/* Phase 0b — per-item store assignment. Owner taps to set
+              the chain this item should be bought at; caregivers see
+              the filtered list at /shopping/active?store={id}. */}
+          {onAssignStore && (
+            <ItemStoreChip
+              assignedStoreId={item.assignedStoreId}
+              onAssign={(storeId) => onAssignStore(item.id, storeId)}
+            />
+          )}
         </div>
 
         {/* Recipe Links - Show which recipes use this ingredient */}

@@ -67,22 +67,67 @@ export function useStoreRoster(ownerId?: string): UseStoreRosterReturn {
       setLoading(false)
       return
     }
-    const ref = doc(db, 'users', targetUid)
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        const data = snap.data() || {}
-        const raw = Array.isArray(data.householdStoreIds) ? data.householdStoreIds : []
+    const callerUid = auth.currentUser?.uid
+
+    // Same-user path (owner viewing/editing own roster): real-time
+    // Firestore listener — /users/{userId} is readable by isOwner,
+    // so the snapshot stream works.
+    if (callerUid && callerUid === targetUid) {
+      const ref = doc(db, 'users', targetUid)
+      const unsub = onSnapshot(
+        ref,
+        (snap) => {
+          const data = snap.data() || {}
+          const raw = Array.isArray(data.householdStoreIds) ? data.householdStoreIds : []
+          setSelectedIds(orderedFromCatalog(raw))
+          setLoading(false)
+        },
+        (err) => {
+          logger.warn('[useStoreRoster] snapshot error', { error: err.message })
+          setError(err.message || 'Failed to load roster')
+          setLoading(false)
+        },
+      )
+      return unsub
+    }
+
+    // Cross-user path (caregiver reading owner's roster): the
+    // /users/{userId} rule blocks listeners from non-owners (it
+    // would expose subscription / managedBy / profile data). Hit
+    // the household-access-gated API instead. No real-time, but
+    // the roster changes rarely; mount-time fetch is fine.
+    let cancelled = false
+    ;(async () => {
+      try {
+        const user = auth.currentUser
+        if (!user) {
+          setLoading(false)
+          return
+        }
+        const token = await user.getIdToken()
+        const res = await fetch(`/api/owners/${targetUid}/store-roster`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (cancelled) return
+        if (!res.ok) {
+          throw new Error(`store-roster fetch ${res.status}`)
+        }
+        const body = (await res.json()) as { ids?: string[] }
+        const raw = Array.isArray(body?.ids) ? body.ids : []
         setSelectedIds(orderedFromCatalog(raw))
         setLoading(false)
-      },
-      (err) => {
-        logger.warn('[useStoreRoster] snapshot error', { error: err.message })
-        setError(err.message || 'Failed to load roster')
+      } catch (err: any) {
+        if (cancelled) return
+        logger.warn('[useStoreRoster] cross-user fetch failed', {
+          error: err?.message,
+        })
+        setError(err?.message || 'Failed to load roster')
         setLoading(false)
-      },
-    )
-    return unsub
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
   }, [targetUid, orderedFromCatalog])
 
   const setSelected = useCallback(async (ids: string[]) => {

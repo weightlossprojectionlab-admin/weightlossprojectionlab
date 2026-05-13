@@ -22,10 +22,11 @@
  * session starts with no storeLocation.
  */
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useStoreRoster } from '@/hooks/useStoreRoster'
 import { STORE_CATALOG_BY_ID } from '@/constants/store-roster'
 import { StoreBrandMark } from '@/components/family/StoreBrandMark'
+import { useShopping } from '@/hooks/useShopping'
 
 interface ShoppingStorePickerProps {
   householdId: string
@@ -40,12 +41,46 @@ interface ShoppingStorePickerProps {
   onEmptyRoster: () => void
 }
 
+/** Per-store item count summary — drives the count badges on each
+ *  tile so the caregiver knows where the work is. */
+interface StoreCounts {
+  /** items where assignedStoreId === storeId */
+  perStore: Map<string, number>
+  /** items with no / empty assignedStoreId — show in EVERY store's
+   *  view since they're "buy wherever convenient" */
+  unassigned: number
+  /** total needed items (for the "Skip — see all N" footer count) */
+  total: number
+}
+
 export function ShoppingStorePicker({
   householdId,
   onPick,
   onEmptyRoster,
 }: ShoppingStorePickerProps) {
   const { selectedIds, loading } = useStoreRoster(householdId)
+  // Phase 0b — read the owner's shopping items so we can show counts
+  // per store on each tile. Reuses the same useShopping(targetUserId)
+  // path the caregiver's /shopping/active already uses, so the listener
+  // state is shared and counts stay in sync.
+  const { items: shopItems } = useShopping(householdId)
+
+  const counts: StoreCounts = useMemo(() => {
+    const perStore = new Map<string, number>()
+    let unassigned = 0
+    let total = 0
+    for (const it of shopItems) {
+      if (!it.needed) continue
+      total += 1
+      const sid = it.assignedStoreId
+      if (sid && sid.length > 0) {
+        perStore.set(sid, (perStore.get(sid) || 0) + 1)
+      } else {
+        unassigned += 1
+      }
+    }
+    return { perStore, unassigned, total }
+  }, [shopItems])
 
   // Roster has finished loading and is empty — kick the page wrapper
   // forward immediately. Effect (not render-time) so we don't call a
@@ -100,20 +135,41 @@ export function ShoppingStorePicker({
         </p>
 
         <div className="grid grid-cols-3 gap-2.5">
-          {stores.map((store) => (
-            <button
-              key={store.id}
-              type="button"
-              onClick={() => onPick(store.id, store.name)}
-              data-testid={`shopping-store-pick-${store.id}`}
-              className="flex flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-4 min-h-[96px] shadow-sm hover:shadow-md active:scale-[0.97] transition-all border border-border bg-card hover:border-foreground/30"
-            >
-              <StoreBrandMark store={store} size="md" />
-              <span className="text-xs font-medium text-center leading-tight">
-                {store.name}
-              </span>
-            </button>
-          ))}
+          {stores.map((store) => {
+            // Phase 0b — items the caregiver will see when they pick
+            // this store = items assigned here + unassigned ("any
+            // store"). Unassigned bucket is shared across every tile;
+            // that's intentional — they get picked off as the caregiver
+            // grabs them at whichever store they're at first.
+            const assignedHere = counts.perStore.get(store.id) || 0
+            const visibleHere = assignedHere + counts.unassigned
+            return (
+              <button
+                key={store.id}
+                type="button"
+                onClick={() => onPick(store.id, store.name)}
+                data-testid={`shopping-store-pick-${store.id}`}
+                data-item-count={visibleHere}
+                className="relative flex flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-4 min-h-[96px] shadow-sm hover:shadow-md active:scale-[0.97] transition-all border border-border bg-card hover:border-foreground/30"
+              >
+                <StoreBrandMark store={store} size="md" />
+                <span className="text-xs font-medium text-center leading-tight">
+                  {store.name}
+                </span>
+                <span className="text-[10px] text-muted-foreground leading-none">
+                  {visibleHere} {visibleHere === 1 ? 'item' : 'items'}
+                </span>
+                {assignedHere > 0 && (
+                  <span
+                    className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center shadow-sm"
+                    aria-label={`${assignedHere} items assigned to ${store.name}`}
+                  >
+                    {assignedHere}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
 
         <button
@@ -122,7 +178,7 @@ export function ShoppingStorePicker({
           className="w-full mt-5 px-4 py-2.5 text-sm font-medium rounded-xl bg-background border-2 border-border text-foreground hover:border-primary min-h-[44px]"
           data-testid="shopping-store-skip"
         >
-          Skip for now
+          Skip — see all {counts.total} {counts.total === 1 ? 'item' : 'items'}
         </button>
       </div>
     </div>

@@ -54,15 +54,28 @@ async function gotoCaregiverShoppingActive(page: Page): Promise<void> {
     waitUntil: 'domcontentloaded',
   })
 
-  // If the household has a roster, the "Which store?" modal appears.
-  // Tap Skip for now — the sort rules don't depend on store choice.
-  // If the roster is empty, onEmptyRoster fires and the page proceeds
-  // without a modal — the locator below times out and we move on.
+  // Two valid landing states:
+  //   • Picker modal visible (household has a roster — Phase 0b's
+  //     store-roster API fetch resolved with entries)
+  //   • In-store page rendered without a modal (empty roster path
+  //     fired onEmptyRoster())
+  // Race them; whichever resolves first tells us what state we're in.
+  // Generous timeout because the cross-user roster fetch hits the
+  // API + Firestore admin SDK and can take several seconds on cold
+  // compile.
+  await Promise.race([
+    page.getByTestId('shopping-store-skip').waitFor({ timeout: 20_000 }),
+    page.getByTestId('active-shopping-title').waitFor({ timeout: 20_000 }),
+  ]).catch(() => {
+    // Neither appeared in 20s — let the downstream assertion produce
+    // the meaningful failure message instead of swallowing here.
+  })
+
+  // If the modal showed, dismiss it so the sort rules can be
+  // asserted on the rendered in-store list.
   const skipBtn = page.getByTestId('shopping-store-skip')
-  try {
-    await skipBtn.click({ timeout: 3_000 })
-  } catch {
-    // No modal — empty roster path. Proceeding directly.
+  if (await skipBtn.isVisible().catch(() => false)) {
+    await skipBtn.click()
   }
 }
 

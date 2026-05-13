@@ -119,3 +119,49 @@ export const STORE_CATEGORY_LABELS: Readonly<Record<StoreCategory, string>> = {
   dollar: 'Dollar Stores',
   natural: 'Natural & Organic',
 }
+
+/**
+ * Normalize a free-text store name (typically from a receipt OCR's
+ * `store` field — "WALMART INC #1234" / "WAL-MART SUPERCENTER" /
+ * "ALDI US") to the catalog `id` ('walmart' / 'aldi').
+ *
+ * Replaces the legacy `identifyGroceryChain` in lib/location-service.ts,
+ * which returned a chain NAME from a separate hardcoded array and
+ * couldn't bridge to the catalog ids that Phase 0a's roster uses.
+ * This function is the single normalization point — receipt OCR,
+ * Start Shopping picker, best-store auto-fill, and the
+ * ShoppingItem.assignedStoreId writer all flow through here so a
+ * given chain has one canonical id everywhere.
+ *
+ * Matching strategy: case-insensitive substring on each catalog
+ * entry's name AND id. The catalog name "Whole Foods Market" matches
+ * receipt strings like "WHOLE FOODS MARKET #10123" and the catalog
+ * id "whole-foods" matches "whole-foods.com" (defensive). Returns
+ * the FIRST match in catalog order — entries with longer names sort
+ * later in the iteration so shorter, more-specific names win on
+ * ambiguity (e.g. "Family Dollar" wins over "Dollar Tree" when the
+ * receipt says "FAMILY DOLLAR").
+ *
+ * Returns null when no entry matches — caller falls back to the
+ * raw free-text store name for display, but no `assignedStoreId`
+ * gets set (preserves "any store" semantics).
+ */
+export function normalizeStoreNameToCatalogId(text: string | null | undefined): string | null {
+  if (!text || typeof text !== 'string') return null
+  const lower = text.toLowerCase().trim()
+  if (lower.length === 0) return null
+
+  // Sort by name length DESC so longer (more specific) names match
+  // before shorter ones that are substrings. "Family Dollar" must
+  // beat the substring "Dollar" if the catalog ever held both.
+  const sortedByLength = [...STORE_CATALOG].sort(
+    (a, b) => b.name.length - a.name.length,
+  )
+  for (const entry of sortedByLength) {
+    const entryName = entry.name.toLowerCase()
+    if (lower.includes(entryName)) return entry.id
+    // Also try the id pattern (e.g. "harris-teeter" from a URL/slug)
+    if (lower.includes(entry.id)) return entry.id
+  }
+  return null
+}

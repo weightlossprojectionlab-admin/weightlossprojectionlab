@@ -119,6 +119,14 @@ interface ActiveShoppingModeProps {
    * is solo-owner and no fan-out fires.
    */
   ownerId?: string
+  /**
+   * Display name of the store the caregiver picked on Start Shopping
+   * (Phase 0b). When set, the header reads "Shopping at Walmart"
+   * instead of just "Shopping" — gives the caregiver a visual reminder
+   * of where they are. Passed through from the picker; falls back to
+   * session.storeLocation.name when receipt OCR overrides post-trip.
+   */
+  storeName?: string
 }
 
 interface PendingConfirm {
@@ -127,7 +135,7 @@ interface PendingConfirm {
   itemBarcode?: string
 }
 
-export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, ownerId }: ActiveShoppingModeProps) {
+export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, ownerId, storeName }: ActiveShoppingModeProps) {
   // Feature-access gates — terminated subscribers can view the trip
   // but can't scan, snap a receipt, or invoke AI features.
   const scanBarcodeLock = useLockedAction()
@@ -835,8 +843,12 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
       {/* Header */}
       <header className="px-4 py-3 border-b border-border flex items-center justify-between bg-card sticky top-0">
         <div>
-          <h1 className="text-base font-bold text-foreground">
-            {summaryOpen ? 'Trip summary' : 'Shopping'}
+          <h1 className="text-base font-bold text-foreground" data-testid="active-shopping-title">
+            {summaryOpen
+              ? 'Trip summary'
+              : storeName
+                ? `Shopping at ${storeName}`
+                : 'Shopping'}
           </h1>
           <p className="text-xs text-muted-foreground">
             {foundCount} of {totalCount} found

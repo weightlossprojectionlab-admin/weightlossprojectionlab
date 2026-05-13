@@ -71,6 +71,22 @@ export interface ShoppingSession {
     latitude: number
     longitude: number
   }
+  /**
+   * Catalog id of the chain this trip is being run at (Phase 0b).
+   * Distinct from `storeLocation.name` (free text like "Walmart
+   * Supercenter #1234") — `storeId` is the canonical catalog id
+   * ('walmart') that joins against ShoppingItem.assignedStoreId
+   * for filtering.
+   *
+   * Set paths:
+   *   • Caregiver picks a store on the Start Shopping picker;
+   *     /shopping/active passes ?store=walmart through to the
+   *     session at creation time.
+   *   • Receipt OCR (lib/apply-receipt-prices.ts) corrects this
+   *     post-checkout if the caregiver actually ended up somewhere
+   *     different — receipt is ground truth.
+   */
+  storeId?: string
   metadata: {
     appVersion: string
     deviceType: DeviceType
@@ -89,6 +105,9 @@ export interface ShoppingSessionCreateParams {
     latitude: number
     longitude: number
   }
+  /** Catalog id of the chain — set from the Start Shopping picker.
+   *  See ShoppingSession.storeId for semantics. */
+  storeId?: string
 }
 
 export interface ShoppingSessionUpdateParams {
