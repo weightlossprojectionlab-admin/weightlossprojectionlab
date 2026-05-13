@@ -26,6 +26,7 @@ import {
   type StoreCatalogEntry,
   type StoreCategory,
 } from '@/constants/store-roster'
+import { StoreBrandMark } from '@/components/family/StoreBrandMark'
 
 interface StoreRosterPickerProps {
   selectedIds: string[]
@@ -75,16 +76,15 @@ function StoreTile({
       ].join(' ')}
       style={selected ? { backgroundColor: store.brandColor } : undefined}
     >
-      <div
-        className={[
-          'w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0',
-          selected ? `${TILE_FG} bg-white/15` : '',
-        ].join(' ')}
-        style={!selected ? { backgroundColor: store.brandColor, color: 'white' } : undefined}
-        aria-hidden
-      >
-        {store.initial}
-      </div>
+      {/* Brand mark: real logo on a white surface if Clearbit returns
+          one, otherwise brand-color initial. The selected/unselected
+          state of the surrounding tile changes the surface, but the
+          mark itself stays on white so logos read cleanly either way. */}
+      <StoreBrandMark store={store} size="md" whiteSurface />
+      {/* Hidden mirror of the initial — kept for any e2e selectors
+          that look up tiles by their displayed initial. Visual is
+          driven by StoreBrandMark above. */}
+      <span className="sr-only" aria-hidden>{store.initial}</span>
       <span
         className={[
           'text-xs font-medium text-center leading-tight px-1',

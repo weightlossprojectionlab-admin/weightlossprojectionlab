@@ -25,6 +25,7 @@
 import { useEffect } from 'react'
 import { useStoreRoster } from '@/hooks/useStoreRoster'
 import { STORE_CATALOG_BY_ID } from '@/constants/store-roster'
+import { StoreBrandMark } from '@/components/family/StoreBrandMark'
 
 interface ShoppingStorePickerProps {
   householdId: string
@@ -107,13 +108,7 @@ export function ShoppingStorePicker({
               data-testid={`shopping-store-pick-${store.id}`}
               className="flex flex-col items-center justify-center gap-1.5 rounded-2xl px-3 py-4 min-h-[96px] shadow-sm hover:shadow-md active:scale-[0.97] transition-all border border-border bg-card hover:border-foreground/30"
             >
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0 text-white"
-                style={{ backgroundColor: store.brandColor }}
-                aria-hidden
-              >
-                {store.initial}
-              </div>
+              <StoreBrandMark store={store} size="md" />
               <span className="text-xs font-medium text-center leading-tight">
                 {store.name}
               </span>
