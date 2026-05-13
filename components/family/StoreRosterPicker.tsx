@@ -66,8 +66,12 @@ function StoreTile({
       aria-pressed={selected}
       data-testid={`store-tile-${store.id}`}
       className={[
-        'group relative flex flex-col items-center justify-center gap-1.5',
-        'rounded-2xl px-3 py-4 min-h-[96px] transition-all',
+        // Mobile-first: tighter padding + min-h on phones, more breathing
+        // room from sm: up. min-h hits 88px on mobile (still well past
+        // the 44px tap-target floor) and 96px from sm: where horizontal
+        // space allows.
+        'group relative flex flex-col items-center justify-center gap-1 sm:gap-1.5',
+        'rounded-2xl px-2 sm:px-3 py-3 sm:py-4 min-h-[88px] sm:min-h-[96px] transition-all',
         'shadow-sm hover:shadow-md active:scale-[0.97]',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         selected
@@ -133,7 +137,9 @@ export function StoreRosterPicker({
   }, [])
 
   return (
-    <div className="space-y-6" data-testid="store-roster-picker">
+    // Section spacing collapses on mobile (less wasted vertical) and
+    // opens up on larger screens. Grid gap follows the same pattern.
+    <div className="space-y-5 sm:space-y-6" data-testid="store-roster-picker">
       {(Object.keys(STORE_CATEGORY_LABELS) as StoreCategory[]).map((cat) => {
         const stores = grouped.get(cat) || []
         if (stores.length === 0) return null
@@ -142,7 +148,7 @@ export function StoreRosterPicker({
             <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2 px-1">
               {STORE_CATEGORY_LABELS[cat]}
             </h3>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2.5">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 sm:gap-2.5">
               {stores.map((s) => (
                 <StoreTile
                   key={s.id}
