@@ -17,21 +17,35 @@
  *           from (typically /shopping). Browser-back is also wired
  *           naturally because this is a real route.
  *
- * Session lifecycle (Phase 2):
+ * Session lifecycle:
  *   On mount we kick off shoppingSessionManager.startSession so that
- *   (a) the active-shopper pill on /family/dashboard (Phase 3) knows
- *   who is in-store right now, and (b) the bell fan-out endpoint
- *   (/api/owners/[ownerId]/shopping/start) has a sessionId to attach
+ *   (a) the active-shoppers strip on /family/dashboard knows who is
+ *   in-store right now, and (b) the bell fan-out endpoint
+ *   /api/owners/[ownerId]/shopping/start has a sessionId to attach
  *   the notification metadata to. The session ends inside
- *   ActiveShoppingMode after Confirm Purchase succeeds — the same
- *   place the duty auto-close fires.
+ *   ActiveShoppingMode after Confirm Purchase succeeds — same place
+ *   the duty auto-close fires.
+ *
+ * Store picker (Phase 0a-ii):
+ *   Caregiver flows (ownerIdParam set) show the ShoppingStorePicker
+ *   BEFORE the session starts. The picked store name flows into
+ *   shopping_sessions.storeLocation.name → the announce-start request
+ *   body → the bell title ("Sarah is shopping at Walmart") and the
+ *   active-shoppers strip's per-card display. Empty roster or an
+ *   explicit Skip starts the session without a storeLocation —
+ *   identical behavior to the pre-0a-ii flow.
+ *
+ *   Owner-self trips (no ownerIdParam) skip the picker entirely —
+ *   owner shopping their own list doesn't need the "for the family"
+ *   context disambiguation, and the modal would just be friction
+ *   between the dashboard and the items.
  *
  * Empty-state behavior: if the user has no needed items, the
  * ActiveShoppingMode list view shows its own "no items" message —
  * no special handling here.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -41,6 +55,7 @@ import { auth } from '@/lib/firebase'
 import { shoppingSessionManager } from '@/lib/shopping-session-manager'
 import { generateDeviceId } from '@/types/shopping-session'
 import { logger } from '@/lib/logger'
+import { ShoppingStorePicker } from '@/components/shopping/ShoppingStorePicker'
 
 const ActiveShoppingMode = dynamic(
   () =>
@@ -82,8 +97,29 @@ function ActiveShoppingPageContent() {
   // call kicks off.
   const startedRef = useRef(false)
 
+  // Store-picker gating. Caregiver mode shows the picker; the picked
+  // store (or explicit skip) flips `pickerResolved` and the session-
+  // start effect proceeds. Owner-self mode skips the picker entirely.
+  const isCaregiverMode = !!ownerIdParam && ownerIdParam !== auth.currentUser?.uid
+  const [pickerResolved, setPickerResolved] = useState<boolean>(!isCaregiverMode)
+  const [pickedStoreName, setPickedStoreName] = useState<string | null>(null)
+
+  const handlePickStore = useCallback((_id: string | null, name: string | null) => {
+    setPickedStoreName(name)
+    setPickerResolved(true)
+  }, [])
+  const handleEmptyRoster = useCallback(() => {
+    // Roster has no entries — nothing to pick from; proceed without
+    // a storeLocation. Same outcome as Skip, no modal flash.
+    setPickerResolved(true)
+  }, [])
+
   useEffect(() => {
     if (startedRef.current) return
+    // Wait for the picker to resolve before creating the session —
+    // otherwise we'd kick off without the storeLocation context we
+    // were specifically asking for.
+    if (!pickerResolved) return
     const user = auth.currentUser
     if (!user) return
     startedRef.current = true
@@ -100,6 +136,13 @@ function ActiveShoppingPageContent() {
           userName,
           userRole,
           deviceId: generateDeviceId(),
+          // Lat/lng placeholders match logStoreVisit's current shape —
+          // real geolocation lands in a future phase (per-store layout
+          // learning). The brand-name string is the user-visible value
+          // and the one the bell title surfaces.
+          ...(pickedStoreName
+            ? { storeLocation: { name: pickedStoreName, latitude: 0, longitude: 0 } }
+            : {}),
         })
         setSessionId(id)
 
@@ -117,6 +160,7 @@ function ActiveShoppingPageContent() {
               body: JSON.stringify({
                 sessionId: id,
                 ...(dutyIdParam ? { fromDutyId: dutyIdParam } : {}),
+                ...(pickedStoreName ? { storeName: pickedStoreName } : {}),
               }),
             })
           } catch (err) {
@@ -133,7 +177,20 @@ function ActiveShoppingPageContent() {
         startedRef.current = false
       }
     })()
-  }, [ownerIdParam, dutyIdParam])
+  }, [ownerIdParam, dutyIdParam, pickerResolved, pickedStoreName])
+
+  // Caregiver mode + picker hasn't resolved yet → render the modal
+  // over a backdrop. We deliberately don't load ActiveShoppingMode in
+  // this state so the items don't flash behind the modal.
+  if (isCaregiverMode && !pickerResolved) {
+    return (
+      <ShoppingStorePicker
+        householdId={ownerIdParam!}
+        onPick={handlePickStore}
+        onEmptyRoster={handleEmptyRoster}
+      />
+    )
+  }
 
   if (loading) {
     return (
