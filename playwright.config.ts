@@ -69,6 +69,16 @@ export default defineConfig({
       use: { headless: false },
     },
     {
+      // Secondary auth setup for the caregiver-side fixture user.
+      // Headless + zero slowMo so it survives the cold-compile of
+      // /auth on a fresh dev server without hitting the 2-min cap.
+      // (auth.setup.ts is headed because Google OAuth fallback needs
+      // a human; this one is pure password — no human needed.)
+      name: 'setup-caregiver',
+      testMatch: /auth-caregiver\.setup\.ts/,
+      use: { headless: true, launchOptions: { slowMo: 0 } },
+    },
+    {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
@@ -80,7 +90,22 @@ export default defineConfig({
         viewport: { width: 960, height: 940 },
       },
       dependencies: ['setup'],
-      testIgnore: /auth\.setup\.ts/,
+      // Don't pick up either auth setup file in the regular run. Don't
+      // pick up caregiver-side specs either — those use a different
+      // storage state and run under the chromium-caregiver project.
+      testIgnore: [/auth\.setup\.ts/, /auth-caregiver\.setup\.ts/, /\.caregiver\.spec\.ts$/],
+    },
+    {
+      // Caregiver-side specs use the percyrice fixture. Pattern: name
+      // the spec *.caregiver.spec.ts and it runs under this project.
+      name: 'chromium-caregiver',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/caregiver.json',
+        viewport: { width: 960, height: 940 },
+      },
+      dependencies: ['setup-caregiver'],
+      testMatch: /\.caregiver\.spec\.ts$/,
     },
   ],
 })

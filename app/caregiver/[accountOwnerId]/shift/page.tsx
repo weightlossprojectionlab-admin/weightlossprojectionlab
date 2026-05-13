@@ -116,7 +116,11 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
                 </div>
                 <ul className="space-y-2">
                   {group.items.map((item) => {
-                    const initial = (item.patientName?.[0] || '?').toUpperCase()
+                    // Avatar initial: prefer the patient when a duty is tied to one,
+                    // else fall back to the action verb's initial ("D" for duty,
+                    // "C" for check_in) so household-wide duties don't render as "?".
+                    const initialSource = item.patientName || item.kind || '?'
+                    const initial = initialSource[0].toUpperCase()
                     const actionLabel = item.kind.replace(/_/g, ' ')
                     const urgencyLabel =
                       item.urgency === 'overdue'
@@ -142,8 +146,10 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
                             <span className="text-primary font-semibold text-lg">{initial}</span>
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-foreground truncate">{item.patientName}</p>
-                            <p className="text-xs text-muted-foreground capitalize">{actionLabel}</p>
+                            <p className="font-semibold text-foreground truncate">{item.title}</p>
+                            <p className="text-xs text-muted-foreground capitalize">
+                              {item.patientName ? `${item.patientName} · ` : ''}{actionLabel}
+                            </p>
                           </div>
                           {urgencyLabel && urgencyClass && (
                             <span className={`text-xs font-medium px-2 py-1 rounded ${urgencyClass} flex-shrink-0`}>
