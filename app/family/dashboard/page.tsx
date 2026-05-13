@@ -24,6 +24,7 @@ import { HouseholdManager } from '@/components/households/HouseholdManager'
 import { DutyListView } from '@/components/household/DutyListView'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { HandoffNotes } from '@/components/caregiver/HandoffNotes'
+import { ActiveShoppersStrip } from '@/components/family/ActiveShoppersStrip'
 import { ROLE_LABELS } from '@/lib/family-roles'
 import type { FamilyMember, FamilyInvitation } from '@/types/medical'
 import type { CaregiverProfile } from '@/types/caregiver'
@@ -157,6 +158,16 @@ function FamilyDashboardContent() {
       />
 
       <main className="container mx-auto px-4 py-8">
+        {/*
+          Active-shoppers strip — Phase 3a orchestration UX. Hidden when
+          nobody's mid-trip. Lives ABOVE the tab nav so the owner sees
+          "someone's in the store right now" without having to be on a
+          specific tab. The strip self-hides when sessions === 0, so
+          this is a no-op for households whose caregivers aren't in
+          active shopping mode.
+        */}
+        <ActiveShoppersStrip householdId={user?.uid} />
+
         {/* Tab Navigation */}
         <div className="flex items-center gap-4 mb-6 border-b border-border overflow-x-auto">
           <button
