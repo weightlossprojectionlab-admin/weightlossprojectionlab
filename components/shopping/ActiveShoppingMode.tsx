@@ -427,6 +427,23 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
         purchasedBy: userId,
       })
 
+      // Record the scan event on the session — bumps itemsScanned
+      // (drives the active-shoppers strip's "N items picked" line on
+      // /family/dashboard) AND appends to scanSequence (Phase C ML
+      // substrate: per-(caregiver, store) aisle-visit order). Best-
+      // effort: failure logs but doesn't block the trip.
+      try {
+        await shoppingSessionManager.incrementItemsScanned({
+          itemId: activeItem.id,
+          category: activeItem.category,
+        })
+      } catch (err) {
+        logger.warn('[ActiveShopping] scan-event capture failed', {
+          itemId: activeItem.id,
+          error: (err as Error).message,
+        })
+      }
+
       // Haptic + audible confirmation. Synthesized chime (no asset
       // file) so this works even when /notification.mp3 is missing.
       try {
