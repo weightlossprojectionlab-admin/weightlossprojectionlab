@@ -34,6 +34,96 @@ export default function CaregiverShiftPage({ params }: CaregiverShiftPageProps) 
   )
 }
 
+// ─── visual helpers ────────────────────────────────────────────────────
+
+/** Time-of-day greeting in the page title. Keeps "Today" but warmer. */
+function greetingTitle(): string {
+  const h = new Date().getHours()
+  if (h < 5) return 'Tonight'
+  if (h < 12) return 'Good morning'
+  if (h < 17) return 'Good afternoon'
+  if (h < 21) return 'Good evening'
+  return 'Tonight'
+}
+
+/** Pick a per-item emoji from kind + duty category. The category set
+ *  is open-ended (custom user duties), so unknown values fall back to
+ *  a generic clipboard. */
+function pickIcon(kind: string, category?: string): string {
+  if (kind === 'check_in') return '👋'
+  switch ((category || '').toLowerCase()) {
+    case 'medication':
+    case 'medications':
+      return '💊'
+    case 'meals':
+    case 'meal':
+    case 'cooking':
+      return '🍽️'
+    case 'household':
+    case 'chores':
+    case 'cleaning':
+      return '🏠'
+    case 'errands':
+    case 'shopping':
+      return '🛒'
+    case 'appointments':
+    case 'appointment':
+      return '📅'
+    case 'finances':
+    case 'bills':
+      return '💵'
+    case 'transportation':
+    case 'transport':
+      return '🚗'
+    case 'yard_work':
+      return '🌳'
+    case 'self_care':
+      return '🛁'
+    default:
+      return '📋'
+  }
+}
+
+/** Soft pastel tint for the avatar tile, picked from the same vocabulary
+ *  as pickIcon so icons and colors agree per category. */
+function pickTint(kind: string, category?: string): string {
+  if (kind === 'check_in') return 'bg-teal-100 dark:bg-teal-900/30'
+  switch ((category || '').toLowerCase()) {
+    case 'medication':
+    case 'medications':
+      return 'bg-rose-100 dark:bg-rose-900/30'
+    case 'meals':
+    case 'meal':
+    case 'cooking':
+      return 'bg-orange-100 dark:bg-orange-900/30'
+    case 'household':
+    case 'chores':
+    case 'cleaning':
+      return 'bg-amber-100 dark:bg-amber-900/30'
+    case 'errands':
+    case 'shopping':
+      return 'bg-yellow-100 dark:bg-yellow-900/30'
+    case 'appointments':
+    case 'appointment':
+      return 'bg-purple-100 dark:bg-purple-900/30'
+    case 'finances':
+    case 'bills':
+      return 'bg-emerald-100 dark:bg-emerald-900/30'
+    case 'yard_work':
+      return 'bg-lime-100 dark:bg-lime-900/30'
+    default:
+      return 'bg-blue-100 dark:bg-blue-900/30'
+  }
+}
+
+/** Snake_case → Title Case for the small subtitle line ("medication" →
+ *  "Medication"; "yard_work" → "Yard Work"). */
+function prettyCategory(category: string): string {
+  return category
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
   const router = useRouter()
   const { accountOwnerId } = use(params)
@@ -79,100 +169,117 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white py-2 px-4 text-center text-sm font-medium">
-        Beta — Today
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-blue-50/40 to-background dark:from-purple-900/10 dark:via-blue-900/5 dark:to-background">
+      <div className="bg-gradient-to-r from-amber-400 via-orange-400 to-pink-400 text-white py-2 px-4 text-center text-xs font-semibold tracking-wide">
+        ✨ Beta — Today
       </div>
 
       <PageHeader
-        title="Today"
-        subtitle="What's due across every household you help."
+        title={greetingTitle()}
+        subtitle="A quick look at what's on your plate across every household you help. 💛"
       />
 
       <main className="container mx-auto px-4 py-8" data-testid="shift-worklist">
         {loading ? (
-          <div className="bg-card rounded-lg border-2 border-border p-8 text-center">
-            <p className="text-sm text-muted-foreground">Loading today's care…</p>
+          <div className="bg-white/70 dark:bg-card/70 backdrop-blur-sm rounded-2xl shadow-sm p-10 text-center">
+            <div className="text-4xl mb-2">☕</div>
+            <p className="text-sm text-muted-foreground">Loading today&apos;s care…</p>
           </div>
         ) : groups.length === 0 ? (
-          <div className="bg-card rounded-lg border-2 border-border p-8 text-center">
-            <h2 className="text-lg font-semibold text-foreground mb-2">All clear</h2>
-            <p className="text-sm text-muted-foreground">
-              No households or patients on your access list right now. When someone invites
-              you to caregive, their household appears here.
+          <div className="bg-white/70 dark:bg-card/70 backdrop-blur-sm rounded-2xl shadow-sm p-10 text-center">
+            <div className="text-5xl mb-3">🌿</div>
+            <h2 className="text-xl font-semibold text-foreground mb-2">All clear today</h2>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              No households on your list yet. When someone invites you to caregive, you&apos;ll see their family here.
             </p>
           </div>
         ) : (
-          <div className="space-y-8">
-            {groups.map((group) => (
-              <section key={group.ownerId} data-testid={`shift-group-${group.ownerId}`}>
-                <div className="flex items-baseline justify-between mb-3">
-                  <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                    {group.ownerName}&apos;s Family
-                  </h2>
-                  <span className="text-xs text-muted-foreground">
-                    {group.items.length} {group.items.length === 1 ? 'patient' : 'patients'}
-                  </span>
-                </div>
-                <ul className="space-y-2">
-                  {group.items.map((item) => {
-                    // Avatar initial: prefer the patient when a duty is tied to one,
-                    // else fall back to the action verb's initial ("D" for duty,
-                    // "C" for check_in) so household-wide duties don't render as "?".
-                    const initialSource = item.patientName || item.kind || '?'
-                    const initial = initialSource[0].toUpperCase()
-                    const actionLabel = item.kind.replace(/_/g, ' ')
-                    const urgencyLabel =
-                      item.urgency === 'overdue'
-                        ? 'Overdue'
-                        : item.urgency === 'due_now'
-                          ? 'Due now'
-                          : null
-                    const urgencyClass =
-                      item.urgency === 'overdue'
-                        ? 'bg-error-light text-error-dark'
-                        : item.urgency === 'due_now'
-                          ? 'bg-warning-light text-warning-dark'
-                          : null
-                    return (
-                      <li key={item.id}>
-                        <button
-                          type="button"
-                          onClick={() => router.push(item.href)}
-                          data-testid={`shift-item-${item.id}`}
-                          className="w-full text-left bg-card rounded-lg border-2 border-border p-4 hover:border-primary transition-colors flex items-center gap-4"
-                        >
-                          <div className="w-12 h-12 rounded-full bg-primary-light flex items-center justify-center flex-shrink-0">
-                            <span className="text-primary font-semibold text-lg">{initial}</span>
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-foreground truncate">{item.title}</p>
-                            <p className="text-xs text-muted-foreground capitalize">
-                              {item.patientName ? `${item.patientName} · ` : ''}{actionLabel}
-                            </p>
-                          </div>
-                          {urgencyLabel && urgencyClass && (
-                            <span className={`text-xs font-medium px-2 py-1 rounded ${urgencyClass} flex-shrink-0`}>
-                              {urgencyLabel}
-                            </span>
-                          )}
-                          <svg
-                            className="w-5 h-5 text-muted-foreground flex-shrink-0"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
+          <div className="space-y-10">
+            {groups.map((group, groupIdx) => {
+              // Soft per-section accent — each household gets a different
+              // pastel band so the eye can scan across multiple families.
+              const accents = [
+                { ring: 'ring-purple-200', dot: 'bg-purple-400', soft: 'from-purple-100 to-pink-50' },
+                { ring: 'ring-blue-200', dot: 'bg-blue-400', soft: 'from-blue-100 to-teal-50' },
+                { ring: 'ring-amber-200', dot: 'bg-amber-400', soft: 'from-amber-100 to-orange-50' },
+                { ring: 'ring-emerald-200', dot: 'bg-emerald-400', soft: 'from-emerald-100 to-lime-50' },
+              ]
+              const accent = accents[groupIdx % accents.length]
+
+              return (
+                <section key={group.ownerId} data-testid={`shift-group-${group.ownerId}`}>
+                  <div className={`bg-gradient-to-r ${accent.soft} dark:bg-none dark:bg-card rounded-2xl px-5 py-3 mb-4 flex items-center justify-between shadow-sm`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full ${accent.dot}`}></span>
+                      <h2 className="text-sm font-semibold text-foreground">
+                        {group.ownerName}&apos;s Family
+                      </h2>
+                    </div>
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {group.items.length} {group.items.length === 1 ? 'thing' : 'things'} on your plate
+                    </span>
+                  </div>
+
+                  <ul className="space-y-3">
+                    {group.items.map((item) => {
+                      const icon = pickIcon(item.kind, item.category)
+                      const tint = pickTint(item.kind, item.category)
+                      const actionLabel =
+                        item.kind === 'duty'
+                          ? (item.category ? prettyCategory(item.category) : 'Duty')
+                          : 'Check-in'
+                      const urgencyLabel =
+                        item.urgency === 'overdue'
+                          ? '⚠️ Overdue'
+                          : item.urgency === 'due_now'
+                            ? '⏰ Due today'
+                            : null
+                      const urgencyClass =
+                        item.urgency === 'overdue'
+                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                          : item.urgency === 'due_now'
+                            ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'
+                            : null
+                      return (
+                        <li key={item.id}>
+                          <button
+                            type="button"
+                            onClick={() => router.push(item.href)}
+                            data-testid={`shift-item-${item.id}`}
+                            className="w-full text-left bg-white dark:bg-card rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-4 flex items-center gap-4"
                           >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-                {/* Per-household handoff log: composer + recent feed. */}
-                <HandoffNotes ownerId={group.ownerId} ownerName={group.ownerName} />
-              </section>
-            ))}
+                            <div className={`w-12 h-12 rounded-2xl ${tint} flex items-center justify-center flex-shrink-0 text-2xl`}>
+                              {icon}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-foreground truncate">{item.title}</p>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                {item.patientName ? `for ${item.patientName} · ` : ''}{actionLabel}
+                              </p>
+                            </div>
+                            {urgencyLabel && urgencyClass && (
+                              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${urgencyClass} flex-shrink-0`}>
+                                {urgencyLabel}
+                              </span>
+                            )}
+                            <svg
+                              className="w-5 h-5 text-muted-foreground/60 flex-shrink-0"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                            </svg>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {/* Per-household handoff log: composer + recent feed. */}
+                  <HandoffNotes ownerId={group.ownerId} ownerName={group.ownerName} />
+                </section>
+              )
+            })}
           </div>
         )}
 

@@ -55,6 +55,9 @@ export interface WorklistItem {
 
   /** Headline copy the UI renders. Concrete and action-shaped. */
   title: string
+  /** Optional category passthrough — duties use this to pick an icon/color
+   *  per kind of task (medication, meals, household, etc.). */
+  category?: string
 
   /** ISO date — null when the item is "anytime soon" with no specific deadline. */
   dueAt: string | null
@@ -164,6 +167,7 @@ export function useCaregiverWorklist(): UseCaregiverWorklistReturn {
         patientId,
         patientName,
         title,
+        category: duty.category,
         dueAt: duty.nextDueDate || null,
         // No deep-link for an individual duty yet — route to the
         // owner's Household Duties tab for now. Deep-link is a small
