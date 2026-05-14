@@ -112,10 +112,21 @@ export function ShoppingStorePicker({
   // onEmptyRoster. Keeps the DOM clean.
   if (selectedIds.length === 0) return null
 
-  // Resolve the household's chosen ids back to catalog entries.
+  // Resolve the household's chosen ids back to catalog entries, then
+  // sort by per-store item count descending — the "main" stop (most
+  // items assigned) surfaces first. Phase 0c-a rule v1: item-fit
+  // ordering. Ties preserve catalog order via Array.sort's stability
+  // (ES2019+). Proximity tiebreaker deferred to 0c-b (needs owner home
+  // address + per-chain store coords).
   const stores = selectedIds
     .map((id) => STORE_CATALOG_BY_ID[id])
     .filter((s): s is NonNullable<typeof s> => !!s)
+    .slice()
+    .sort((a, b) => {
+      const ca = counts.perStore.get(a.id) || 0
+      const cb = counts.perStore.get(b.id) || 0
+      return cb - ca
+    })
 
   return (
     <div
