@@ -20,7 +20,30 @@ import { isFeatureEnabled } from '@/lib/featureFlags'
 import { useCaregiverWorklist, type WorklistItem } from '@/hooks/useCaregiverWorklist'
 import { HandoffNotes } from '@/components/caregiver/HandoffNotes'
 import { DutyActionSheet } from '@/components/caregiver/DutyActionSheet'
+import { auth } from '@/lib/firebase'
+import { logger } from '@/lib/logger'
 import type { HouseholdDuty } from '@/types/household-duties'
+
+// Phase 0d — task gating per-item claim state.
+//
+//   • 'own': single-assigned (auto-claimed at create) OR claimedBy === caller.
+//     Card behaves normally — click navigates or opens action sheet.
+//   • 'unclaimed': multi-assigned, claimedBy is empty. Card shows
+//     "Take this" affordance; click POSTs /claim and refreshes.
+//   • 'claimed_by_other': multi-assigned, claimedBy is someone else.
+//     Card is read-only and labeled "Claimed by another caregiver".
+type ClaimState = 'own' | 'unclaimed' | 'claimed_by_other'
+
+function computeClaimState(duty: HouseholdDuty | undefined, callerUid: string | null): ClaimState {
+  if (!duty || !callerUid) return 'own'
+  const assignees = Array.isArray(duty.assignedTo) ? duty.assignedTo : []
+  // Single-assigned duties carry an implicit claim by their sole assignee.
+  // Anything claimed by the caller is "own" regardless of pool size.
+  if (assignees.length <= 1) return 'own'
+  if (duty.claimedBy === callerUid) return 'own'
+  if (!duty.claimedBy) return 'unclaimed'
+  return 'claimed_by_other'
+}
 
 interface CaregiverShiftPageProps {
   params: Promise<{
@@ -140,6 +163,46 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
     ownerName: string
     patientName?: string
   } | null>(null)
+
+  // Phase 0d — disable a card while its claim POST is in flight to keep
+  // the user from triple-tapping during the network round-trip. Set of
+  // duty ids currently mid-claim.
+  const [claimingIds, setClaimingIds] = useState<Set<string>>(new Set())
+
+  const callerUid = auth.currentUser?.uid || null
+
+  async function handleClaim(duty: HouseholdDuty): Promise<void> {
+    if (claimingIds.has(duty.id)) return
+    const user = auth.currentUser
+    if (!user) return
+    setClaimingIds((s) => {
+      const next = new Set(s)
+      next.add(duty.id)
+      return next
+    })
+    try {
+      const token = await user.getIdToken()
+      const res = await fetch(`/api/household-duties/${duty.id}/claim`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok && res.status !== 200) {
+        // Race lost (409) or other error. Refresh the worklist so the
+        // caregiver sees the current state (likely "Claimed by another
+        // caregiver" now), and let them route to other work.
+        logger.info('[shift-view] claim rejected', { dutyId: duty.id, status: res.status })
+      }
+    } catch (err) {
+      logger.warn('[shift-view] claim error', { error: (err as Error)?.message })
+    } finally {
+      await refresh()
+      setClaimingIds((s) => {
+        const next = new Set(s)
+        next.delete(duty.id)
+        return next
+      })
+    }
+  }
 
   // Group worklist items by owner so the UI can render one section per
   // household. Stable order: first occurrence in `items` wins.
@@ -267,7 +330,31 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
                       //
                       // Non-duty items (check_in, future kinds) just
                       // route to their href.
+                      //
+                      // Phase 0d task gating: duties owned by a multi-
+                      // assignee pool need a claim before they're
+                      // actionable. computeClaimState routes the click
+                      // accordingly:
+                      //
+                      //   • own / single-assigned → existing behavior
+                      //   • unclaimed → POST /claim, refresh; UI shows
+                      //     a "Take this" affordance
+                      //   • claimed_by_other → card disabled; UI shows
+                      //     "Claimed by another caregiver"
+                      const claimState =
+                        item.kind === 'duty' && item.duty
+                          ? computeClaimState(item.duty as HouseholdDuty, callerUid)
+                          : 'own'
+                      const isClaiming = item.duty ? claimingIds.has((item.duty as HouseholdDuty).id) : false
+                      const isClaimedByOther = claimState === 'claimed_by_other'
+                      const isUnclaimed = claimState === 'unclaimed'
+
                       const onClick = () => {
+                        if (isClaimedByOther) return // read-only
+                        if (isUnclaimed && item.duty) {
+                          void handleClaim(item.duty as HouseholdDuty)
+                          return
+                        }
                         if (item.kind === 'duty' && item.duty && !item.href) {
                           setSelectedDuty({
                             duty: item.duty as HouseholdDuty,
@@ -283,8 +370,14 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
                           <button
                             type="button"
                             onClick={onClick}
+                            disabled={isClaimedByOther || isClaiming}
                             data-testid={`shift-item-${item.id}`}
-                            className="w-full text-left bg-white dark:bg-card rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all p-4 flex items-center gap-4"
+                            data-claim-state={claimState}
+                            className={`w-full text-left bg-white dark:bg-card rounded-2xl shadow-sm transition-all p-4 flex items-center gap-4 ${
+                              isClaimedByOther
+                                ? 'opacity-60 cursor-not-allowed'
+                                : 'hover:shadow-md hover:-translate-y-0.5'
+                            }`}
                           >
                             <div className={`w-12 h-12 rounded-2xl ${tint} flex items-center justify-center flex-shrink-0 text-2xl`}>
                               {icon}
@@ -295,19 +388,37 @@ function CaregiverShiftContent({ params }: CaregiverShiftPageProps) {
                                 {item.patientName ? `for ${item.patientName} · ` : ''}{actionLabel}
                               </p>
                             </div>
-                            {urgencyLabel && urgencyClass && (
-                              <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${urgencyClass} flex-shrink-0`}>
-                                {urgencyLabel}
+                            {isClaimedByOther ? (
+                              <span
+                                className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 flex-shrink-0"
+                                data-testid={`shift-item-claimed-by-other-${item.id}`}
+                              >
+                                🔒 Taken
                               </span>
+                            ) : isUnclaimed ? (
+                              <span
+                                className="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary/10 text-primary flex-shrink-0"
+                                data-testid={`shift-item-take-this-${item.id}`}
+                              >
+                                {isClaiming ? 'Claiming…' : 'Take this →'}
+                              </span>
+                            ) : (
+                              <>
+                                {urgencyLabel && urgencyClass && (
+                                  <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${urgencyClass} flex-shrink-0`}>
+                                    {urgencyLabel}
+                                  </span>
+                                )}
+                                <svg
+                                  className="w-5 h-5 text-muted-foreground/60 flex-shrink-0"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                </svg>
+                              </>
                             )}
-                            <svg
-                              className="w-5 h-5 text-muted-foreground/60 flex-shrink-0"
-                              fill="none"
-                              viewBox="0 0 24 24"
-                              stroke="currentColor"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
                           </button>
                         </li>
                       )

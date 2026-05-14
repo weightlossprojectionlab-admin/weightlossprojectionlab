@@ -350,6 +350,16 @@ export interface HouseholdDuty {
   assignedBy: string // userId who made the assignment
   assignedAt: string // ISO 8601
 
+  // Phase 0d claim semantic — when a duty is multi-assigned (assignedTo
+  // length > 1), only the caregiver in claimedBy is actively responsible
+  // for it; others see "Claimed by X" on the shift view. Set via the
+  // /api/household-duties/[id]/claim transactional endpoint so two
+  // caregivers can't race-claim the same duty. Single-assigned duties
+  // (assignedTo length === 1) auto-set claimedBy = assignedTo[0] at
+  // creation, so the claim is implicit and the UI affordance is hidden.
+  claimedBy?: string // userId of the caregiver who claimed
+  claimedAt?: string // ISO 8601
+
   // Scheduling
   frequency: DutyFrequency
   customSchedule?: {

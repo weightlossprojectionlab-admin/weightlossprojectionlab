@@ -323,6 +323,17 @@ export async function POST(request: NextRequest) {
     if (body.notes) duty.notes = body.notes
     if (body.specialInstructions) duty.specialInstructions = body.specialInstructions
 
+    // Phase 0d — auto-claim single-assigned duties. With exactly one
+    // caregiver in assignedTo, there's no contention possible, so we
+    // set claimedBy at create time so the shift view doesn't show a
+    // "Take this" affordance the caregiver doesn't need. Multi-assigned
+    // duties leave claimedBy undefined until a caregiver actively claims
+    // via /api/household-duties/[id]/claim.
+    if (body.assignedTo.length === 1) {
+      duty.claimedBy = body.assignedTo[0]
+      duty.claimedAt = now
+    }
+
     const docRef = await db.collection('household_duties').add(duty as Omit<HouseholdDuty, 'id'>)
     const createdDuty: HouseholdDuty = {
       ...duty as HouseholdDuty,
