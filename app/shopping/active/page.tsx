@@ -56,6 +56,7 @@ import { shoppingSessionManager } from '@/lib/shopping-session-manager'
 import { generateDeviceId } from '@/types/shopping-session'
 import { logger } from '@/lib/logger'
 import { ShoppingStorePicker } from '@/components/shopping/ShoppingStorePicker'
+import { STORE_CATALOG_BY_ID } from '@/constants/store-roster'
 
 const ActiveShoppingMode = dynamic(
   () =>
@@ -112,7 +113,15 @@ function ActiveShoppingPageContent() {
   // filtered list.
   const isCaregiverMode = !!ownerIdParam && ownerIdParam !== auth.currentUser?.uid
   const [pickerResolved, setPickerResolved] = useState<boolean>(!isCaregiverMode || !!storeIdParam)
-  const [pickedStoreName, setPickedStoreName] = useState<string | null>(null)
+  // When ?store= deep-links straight to the active mode (e.g. duty
+  // card with a pre-tagged store, shared URL, e2e test), the picker's
+  // onPick callback never fires — so we'd lose the store NAME for the
+  // header. Resolve it from the catalog on initial render to keep
+  // "Shopping at Walmart" rendering even without a picker interaction.
+  const [pickedStoreName, setPickedStoreName] = useState<string | null>(() => {
+    if (!storeIdParam) return null
+    return STORE_CATALOG_BY_ID[storeIdParam]?.name ?? null
+  })
   // Phase 0b — track the picked catalog id so we can:
   //   (a) thread it into shoppingSessionManager.startSession's storeId
   //   (b) filter the items the caregiver sees in ActiveShoppingMode

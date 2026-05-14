@@ -93,7 +93,13 @@ export default defineConfig({
       // Don't pick up either auth setup file in the regular run. Don't
       // pick up caregiver-side specs either — those use a different
       // storage state and run under the chromium-caregiver project.
-      testIgnore: [/auth\.setup\.ts/, /auth-caregiver\.setup\.ts/, /\.caregiver\.spec\.ts$/],
+      // Multirole specs also have their own project (chromium-multirole).
+      testIgnore: [
+        /auth\.setup\.ts/,
+        /auth-caregiver\.setup\.ts/,
+        /\.caregiver\.spec\.ts$/,
+        /\.multirole\.spec\.ts$/,
+      ],
     },
     {
       // Caregiver-side specs use the percyrice fixture. Pattern: name
@@ -106,6 +112,20 @@ export default defineConfig({
       },
       dependencies: ['setup-caregiver'],
       testMatch: /\.caregiver\.spec\.ts$/,
+    },
+    {
+      // Multi-role specs verify the caregiver → owner real-time contract
+      // by attaching BOTH storage states to a single browser via
+      // newContext({ storageState }). Depends on both setups so both
+      // .auth files exist before the spec runs. No default storageState
+      // here — each test attaches per-context.
+      name: 'chromium-multirole',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 960, height: 940 },
+      },
+      dependencies: ['setup', 'setup-caregiver'],
+      testMatch: /\.multirole\.spec\.ts$/,
     },
   ],
 })
