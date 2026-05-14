@@ -68,6 +68,12 @@ import {
 import { addProductImage } from '@/lib/product-image-upload'
 import { barcodeVariants } from '@/lib/barcode-variants'
 import { playStepDoneChime } from '@/lib/cook-chime'
+import { shoppingSessionManager } from '@/lib/shopping-session-manager'
+import {
+  comparePerishability,
+  compareWaitCounter,
+  compareFragility,
+} from '@/lib/perishability-tiers'
 import type { ShoppingItem } from '@/types/shopping'
 import { ScanItemCard } from './ScanItemCard'
 import { ReceiptCaptureSurface } from './ReceiptCaptureSurface'
@@ -85,6 +91,42 @@ interface ActiveShoppingModeProps {
   isOpen: boolean
   onClose: () => void
   items: ShoppingItem[]
+  /**
+   * Optional duty this shopping trip is fulfilling. When set, completing
+   * the trip (Confirm Purchase) auto-fires the duty-complete endpoint so
+   * the caregiver doesn't have to mark the duty done as a second step.
+   * Threaded through from /shopping/active?dutyId=<id>. Best-effort —
+   * the failure is logged, but the trip exit still proceeds.
+   */
+  dutyId?: string
+  /**
+   * Active shopping_sessions doc id. Set by the page wrapper after
+   * shoppingSessionManager.startSession resolves. Drives:
+   *   • the announce-done bell fan-out (carries the sessionId in
+   *     ShoppingDoneMetadata for the family's notification)
+   *   • the endSession call after Confirm Purchase, which flips the
+   *     session status to 'completed' and stamps endedAt
+   * Null while the session is still being created OR if the caller
+   * didn't wire one — in either case the fan-out / endSession steps
+   * skip gracefully.
+   */
+  sessionId?: string | null
+  /**
+   * Owner uid this trip is FOR. Distinct from the actor: when a
+   * caregiver shops on the owner's behalf, ownerId is the owner's uid
+   * while auth.currentUser.uid is the caregiver's. Used to target the
+   * /api/owners/[ownerId]/shopping/done endpoint. When unset, the trip
+   * is solo-owner and no fan-out fires.
+   */
+  ownerId?: string
+  /**
+   * Display name of the store the caregiver picked on Start Shopping
+   * (Phase 0b). When set, the header reads "Shopping at Walmart"
+   * instead of just "Shopping" — gives the caregiver a visual reminder
+   * of where they are. Passed through from the picker; falls back to
+   * session.storeLocation.name when receipt OCR overrides post-trip.
+   */
+  storeName?: string
 }
 
 interface PendingConfirm {
@@ -93,7 +135,7 @@ interface PendingConfirm {
   itemBarcode?: string
 }
 
-export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingModeProps) {
+export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, ownerId, storeName }: ActiveShoppingModeProps) {
   // Feature-access gates — terminated subscribers can view the trip
   // but can't scan, snap a receipt, or invoke AI features.
   const scanBarcodeLock = useLockedAction()
@@ -167,34 +209,6 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
     return map
   }, [items])
 
-  // Walk-the-store category order. Items group into sections by
-  // category, with sections ordered to minimize backtracking on a
-  // typical store layout: perimeter (fresh) first, interior aisles
-  // (shelf-stable) middle, far-back / non-food last. Categories
-  // missing from this list fall through to the end via Infinity.
-  const STORE_LAYOUT_ORDER: Record<string, number> = useMemo(
-    () => ({
-      produce: 0,
-      bakery: 1,
-      deli: 2,
-      meat: 3,
-      seafood: 4,
-      dairy: 5,
-      eggs: 6,
-      herbs: 7,
-      frozen: 8,
-      spices: 9,
-      condiments: 10,
-      pantry: 11,
-      beverages: 12,
-      baby: 13,
-      'pet-food': 14,
-      'pet-supplies': 15,
-      other: 99,
-    }),
-    []
-  )
-
   // Sort: pending items first (in original order), found items last
   // and visually distinct. Done in a memo so the order doesn't churn
   // every render.
@@ -231,10 +245,20 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
   const foundCount = orderedSessionRows.found.length
 
   // Group pending items by category so the shopper walks the store
-  // section by section instead of zig-zagging across aisles. Sections
-  // emerge in STORE_LAYOUT_ORDER; categories not in the map fall to
-  // the end. Within a section, items keep their original session
-  // order (avoids reshuffling under the user's finger mid-trip).
+  // section by section instead of zig-zagging across aisles. Section
+  // order comes from the centralized rule chain in
+  // lib/perishability-tiers.ts — same rules the owner-side smartSort
+  // applies on /shopping:
+  //
+  //   1) Perishability tier — frozen LAST (universal cold-chain floor)
+  //   2) Wait-counter — deli + seafood EARLIER within their tier
+  //      (place the order first, retrieve near checkout)
+  //   3) Fragility — bakery + eggs LATER within their tier
+  //      (top-of-cart, less likely to crush)
+  //   4) Category name — deterministic alphabetical tie-break
+  //
+  // Within a section, items keep their original session order (avoids
+  // reshuffling under the user's finger mid-trip).
   const pendingByCategory = useMemo(() => {
     const groups = new Map<string, ShoppingItem[]>()
     for (const it of orderedSessionRows.pending) {
@@ -243,11 +267,17 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       groups.get(cat)!.push(it)
     }
     return Array.from(groups.entries()).sort(([a], [b]) => {
-      const oa = STORE_LAYOUT_ORDER[a] ?? 100
-      const ob = STORE_LAYOUT_ORDER[b] ?? 100
-      return oa - ob
+      const pa = { category: a as ShoppingItem['category'] }
+      const pb = { category: b as ShoppingItem['category'] }
+      const tier = comparePerishability(pa, pb)
+      if (tier !== 0) return tier
+      const wc = compareWaitCounter(pa, pb)
+      if (wc !== 0) return wc
+      const fg = compareFragility(pa, pb)
+      if (fg !== 0) return fg
+      return a.localeCompare(b)
     })
-  }, [orderedSessionRows.pending, STORE_LAYOUT_ORDER])
+  }, [orderedSessionRows.pending])
 
   const activeItem = activeItemId ? liveItemsById.get(activeItemId) ?? null : null
 
@@ -397,6 +427,23 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
         quantity,
         purchasedBy: userId,
       })
+
+      // Record the scan event on the session — bumps itemsScanned
+      // (drives the active-shoppers strip's "N items picked" line on
+      // /family/dashboard) AND appends to scanSequence (Phase C ML
+      // substrate: per-(caregiver, store) aisle-visit order). Best-
+      // effort: failure logs but doesn't block the trip.
+      try {
+        await shoppingSessionManager.incrementItemsScanned({
+          itemId: activeItem.id,
+          category: activeItem.category,
+        })
+      } catch (err) {
+        logger.warn('[ActiveShopping] scan-event capture failed', {
+          itemId: activeItem.id,
+          error: (err as Error).message,
+        })
+      }
 
       // Haptic + audible confirmation. Synthesized chime (no asset
       // file) so this works even when /notification.mp3 is missing.
@@ -680,6 +727,105 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       toast.success(
         `Purchase confirmed — ${foundCount} item${foundCount > 1 ? 's' : ''} added to inventory`,
       )
+
+      // 4) Fan out a 'shopping_done' bell notification to the owner +
+      //    other household members. Only fires when ownerId is set
+      //    (caregiver-on-behalf-of-owner trips); solo-owner trips don't
+      //    need a self-announcement. Best-effort: any failure is logged
+      //    but never blocks the trip exit.
+      if (ownerId && sessionId && userId) {
+        try {
+          const user = auth.currentUser
+          if (user) {
+            const token = await user.getIdToken()
+            const skippedCount = orderedSessionRows.pending.filter(
+              (it) => it.needed && !it.foundInStore,
+            ).length
+            await fetch(`/api/owners/${ownerId}/shopping/done`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                sessionId,
+                itemsFound: foundCount,
+                ...(skippedCount > 0 ? { itemsSkipped: skippedCount } : {}),
+                ...(summaryStoreName.trim()
+                  ? { storeName: summaryStoreName.trim() }
+                  : {}),
+                ...(dutyId ? { fromDutyId: dutyId } : {}),
+              }),
+            }).catch((err) => {
+              logger.warn('[ActiveShopping] announce-done failed', {
+                sessionId,
+                error: (err as Error).message,
+              })
+            })
+          }
+        } catch (err) {
+          logger.warn('[ActiveShopping] announce-done threw', {
+            sessionId,
+            error: (err as Error).message,
+          })
+        }
+      }
+
+      // 5) End the shopping_sessions doc — flips status to 'completed'
+      //    and stamps endedAt. Done AFTER the announce-done fetch so
+      //    the server can still read the session for duration calc.
+      //    Best-effort: failures are logged; the session manager has
+      //    its own timeout-based safety net (2-hour absolute max).
+      if (sessionId) {
+        try {
+          await shoppingSessionManager.endSession()
+        } catch (err) {
+          logger.warn('[ActiveShopping] endSession failed', {
+            sessionId,
+            error: (err as Error).message,
+          })
+        }
+      }
+
+      // 6) If this trip was tied to a household duty (caregiver tapped a
+      //    grocery / errand / med-pickup card on the Today view, which
+      //    routes here with ?dutyId=…), close that duty automatically.
+      //    The shopping session IS how a shopping duty completes — no
+      //    second tap. Best-effort: failure is logged + a soft toast so
+      //    the caregiver can manually mark it from the worklist if
+      //    needed, but the trip still exits cleanly.
+      if (dutyId && userId) {
+        try {
+          const user = auth.currentUser
+          if (user) {
+            const token = await user.getIdToken()
+            const res = await fetch(`/api/household-duties/${dutyId}/complete`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                feedback: `Completed via in-store shopping (${foundCount} item${foundCount === 1 ? '' : 's'})`,
+              }),
+            })
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}))
+              logger.warn('[ActiveShopping] auto duty-complete failed', {
+                dutyId,
+                status: res.status,
+                error: body?.error,
+              })
+              toast.error("Couldn't auto-close the duty — mark it done from your Today list.")
+            }
+          }
+        } catch (err) {
+          logger.warn('[ActiveShopping] auto duty-complete threw', {
+            dutyId,
+            error: (err as Error).message,
+          })
+        }
+      }
     } finally {
       setSummarySaving(false)
       // Auto-open the receipt capture surface — the receipt is fresh in
@@ -697,8 +843,12 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
       {/* Header */}
       <header className="px-4 py-3 border-b border-border flex items-center justify-between bg-card sticky top-0">
         <div>
-          <h1 className="text-base font-bold text-foreground">
-            {summaryOpen ? 'Trip summary' : 'Shopping'}
+          <h1 className="text-base font-bold text-foreground" data-testid="active-shopping-title">
+            {summaryOpen
+              ? 'Trip summary'
+              : storeName
+                ? `Shopping at ${storeName}`
+                : 'Shopping'}
           </h1>
           <p className="text-xs text-muted-foreground">
             {foundCount} of {totalCount} found
@@ -1017,7 +1167,10 @@ export function ActiveShoppingMode({ isOpen, onClose, items }: ActiveShoppingMod
                         fall to the end. */}
                     {pendingByCategory.map(([cat, catItems]) => (
                       <Fragment key={cat}>
-                        <li className="px-4 py-2 bg-muted/30">
+                        <li
+                          className="px-4 py-2 bg-muted/30"
+                          data-testid={`category-section-${cat}`}
+                        >
                           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                             {formatCategoryLabel(cat)}
                           </p>

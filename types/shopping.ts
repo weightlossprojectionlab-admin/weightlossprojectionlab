@@ -167,6 +167,27 @@ export interface ShoppingItem {
   userId: string // Legacy: kept for backwards compatibility, now represents household owner
   householdId?: string // NEW: Account owner's userId for family plans
 
+  /**
+   * Catalog id of the chain this item should be bought at (Phase 0b).
+   * The owner taps a chip on the /shopping row to assign — "milk @
+   * Walmart" — or leaves it blank ("any store"). The caregiver's
+   * /shopping/active filters items by `?store=` param against this
+   * field, so picking Walmart in the Start Shopping picker shows
+   * only Walmart-assigned items + the unassigned "any store" bucket.
+   *
+   * Auto-set paths:
+   *   • Receipt OCR (lib/apply-receipt-prices.ts) — normalizes the
+   *     receipt's free-text `store` to a catalog id via
+   *     normalizeStoreNameToCatalogId; receipt is ground truth.
+   *   • New-item creation (lib/shopping-operations.ts) — best-store
+   *     auto-fill from `purchaseHistory[].store` most-recent.
+   *
+   * Values are catalog ids from constants/store-roster.ts
+   * STORE_CATALOG (e.g. 'walmart', 'whole-foods'). Absent / null /
+   * empty string means "any store" — buy wherever convenient.
+   */
+  assignedStoreId?: string
+
   // Product Info (from OpenFoodFacts or manual entry)
   barcode?: string // Optional: undefined for manual entries from recipes
   /** Tier of the primary `barcode` — Unit/Pack/Case. Optional for legacy rows. */

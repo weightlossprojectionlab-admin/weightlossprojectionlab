@@ -9,6 +9,11 @@ import { adminDb } from '@/lib/firebase-admin'
 import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 import { logger } from '@/lib/logger'
+import {
+  upsertCaregiverOf,
+  upsertFamilyMember,
+  upsertPatientFamilyMember,
+} from '@/lib/caregiver-relationship'
 import type { FamilyInvitation, FamilyMember } from '@/types/medical'
 
 export async function POST(
@@ -122,44 +127,48 @@ export async function POST(
     const cleanedMember = Object.fromEntries(
       Object.entries(familyMember).filter(([, v]) => v !== undefined)
     )
-    const memberRef = await adminDb
-      .collection('users')
-      .doc(invitation.invitedByUserId)
-      .collection('familyMembers')
-      .add(cleanedMember)
 
-    logger.info('[Invitations] Family member record created', {
-      memberId: memberRef.id,
+    // Idempotent upsert: if a familyMembers doc for this caregiver already
+    // exists on this owner, merge into it. Otherwise create. Stops the
+    // "3 caregiver rows for the same person" duplicates that resulted from
+    // multiple invites to the same email.
+    const familyMemberId = await upsertFamilyMember(
+      invitation.invitedByUserId,
+      {
+        userId,
+        email: userEmail,
+        name: userName,
+        permissions: invitation.permissions as unknown as Record<string, boolean>,
+        patientsAccess: invitation.patientsShared,
+      },
+      cleanedMember,
+    )
+
+    logger.info('[Invitations] Family member record upserted', {
+      memberId: familyMemberId,
       role: familyMember.familyRole,
       patientsShared: invitation.patientsShared?.length || 0
     })
 
-    // Create family member records for each patient in patientsShared
-    const batch = adminDb.batch()
-
+    // Same idempotent shape for each per-patient family-member doc.
     for (const patientId of invitation.patientsShared) {
-      const patientFamilyMemberRef = adminDb
-        .collection('users')
-        .doc(invitation.invitedByUserId)
-        .collection('patients')
-        .doc(patientId)
-        .collection('familyMembers')
-        .doc(memberRef.id) // Use same ID as account-level family member
-
-      batch.set(patientFamilyMemberRef, {
-        userId,
-        email: userEmail,
-        name: userName,
-        relationship: 'family',
-        permissions: invitation.permissions,
-        status: 'accepted',
-        addedAt: acceptedAt,
-        addedBy: invitation.invitedByUserId,
-        lastModified: acceptedAt
-      })
+      await upsertPatientFamilyMember(
+        invitation.invitedByUserId,
+        patientId,
+        familyMemberId,
+        {
+          userId,
+          email: userEmail,
+          name: userName,
+          relationship: 'family',
+          permissions: invitation.permissions,
+          status: 'accepted',
+          addedAt: acceptedAt,
+          addedBy: invitation.invitedByUserId,
+          lastModified: acceptedAt,
+        },
+      )
     }
-
-    await batch.commit()
 
     // Update invitation status
     await invitationRef.update({
@@ -168,29 +177,21 @@ export async function POST(
       acceptedAt
     })
 
-    // Add caregiver context to user's profile (family plan multi-tenancy)
-    // Do NOT set userMode or force onboarding - caregiver-only users skip onboarding
+    // Add or extend caregiver context on the user's profile. Same idempotent
+    // semantics as the owner-side upsert — a second invite from the same
+    // owner extends the existing relationship instead of duplicating it.
+    // Caregiver-only users skip onboarding; do not set userMode here.
     const userRef = adminDb.collection('users').doc(userId)
-
-    // Build caregiver context object
-    const caregiverContext = {
+    await upsertCaregiverOf(userId, {
       accountOwnerId: invitation.invitedByUserId,
       accountOwnerName: invitation.invitedByName,
       role: invitation.familyRole || 'caregiver',
       patientsAccess: invitation.patientsShared,
-      permissions: invitation.permissions,
+      permissions: invitation.permissions as unknown as Record<string, boolean>,
       addedAt: acceptedAt,
       invitationId: invitationId,
-      familyPlan: true
-    }
-
-    // Add to caregiverOf array (supports multiple family accounts)
-    const userSnapshot = await userRef.get()
-    const existingCaregiverOf = userSnapshot.data()?.caregiverOf || []
-
-    await userRef.set({
-      caregiverOf: [...existingCaregiverOf, caregiverContext]
-    }, { merge: true })
+      familyPlan: true,
+    })
 
     // Log HIPAA acknowledgment to Firestore for compliance audit trail
     if (body.hipaaAcknowledged) {
@@ -209,7 +210,7 @@ export async function POST(
     }
 
     const createdMember: FamilyMember = {
-      id: memberRef.id,
+      id: familyMemberId,
       ...familyMember
     }
 

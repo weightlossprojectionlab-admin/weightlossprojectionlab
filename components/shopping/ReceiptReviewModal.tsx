@@ -36,6 +36,7 @@ import toast from 'react-hot-toast'
 import { CheckIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import { applyReceiptPrices } from '@/lib/apply-receipt-prices'
+import { shoppingSessionManager } from '@/lib/shopping-session-manager'
 import {
   matchReceiptToTrip,
   pickPriceCents,
@@ -126,6 +127,12 @@ export function ReceiptReviewModal({
     }
     setApplying(true)
     try {
+      // Phase 0b — pass the active sessionId so applyReceiptPrices
+      // can ground-truth the session's storeId + storeLocation.name
+      // from the receipt's actual OCR'd store. The receipt is the
+      // canonical "where did this trip happen" — caregiver may have
+      // picked Walmart at session start but ended up at Costco.
+      const activeSessionId = shoppingSessionManager.getSessionId()
       const result = await applyReceiptPrices(
         acceptedMatches
           .filter((m) => m.priceCents != null)
@@ -133,7 +140,10 @@ export function ReceiptReviewModal({
             itemId: m.tripItemId,
             priceCents: m.priceCents as number,
           })),
-        { storeName: ocrResult.store ?? undefined },
+        {
+          storeName: ocrResult.store ?? undefined,
+          ...(activeSessionId ? { sessionId: activeSessionId } : {}),
+        },
       )
 
       logger.info('[ReceiptReview] Prices applied', {

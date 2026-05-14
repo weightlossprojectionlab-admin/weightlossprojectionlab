@@ -14,6 +14,7 @@
 'use client'
 
 import { LockClosedIcon } from '@heroicons/react/24/solid'
+import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
 
 interface FeaturePausedStateProps {
   /** Display name of the gated feature, e.g. "Family Member Management". */
@@ -21,6 +22,10 @@ interface FeaturePausedStateProps {
 }
 
 export function FeaturePausedState({ feature }: FeaturePausedStateProps) {
+  // Caregiver-only viewers see no subscription UI — they're not the
+  // subscriber being paused. Server-side gates remain authoritative.
+  if (useIsCaregiverOnly()) return null
+
   return (
     <div className="bg-card rounded-lg shadow-sm border border-border p-8">
       <div className="text-center max-w-md mx-auto">

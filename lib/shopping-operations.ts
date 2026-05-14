@@ -44,6 +44,7 @@ import { mapUsdaCategory } from './usda-category-map'
 import { FirebaseTimestamp, toDate } from '@/types/common'
 import { generateProductKey, findHouseholdItemByProductKey, addOrUpdateHouseholdItem } from './household-shopping-operations'
 import { COLLECTIONS } from '@/constants/firestore'
+import { normalizeStoreNameToCatalogId } from '@/constants/store-roster'
 
 const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 const STORE_VISITS_COLLECTION = 'store_visits'
@@ -155,6 +156,93 @@ export function convertTimestamps<T extends FirestoreData>(data: T): T {
 }
 
 /**
+ * Phase 0b-vii — best-store inference for a new item.
+ *
+ * Looks at the user's existing items in the same category and returns
+ * the most-recent assignedStoreId (preferred), falling back to the
+ * most-recent purchaseHistory entry's `store` (free text → normalized
+ * via normalizeStoreNameToCatalogId).
+ *
+ * Returns undefined when no signal exists — caller leaves the new
+ * item unassigned ("Any store"), which the owner can override via
+ * the row chip on /shopping. This is the rule-baseline; ML v2 could
+ * weight by price + recency + brand-loyalty (deferred per
+ * [[feedback-rule-first-then-ml]]).
+ *
+ * Best-effort: failures log + return undefined so item creation
+ * continues. One Firestore query per item add — small cost,
+ * predictable, no new index needed (single-equality on category).
+ */
+async function inferAssignedStoreIdForCategory(
+  userId: string,
+  category: ProductCategory,
+): Promise<string | undefined> {
+  try {
+    const q = query(
+      collection(db, SHOPPING_ITEMS_COLLECTION),
+      where('userId', '==', userId),
+      where('category', '==', category),
+      firestoreLimit(20),
+    )
+    const snap = await getDocs(q)
+    if (snap.empty) return undefined
+
+    // First pass: most-recent assignedStoreId among items that have one.
+    let bestAssigned: { storeId: string; ts: number } | undefined
+    let bestFromHistory: { storeId: string; ts: number } | undefined
+
+    for (const d of snap.docs) {
+      const data = d.data() as ShoppingItem
+      const lastPurchasedMs =
+        data.lastPurchased instanceof Date
+          ? data.lastPurchased.getTime()
+          : (data.lastPurchased as any)?.toMillis?.() || 0
+
+      if (data.assignedStoreId && data.assignedStoreId.length > 0) {
+        if (!bestAssigned || lastPurchasedMs > bestAssigned.ts) {
+          bestAssigned = { storeId: data.assignedStoreId, ts: lastPurchasedMs }
+        }
+      }
+
+      // Second-tier signal: purchaseHistory free-text store →
+      // normalized catalog id. Used only when no assignedStoreId is
+      // available anywhere.
+      if (!bestAssigned && Array.isArray(data.purchaseHistory)) {
+        const recentHist = data.purchaseHistory
+          .filter((e) => e?.store)
+          .sort((a, b) => {
+            const ta =
+              a.date instanceof Date ? a.date.getTime() : (a.date as any)?.toMillis?.() || 0
+            const tb =
+              b.date instanceof Date ? b.date.getTime() : (b.date as any)?.toMillis?.() || 0
+            return tb - ta
+          })[0]
+        if (recentHist?.store) {
+          const normalized = normalizeStoreNameToCatalogId(recentHist.store)
+          if (normalized) {
+            const t = recentHist.date instanceof Date
+              ? recentHist.date.getTime()
+              : (recentHist.date as any)?.toMillis?.() || 0
+            if (!bestFromHistory || t > bestFromHistory.ts) {
+              bestFromHistory = { storeId: normalized, ts: t }
+            }
+          }
+        }
+      }
+    }
+
+    return bestAssigned?.storeId ?? bestFromHistory?.storeId
+  } catch (err) {
+    logger.warn('[inferAssignedStoreIdForCategory] failed', {
+      userId,
+      category,
+      error: (err as Error).message,
+    })
+    return undefined
+  }
+}
+
+/**
  * Create or update a shopping item from barcode scan
  * Supports both individual and household (family plan) modes
  */
@@ -249,6 +337,20 @@ export async function addOrUpdateShoppingItem(
     const unit = options.unit ?? suggestDefaultUnit(category)
     const displayQuantity = formatQuantityDisplay(quantity, unit)
 
+    // Phase 0b-vii — best-store auto-fill. If `options.store` was
+    // explicitly passed (caller knows where it's being bought), prefer
+    // its catalog-id normalization. Otherwise infer from the user's
+    // existing items in the same category — the rule-baseline ML hook
+    // that captures the "where do we usually buy this category"
+    // signal. Owner can override via the row chip on /shopping.
+    const explicitAssignedStoreId = options.store
+      ? normalizeStoreNameToCatalogId(options.store)
+      : null
+    const inferredAssignedStoreId = explicitAssignedStoreId
+      ? null
+      : await inferAssignedStoreIdForCategory(userId, category)
+    const autoAssignedStoreId = explicitAssignedStoreId || inferredAssignedStoreId || undefined
+
     // Phase 2b: copy container size onto the row so the inventory pill
     // can compute % remaining without re-querying product_database, and
     // seed remainingAmount = containerSize * quantity (full purchase,
@@ -268,6 +370,9 @@ export async function addOrUpdateShoppingItem(
       brand: product.brands || '',
       imageUrl: product.image_front_url || product.image_url || '',
       category,
+      // Phase 0b — auto-fill assignedStoreId from the user's history
+      // for this category. Owner can override via the row chip.
+      ...(autoAssignedStoreId ? { assignedStoreId: autoAssignedStoreId } : {}),
       isManual: false, // Scanned items are not manual
       manualIngredientName: undefined,
       recipeIds: [], // Scanned items start with empty recipe array

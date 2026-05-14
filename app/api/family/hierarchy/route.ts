@@ -98,8 +98,30 @@ export async function GET(request: NextRequest) {
     }
 
     const userData = userDoc.data()
+
+    // Semantic intent: "who owns the family hierarchy this caller is part of?"
+    //   1. If the user is explicitly flagged as account owner, it's them.
+    //   2. If their doc points at an explicit accountOwnerId (legacy field
+    //      used by some onboarding paths), use that.
+    //   3. If the user is caregiver-only (no own household) and has at
+    //      least one caregiverOf entry, surface the FIRST owner they help
+    //      so the hierarchy view shows that owner's family.
+    //   4. Otherwise, default to the caller as the owner of their own
+    //      family — legacy self-onboarded owners never had isAccountOwner
+    //      backfilled, but they ARE the owner of their own household.
+    //
+    // Prior behavior: only steps 1+2 existed, so anyone whose doc lacked
+    // the flag (every legacy owner) got a 404, breaking /family/dashboard.
     const isAccountOwner = userData?.preferences?.isAccountOwner === true
-    const ownerUserId = isAccountOwner ? userId : userData?.accountOwnerId
+    const isExplicitlyNotOwner = userData?.preferences?.isAccountOwner === false
+    const firstCaregiverContextOwner = isExplicitlyNotOwner
+      ? userData?.caregiverOf?.[0]?.accountOwnerId
+      : undefined
+    const ownerUserId =
+      (isAccountOwner ? userId : undefined) ||
+      userData?.accountOwnerId ||
+      firstCaregiverContextOwner ||
+      userId // default: caller owns their own family
 
     if (!ownerUserId) {
       return NextResponse.json(

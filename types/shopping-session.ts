@@ -7,10 +7,44 @@
 
 import type { HouseholdRole } from './household-permissions'
 import type { Timestamp } from 'firebase/firestore'
+import type { ProductCategory } from './shopping'
 
 export type ShoppingSessionStatus = 'active' | 'paused' | 'completed' | 'expired'
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop'
+
+/**
+ * Per-scan event captured during a session. Forms the substrate for
+ * Phase C ML — per-(caregiver, store) learned aisle-visit order.
+ *
+ * Today's `itemsScanned: number` is a count only; this array preserves
+ * sequence + per-event timing + category context so a future model
+ * can answer "in this store, this caregiver typically picks tier-2
+ * (produce) before tier-3 (deli)" or "frozen always last regardless
+ * of aisle position." The rule-baseline sort already encodes the
+ * universal "frozen last" floor; ML adds the family-specific layer.
+ *
+ * Size: one trip is ≤ 100 items; each event ≤ 200 bytes; total
+ * embedded size ≤ 20KB. Far below Firestore's 1MB doc limit. Keeping
+ * it embedded (vs. a separate `scan_events` collection) avoids fan-
+ * out reads when computing per-session aisle traversal.
+ *
+ * Field intent:
+ *   - itemId: the shopping_items row scanned
+ *   - scannedAt: server-side Timestamp captured at the moment the
+ *     scan event was recorded; the SEQUENCE matters more than absolute
+ *     time for the ML use case, but timing also enables "duration
+ *     between adjacent scans" derived features
+ *   - category: copied from the item at scan time so an ML model
+ *     doesn't have to re-fetch items to know what tier each scan was
+ *     in. Optional because legacy callers (SequentialShoppingFlow's
+ *     count-only behavior) may not pass it.
+ */
+export interface ScanEvent {
+  itemId: string
+  scannedAt: Timestamp | Date
+  category?: ProductCategory
+}
 
 export interface ShoppingSession {
   id: string
@@ -24,12 +58,35 @@ export interface ShoppingSession {
   expiresAt: Timestamp | Date // Auto-cleanup after 2 hours
   endedAt?: Timestamp | Date
   deviceId: string // Prevent duplicate sessions
-  itemsScanned: number // Progress indicator
+  itemsScanned: number // Progress indicator (count only)
+  /**
+   * Sequential per-scan events — substrate for the Phase C ML aisle-
+   * order learner. Optional because legacy sessions (pre-rule v2
+   * commit) and the count-only path don't populate it. Consumers
+   * (analytics, ML) tolerate undefined / empty arrays.
+   */
+  scanSequence?: ScanEvent[]
   storeLocation?: {
     name: string
     latitude: number
     longitude: number
   }
+  /**
+   * Catalog id of the chain this trip is being run at (Phase 0b).
+   * Distinct from `storeLocation.name` (free text like "Walmart
+   * Supercenter #1234") — `storeId` is the canonical catalog id
+   * ('walmart') that joins against ShoppingItem.assignedStoreId
+   * for filtering.
+   *
+   * Set paths:
+   *   • Caregiver picks a store on the Start Shopping picker;
+   *     /shopping/active passes ?store=walmart through to the
+   *     session at creation time.
+   *   • Receipt OCR (lib/apply-receipt-prices.ts) corrects this
+   *     post-checkout if the caregiver actually ended up somewhere
+   *     different — receipt is ground truth.
+   */
+  storeId?: string
   metadata: {
     appVersion: string
     deviceType: DeviceType
@@ -48,6 +105,9 @@ export interface ShoppingSessionCreateParams {
     latitude: number
     longitude: number
   }
+  /** Catalog id of the chain — set from the Start Shopping picker.
+   *  See ShoppingSession.storeId for semantics. */
+  storeId?: string
 }
 
 export interface ShoppingSessionUpdateParams {

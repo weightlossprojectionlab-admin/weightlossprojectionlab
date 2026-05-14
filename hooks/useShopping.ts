@@ -6,6 +6,22 @@
  * Real-time hook for managing shopping list and store visits.
  * Subscribes to `shopping_items` via Firestore onSnapshot so the list stays
  * in sync with /inventory and across devices/tabs.
+ *
+ * Multi-account scope:
+ *   useShopping()                — defaults to the signed-in user's own
+ *                                  bucket. Owner-context behavior, unchanged.
+ *   useShopping(targetUserId)    — reads the bucket of `targetUserId`.
+ *                                  Used when a caregiver opens
+ *                                  /shopping/active?ownerId=<owner> to
+ *                                  shop on behalf of an owner they have
+ *                                  household access to. The Firestore
+ *                                  rule's userId-as-owner branch (see
+ *                                  firestore.rules) gates the read.
+ *
+ * Audit chain stays correct: the bucket userId identifies WHICH list
+ * this item lives on; callers (ActiveShoppingMode etc.) still pass
+ * `purchasedBy: auth.currentUser.uid` as a separate field to record the
+ * actor. ShoppingItem.userId is the bucket, not the actor.
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
@@ -13,7 +29,6 @@ import {
   collection,
   query,
   where,
-  orderBy,
   onSnapshot
 } from 'firebase/firestore'
 import { db, auth } from '@/lib/firebase'
@@ -38,16 +53,24 @@ import { mergeIngredients } from '@/lib/shopping-diff'
 import type { RecipeIngredient } from '@/lib/shopping-diff'
 import type { Store } from '@/types/shopping'
 import { COLLECTIONS } from '@/constants/firestore'
+import {
+  comparePerishability,
+  compareFragility,
+  compareWaitCounter,
+} from '@/lib/perishability-tiers'
 
 const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
-export function useShopping() {
+export function useShopping(targetUserId?: string) {
   const [items, setItems] = useState<ShoppingItem[]>([])
   const [stores, setStores] = useState<Store[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const userId = auth.currentUser?.uid
+  // Bucket scope: the userId whose shopping_items we read/write. Defaults
+  // to the signed-in user (own list); overridden when a caregiver passes
+  // an ownerId to shop on someone else's behalf.
+  const userId = targetUserId ?? auth.currentUser?.uid
 
   // Derive needed items from the live `items` snapshot — single source of truth.
   const neededItems = useMemo(
@@ -58,24 +81,48 @@ export function useShopping() {
   // Real-time subscription to the user's shopping items.
   // Replaces what used to be two one-shot fetches (getAllShoppingItems +
   // getNeededItems). One listener, derived state for `needed`.
+  //
+  // Filtered on `householdId` (not `userId`) so the same query works for
+  // both owner-self and caregiver-on-behalf paths:
+  //   • For owners, householdId == auth.uid (single-user) or owner uid.
+  //   • For caregivers (passing targetUserId), householdId == owner uid.
+  // The shopping_items firestore.rules permit a caregiver familyMember
+  // when the query filter matches `resource.data.householdId` — Firestore's
+  // static query analyzer can prove that branch from the query alone,
+  // unlike a userId-filtered query which combines a value-mismatch on
+  // resource.data.userId with a cross-doc isHouseholdMember() check that
+  // the analyzer refuses to prove statically. See
+  // scripts/migrate-backfill-shopping-householdid.ts which normalized
+  // every existing item to set householdId == userId.
   useEffect(() => {
     if (!userId) {
       setLoading(false)
       return
     }
 
+    // No orderBy — that would need a composite index on
+    // (householdId asc, updatedAt desc) which doesn't exist. Items are
+    // small in scale (≤ a few hundred per household) and every consumer
+    // sorts client-side anyway (smartSort by aisle order, /shopping/active
+    // segments by needed/found, etc.), so we sort here by updatedAt desc
+    // after the snapshot lands. Same end result, no new index, no deploy.
     const q = query(
       collection(db, SHOPPING_ITEMS_COLLECTION),
-      where('userId', '==', userId),
-      orderBy('updatedAt', 'desc')
+      where('householdId', '==', userId)
     )
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const all = snapshot.docs.map(doc =>
-          convertTimestamps({ id: doc.id, ...doc.data() }) as ShoppingItem
-        )
+        const all = snapshot.docs
+          .map(doc =>
+            convertTimestamps({ id: doc.id, ...doc.data() }) as ShoppingItem
+          )
+          .sort((a, b) => {
+            const aTs = (a.updatedAt instanceof Date ? a.updatedAt.getTime() : 0)
+            const bTs = (b.updatedAt instanceof Date ? b.updatedAt.getTime() : 0)
+            return bTs - aTs
+          })
         setItems(all)
         setLoading(false)
         setError(null)
@@ -238,32 +285,80 @@ export function useShopping() {
   }, [items, neededItems])
 
   /**
-   * Smart sort shopping items by store aisle order
+   * Smart sort shopping items.
+   *
+   * Sort priorities (in order):
+   *   1. Aisle order (when the store has one set) — physical walk path.
+   *   2. Perishability tier — frozen LAST, refrigerated LATE, shelf-
+   *      stable FIRST. Holds within an aisle AND as the primary key
+   *      when no aisle data exists. See lib/perishability-tiers.ts
+   *      for the semantic intent + future ML upgrade path.
+   *   3. Wait-counter — within the same tier, counter-order categories
+   *      (deli, seafood) sort EARLIER so the caregiver places the
+   *      order at the start of the tier-pass and the staff prep it
+   *      while the rest of the trip happens. Seafood sorts before
+   *      dairy + meat within tier 4.
+   *   4. Fragility — within the same tier, fragile items (bakery,
+   *      eggs) sort LATER so they end up on TOP of the cart when
+   *      loaded. Cross-tier order still belongs to perishability;
+   *      this only breaks ties WITHIN a tier.
+   *   5. Item priority (high → low) — caregiver-set urgency.
+   *   6. Category name alphabetical — deterministic final tie-break.
+   *
+   * The "frozen last" invariant survives every other dimension:
+   * aisle places items in walk-order, but if two items fall in the
+   * same aisle bucket the perishability comparator wins. Cold-chain
+   * safety is a rule, not a preference — ML upgrades override aisle
+   * order for THIS store, not the tier table.
    */
   const smartSort = useCallback((
     itemsToSort: ShoppingItem[],
     storeId?: string
   ): ShoppingItem[] => {
     const store = stores.find(s => s.id === storeId)
+    const priorityOrder = { high: 3, medium: 2, low: 1 } as const
 
-    if (!store || !store.aisleOrder) {
-      return [...itemsToSort].sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 }
-        const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
-        if (priorityDiff !== 0) return priorityDiff
-        return a.category.localeCompare(b.category)
-      })
+    const aisleOrder = store?.aisleOrder
+    const aisleIndex = (cat: ShoppingItem['category']): number => {
+      if (!aisleOrder) return 0
+      const i = aisleOrder.indexOf(cat)
+      // Categories not present in this store's aisle order sort to the
+      // end of the aisle pass; perishability + priority decide their
+      // order among themselves.
+      return i === -1 ? Number.MAX_SAFE_INTEGER : i
     }
 
     return [...itemsToSort].sort((a, b) => {
-      const aIndex = store.aisleOrder!.indexOf(a.category)
-      const bIndex = store.aisleOrder!.indexOf(b.category)
+      // 1) Aisle order — only matters when the store has aisleOrder.
+      if (aisleOrder) {
+        const ai = aisleIndex(a.category)
+        const bi = aisleIndex(b.category)
+        if (ai !== bi) return ai - bi
+      }
 
-      if (aIndex === -1 && bIndex === -1) return 0
-      if (aIndex === -1) return 1
-      if (bIndex === -1) return -1
+      // 2) Perishability — frozen LAST.
+      const tierDiff = comparePerishability(a, b)
+      if (tierDiff !== 0) return tierDiff
 
-      return aIndex - bIndex
+      // 3) Wait-counter — within the same tier, counter-order items
+      //    EARLIER. Place the order first; staff prep while the rest
+      //    of the trip happens. Seafood sorts before dairy + meat
+      //    within tier 4.
+      const counterDiff = compareWaitCounter(a, b)
+      if (counterDiff !== 0) return counterDiff
+
+      // 4) Fragility — within the same tier, fragile items LATER
+      //    (top-of-cart). Bakery sorts after produce within tier 2;
+      //    eggs after deli within tier 3.
+      const fragDiff = compareFragility(a, b)
+      if (fragDiff !== 0) return fragDiff
+
+      // 5) Priority — high urgency first within the same tier.
+      const priorityDiff = priorityOrder[b.priority] - priorityOrder[a.priority]
+      if (priorityDiff !== 0) return priorityDiff
+
+      // 6) Stable deterministic tie-break.
+      return a.category.localeCompare(b.category)
     })
   }, [stores])
 

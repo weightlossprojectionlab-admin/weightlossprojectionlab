@@ -432,6 +432,31 @@ export const userProfileOperations = {
     return makeAuthenticatedRequest('/api/user-profile')
   },
 
+  // Get an account owner's display name. Used by caregivers (via the
+  // useOwnerNames hook) to render the right name in the AccountSwitcher,
+  // shift view, handoff log, etc. The endpoint enforces that the caller
+  // has caregiver access to the owner.
+  async getOwnerDisplayName(ownerId: string) {
+    return makeAuthenticatedRequest(`/api/owners/${ownerId}/display-name`)
+  },
+
+  // Handoff notes — owner-rooted ledger of caregiver handoff messages.
+  // Auth: caller is owner OR has accepted familyMembers entry on owner.
+  async listHandoffNotes(ownerId: string, limit = 20) {
+    return makeAuthenticatedRequest(
+      `/api/owners/${ownerId}/handoff-notes?limit=${limit}`,
+    )
+  },
+  async createHandoffNote(
+    ownerId: string,
+    input: { body: string; patientIds?: string[]; flaggedForOwner?: boolean },
+  ) {
+    return makeAuthenticatedRequest(`/api/owners/${ownerId}/handoff-notes`, {
+      method: 'POST',
+      body: JSON.stringify(input),
+    })
+  },
+
   // Update user profile (including onboarding data)
   async updateUserProfile(data: Partial<{
     profile?: Partial<UserProfile>

@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { SubscriptionPlan } from '@/types'
 import { UpgradeModal } from './UpgradeModal'
+import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
 
 interface UpgradePromptProps {
   /** Feature that requires upgrade */
@@ -44,6 +45,9 @@ export function UpgradePrompt({
   variant = 'card'
 }: UpgradePromptProps) {
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  // Don't tell a caregiver-only viewer to upgrade — they have no plan
+  // for THIS surface. Predicate centralized in useIsCaregiverOnly.
+  if (useIsCaregiverOnly()) return null
 
   const defaultMessage = message || `Upgrade your plan to unlock ${featureName || feature}`
 
