@@ -24,6 +24,11 @@ export const FEATURE_FLAGS = {
 
   // Analytics & Monitoring
   ANALYTICS_ENABLED: process.env.NEXT_PUBLIC_ANALYTICS === 'true',
+
+  // Caregiver shift dashboard (semantic caregiver UI: worklist + handoff log)
+  // Phased rollout, kill-switch for the new /caregiver/[id]/shift surface.
+  CAREGIVER_SHIFT_VIEW:
+    process.env.NEXT_PUBLIC_CAREGIVER_SHIFT_VIEW === 'true',
 } as const;
 
 export type FeatureFlagKey = keyof typeof FEATURE_FLAGS;

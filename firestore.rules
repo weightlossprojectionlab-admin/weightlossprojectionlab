@@ -553,13 +553,20 @@ service cloud.firestore {
       // ============================================
 
       // User's favorite stores
+      //
+      // Caregivers with household access can read/write the owner's
+      // stores so the in-store shopping flow (aisle sort, store picker)
+      // works when shopping on the owner's behalf via
+      // /shopping/active?ownerId=<owner>. The household-member branch
+      // mirrors the shopping_items rule below — membership IS access,
+      // consistent with adjacent household-shared surfaces.
       match /stores/{storeId} {
-        allow read: if isOwner(userId);
-        allow create: if isOwner(userId) &&
+        allow read: if isOwner(userId) || isHouseholdMember(userId);
+        allow create: if (isOwner(userId) || isHouseholdMember(userId)) &&
                         request.resource.data.userId == userId;
-        allow update: if isOwner(userId) &&
+        allow update: if (isOwner(userId) || isHouseholdMember(userId)) &&
                         resource.data.userId == userId;
-        allow delete: if isOwner(userId);
+        allow delete: if isOwner(userId) || isHouseholdMember(userId);
       }
 
       // Price history tracking
@@ -1143,27 +1150,43 @@ service cloud.firestore {
     }
 
     // Shopping items and kitchen inventory (household shared)
+    //
+    // Access model: the bucket is the OWNER's household, identified by
+    // either an explicit `householdId` field (newer items) OR the legacy
+    // `userId` field (which the ShoppingItem schema documents as
+    // "represents household owner"). Both branches are honored so we
+    // don't need to backfill `householdId` on existing data — see
+    // types/shopping.ts:167.
+    //
+    // Caregivers gain access via the same `familyMembers/{uid}` doc
+    // existence check used for kitchen inventory and order_receipts.
+    // No shopping-specific permission flag exists today; membership IS
+    // the gate, consistent with adjacent household-shared surfaces.
     match /shopping_items/{itemId} {
       // Read: Owner or family members can read
       allow read: if isAuthenticated() &&
                      (resource == null ||
                       resource.data.userId == request.auth.uid ||
-                      (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+                      (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)) ||
+                      isHouseholdMember(resource.data.userId));
 
       // Create: Owner or family members can create
       allow create: if isAuthenticated() &&
                       (request.resource.data.userId == request.auth.uid ||
-                       (request.resource.data.householdId != null && isHouseholdMember(request.resource.data.householdId)));
+                       (request.resource.data.householdId != null && isHouseholdMember(request.resource.data.householdId)) ||
+                       isHouseholdMember(request.resource.data.userId));
 
       // Update: Owner or family members can update
       allow update: if isAuthenticated() &&
                       (resource.data.userId == request.auth.uid ||
-                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)) ||
+                       isHouseholdMember(resource.data.userId));
 
       // Delete: Owner or family members can delete
       allow delete: if isAuthenticated() &&
                       (resource.data.userId == request.auth.uid ||
-                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)));
+                       (resource.data.householdId != null && isHouseholdMember(resource.data.householdId)) ||
+                       isHouseholdMember(resource.data.userId));
     }
 
     // Inventory actions - Audit trail for inventory changes (discard, consume, etc.)

@@ -17,6 +17,7 @@ import {
 import { checkBiometricPermission, getSettingsInstructions } from '@/lib/permissions'
 import { userProfileOperations } from '@/lib/firebase-operations'
 import { createDefaultProfile } from '@/lib/default-profile'
+import { createCaregiverOnlyUserDoc } from '@/lib/user-role'
 import { useAuth } from '@/hooks/useAuth'
 import { determineUserDestination } from '@/lib/auth-router'
 
@@ -157,15 +158,22 @@ function AuthContent() {
     try {
       let user
       if (isSignUp) {
-        logger.info('[Auth Page] Starting sign up')
+        logger.info('[Auth Page] Starting sign up', { isInvitationFlow })
         user = await signUp(email, password)
         logger.info('[Auth Page] Sign up successful', { userId: user?.uid })
 
-        // Create user profile in Firestore
+        // Create user profile in Firestore — branch on intent.
+        // Invitation flow → caregiver-only user doc (no subscription, no Single User plan).
+        // Otherwise → standard owner profile that will run onboarding next.
         if (user) {
           try {
-            const profileData = createDefaultProfile(email, name || email.split('@')[0])
-            await userProfileOperations.createUserProfile(profileData)
+            if (isInvitationFlow) {
+              await createCaregiverOnlyUserDoc(user.uid, email, name || email.split('@')[0])
+              logger.info('[Auth Page] Caregiver-only user doc created', { userId: user.uid })
+            } else {
+              const profileData = createDefaultProfile(email, name || email.split('@')[0])
+              await userProfileOperations.createUserProfile(profileData)
+            }
           } catch (profileError: any) {
             // Log error but don't block signup flow
             logger.error('Error creating user profile:', profileError)

@@ -1,0 +1,204 @@
+/**
+ * Handoff notes API
+ *
+ *   GET  /api/owners/[ownerId]/handoff-notes?limit=20
+ *   POST /api/owners/[ownerId]/handoff-notes
+ *
+ * The substrate for the shift-view handoff log (UI in P4). Notes live at
+ * users/{ownerId}/handoffNotes/{noteId} so they're naturally scoped to
+ * the household and follow the same access-control story as the rest of
+ * the owner-rooted data.
+ *
+ * Auth: caller is the owner OR has an accepted familyMembers entry on
+ * this owner. Same rule pattern as /api/owners/[id]/display-name; the
+ * subscription gate is intentionally NOT applied — notes are read AND
+ * write for caregivers regardless of the owner's billing state (they
+ * don't cost anything to store, and a terminated subscription
+ * shouldn't silence a caregiver's handoff).
+ *
+ * Validation:
+ *   - body: required, max 2000 chars
+ *   - patientIds: optional string[]
+ *   - flaggedForOwner: optional boolean
+ */
+
+import { NextRequest, NextResponse } from 'next/server'
+import { adminDb } from '@/lib/firebase-admin'
+import { logger } from '@/lib/logger'
+import { recordInAppNotification } from '@/lib/notifications/dispatch'
+import { requireHouseholdAccess } from '@/lib/api/household-access'
+import type { HandoffNote, CreateHandoffNoteInput } from '@/types/handoff'
+import type { HandoffNoteMetadata } from '@/types/notifications'
+
+interface RouteParams {
+  params: Promise<{ ownerId: string }>
+}
+
+const BODY_MAX = 2000
+const DEFAULT_LIMIT = 20
+const MAX_LIMIT = 100
+
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { ownerId } = await params
+    const auth = await requireHouseholdAccess(request, ownerId)
+    if (auth instanceof Response) return auth
+
+    const url = new URL(request.url)
+    const rawLimit = parseInt(url.searchParams.get('limit') || '', 10)
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(rawLimit, MAX_LIMIT)
+      : DEFAULT_LIMIT
+
+    const snap = await adminDb
+      .collection('users')
+      .doc(ownerId)
+      .collection('handoffNotes')
+      .orderBy('createdAt', 'desc')
+      .limit(limit)
+      .get()
+
+    const notes: HandoffNote[] = snap.docs.map((doc) => {
+      const data = doc.data() || {}
+      return {
+        id: doc.id,
+        ownerId,
+        authorId: data.authorId,
+        authorName: data.authorName,
+        body: data.body,
+        patientIds: data.patientIds,
+        flaggedForOwner: data.flaggedForOwner,
+        createdAt: data.createdAt,
+        updatedAt: data.updatedAt,
+      }
+    })
+
+    return NextResponse.json({ items: notes })
+  } catch (error: any) {
+    logger.error('[API /owners/[id]/handoff-notes GET] Error', error)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}
+
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { ownerId } = await params
+    const auth = await requireHouseholdAccess(request, ownerId)
+    if (auth instanceof Response) return auth
+
+    let payload: CreateHandoffNoteInput
+    try {
+      payload = (await request.json()) as CreateHandoffNoteInput
+    } catch {
+      return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+    }
+
+    const body = typeof payload?.body === 'string' ? payload.body.trim() : ''
+    if (!body) {
+      return NextResponse.json({ error: 'body is required' }, { status: 400 })
+    }
+    if (body.length > BODY_MAX) {
+      return NextResponse.json(
+        { error: `body exceeds ${BODY_MAX} characters` },
+        { status: 400 },
+      )
+    }
+
+    const patientIds = Array.isArray(payload?.patientIds)
+      ? payload.patientIds.filter((p) => typeof p === 'string' && p.length > 0)
+      : undefined
+    const flaggedForOwner = payload?.flaggedForOwner === true
+
+    const now = new Date().toISOString()
+    const noteData: Omit<HandoffNote, 'id'> = {
+      ownerId,
+      authorId: auth.callerUid,
+      authorName: auth.authorName,
+      body,
+      ...(patientIds && patientIds.length > 0 ? { patientIds } : {}),
+      ...(flaggedForOwner ? { flaggedForOwner: true } : {}),
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    const ref = await adminDb
+      .collection('users')
+      .doc(ownerId)
+      .collection('handoffNotes')
+      .add(noteData)
+
+    const note: HandoffNote = { id: ref.id, ...noteData }
+
+    // Fan out in-app notifications to every other household member so
+    // the bell badge ticks for them. Audience = owner + all accepted
+    // familyMembers minus the author. Each recipient gets a link to
+    // THEIR natural reading surface:
+    //   - owner          → /family/dashboard?tab=notes
+    //   - caregiver/etc. → /caregiver/{ownerId}
+    // Best-effort: failures are logged but never block the POST response.
+    try {
+      const familyMembersSnap = await adminDb
+        .collection('users')
+        .doc(ownerId)
+        .collection('familyMembers')
+        .where('status', '==', 'accepted')
+        .get()
+
+      const recipients: Array<{ userId: string; isOwner: boolean }> = []
+      if (auth.callerUid !== ownerId) {
+        recipients.push({ userId: ownerId, isOwner: true })
+      }
+      for (const doc of familyMembersSnap.docs) {
+        const memberUserId = doc.data()?.userId
+        if (!memberUserId || memberUserId === auth.callerUid) continue
+        recipients.push({ userId: memberUserId, isOwner: false })
+      }
+
+      const excerpt = body.length > 140 ? body.slice(0, 137) + '…' : body
+      const baseMetadata: HandoffNoteMetadata = {
+        noteId: ref.id,
+        ownerId,
+        authorId: auth.callerUid,
+        authorName: auth.authorName,
+        bodyExcerpt: excerpt,
+        ...(flaggedForOwner ? { flaggedForOwner: true } : {}),
+      }
+
+      await Promise.all(
+        recipients.map((r) =>
+          recordInAppNotification({
+            userId: r.userId,
+            type: 'handoff_note',
+            // Flag bumps priority for the owner only — other care-team
+            // members get every entry at normal priority.
+            priority: flaggedForOwner && r.isOwner ? 'high' : 'normal',
+            title: r.isOwner && flaggedForOwner
+              ? `${auth.authorName} flagged a care log entry for you`
+              : `${auth.authorName} added to the care log`,
+            message: excerpt,
+            actionUrl: r.isOwner ? '/family/dashboard?tab=notes' : `/caregiver/${ownerId}`,
+            actionLabel: 'Read',
+            metadata: baseMetadata,
+            expiresInDays: 30,
+          }).catch((err) => {
+            logger.warn('[handoff-notes POST] notification dispatch failed', {
+              recipient: r.userId,
+              noteId: ref.id,
+              error: err?.message,
+            })
+          }),
+        ),
+      )
+    } catch (notifyError: any) {
+      logger.warn('[handoff-notes POST] notification fan-out failed', {
+        noteId: ref.id,
+        error: notifyError?.message,
+      })
+    }
+
+    return NextResponse.json({ note }, { status: 201 })
+  } catch (error: any) {
+    logger.error('[API /owners/[id]/handoff-notes POST] Error', error)
+    return NextResponse.json({ error: 'Internal error' }, { status: 500 })
+  }
+}

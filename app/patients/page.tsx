@@ -12,6 +12,7 @@ import { PageHeader } from '@/components/ui/PageHeader'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
 import AuthGuard from '@/components/auth/AuthGuard'
+import OwnerOnlyGuard from '@/components/auth/OwnerOnlyGuard'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { useSubscription } from '@/hooks/useSubscription'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
@@ -44,7 +45,9 @@ import toast from 'react-hot-toast'
 export default function PatientsPage() {
   return (
     <AuthGuard>
-      <PatientsContent />
+      <OwnerOnlyGuard>
+        <PatientsContent />
+      </OwnerOnlyGuard>
     </AuthGuard>
   )
 }

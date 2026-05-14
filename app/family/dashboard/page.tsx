@@ -9,8 +9,9 @@
 
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useFamilyRoles, getCurrentUserRole, useIsAccountOwner } from '@/hooks/useFamilyRoles'
 import { useInvitations } from '@/hooks/useInvitations'
 import { usePatients } from '@/hooks/usePatients'
@@ -22,6 +23,8 @@ import { TransferOwnershipModal } from '@/components/family/TransferOwnershipMod
 import { HouseholdManager } from '@/components/households/HouseholdManager'
 import { DutyListView } from '@/components/household/DutyListView'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { HandoffNotes } from '@/components/caregiver/HandoffNotes'
+import { ActiveShoppersStrip } from '@/components/family/ActiveShoppersStrip'
 import { ROLE_LABELS } from '@/lib/family-roles'
 import type { FamilyMember, FamilyInvitation } from '@/types/medical'
 import type { CaregiverProfile } from '@/types/caregiver'
@@ -41,11 +44,29 @@ function FamilyDashboardContent() {
   const { patients, loading: patientsLoading } = usePatients()
   const { households, loading: householdsLoading } = useHouseholds()
 
-  // Check URL for tab parameter
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
-  const initialTab = (searchParams?.get('tab') as 'members' | 'invitations' | 'access' | 'households' | 'duties') || 'members'
+  // Read ?tab=... via Next.js's useSearchParams so it works on both
+  // server and client renders. The prior pattern (typeof window !==
+  // 'undefined' ? ... : null) read null on the server render, defaulted
+  // to 'members', and useState never re-initialised on hydration — so
+  // a link to /family/dashboard?tab=duties landed on the Caregivers tab.
+  const searchParams = useSearchParams()
+  type Tab = 'members' | 'invitations' | 'access' | 'households' | 'duties' | 'notes'
+  const VALID_TABS: Tab[] = ['members', 'invitations', 'access', 'households', 'duties', 'notes']
+  const tabFromUrl = (searchParams?.get('tab') ?? 'members') as Tab
+  const initialTab: Tab = VALID_TABS.includes(tabFromUrl) ? tabFromUrl : 'members'
 
-  const [activeTab, setActiveTab] = useState<'members' | 'invitations' | 'access' | 'households' | 'duties'>(initialTab)
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab)
+
+  // If the user navigates between tab=... values without remounting
+  // (e.g. clicking a different in-app link to /family/dashboard?tab=X),
+  // sync the active tab to the new query string.
+  useEffect(() => {
+    const next = (searchParams?.get('tab') ?? 'members') as Tab
+    if (VALID_TABS.includes(next) && next !== activeTab) {
+      setActiveTab(next)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
   const [showInviteModal, setShowInviteModal] = useState(false)
   const [showTransferModal, setShowTransferModal] = useState(false)
   const [selectedHouseholdForDuties, setSelectedHouseholdForDuties] = useState<string | null>(null)
@@ -137,6 +158,16 @@ function FamilyDashboardContent() {
       />
 
       <main className="container mx-auto px-4 py-8">
+        {/*
+          Active-shoppers strip — Phase 3a orchestration UX. Hidden when
+          nobody's mid-trip. Lives ABOVE the tab nav so the owner sees
+          "someone's in the store right now" without having to be on a
+          specific tab. The strip self-hides when sessions === 0, so
+          this is a no-op for households whose caregivers aren't in
+          active shopping mode.
+        */}
+        <ActiveShoppersStrip householdId={user?.uid} />
+
         {/* Tab Navigation */}
         <div className="flex items-center gap-4 mb-6 border-b border-border overflow-x-auto">
           <button
@@ -188,6 +219,16 @@ function FamilyDashboardContent() {
             }`}
           >
             🏠 Household Duties
+          </button>
+          <button
+            onClick={() => setActiveTab('notes')}
+            className={`px-4 py-3 font-medium transition-colors border-b-2 whitespace-nowrap ${
+              activeTab === 'notes'
+                ? 'border-primary text-primary dark:text-purple-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground dark:hover:text-gray-200'
+            }`}
+          >
+            📝 Care Log
           </button>
         </div>
 
@@ -504,6 +545,18 @@ function FamilyDashboardContent() {
                   </>
                 )}
               </div>
+            )}
+
+            {/* Handoff Notes Tab — owner reads (and writes) what caregivers
+                left for the household. Composer + feed share the same
+                component the caregiver-side shift view uses (P4); scope is
+                this owner's UID since this is THEIR household dashboard. */}
+            {activeTab === 'notes' && user && (
+              <HandoffNotes
+                ownerId={user.uid}
+                ownerName={user.displayName || user.email || 'your'}
+                visibleCount={50}
+              />
             )}
           </>
         )}

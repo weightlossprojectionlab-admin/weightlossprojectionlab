@@ -29,6 +29,7 @@ import { db } from './firebase'
 import { logger } from './logger'
 import { COLLECTIONS } from '@/constants/firestore'
 import type { ShoppingItem, PurchaseHistoryEntry } from '@/types/shopping'
+import { normalizeStoreNameToCatalogId } from '@/constants/store-roster'
 
 const SHOPPING_ITEMS_COLLECTION = COLLECTIONS.SHOPPING_ITEMS
 
@@ -45,10 +46,49 @@ export interface PriceApplyResult {
 
 export async function applyReceiptPrices(
   applications: PriceApplication[],
-  options: { storeName?: string } = {},
+  options: { storeName?: string; sessionId?: string } = {},
 ): Promise<PriceApplyResult> {
   const failedItemIds: string[] = []
   let applied = 0
+
+  // Phase 0b — normalize the receipt's free-text store to a catalog
+  // id once, up front. Every matched item gets `assignedStoreId` set
+  // to this value (receipt = ground truth). When the OCR string
+  // doesn't match a catalog entry (rare chain, typo, missing from
+  // STORE_CATALOG), normalizedStoreId is null and items keep
+  // whatever `assignedStoreId` they had (or stay unassigned).
+  const normalizedStoreId = options.storeName
+    ? normalizeStoreNameToCatalogId(options.storeName)
+    : null
+
+  // Phase 0b-iii — if the trip carried a sessionId AND we resolved a
+  // catalog id from the receipt, correct the session's storeId +
+  // storeLocation.name to ground-truth what actually happened. The
+  // caregiver may have picked "Walmart" at session start but ended
+  // up at Costco; receipt overwrites both fields. Best-effort:
+  // failure logs but doesn't abort the price apply.
+  if (options.sessionId && (normalizedStoreId || options.storeName)) {
+    try {
+      const sessionRef = doc(db, 'shopping_sessions', options.sessionId)
+      const sessionUpdates: Record<string, unknown> = {}
+      if (normalizedStoreId) sessionUpdates.storeId = normalizedStoreId
+      if (options.storeName) {
+        sessionUpdates.storeLocation = {
+          name: options.storeName,
+          latitude: 0,
+          longitude: 0,
+        }
+      }
+      if (Object.keys(sessionUpdates).length > 0) {
+        await updateDoc(sessionRef, sessionUpdates)
+      }
+    } catch (err) {
+      logger.warn('[ApplyReceiptPrices] Session store-truth update failed', {
+        sessionId: options.sessionId,
+        error: (err as Error).message,
+      })
+    }
+  }
 
   for (const app of applications) {
     if (!app.itemId || !Number.isFinite(app.priceCents) || app.priceCents <= 0) {
@@ -95,12 +135,21 @@ export async function applyReceiptPrices(
       const tierField =
         tier === 'C' ? 'casePriceCents' : tier === 'P' ? 'packPriceCents' : 'unitPriceCents'
 
-      await updateDoc(ref, {
+      const updates: Record<string, unknown> = {
         purchasePriceCents: app.priceCents,
         [tierField]: app.priceCents,
         purchaseHistory: history,
         updatedAt: new Date(),
-      })
+      }
+      // Phase 0b-ii — if the receipt normalized to a known chain
+      // and the item doesn't already carry an explicit assignment
+      // (preserves the owner's manual override), set assignedStoreId
+      // from the receipt. Receipt is ground truth — they actually
+      // bought it there.
+      if (normalizedStoreId && !item.assignedStoreId) {
+        updates.assignedStoreId = normalizedStoreId
+      }
+      await updateDoc(ref, updates)
       applied += 1
     } catch (err) {
       logger.error('[ApplyReceiptPrices] Write failed', err as Error, {

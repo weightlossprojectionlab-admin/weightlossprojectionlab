@@ -13,6 +13,8 @@ import { LightBulbIcon, ClockIcon, ShoppingBagIcon, PlusIcon } from '@heroicons/
 import { findDueToBuyItems, findFrequentlyBoughtTogether } from '@/lib/purchase-learning'
 import type { ShoppingItem } from '@/types/shopping'
 import type { DueToBuyItem, FrequentlyBoughtTogether } from '@/lib/purchase-learning'
+import { STORE_CATALOG_BY_ID } from '@/constants/store-roster'
+import { StoreBrandMark } from '@/components/family/StoreBrandMark'
 
 interface SmartSuggestionsProps {
   items: ShoppingItem[]
@@ -106,31 +108,45 @@ export function SmartSuggestions({
             <p className="text-xs text-muted-foreground mb-2">
               Based on your purchase history
             </p>
-            {dueToBuy.map((item) => (
-              <div
-                key={item.item.id}
-                className="flex items-center justify-between p-3 bg-background dark:bg-gray-700 rounded-lg border border-border dark:border-gray-600"
-              >
-                <div className="flex-1">
-                  <div className="font-medium text-foreground dark:text-white">
-                    {item.item.productName}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Usually bought every {item.expectedDays} days
-                    {' · '}
-                    {item.daysSinceLastPurchase} days since last purchase
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleAddItem(item.item.productName)}
-                  disabled={adding === item.item.productName}
-                  className="ml-3 p-2 text-secondary hover:bg-secondary-light dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
-                  aria-label={`Add ${item.item.productName} to shopping list`}
+            {dueToBuy.map((dueItem) => {
+              // Phase 0b — show the assigned store inline so the owner
+              // sees WHERE this would be bought when they tap to add.
+              // Falls through silently when unassigned.
+              const assignedStore = dueItem.item.assignedStoreId
+                ? STORE_CATALOG_BY_ID[dueItem.item.assignedStoreId]
+                : undefined
+              return (
+                <div
+                  key={dueItem.item.id}
+                  className="flex items-center justify-between p-3 bg-background dark:bg-gray-700 rounded-lg border border-border dark:border-gray-600"
                 >
-                  <PlusIcon className="h-5 w-5" />
-                </button>
-              </div>
-            ))}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      {assignedStore && (
+                        <StoreBrandMark store={assignedStore} size="sm" />
+                      )}
+                      <div className="font-medium text-foreground dark:text-white truncate">
+                        {dueItem.item.productName}
+                      </div>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Usually bought every {dueItem.expectedDays} days
+                      {' · '}
+                      {dueItem.daysSinceLastPurchase} days since last purchase
+                      {assignedStore ? ` · ${assignedStore.name}` : ''}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleAddItem(dueItem.item.productName)}
+                    disabled={adding === dueItem.item.productName}
+                    className="ml-3 p-2 text-secondary hover:bg-secondary-light dark:hover:bg-blue-900/30 rounded-lg transition-colors disabled:opacity-50"
+                    aria-label={`Add ${dueItem.item.productName} to shopping list`}
+                  >
+                    <PlusIcon className="h-5 w-5" />
+                  </button>
+                </div>
+              )
+            })}
           </>
         )}
 

@@ -11,6 +11,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
 import type { FeaturePreference, SubscriptionPlan } from '@/types'
+import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
 
 interface UpgradeRequiredModalProps {
   isOpen: boolean
@@ -100,8 +101,12 @@ export function UpgradeRequiredModal({
 }: UpgradeRequiredModalProps) {
   const router = useRouter()
   const [billingInterval, setBillingInterval] = useState<'monthly' | 'yearly'>('monthly')
+  const caregiverOnly = useIsCaregiverOnly()
 
   if (!isOpen) return null
+  // Caregiver-only viewers see no subscription UI — same gate as the
+  // other subscription components. Server-side gates are authoritative.
+  if (caregiverOnly) return null
 
   // Validate plans exist in pricing table
   const normalizedCurrentPlan = PLAN_PRICING[currentPlan] ? currentPlan : 'free'

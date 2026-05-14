@@ -15,7 +15,8 @@ import {
   getDocs,
   limit,
   Timestamp,
-  increment
+  increment,
+  arrayUnion,
 } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
@@ -24,6 +25,7 @@ import type {
   ShoppingSessionCreateParams,
   ShoppingSessionStatus
 } from '@/types/shopping-session'
+import type { ProductCategory } from '@/types/shopping'
 import {
   SESSION_TIMEOUTS,
   generateDeviceId,
@@ -142,19 +144,45 @@ export class ShoppingSessionManager {
   }
 
   /**
-   * Increment items scanned counter and update activity
+   * Increment items-scanned counter and update activity, optionally
+   * appending a per-event record to scanSequence for the Phase C ML
+   * substrate.
+   *
+   * The count and the sequence are intentionally kept independent —
+   * legacy callers (SequentialShoppingFlow) can keep firing without
+   * args (count-only). New callers (ActiveShoppingMode.fulfillActiveItem)
+   * pass `{itemId, category}` to ALSO append a ScanEvent. The optional
+   * arg lets the migration land without a flag-day.
+   *
+   * Sequence semantics: `arrayUnion` is order-preserving append (deep
+   * equality dedup, but every scan carries a distinct Timestamp so
+   * effective behavior is "push"). Concurrent scans from the same
+   * session — rare, but possible on flaky networks — merge cleanly
+   * without losing events.
    */
-  async incrementItemsScanned(): Promise<void> {
+  async incrementItemsScanned(
+    itemContext?: { itemId: string; category?: ProductCategory }
+  ): Promise<void> {
     if (!this.sessionId) return
 
     try {
-      await updateDoc(doc(db, 'shopping_sessions', this.sessionId), {
+      const updates: Record<string, unknown> = {
         itemsScanned: increment(1),
-        lastActivityAt: Timestamp.now()
-      })
+        lastActivityAt: Timestamp.now(),
+      }
+      if (itemContext?.itemId) {
+        const event: Record<string, unknown> = {
+          itemId: itemContext.itemId,
+          scannedAt: Timestamp.now(),
+        }
+        if (itemContext.category) event.category = itemContext.category
+        updates.scanSequence = arrayUnion(event)
+      }
+      await updateDoc(doc(db, 'shopping_sessions', this.sessionId), updates)
 
       logger.info('[ShoppingSession] Item scanned', {
-        sessionId: this.sessionId
+        sessionId: this.sessionId,
+        ...(itemContext?.itemId ? { itemId: itemContext.itemId } : {}),
       })
     } catch (error) {
       logger.error('[ShoppingSession] Failed to increment items', error as Error, {

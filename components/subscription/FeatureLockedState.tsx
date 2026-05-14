@@ -6,6 +6,8 @@
 
 'use client'
 
+import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
+
 interface FeatureLockedStateProps {
   feature: string
   requiredUpgrade: {
@@ -17,6 +19,9 @@ interface FeatureLockedStateProps {
 }
 
 export function FeatureLockedState({ feature, requiredUpgrade, onUpgrade }: FeatureLockedStateProps) {
+  // Caregiver-only viewers see no subscription UI. Hook in hooks/useIsCaregiverOnly.
+  if (useIsCaregiverOnly()) return null
+
   // Action label names the actual upgrade rather than the generic
   // "Unlock Feature". The CTA verb varies because the action does:
   // a Single User upgrading to Family hears "Upgrade to Family
