@@ -1,4 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app'
+import { getFirestore } from 'firebase-admin/firestore'
+import * as path from 'path'
+import * as fs from 'fs'
 
 /**
  * Caregiver-side /shopping/active — UI assertion that the central
@@ -28,6 +32,120 @@ import { test, expect, type Page } from '@playwright/test'
  */
 
 const OWNER_UID = 'Y8wSTgymg3YXWU94iJVjzoGxsMI2'
+const CAREGIVER_UID = 'X0exvZzk4iPc5OV0lEOBQglWDoA3'
+
+// Self-seed shopping_items spanning multiple perishability tiers so
+// the tier-order assertion has data to test against. Wipe-resistant —
+// after the live data-reset earlier this session there are zero
+// shopping_items, so these tests need their own corpus.
+function findServiceAccountPath(): string {
+  let dir = process.cwd()
+  for (let i = 0; i < 6; i++) {
+    const c = path.join(dir, 'service_account_key.json')
+    if (fs.existsSync(c)) return c
+    const p = path.dirname(dir)
+    if (p === dir) break
+    dir = p
+  }
+  throw new Error('service_account_key.json not found')
+}
+
+if (getApps().length === 0) {
+  initializeApp({ credential: cert(require(findServiceAccountPath())) })
+}
+const adminDb = getFirestore(getApp())
+
+const SEED_STAMP = Date.now()
+const SEED_PREFIX = `__test_sort_${SEED_STAMP}_`
+const SEED_ITEMS: Array<{ id: string; name: string; category: string; tier: number }> = [
+  { id: `${SEED_PREFIX}pantry`, name: 'SORT pantry item', category: 'pantry', tier: 1 },
+  { id: `${SEED_PREFIX}produce`, name: 'SORT produce item', category: 'produce', tier: 2 },
+  { id: `${SEED_PREFIX}eggs`, name: 'SORT eggs item', category: 'eggs', tier: 3 },
+  { id: `${SEED_PREFIX}dairy`, name: 'SORT dairy item', category: 'dairy', tier: 4 },
+  { id: `${SEED_PREFIX}frozen`, name: 'SORT frozen item', category: 'frozen', tier: 5 },
+]
+
+// Capture the test-run window so we can scope owner-side notification
+// cleanup to JUST the events we triggered. afterAll deletes
+// shopping_started / shopping_done notifications fired in this window
+// so the owner's bell doesn't accumulate test residue.
+const RUN_STARTED_AT = new Date().toISOString()
+
+test.beforeAll(async () => {
+  const now = new Date()
+  const base = {
+    userId: OWNER_UID,
+    householdId: OWNER_UID,
+    brand: 'TEST',
+    imageUrl: '',
+    isManual: true,
+    inStock: false,
+    needed: true,
+    priority: 'medium' as const,
+    quantity: 1,
+    unit: 'each',
+    purchaseHistory: [],
+    createdAt: now,
+    updatedAt: now,
+  }
+  await Promise.all(
+    SEED_ITEMS.map((item) =>
+      adminDb.collection('shopping_items').doc(item.id).set({
+        ...base,
+        productName: item.name,
+        category: item.category,
+      }),
+    ),
+  )
+})
+
+test.afterAll(async () => {
+  // 1. Drop seeded items.
+  await Promise.all(
+    SEED_ITEMS.map((item) =>
+      adminDb.collection('shopping_items').doc(item.id).delete().catch(() => {}),
+    ),
+  )
+
+  // 2. Owner-POV cleanup — these tests open /shopping/active which
+  //    starts a shopping_session and (per Phase 2) fires a
+  //    shopping_started notification to the owner + accepted
+  //    caregivers. Delete the notifs we triggered during this run.
+  const notifSnap = await adminDb
+    .collection('notifications')
+    .where('type', 'in', ['shopping_started', 'shopping_done'])
+    .where('userId', 'in', [OWNER_UID, CAREGIVER_UID])
+    .get()
+  const recent = notifSnap.docs.filter((d) => {
+    const createdAt = String(d.data()?.createdAt || '')
+    return createdAt >= RUN_STARTED_AT
+  })
+  if (recent.length > 0) {
+    const batch = adminDb.batch()
+    for (const d of recent) batch.delete(d.ref)
+    await batch.commit().catch(() => {})
+  }
+
+  // 3. Owner-POV cleanup — also drop the shopping_sessions docs the
+  //    test opens (the active-shoppers strip on the owner dashboard
+  //    reads from them). Scope to sessions created in this run.
+  const sessSnap = await adminDb
+    .collection('shopping_sessions')
+    .where('householdId', '==', OWNER_UID)
+    .get()
+  const sessions = sessSnap.docs.filter((d) => {
+    const startedAtRaw = d.data()?.startedAt
+    // startedAt is a Firestore Timestamp; toDate() works on admin SDK
+    const startedAt = startedAtRaw?.toDate?.() ?? startedAtRaw
+    const iso = startedAt instanceof Date ? startedAt.toISOString() : String(startedAt || '')
+    return iso >= RUN_STARTED_AT
+  })
+  if (sessions.length > 0) {
+    const batch = adminDb.batch()
+    for (const d of sessions) batch.delete(d.ref)
+    await batch.commit().catch(() => {})
+  }
+})
 
 const PERISHABILITY_TIER: Record<string, number> = {
   other: 1,

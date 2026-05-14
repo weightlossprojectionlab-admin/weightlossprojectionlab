@@ -1,4 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
+import { initializeApp, cert, getApps, getApp } from 'firebase-admin/app'
+import { getFirestore } from 'firebase-admin/firestore'
+import * as path from 'path'
+import * as fs from 'fs'
 
 /**
  * Caregiver-side Today view — UI smoke.
@@ -28,6 +32,201 @@ import { test, expect, type Page } from '@playwright/test'
  */
 
 const OWNER_UID = 'Y8wSTgymg3YXWU94iJVjzoGxsMI2'
+const PERCY_UID = 'z2ejce7nFBXS9upf2unfRlYcPhk2'
+const CAREGIVER_UID = 'X0exvZzk4iPc5OV0lEOBQglWDoA3'
+const WLP_HOUSEHOLD_DOC_ID = '29GCzfnQ9GvJ58QQo1DB'
+
+// Self-seed Firestore state so this spec is wipe-resistant. The two
+// tests that read seed-dependent data ('each household section is
+// fully equipped' and 'clicking a duty card opens the inline action
+// sheet') need:
+//   • Percy section: a worklist item carrying the patient name
+//     "E2E Test Patient" so the per-section assertion can pin it.
+//   • WLP section: a non-shopping duty assigned to the caregiver
+//     ("Vacuum living room") so the duty-card → action-sheet path
+//     under test has something to click.
+// Both arrive via household_duties — duty cards always carry the
+// patient name (`title = ${duty.name} — ${patientName}`), and the
+// duty-claim spec already proved the same seed pattern works.
+function findServiceAccountPath(): string {
+  let dir = process.cwd()
+  for (let i = 0; i < 6; i++) {
+    const c = path.join(dir, 'service_account_key.json')
+    if (fs.existsSync(c)) return c
+    const p = path.dirname(dir)
+    if (p === dir) break
+    dir = p
+  }
+  throw new Error('service_account_key.json not found')
+}
+
+if (getApps().length === 0) {
+  initializeApp({ credential: cert(require(findServiceAccountPath())) })
+}
+const adminDb = getFirestore(getApp())
+
+const SEED_STAMP = Date.now()
+const SEED_IDS = {
+  percyPatient: `__test_shiftview_patient_${SEED_STAMP}`,
+  percyDuty: `__test_shiftview_percy_duty_${SEED_STAMP}`,
+  wlpDuty: `__test_shiftview_wlp_vacuum_${SEED_STAMP}`,
+}
+
+// Remember the original patientsAccess values so afterAll can restore.
+let originalPercyAccess: string[] | undefined
+
+test.beforeAll(async () => {
+  const now = new Date().toISOString()
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  const tomorrowIso = tomorrow.toISOString()
+
+  // 1. Patient on Percy's account so the worklist hook can resolve
+  //    "E2E Test Patient" by id from /users/{percy}/patients.
+  await adminDb
+    .collection('users')
+    .doc(PERCY_UID)
+    .collection('patients')
+    .doc(SEED_IDS.percyPatient)
+    .set({
+      id: SEED_IDS.percyPatient,
+      userId: PERCY_UID,
+      name: 'E2E Test Patient',
+      type: 'human',
+      relationship: 'self',
+      dateOfBirth: '1990-01-01',
+      createdAt: now,
+    })
+
+  // 2. Patch the OWNER-side familyMembers.patientsAccess so the GET
+  //    /patients endpoint surfaces this seeded patient to the caregiver.
+  //    Post-S4 migrations key familyMembers docs by the caregiver uid,
+  //    so we can address the doc directly.
+  const fmRef = adminDb
+    .collection('users')
+    .doc(PERCY_UID)
+    .collection('familyMembers')
+    .doc(CAREGIVER_UID)
+  const fmSnap = await fmRef.get()
+  originalPercyAccess = Array.isArray(fmSnap.data()?.patientsAccess)
+    ? (fmSnap.data()!.patientsAccess as string[])
+    : undefined
+  await fmRef.update({ patientsAccess: [SEED_IDS.percyPatient] })
+
+  // 3. Percy-household duty referencing that patient — gives Percy's
+  //    section a worklist item AND surfaces the patient name in the
+  //    card title via `${duty.name} — ${patientName}`.
+  const baseDuty = {
+    category: 'personal_care' as const,
+    isCustom: false,
+    assignedBy: PERCY_UID,
+    assignedAt: now,
+    frequency: 'daily' as const,
+    priority: 'medium' as const,
+    status: 'pending' as const,
+    completionCount: 0,
+    skipCount: 0,
+    notifyOnCompletion: false,
+    notifyOnOverdue: false,
+    reminderEnabled: false,
+    createdAt: now,
+    createdBy: PERCY_UID,
+    lastModified: now,
+    isActive: true,
+    nextDueDate: tomorrowIso,
+  }
+  await adminDb.collection('household_duties').doc(SEED_IDS.percyDuty).set({
+    ...baseDuty,
+    householdId: PERCY_UID, // Percy has no households doc; use uid as householdId
+    userId: PERCY_UID,
+    name: 'Daily check',
+    forPatientId: SEED_IDS.percyPatient,
+    assignedTo: [CAREGIVER_UID],
+    claimedBy: CAREGIVER_UID,
+    claimedAt: now,
+  })
+
+  // 4. WLP-household duty: non-shopping category so the duty-card click
+  //    opens the inline action sheet (the contract under test).
+  await adminDb.collection('household_duties').doc(SEED_IDS.wlpDuty).set({
+    ...baseDuty,
+    householdId: WLP_HOUSEHOLD_DOC_ID,
+    userId: OWNER_UID,
+    name: 'Vacuum living room',
+    category: 'cleaning_living_areas',
+    assignedBy: OWNER_UID,
+    createdBy: OWNER_UID,
+    assignedTo: [CAREGIVER_UID],
+    claimedBy: CAREGIVER_UID,
+    claimedAt: now,
+  })
+})
+
+test.afterAll(async () => {
+  // 1. Drop seed patient + duties.
+  await Promise.all([
+    adminDb
+      .collection('users')
+      .doc(PERCY_UID)
+      .collection('patients')
+      .doc(SEED_IDS.percyPatient)
+      .delete()
+      .catch(() => {}),
+    adminDb.collection('household_duties').doc(SEED_IDS.percyDuty).delete().catch(() => {}),
+    adminDb.collection('household_duties').doc(SEED_IDS.wlpDuty).delete().catch(() => {}),
+  ])
+
+  // 2. Restore Percy's familyMembers.patientsAccess to whatever it
+  //    was before — usually [], but if a future change populates it,
+  //    we don't want to clobber that.
+  await adminDb
+    .collection('users')
+    .doc(PERCY_UID)
+    .collection('familyMembers')
+    .doc(CAREGIVER_UID)
+    .update({ patientsAccess: originalPercyAccess ?? [] })
+    .catch(() => {})
+
+  // 3. Owner-POV cleanup — the care-log test writes a handoffNote on
+  //    /users/{WLP}/handoffNotes/, which surfaces in the owner's care
+  //    log forever otherwise. Delete every handoff note whose body
+  //    starts with "caregiver ui probe " (the test stamp prefix).
+  const probeNotes = await adminDb
+    .collection('users')
+    .doc(OWNER_UID)
+    .collection('handoffNotes')
+    .get()
+  const toDelete = probeNotes.docs.filter((d) => {
+    const body = String(d.data()?.body || '')
+    return body.startsWith('caregiver ui probe ')
+  })
+  if (toDelete.length > 0) {
+    const batch = adminDb.batch()
+    for (const d of toDelete) batch.delete(d.ref)
+    await batch.commit().catch(() => {})
+  }
+
+  // 4. Owner-POV cleanup — handoff-note fanouts spawn `handoff_note`
+  //    notifications on the owner + accepted caregivers. Match by
+  //    metadata if the dispatcher stamps the source body, else by
+  //    type + recent timestamp. Conservative: only delete notifs
+  //    whose message contains the probe stamp prefix so we never
+  //    nuke real handoff notifications.
+  const notifSnap = await adminDb
+    .collection('notifications')
+    .where('type', '==', 'handoff_note')
+    .where('userId', 'in', [OWNER_UID, CAREGIVER_UID])
+    .get()
+  const probeNotifs = notifSnap.docs.filter((d) => {
+    const message = String(d.data()?.message || '')
+    return message.includes('caregiver ui probe ')
+  })
+  if (probeNotifs.length > 0) {
+    const batch = adminDb.batch()
+    for (const d of probeNotifs) batch.delete(d.ref)
+    await batch.commit().catch(() => {})
+  }
+})
 
 /**
  * Wait for the worklist to be done loading and have its expected
