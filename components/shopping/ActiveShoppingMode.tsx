@@ -64,8 +64,11 @@ import {
   logStoreVisit,
   deleteShoppingItem,
   updateShoppingItem,
+  addOrUpdateShoppingItem,
 } from '@/lib/shopping-operations'
 import { addProductImage } from '@/lib/product-image-upload'
+import { lookupBarcodeWithCache } from '@/lib/cached-product-lookup'
+import { simplifyProduct } from '@/lib/openfoodfacts-api'
 import { barcodeVariants } from '@/lib/barcode-variants'
 import { playStepDoneChime } from '@/lib/cook-chime'
 import { shoppingSessionManager } from '@/lib/shopping-session-manager'
@@ -151,6 +154,27 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
   const [photoCaptureOpen, setPhotoCaptureOpen] = useState(false)
   const [pendingConfirm, setPendingConfirm] = useState<PendingConfirm | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  // "+ Add" header button → opens this dialog so the caregiver can add
+  // a non-list item to the cart on the fly. The new item is created in
+  // the caller's shopping list (assignedStoreId = current store, if
+  // known) as already-purchased so it counts in the "X of Y found"
+  // header AND lands in the inventory after the trip ends — same
+  // outcome path as a scanned non-list item.
+  const [addOnFlyOpen, setAddOnFlyOpen] = useState(false)
+  const [addOnFlyName, setAddOnFlyName] = useState('')
+  const [addOnFlyUpc, setAddOnFlyUpc] = useState('')
+  const [addOnFlySubmitting, setAddOnFlySubmitting] = useState(false)
+  // Tap-to-enlarge for the product thumbnails on TO-PICK and DONE.
+  // Caregiver at the shelf needs to compare what's in front of them
+  // to what's on the list — the 80×80 row thumb is too small to be
+  // a reliable visual match. Tap pops a fullscreen overlay with the
+  // big image; tap anywhere to close.
+  const [enlargedImage, setEnlargedImage] = useState<{ url: string; alt: string } | null>(null)
+  // Scanner is reused for two flows: (a) confirming the active item's
+  // barcode mid-trip (default), and (b) "Add on the fly" scan-to-add
+  // from the dialog. handleScan branches on this flag so the existing
+  // confirm logic stays unchanged for the active-item path.
+  const [scannerMode, setScannerMode] = useState<'confirm' | 'add-on-fly'>('confirm')
   // 2.4 — Summary screen state. End button opens this; Save & exit
   // logs the StoreVisit then router.backs.
   const [summaryOpen, setSummaryOpen] = useState(false)
@@ -512,6 +536,13 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
   // Branch logic for scan results.
   const handleScan = (rawBarcode: string) => {
     setScannerOpen(false)
+    // "Add on the fly" scan path — opened from the dialog rather than
+    // the active-item card. Route to the dedicated handler and bail
+    // out of the confirm-active-item logic entirely.
+    if (scannerMode === 'add-on-fly') {
+      void handleAddOnFlyBarcode(rawBarcode)
+      return
+    }
     if (!activeItem) return
 
     const cleaned = (rawBarcode || '').replace(/\D/g, '').trim()
@@ -641,6 +672,168 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
   // skipped items, then router.back via onClose. Inventory writes
   // never block the exit — even if a few fail, the user gets out
   // cleanly; partial state is recoverable.
+  /**
+   * Add-on-fly via barcode — shared by the scanner-driven path
+   * (scannerMode === 'add-on-fly') and the typed-UPC path in the
+   * dialog. DRY with /shopping/page.tsx's handleBarcodeScan: same
+   * lookupBarcodeWithCache → simplifyProduct → addOrUpdateShoppingItem
+   * pipeline, just dispatched from the active-mode dialog.
+   *
+   * Success path: known barcode → product fetched → row created at
+   * needed:true / inStock:false → immediately markItemAsPurchased so
+   * it counts as "found" in the trip header → appended to sessionItems
+   * with the post-purchase shape → dialog closes.
+   *
+   * Not-found path: surface a hint that the barcode wasn't recognized
+   * and clear the UPC field. The user can either re-scan, try a
+   * different UPC, or fall through to the name-only path in the same
+   * dialog (which attaches no barcode).
+   */
+  const handleAddOnFlyBarcode = async (rawBarcode: string) => {
+    const cleaned = (rawBarcode || '').replace(/\D/g, '').trim()
+    if (!cleaned) {
+      toast.error('Could not read that barcode')
+      return
+    }
+    if (addOnFlySubmitting) return
+    setAddOnFlySubmitting(true)
+    try {
+      const user = auth.currentUser
+      if (!user) throw new Error('Not signed in')
+      const actorUid = user.uid
+      const householdUid = ownerId || actorUid
+
+      const response = await lookupBarcodeWithCache(cleaned)
+      const product = simplifyProduct(response)
+
+      if (!product.found || !response.product) {
+        toast.error('Couldn’t find that UPC — try the name instead')
+        setAddOnFlyUpc('')
+        return
+      }
+
+      const created = await addOrUpdateShoppingItem(
+        householdUid,
+        response.product,
+        {
+          inStock: false,
+          needed: true,
+          quantity: 1,
+          householdId: householdUid,
+          memberId: actorUid,
+        },
+      )
+      // Mark foundInStore (NOT purchased) — purchase finalizes at the
+      // trip's Confirm Purchase step, same path as items scanned off
+      // the existing list. Marking purchased here would flip needed
+      // to false and the parent's neededItems filter would strip the
+      // row before it reached the UI.
+      await markItemAsFoundInStore(created.id, {
+        quantity: 1,
+        purchasedBy: actorUid,
+      })
+
+      setSessionItems((prev) => [
+        ...prev,
+        {
+          ...created,
+          needed: true,
+          foundInStore: true,
+        },
+      ])
+
+      toast.success(`Added "${product.name}" to the cart`)
+      setAddOnFlyUpc('')
+      setAddOnFlyName('')
+      setAddOnFlyOpen(false)
+    } catch (err) {
+      logger.error('[ActiveShoppingMode] add-on-fly barcode failed', err as Error)
+      toast.error('Lookup failed — please try again')
+    } finally {
+      setAddOnFlySubmitting(false)
+      // Always reset scanner mode after a barcode-driven add so the
+      // next active-item scan goes through the confirm path.
+      setScannerMode('confirm')
+    }
+  }
+
+  /**
+   * "+ Add" header button — create a non-list item on the fly during
+   * an active shopping trip, then immediately mark it found. Same
+   * end-state as scanning a non-list barcode (impulse purchase), but
+   * driven by name entry for items without barcodes.
+   *
+   * Semantics:
+   *   • New item belongs to the OWNER's shopping list (userId =
+   *     ownerId in caregiver mode; auth uid in solo mode).
+   *   • Created with needed:true, inStock:false so it goes through the
+   *     markItemAsPurchased path that stamps lastPurchased + appends
+   *     to purchaseHistory — same audit trail as a scanned non-list
+   *     item.
+   *   • Appended to sessionItems so the new row appears immediately,
+   *     not on the next session re-open.
+   *
+   * Category auto-detect happens server-side via addOrUpdateShoppingItem's
+   * pickCategory (uses CATEGORY_KEYWORDS on product_name). Future
+   * iteration can surface that picker in the dialog if auto-detect
+   * misclassifies; for v1 the trust-the-default behavior is fine.
+   */
+  const handleSubmitAddOnFly = async () => {
+    const trimmed = addOnFlyName.trim()
+    if (!trimmed || addOnFlySubmitting) return
+    setAddOnFlySubmitting(true)
+    try {
+      const user = auth.currentUser
+      if (!user) throw new Error('Not signed in')
+      const actorUid = user.uid
+      const householdUid = ownerId || actorUid
+
+      const product = {
+        code: '',
+        product_name: trimmed,
+        brands: '',
+      } as any
+
+      const created = await addOrUpdateShoppingItem(householdUid, product, {
+        inStock: false,
+        needed: true,
+        quantity: 1,
+        householdId: householdUid,
+        memberId: actorUid,
+      })
+
+      // Mark foundInStore (NOT purchased) — same reasoning as the
+      // barcode path: purchase finalizes at Confirm Purchase, and a
+      // purchased item would have needed=false and get stripped by
+      // the parent's neededItems filter before reaching the UI.
+      await markItemAsFoundInStore(created.id, {
+        quantity: 1,
+        purchasedBy: actorUid,
+      })
+
+      // Append to sessionItems with the found-but-still-needed shape
+      // so the row renders in the "found" bucket immediately, without
+      // waiting for the snapshot listener round-trip.
+      setSessionItems((prev) => [
+        ...prev,
+        {
+          ...created,
+          needed: true,
+          foundInStore: true,
+        },
+      ])
+
+      toast.success(`Added "${trimmed}" to the cart`)
+      setAddOnFlyName('')
+      setAddOnFlyOpen(false)
+    } catch (err) {
+      logger.error('[ActiveShoppingMode] add-on-fly failed', err as Error)
+      toast.error('Could not add the item — please try again')
+    } finally {
+      setAddOnFlySubmitting(false)
+    }
+  }
+
   const handleConfirmPurchase = async () => {
     setSummarySaving(true)
     try {
@@ -855,34 +1048,21 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
           </p>
         </div>
         {!summaryOpen && (
-          /* Header utility actions:
-             1. "+ Add" — primary, frequent action: add a non-list item to
-                the cart on the fly. Filled button so it stands out.
-             2. "⋮ menu" — overflow for everything else (Snap receipt,
-                Message family, Export list, Cancel trip). Bottom sheet
-                surfaces those without crowding the header.
+          /* Header utility action: "⋮ menu" — overflow for the trip's
+             auxiliary actions (Snap receipt, Message family, Export
+             list, Cancel trip). Bottom sheet surfaces those without
+             crowding the header. The primary "+ Add item" action
+             moved to a fixed bottom bar (thumb-reachable, anchored
+             above the iOS home indicator).
           */
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() =>
-                toast('Add to cart on the fly — coming soon', { icon: '🛒' })
-              }
-              className="min-h-[44px] px-3 py-2 flex items-center gap-1.5 bg-primary text-white rounded-lg font-medium text-sm active:bg-primary-dark transition-colors"
-              aria-label="Add item to cart"
-            >
-              <PlusIcon className="w-4 h-4" />
-              <span>Add</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setTripMenuOpen(true)}
-              className="min-h-[44px] min-w-[44px] p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
-              aria-label="More trip options"
-            >
-              <EllipsisVerticalIcon className="w-5 h-5" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setTripMenuOpen(true)}
+            className="min-h-[44px] min-w-[44px] p-2 bg-muted text-foreground rounded-lg active:bg-muted/80"
+            aria-label="More trip options"
+          >
+            <EllipsisVerticalIcon className="w-5 h-5" />
+          </button>
         )}
       </header>
 
@@ -1185,15 +1365,47 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
                               onClick={() => openItem(item)}
                               className="flex-1 px-4 py-3 flex items-center gap-3 text-left min-w-0"
                             >
-                              <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                              {/* Inner clickable area that intercepts the
+                                  tap and opens the enlarged image overlay
+                                  instead of bubbling up to openItem.
+                                  Rendered as a div + role=button so the
+                                  outer <button> doesn't nest a button
+                                  (invalid HTML / a11y warning). */}
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                aria-label={`Enlarge image of ${item.productName}`}
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  if (item.imageUrl) {
+                                    setEnlargedImage({
+                                      url: item.imageUrl,
+                                      alt: item.productName,
+                                    })
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.stopPropagation()
+                                    e.preventDefault()
+                                    if (item.imageUrl) {
+                                      setEnlargedImage({
+                                        url: item.imageUrl,
+                                        alt: item.productName,
+                                      })
+                                    }
+                                  }
+                                }}
+                                className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 cursor-zoom-in"
+                              >
                                 {item.imageUrl ? (
                                   <img
                                     src={item.imageUrl}
                                     alt=""
-                                    className="w-full h-full object-contain"
+                                    className="w-full h-full object-contain pointer-events-none"
                                   />
                                 ) : (
-                                  <span className="text-3xl">📦</span>
+                                  <span className="text-3xl pointer-events-none">📦</span>
                                 )}
                               </div>
                               <div className="flex-1 min-w-0">
@@ -1274,17 +1486,29 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
                       key={item.id}
                       className="px-4 py-3 flex items-center gap-3"
                     >
-                      <div className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 opacity-60">
+                      <button
+                        type="button"
+                        aria-label={`Enlarge image of ${item.productName}`}
+                        onClick={() => {
+                          if (item.imageUrl) {
+                            setEnlargedImage({
+                              url: item.imageUrl,
+                              alt: item.productName,
+                            })
+                          }
+                        }}
+                        className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 opacity-60 cursor-zoom-in"
+                      >
                         {item.imageUrl ? (
                           <img
                             src={item.imageUrl}
                             alt=""
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-contain pointer-events-none"
                           />
                         ) : (
-                          <span className="text-3xl">📦</span>
+                          <span className="text-3xl pointer-events-none">📦</span>
                         )}
-                      </div>
+                      </button>
                       <div className="flex-1 min-w-0 opacity-60">
                         <p className="font-medium text-foreground truncate line-through">
                           <span className="font-bold">{item.quantity || 1} ×</span>{' '}
@@ -1311,6 +1535,33 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
               )}
             </>
           )}
+        </div>
+      )}
+
+      {/* Fixed bottom action bar — "Add item" anchored to the bottom
+          of the viewport so it's thumb-reachable while the caregiver
+          scrolls through the list. Sits as the last flex child of the
+          fixed-inset-0 flex-col container, so it doesn't need its
+          own `fixed` positioning. Safe-area inset keeps it above the
+          iOS home indicator. Hidden on the summary screen — once the
+          caregiver is checking out, the action menu changes context.
+          z-index keeps it above the list but below modals (z-50 to
+          z-60+ range). */}
+      {!summaryOpen && (
+        <div
+          className="border-t border-border bg-card/95 backdrop-blur-sm px-4 pt-3"
+          style={{ paddingBottom: 'max(0.75rem, env(safe-area-inset-bottom))' }}
+        >
+          <button
+            type="button"
+            data-testid="active-add-on-fly"
+            onClick={() => setAddOnFlyOpen(true)}
+            className="w-full min-h-[52px] px-4 py-3 flex items-center justify-center gap-2 bg-primary text-white rounded-2xl font-semibold text-base active:bg-primary-dark active:scale-[0.99] transition-transform shadow-md"
+            aria-label="Add item to cart"
+          >
+            <PlusIcon className="w-5 h-5" />
+            <span>Add item</span>
+          </button>
         </div>
       )}
 
@@ -1842,6 +2093,210 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
       )}
 
       {photoCaptureOpen /* file picker is invisible; this is a placeholder for future inline UI */}
+
+      {/* Enlarged image overlay — fullscreen-ish viewer for product
+          thumbnails. Tap anywhere (image or backdrop) to close. Pinch-
+          zoom on the image itself works natively via the browser's
+          touch gestures since we use a plain <img> without explicit
+          touch-action restrictions. */}
+      {enlargedImage && (
+        <div
+          className="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Enlarged product image"
+          onClick={() => setEnlargedImage(null)}
+          data-testid="active-enlarged-image"
+        >
+          <img
+            src={enlargedImage.url}
+            alt={enlargedImage.alt}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+          />
+          <button
+            type="button"
+            aria-label="Close enlarged image"
+            onClick={(e) => {
+              e.stopPropagation()
+              setEnlargedImage(null)
+            }}
+            className="absolute top-4 right-4 w-11 h-11 flex items-center justify-center bg-white/20 hover:bg-white/30 backdrop-blur-sm rounded-full text-white text-2xl"
+            style={{ top: 'max(1rem, env(safe-area-inset-top))' }}
+          >
+            ×
+          </button>
+          <p
+            className="absolute left-4 right-4 text-center text-white text-sm font-medium"
+            style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }}
+          >
+            {enlargedImage.alt}
+          </p>
+        </div>
+      )}
+
+      {/* "+ Add" on-the-fly dialog — bottom sheet on mobile, centered
+          modal on sm+. One required field (item name); category is
+          auto-detected server-side from the name via CATEGORY_KEYWORDS,
+          and assignedStoreId can be backfilled after the receipt-OCR
+          step. Pinned high z-index so it lands above the active-mode
+          summary screen if both are visible. */}
+      {addOnFlyOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="add-on-fly-title"
+          data-testid="active-add-on-fly-dialog"
+        >
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => {
+              if (!addOnFlySubmitting) {
+                setAddOnFlyOpen(false)
+                setAddOnFlyName('')
+                setAddOnFlyUpc('')
+              }
+            }}
+            aria-hidden
+          />
+          {/* Bottom sheet on phones, centered card on tablet+. Safe-
+              area inset keeps the bottom of the sheet above iOS home
+              indicator. max-h-[90vh] + overflow-y-auto guarantees the
+              whole sheet is reachable on short screens (e.g. small
+              Androids with the keyboard open). */}
+          <div
+            className="relative w-full sm:max-w-md bg-card rounded-t-3xl sm:rounded-3xl shadow-2xl px-5 pt-5 pb-6 sm:px-6 sm:pt-6 sm:pb-8 max-h-[90vh] overflow-y-auto"
+            style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+          >
+            {/* Mobile pull-handle hint — visual cue that the sheet
+                came up from the bottom. Hidden on tablet+ where the
+                dialog is centered. */}
+            <div className="sm:hidden w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" aria-hidden />
+
+            <h2
+              id="add-on-fly-title"
+              className="text-xl font-bold text-foreground mb-1"
+            >
+              Add to cart
+            </h2>
+            <p className="text-sm text-muted-foreground mb-5 leading-snug">
+              Grabbed something that wasn&apos;t on the list?
+            </p>
+
+            {/* Path 1 — DRY scan path. Reuses the same BarcodeScanner
+                already mounted on this page; scannerMode steers
+                handleScan into handleAddOnFlyBarcode. Visually
+                dominant on mobile so a thumb can hit it without
+                aiming. */}
+            <button
+              type="button"
+              data-testid="active-add-on-fly-scan"
+              disabled={addOnFlySubmitting}
+              onClick={() => {
+                setScannerMode('add-on-fly')
+                setScannerOpen(true)
+                setAddOnFlyOpen(false)
+              }}
+              className="w-full mb-5 px-4 py-4 flex items-center justify-center gap-3 bg-primary text-white rounded-2xl font-semibold text-base active:bg-primary-dark active:scale-[0.98] transition-transform disabled:opacity-50 min-h-[56px] shadow-md"
+            >
+              <CameraIcon className="w-6 h-6" />
+              <span>Scan barcode</span>
+            </button>
+
+            {/* Divider — visible hairline + label. Easier to scan
+                than tiny all-caps text on small screens. */}
+            <div className="flex items-center gap-3 mb-3" aria-hidden>
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs font-medium text-muted-foreground">
+                or enter UPC
+              </span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Path 2 — typed UPC. Stacked vertically on mobile so the
+                input is full-width (easier to type) and the action
+                button is a full-width target underneath. */}
+            <input
+              data-testid="active-add-on-fly-upc"
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              value={addOnFlyUpc}
+              onChange={(e) => setAddOnFlyUpc(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !addOnFlySubmitting && addOnFlyUpc.trim().length > 0) {
+                  e.preventDefault()
+                  void handleAddOnFlyBarcode(addOnFlyUpc)
+                }
+              }}
+              placeholder="0 12345 67890 12"
+              maxLength={14}
+              className="w-full px-4 py-3.5 bg-background border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[52px] font-mono text-base tracking-wider"
+            />
+            <button
+              type="button"
+              data-testid="active-add-on-fly-upc-submit"
+              onClick={() => void handleAddOnFlyBarcode(addOnFlyUpc)}
+              disabled={addOnFlySubmitting || addOnFlyUpc.trim().length === 0}
+              className="w-full mt-2 mb-5 px-4 py-3 text-sm font-semibold rounded-2xl bg-background border-2 border-primary text-primary active:bg-primary/10 active:scale-[0.98] transition-transform disabled:opacity-40 disabled:border-border min-h-[48px]"
+            >
+              Look up UPC
+            </button>
+
+            {/* Divider for path 3. */}
+            <div className="flex items-center gap-3 mb-3" aria-hidden>
+              <div className="flex-1 h-px bg-border" />
+              <span className="text-xs font-medium text-muted-foreground">
+                or no barcode — just the name
+              </span>
+              <div className="flex-1 h-px bg-border" />
+            </div>
+
+            {/* Path 3 — no-barcode fallback. Bulk produce, deli, in-
+                store baked goods. Same stacked layout. */}
+            <input
+              data-testid="active-add-on-fly-name"
+              type="text"
+              value={addOnFlyName}
+              onChange={(e) => setAddOnFlyName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !addOnFlySubmitting && addOnFlyName.trim().length > 0) {
+                  e.preventDefault()
+                  void handleSubmitAddOnFly()
+                }
+              }}
+              placeholder="e.g. Bananas"
+              maxLength={120}
+              className="w-full px-4 py-3.5 bg-background border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[52px] text-base"
+            />
+            <button
+              type="button"
+              data-testid="active-add-on-fly-submit"
+              onClick={() => void handleSubmitAddOnFly()}
+              disabled={addOnFlySubmitting || addOnFlyName.trim().length === 0}
+              className="w-full mt-2 px-4 py-3 text-sm font-semibold rounded-2xl bg-primary text-white active:bg-primary-dark active:scale-[0.98] transition-transform disabled:opacity-40 min-h-[48px]"
+            >
+              {addOnFlySubmitting ? 'Adding…' : 'Add to cart'}
+            </button>
+
+            {/* Cancel — bottom of the sheet, generous tap target,
+                muted styling so it doesn't compete with the primary
+                actions above. */}
+            <button
+              type="button"
+              onClick={() => {
+                setAddOnFlyOpen(false)
+                setAddOnFlyName('')
+                setAddOnFlyUpc('')
+              }}
+              disabled={addOnFlySubmitting}
+              className="w-full mt-4 px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 min-h-[48px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
