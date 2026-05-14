@@ -36,6 +36,8 @@ import { MedicationList } from '@/components/patients/MedicationList'
 import ImmunizationForm from '@/components/patients/ImmunizationForm'
 import MedicalEquipmentForm from '@/components/patients/MedicalEquipmentForm'
 import FamilyHistoryForm from '@/components/patients/FamilyHistoryForm'
+import { PatientFieldEditor, type FieldOption } from '@/components/patients/PatientFieldEditor'
+import { PreparationNeedsEditor } from '@/components/patients/PreparationNeedsEditor'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
@@ -76,6 +78,80 @@ import { SymptomLogger } from '@/components/pets/SymptomLogger'
 
 import { getCSRFToken } from '@/lib/csrf'
 import { QuickWeightModal } from './components/QuickWeightModal'
+
+// ============================================================
+// PatientFieldEditor option lists.
+// Single source of truth for the static-profile editable enums
+// surfaced on the Info tab. Pulled directly from the canonical
+// PatientProfile types in `types/medical.ts`; if the type changes,
+// these need to change too.
+// ============================================================
+const RELATIONSHIP_OPTIONS: FieldOption[] = [
+  { value: 'self', label: 'Self' },
+  { value: 'spouse', label: 'Spouse' },
+  { value: 'parent', label: 'Parent' },
+  { value: 'child', label: 'Child' },
+  { value: 'sibling', label: 'Sibling' },
+  { value: 'grandparent', label: 'Grandparent' },
+  { value: 'pet', label: 'Pet' },
+]
+const GENDER_OPTIONS: FieldOption[] = [
+  { value: 'male', label: 'Male' },
+  { value: 'female', label: 'Female' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
+]
+const BLOOD_TYPE_OPTIONS: FieldOption[] = [
+  { value: 'A+', label: 'A+' },
+  { value: 'A-', label: 'A−' },
+  { value: 'B+', label: 'B+' },
+  { value: 'B-', label: 'B−' },
+  { value: 'AB+', label: 'AB+' },
+  { value: 'AB-', label: 'AB−' },
+  { value: 'O+', label: 'O+' },
+  { value: 'O-', label: 'O−' },
+  { value: 'unknown', label: 'Unknown (no records)' },
+]
+const ACTIVITY_LEVEL_OPTIONS: FieldOption[] = [
+  { value: 'sedentary', label: 'Sedentary' },
+  { value: 'light', label: 'Light activity' },
+  { value: 'moderate', label: 'Moderate activity' },
+  { value: 'active', label: 'Active' },
+  { value: 'very-active', label: 'Very active' },
+]
+const WEIGHT_GOAL_OPTIONS: FieldOption[] = [
+  { value: 'lose-weight', label: 'Lose weight' },
+  { value: 'maintain-weight', label: 'Maintain weight' },
+  { value: 'gain-muscle', label: 'Gain muscle' },
+  { value: 'improve-health', label: 'Improve overall health' },
+]
+// Adult health conditions surfaced in the wizard's HEALTH_CONDITIONS
+// constant. Keeping the labels human-readable; values stored as-is.
+const HEALTH_CONDITION_OPTIONS: FieldOption[] = [
+  { value: 'Diabetes', label: 'Diabetes' },
+  { value: 'Hypertension', label: 'Hypertension' },
+  { value: 'Heart Disease', label: 'Heart disease' },
+  { value: 'Asthma', label: 'Asthma' },
+  { value: 'Arthritis', label: 'Arthritis' },
+  { value: 'High Cholesterol', label: 'High cholesterol' },
+  { value: 'Thyroid Disorder', label: 'Thyroid disorder' },
+  { value: 'Kidney Disease', label: 'Kidney disease' },
+  { value: 'Allergies', label: 'Allergies' },
+  { value: 'Other', label: 'Other' },
+]
+// FDA "Big 9" food allergens — recognized food allergens under FALCPA
+// + FASTER Act. Captures ~90% of clinical food allergies.
+const FOOD_ALLERGEN_OPTIONS: FieldOption[] = [
+  { value: 'Milk', label: 'Milk / dairy' },
+  { value: 'Eggs', label: 'Eggs' },
+  { value: 'Fish', label: 'Fish' },
+  { value: 'Shellfish', label: 'Shellfish' },
+  { value: 'Tree nuts', label: 'Tree nuts' },
+  { value: 'Peanuts', label: 'Peanuts' },
+  { value: 'Wheat', label: 'Wheat / gluten' },
+  { value: 'Soy', label: 'Soy' },
+  { value: 'Sesame', label: 'Sesame' },
+]
 
 export default function PatientDetailPage() {
   return (
@@ -1993,7 +2069,12 @@ function PatientDetailContent() {
               <h2 className="text-lg font-bold text-foreground mb-4">
                 Family Member Information
               </h2>
-              <div className="space-y-3 text-sm">
+
+              {/* Identity — fields set at creation, surfaced as
+                  read-only here. Type, DOB, species, breed are not
+                  meant to be edited inline (they're either creation-
+                  immutable or routed through a richer flow). */}
+              <div className="space-y-3 text-sm mb-4">
                 {patient.type === 'pet' && (
                   <div>
                     <span className="text-muted-foreground">Type:</span>
@@ -2001,21 +2082,11 @@ function PatientDetailContent() {
                   </div>
                 )}
                 <div>
-                  <span className="text-muted-foreground">Relationship:</span>
-                  <span className="ml-2 font-medium capitalize">{patient.relationship}</span>
-                </div>
-                <div>
                   <span className="text-muted-foreground">Date of Birth:</span>
                   <span className="ml-2 font-medium">
                     {new Date(patient.dateOfBirth).toLocaleDateString()}
                   </span>
                 </div>
-                {patient.gender && (
-                  <div>
-                    <span className="text-muted-foreground">Gender:</span>
-                    <span className="ml-2 font-medium capitalize">{patient.gender}</span>
-                  </div>
-                )}
                 {patient.species && (
                   <div>
                     <span className="text-muted-foreground">Species:</span>
@@ -2030,6 +2101,118 @@ function PatientDetailContent() {
                 )}
               </div>
 
+              {/* Editable profile fields — these were collected by the
+                  family-member onboarding wizard until 2026-05-11, but
+                  the wizard is being slimmed. The post-onboarding edit
+                  surface is HERE; missing values render as "Not
+                  recorded" rather than being lost. */}
+              <div className="border-t border-border pt-4 space-y-1">
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="relationship"
+                  label="Relationship"
+                  type="select"
+                  options={RELATIONSHIP_OPTIONS}
+                  value={patient.relationship}
+                  canEdit={canEditProfile}
+                  onUpdated={(v) => setPatient({ ...patient, relationship: v })}
+                />
+                {!isPet && (
+                  <PatientFieldEditor
+                    patientId={patientId}
+                    field="gender"
+                    label="Gender"
+                    type="select"
+                    options={GENDER_OPTIONS}
+                    value={patient.gender}
+                    canEdit={canEditProfile}
+                    onUpdated={(v) => setPatient({ ...patient, gender: v })}
+                  />
+                )}
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="bloodType"
+                  label="Blood type"
+                  type="select"
+                  options={BLOOD_TYPE_OPTIONS}
+                  value={patient.bloodType}
+                  canEdit={canEditProfile}
+                  emptyLabel="Not recorded — useful in emergencies"
+                  onUpdated={(v) => setPatient({ ...patient, bloodType: v })}
+                />
+              </div>
+
+              {/* Vitals profile (goals + lifestyle) — distinct from
+                  the time-series Vitals tab where individual readings
+                  are logged. These are the slow-changing "set once,
+                  edit when life changes" fields. */}
+              <div className="border-t border-border pt-4 mt-4 space-y-1">
+                <h3 className="text-sm font-semibold text-foreground mb-2">
+                  Vitals Profile
+                </h3>
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="height"
+                  label={`Height${patient.heightUnit === 'metric' ? ' (cm)' : ' (in)'}`}
+                  type="number"
+                  unit={patient.heightUnit === 'metric' ? 'cm' : 'in'}
+                  step={0.1}
+                  min={0}
+                  value={patient.height}
+                  canEdit={canEditProfile}
+                  onUpdated={(v) => setPatient({ ...patient, height: v ?? undefined })}
+                />
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="targetWeight"
+                  label={`Target weight${patient.targetWeightUnit ? ` (${patient.targetWeightUnit})` : patient.weightUnit ? ` (${patient.weightUnit})` : ''}`}
+                  type="number"
+                  unit={patient.targetWeightUnit || patient.weightUnit || 'lbs'}
+                  step={0.1}
+                  min={0}
+                  value={patient.targetWeight}
+                  canEdit={canEditProfile}
+                  onUpdated={(v) => setPatient({ ...patient, targetWeight: v ?? undefined })}
+                />
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="activityLevel"
+                  label="Activity level"
+                  type="select"
+                  options={ACTIVITY_LEVEL_OPTIONS}
+                  value={patient.activityLevel}
+                  canEdit={canEditProfile}
+                  onUpdated={(v) => setPatient({ ...patient, activityLevel: v })}
+                />
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="weightGoal"
+                  label="Weight goal"
+                  type="select"
+                  options={WEIGHT_GOAL_OPTIONS}
+                  value={patient.weightGoal}
+                  canEdit={canEditProfile}
+                  onUpdated={(v) => setPatient({ ...patient, weightGoal: v })}
+                />
+              </div>
+
+              {/* Health conditions — multi-select over a predefined
+                  list. Free-form "Other" specifics belong in the
+                  notes / episodes flow, not this list. */}
+              <div className="border-t border-border pt-4 mt-4">
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="healthConditions"
+                  label="Health conditions"
+                  type="multi-select"
+                  options={HEALTH_CONDITION_OPTIONS}
+                  value={patient.healthConditions}
+                  canEdit={canEditProfile}
+                  emptyLabel="None recorded"
+                  onUpdated={(v) => setPatient({ ...patient, healthConditions: v })}
+                />
+              </div>
+
               {/* Food Profile — surfaces foodAllergies + preferredFoods
                   + aversions + preparationNeeds for every family
                   member. Each subsection only renders when its field
@@ -2038,127 +2221,59 @@ function PatientDetailContent() {
                   exist. Family-meal PRD fields all live on
                   PatientProfile (foundation in c6f76ba) — this is
                   the at-a-glance display surface. */}
-              {(() => {
-                const allergies = patient.foodAllergies ?? []
-                const preferred = patient.preferredFoods ?? []
-                const aversions = patient.aversions ?? []
-                const prep = patient.preparationNeeds
-                const hasAnyPrep =
-                  !!prep && (prep.texture || prep.cutSize || prep.temperature || prep.separated || prep.notes)
-                const isEmpty =
-                  allergies.length === 0 &&
-                  preferred.length === 0 &&
-                  aversions.length === 0 &&
-                  !hasAnyPrep
-
-                return (
-                  <div className="mt-6 pt-6 border-t border-border">
-                    <h3 className="font-semibold text-foreground mb-3">
-                      Food Profile
-                    </h3>
-                    {isEmpty ? (
-                      <p className="text-sm text-muted-foreground">
-                        No allergies, preferences, or prep needs set yet.
-                        {isOwner ? ' Edit profile to add them.' : ''}
-                      </p>
-                    ) : (
-                      <div className="space-y-4 text-sm">
-                        {allergies.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                              Allergies
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {allergies.map((a) => (
-                                <span
-                                  key={a}
-                                  className="text-xs bg-error/10 text-error border border-error/30 px-2 py-1 rounded"
-                                >
-                                  ⚠ {a}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {preferred.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                              Preferred (safe foods)
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {preferred.map((f) => (
-                                <span
-                                  key={f}
-                                  className="text-xs bg-success/10 text-success border border-success/30 px-2 py-1 rounded"
-                                >
-                                  {f}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {aversions.length > 0 && (
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                              Avoid
-                            </p>
-                            <div className="flex flex-wrap gap-1.5">
-                              {aversions.map((a) => (
-                                <span
-                                  key={a}
-                                  className="text-xs bg-muted text-foreground border border-border px-2 py-1 rounded"
-                                >
-                                  {a}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                        {hasAnyPrep && prep && (
-                          <div>
-                            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
-                              Prep Needs
-                            </p>
-                            <div className="space-y-1 text-foreground">
-                              {prep.texture && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Texture:</span>
-                                  <span className="font-medium capitalize">{prep.texture}</span>
-                                </div>
-                              )}
-                              {prep.cutSize && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Cut size:</span>
-                                  <span className="font-medium capitalize">
-                                    {prep.cutSize.replace(/-/g, ' ')}
-                                  </span>
-                                </div>
-                              )}
-                              {prep.temperature && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Temperature:</span>
-                                  <span className="font-medium capitalize">{prep.temperature}</span>
-                                </div>
-                              )}
-                              {prep.separated && (
-                                <div className="flex justify-between">
-                                  <span className="text-muted-foreground">Separation:</span>
-                                  <span className="font-medium">Foods kept apart on plate</span>
-                                </div>
-                              )}
-                              {prep.notes && (
-                                <p className="text-muted-foreground italic mt-1">
-                                  &ldquo;{prep.notes}&rdquo;
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )
-              })()}
+              {/* Food Profile section — every field here is now
+                  editable inline via PatientFieldEditor cells (Phase
+                  1 E1.1 completed the editor coverage). The earlier
+                  display-only blocks were removed since the editors
+                  render the same tag/value display when not editing. */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <h3 className="font-semibold text-foreground mb-3">
+                  Food Profile
+                </h3>
+                <div className="space-y-3">
+                  <PatientFieldEditor
+                    patientId={patientId}
+                    field="foodAllergies"
+                    label="Food allergies"
+                    type="multi-select"
+                    options={FOOD_ALLERGEN_OPTIONS}
+                    value={patient.foodAllergies}
+                    canEdit={canEditProfile}
+                    emptyLabel="None recorded"
+                    onUpdated={(v) => setPatient({ ...patient, foodAllergies: v })}
+                  />
+                  <PatientFieldEditor
+                    patientId={patientId}
+                    field="preferredFoods"
+                    label="Preferred (safe) foods"
+                    type="tag-input"
+                    tone="positive"
+                    placeholder="Type a food and press Enter…"
+                    value={patient.preferredFoods}
+                    canEdit={canEditProfile}
+                    emptyLabel="None recorded"
+                    onUpdated={(v) => setPatient({ ...patient, preferredFoods: v })}
+                  />
+                  <PatientFieldEditor
+                    patientId={patientId}
+                    field="aversions"
+                    label="Aversions / foods to avoid"
+                    type="tag-input"
+                    tone="negative"
+                    placeholder="Type a food and press Enter…"
+                    value={patient.aversions}
+                    canEdit={canEditProfile}
+                    emptyLabel="None recorded"
+                    onUpdated={(v) => setPatient({ ...patient, aversions: v })}
+                  />
+                  <PreparationNeedsEditor
+                    patientId={patientId}
+                    value={patient.preparationNeeds}
+                    canEdit={canEditProfile}
+                    onUpdated={(v) => setPatient({ ...patient, preparationNeeds: v ?? undefined })}
+                  />
+                </div>
+              </div>
 
               {/* Set as Primary Button */}
               {isOwner && (

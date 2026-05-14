@@ -133,6 +133,11 @@ async function fillAdultBasicInfo(page: Page, p: AdultPersona) {
     page.getByRole('heading', { name: 'Who is this person?', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
+  // Step indicator: "Step 1 of 3" — verifies the wizard slim (E2.1)
+  // didn't regress and re-add the conditions step. If this ever
+  // reads "of 4" or "of 5", a step came back unexpectedly.
+  await expect(page.getByText(/^Step 1 of 3$/)).toBeVisible()
+
   // NameInput is blur-commit; fill then blur explicitly.
   await page.getByPlaceholder('Enter name').fill(p.name)
   await page.getByPlaceholder('Enter name').blur()
@@ -140,67 +145,43 @@ async function fillAdultBasicInfo(page: Page, p: AdultPersona) {
   // The single date input on basic_info is DOB.
   await page.locator('input[type="date"]').first().fill(p.dateOfBirth)
 
-  // First select on basic_info is relationship; second is bloodType.
-  await page.locator('select').first().selectOption(p.relationship)
+  // Relationship dropdown removed 2026-05-11 (Phase 1 E2.2) — adult
+  // humans don't set relationship at wizard time. Set via the Info
+  // tab editor post-create.
 
   await page.getByRole('button', { name: p.gender, exact: true }).click()
-
-  if (p.bloodType) {
-    await page.locator('select').nth(1).selectOption(p.bloodType)
-  }
 
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
 }
 
 async function fillAdultVitals(page: Page, p: AdultPersona) {
   await expect(
-    page.getByRole('heading', { name: 'Health vitals', level: 2 }),
+    page.getByRole('heading', { name: 'Current weight', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
-  // Height (imperial) + weight.
-  await page.getByPlaceholder('5', { exact: true }).fill(p.heightFeet)
-  await page.getByPlaceholder('8', { exact: true }).fill(p.heightInches)
+  // Step 2 of 3 on the slim wizard.
+  await expect(page.getByText(/^Step 2 of 3$/)).toBeVisible()
+
+  // Slim vitals step: only currentWeight is collected at the wizard.
+  // Height, activity level, weight goal, target weight all moved to
+  // the patient detail page Info tab (PatientFieldEditor) — edited
+  // post-onboarding when the caregiver has time to fill them in.
   await page.getByPlaceholder('150', { exact: true }).fill(p.weightLbs)
 
-  // Activity Level. Note the select order on this step:
-  //   .nth(0) → weight-unit selector beside the weight input
-  //   .nth(1) → Activity Level
-  //   .nth(2) → Weight Goal (when showGoals=true)
-  await page.locator('select').nth(1).selectOption(p.activityLevel)
-
-  // Optional Goals subsection — only shown for humans (showGoals=true).
-  if (p.weightGoal) {
-    await page.locator('select').nth(2).selectOption(p.weightGoal)
-
-    // Target Weight only renders when weightGoal != maintain-weight.
-    if (p.targetWeightLbs && p.weightGoal !== 'maintain-weight') {
-      // Target weight input has placeholder "140" (for lbs). Use
-      // exact match so it doesn't collide with the current-weight
-      // placeholder "150".
-      await page.getByPlaceholder('140', { exact: true }).fill(p.targetWeightLbs)
-    }
-  }
-
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
 }
 
-async function pickConditionsOrSkip(page: Page, p: AdultPersona) {
-  await expect(
-    page.getByRole('heading', { name: 'Health conditions', level: 2 }),
-  ).toBeVisible({ timeout: 30_000 })
-
-  for (const condition of p.conditions ?? []) {
-    // Conditions render as toggle buttons with the condition text.
-    await page.getByRole('button', { name: condition, exact: true }).click()
-  }
-
-  await page.getByRole('button', { name: 'Continue', exact: true }).click()
-}
+// The conditions step was removed from the wizard in the 2026-05-11
+// slim. Health conditions are now edited via the multi-select cell
+// on the patient detail page Info tab. The personas' `conditions`
+// metadata stays in the fixture (documents semantic intent) but is
+// no longer asserted as wizard-captured.
 
 async function reviewAndCreate(page: Page, p: AdultPersona) {
   await expect(
     page.getByRole('heading', { name: 'Review & create', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(/^Step 3 of 3$/)).toBeVisible()
   await expect(page.getByText(p.name, { exact: false })).toBeVisible()
   await page.getByRole('button', { name: /^Create Family Member$/ }).click()
 }
@@ -227,7 +208,8 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       await pickHumanType(page)
       await fillAdultBasicInfo(page, p)
       await fillAdultVitals(page, p)
-      await pickConditionsOrSkip(page, p)
+      // conditions step removed 2026-05-11 (Phase 1 E2.1) — wizard
+      // now advances directly from vitals to review.
       await reviewAndCreate(page, p)
 
       // After Create the wizard redirects (typically to /patients
@@ -244,20 +226,25 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       expect(created.name).toBe(p.name)
       expect(created.dateOfBirth).toBe(p.dateOfBirth)
       expect(created.gender).toBe(p.gender)
-      expect(created.relationship).toBe(p.relationship)
+      // Relationship is NOT set at wizard create-time for adult
+      // humans (Phase 1 E2.2). The PatientProfile.relationship field
+      // stays absent on the doc until the caregiver edits it via the
+      // patient detail page Info tab. Persona `relationship` field
+      // remains as documentation-only metadata.
+      expect(created.relationship, 'adult human created without relationship').toBeUndefined()
       expect(created.type).toBe('human')
-      if (p.bloodType) expect(created.bloodType).toBe(p.bloodType)
       expect(typeof created.currentWeight).toBe('number')
       expect(created.currentWeight).toBe(parseFloat(p.weightLbs))
-      // Conditions: the wizard stores selected condition keys on
-      // healthConditions. Each selected condition should appear.
-      if (p.conditions?.length) {
-        for (const c of p.conditions) {
-          expect(created.healthConditions, `${c} in healthConditions`).toEqual(
-            expect.arrayContaining([c]),
-          )
-        }
-      }
+
+      // Fields NOT asserted (intentionally — wizard no longer collects):
+      //  - bloodType: moved to patient detail Info tab editor.
+      //  - healthConditions: same.
+      //  - height / activityLevel / weightGoal / targetWeight: same.
+      //  - householdId: assignment lives on /family-admin/households,
+      //    not the family-member wizard. Persona's `household` field
+      //    is documentation-only metadata.
+      // See project_household_deferred.md A4-A4e for the wizard-slim
+      // design rationale.
 
       const createdId = snap.docs[0].id
 
@@ -270,4 +257,168 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       }
     })
   }
+})
+
+// ============================================================
+// Newborn flow battery (Phase 1 E2.2 — 2026-05-11)
+//
+// The wizard's newborn flow gets its own type-selection button (the
+// third memberType option, added in a61dd6b). This block verifies
+// the new entry path: click Newborn → fill name/DOB/gender → fill
+// birth weight + feeding → review → create. Asserts the auto-config
+// from type-selection (primaryCaregivers=[owner])
+// plus the handleCreate defaults (relationship='child',
+// isNewborn=true, lifeStage='newborn').
+// ============================================================
+
+type NewbornPersona = {
+  name: string
+  dateOfBirth: string
+  gender: 'Male' | 'Female'
+  birthWeightLbs: string
+  feedingPreference: 'Breastfeeding' | 'Formula' | 'Combination'
+  feedingPreferenceFieldValue: 'breastfeeding' | 'formula' | 'combination'
+}
+
+function newbornPersona(stamp: number): NewbornPersona {
+  // ~10 days old at the test date. Within the newborn lifeStage
+  // window (0–30 days per getHumanLifeStage).
+  const today = new Date()
+  const dob = new Date(today.getTime() - 10 * 24 * 60 * 60 * 1000)
+  return {
+    name: `Liam Newborn ${stamp}`,
+    dateOfBirth: dob.toISOString().slice(0, 10), // YYYY-MM-DD
+    gender: 'Male',
+    birthWeightLbs: '7.5',
+    feedingPreference: 'Breastfeeding',
+    feedingPreferenceFieldValue: 'breastfeeding',
+  }
+}
+
+async function pickNewbornType(page: Page) {
+  await expect(
+    page.getByRole('heading', { name: 'Who are you adding?', level: 2 }),
+  ).toBeVisible({ timeout: 30_000 })
+  // Newborn is the second of three type-selection buttons.
+  // Picking it auto-advances to basic_info (no Continue needed).
+  await page.getByRole('button').filter({ hasText: 'Newborn' }).first().click()
+}
+
+async function fillNewbornBasicInfo(page: Page, p: NewbornPersona) {
+  await expect(
+    page.getByRole('heading', { name: 'About the newborn', level: 2 }),
+  ).toBeVisible({ timeout: 30_000 })
+
+  await page.getByPlaceholder('Enter name').fill(p.name)
+  await page.getByPlaceholder('Enter name').blur()
+
+  await page.locator('input[type="date"]').first().fill(p.dateOfBirth)
+
+  await page.getByRole('button', { name: p.gender, exact: true }).click()
+
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+}
+
+async function fillNewbornVitals(page: Page, p: NewbornPersona) {
+  await expect(
+    page.getByRole('heading', { name: 'Newborn health check', level: 2 }),
+  ).toBeVisible({ timeout: 30_000 })
+
+  // Birth weight input has placeholder "e.g. 7.5". Note: the wizard
+  // auto-selects 'oz' as the weight unit for newborns (via
+  // getDefaultWeightUnit) — overriding the 'lbs' that the Newborn
+  // type-selection's onClick suggests. So 7.5 here is interpreted as
+  // 7.5 oz, which triggers the "Low Birth Weight Detected" preemie
+  // panel. That's fine — the panel's extra fields are all optional
+  // and don't block Continue.
+  await page.getByPlaceholder('e.g. 7.5').fill(p.birthWeightLbs)
+
+  // Feeding preference is a button group. Do NOT use exact:true — the
+  // accessible name concatenates the emoji span ("🤱") + the label
+  // ("Breastfeeding") + the description ("Exclusive breastfeeding"),
+  // so the whole accessible name is not just "Breastfeeding".
+  await page.getByRole('button', { name: p.feedingPreference }).first().click()
+
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+}
+
+test.describe('Add Family Member wizard — newborn flow @add-family-wizard-newborn', () => {
+  test.setTimeout(5 * 60_000)
+  const stamp = Date.now()
+  const p = newbornPersona(stamp)
+
+  test(`creates a newborn via the new type-selection button (auto-config: primary caregiver, relationship=child)`, async ({
+    page,
+    ownerUserId,
+    firestore,
+  }) => {
+    await page.goto('/patients/new', { waitUntil: 'domcontentloaded' })
+
+    await pickNewbornType(page)
+    await fillNewbornBasicInfo(page, p)
+    await fillNewbornVitals(page, p)
+
+    // The newborn flow has the same review step shape; the existing
+    // helper works without modification.
+    await expect(
+      page.getByRole('heading', { name: 'Review & create', level: 2 }),
+    ).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText(p.name, { exact: false })).toBeVisible()
+    await page.getByRole('button', { name: /^Create Family Member$/ }).click()
+
+    await expect(page).not.toHaveURL(/\/patients\/new/, { timeout: 60_000 })
+
+    const patientsCol = firestore
+      .collection('users').doc(ownerUserId)
+      .collection('patients')
+    const snap = await patientsCol.where('name', '==', p.name).get()
+    expect(snap.size, `one patient created with name ${p.name}`).toBe(1)
+
+    const created = snap.docs[0].data()
+
+    // Identity + dates.
+    expect(created.name).toBe(p.name)
+    expect(created.dateOfBirth).toBe(p.dateOfBirth)
+    expect(created.gender).toBe(p.gender)
+    expect(created.type).toBe('human')
+
+    // handleCreate defaults for newborn-type (a61dd6b):
+    //   relationship = 'child'  (semantic default, not 'self')
+    //   isNewborn = true
+    //   lifeStage = 'newborn'
+    expect(created.relationship, 'newborn default relationship is "child"').toBe('child')
+    expect(created.isNewborn, 'isNewborn flag set').toBe(true)
+    expect(created.lifeStage, 'lifeStage forced to "newborn"').toBe('newborn')
+
+    // Auto-config triggered by picking Newborn type-selection button:
+    //   primaryCaregivers = [account owner] (load-bearing — newborn UX
+    //     depends on having the owner pre-listed as a caregiver).
+    //
+    // NOT asserted: weightUnit. The Newborn button onClick suggests
+    // 'lbs', but the DOB onChange's getDefaultWeightUnit honestly
+    // overrides to 'oz' for newborns (better default for small
+    // weights). The auto-config is a starting suggestion, not a hard
+    // rule — and either unit is a valid newborn UX.
+    expect(Array.isArray(created.primaryCaregivers), 'primaryCaregivers is an array').toBe(true)
+    expect((created.primaryCaregivers as any[]).length, 'one default caregiver (account owner)').toBeGreaterThanOrEqual(1)
+    expect(
+      (created.primaryCaregivers as any[])[0]?.userId,
+      'first caregiver is the account owner',
+    ).toBe(ownerUserId)
+
+    // Newborn-specific fields captured at the wizard.
+    expect(typeof created.currentWeight).toBe('number')
+    expect(created.currentWeight).toBe(parseFloat(p.birthWeightLbs))
+    expect(created.feedingPreference).toBe(p.feedingPreferenceFieldValue)
+
+    const createdId = snap.docs[0].id
+
+    if (process.env.KEEP_DATA === '1') {
+      console.log(
+        `[wizard] KEEP_DATA=1 — keeping newborn ${p.name} (${createdId})`,
+      )
+    } else {
+      await patientsCol.doc(createdId).delete().catch(() => {})
+    }
+  })
 })

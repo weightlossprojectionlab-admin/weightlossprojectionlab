@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { PlusIcon, HomeIcon, MapPinIcon, UsersIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
@@ -16,12 +16,27 @@ import type { Household } from '@/types/household'
 import { HouseholdFormModal } from './HouseholdFormModal'
 import { useHouseholdMembers } from '@/hooks/useHouseholdMembers'
 import { useHouseholds } from '@/hooks/useHouseholds'
+import { usePatients } from '@/hooks/usePatients'
 
 export function HouseholdManager() {
   const { households, loading, error: fetchError } = useHouseholds()
+  const { patients } = usePatients()
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingHousehold, setEditingHousehold] = useState<Household | undefined>()
   const [expandedHouseholdId, setExpandedHouseholdId] = useState<string | null>(null)
+
+  // Derive per-household member counts from the canonical Patient.householdId.
+  // Single fetch (usePatients) → count by householdId — no household-side
+  // memberIds[] array exists.
+  const memberCounts = useMemo(() => {
+    const counts = new Map<string, number>()
+    for (const p of patients ?? []) {
+      if (p.householdId) {
+        counts.set(p.householdId, (counts.get(p.householdId) ?? 0) + 1)
+      }
+    }
+    return counts
+  }, [patients])
 
   const handleDelete = async (householdId: string, householdName: string) => {
     const user = auth.currentUser
@@ -68,6 +83,7 @@ export function HouseholdManager() {
   }
 
   const formatAddress = (address: Household['address']) => {
+    if (!address) return ''
     const parts = [
       address.street,
       address.city,
@@ -157,16 +173,23 @@ export function HouseholdManager() {
                         )}
                       </div>
 
-                      <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
-                        <MapPinIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <span>{formatAddress(household.address)}</span>
-                      </div>
+                      {household.address && formatAddress(household.address) && (
+                        <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
+                          <MapPinIcon className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{formatAddress(household.address)}</span>
+                        </div>
+                      )}
 
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <UsersIcon className="w-4 h-4" />
-                        <span>
-                          {household.memberIds.length} {household.memberIds.length === 1 ? 'member' : 'members'}
-                        </span>
+                        {(() => {
+                          const count = memberCounts.get(household.id) ?? 0
+                          return count === 0 ? (
+                            <span className="italic">no members</span>
+                          ) : (
+                            <span>{count} {count === 1 ? 'member' : 'members'}</span>
+                          )
+                        })()}
                         {household.kitchenConfig?.hasSharedInventory && (
                           <span className="ml-2 px-2 py-0.5 bg-primary/10 text-primary rounded text-xs font-medium">
                             Shared Kitchen
@@ -202,7 +225,7 @@ export function HouseholdManager() {
                     )}
                     className="w-full px-4 py-2 text-sm text-muted-foreground hover:bg-muted/30 transition-colors text-left"
                   >
-                    {expandedHouseholdId === household.id ? '▼' : '▶'} View Members ({household.memberIds.length})
+                    {expandedHouseholdId === household.id ? '▼' : '▶'} View Members ({memberCounts.get(household.id) ?? 0})
                   </button>
 
                   {expandedHouseholdId === household.id && (

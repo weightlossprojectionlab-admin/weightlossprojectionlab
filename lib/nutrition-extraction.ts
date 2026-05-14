@@ -140,7 +140,7 @@ export function extractNutritionFromProduct(product: OFFLikeProduct): ExtractedN
   for (const [outKey, sourceKey] of optionalKeys) {
     const e = extractOne(n, sourceKey, sq)
     if (e.value !== undefined) {
-      ;(out as unknown as Record<string, unknown>)[outKey] = Math.round(e.value * 10) / 10
+      ;(out as unknown as Record<string, number>)[outKey] = Math.round(e.value * 10) / 10
     }
   }
 

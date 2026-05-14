@@ -42,6 +42,13 @@ interface AppFixtures {
   waitForPatientReady: () => Promise<void>
   /** Direct Firestore handle for asserting persistence (bypasses the API). */
   firestore: admin.firestore.Firestore
+  /**
+   * Substrings of console.error messages the test EXPECTS to fire (e.g.,
+   * deliberate cap-gate 403s). Matching messages are filtered out of the
+   * bug-monitor so the post-test teardown doesn't fail an asserted-OK test.
+   * Override per-spec via `test.use({ expectedApiErrorCodes: ['FOO', 'BAR'] })`.
+   */
+  expectedApiErrorCodes: string[]
 }
 
 // Viewport + window size + position are pinned globally in
@@ -49,6 +56,8 @@ interface AppFixtures {
 // Don't reset them per-fixture — that fights the launch args
 // and ends up resizing the window mid-suite.
 export const test = baseTest.extend<AppFixtures>({
+  expectedApiErrorCodes: [],
+
   // Wrap page with bug-monitoring listeners. Every test in the
   // battery automatically catches:
   //   - uncaught page exceptions (window.onerror)
@@ -57,7 +66,7 @@ export const test = baseTest.extend<AppFixtures>({
   //   - console.error calls (filtered for known dev-mode noise)
   // The test fails at teardown if any are recorded, so a passing
   // assertion path doesn't mask a backend regression.
-  page: async ({ page }, use, testInfo) => {
+  page: async ({ page, expectedApiErrorCodes }, use, testInfo) => {
     const pageErrors: Error[] = []
     const consoleErrors: string[] = []
     const httpErrors: Array<{ url: string; status: number }> = []
@@ -75,6 +84,10 @@ export const test = baseTest.extend<AppFixtures>({
         text.includes('[Fast Refresh]') ||
         text.includes('Download the React DevTools')
       ) return
+      // Per-spec opt-out: tests that intentionally trip API caps
+      // (HOUSEHOLD_MEMBER_CAP, etc.) declare the codes so the cap
+      // 403 is treated as expected, not as a regression.
+      if (expectedApiErrorCodes.some((code) => text.includes(code))) return
       consoleErrors.push(text)
     })
 

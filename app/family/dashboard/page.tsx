@@ -495,7 +495,7 @@ function FamilyDashboardContent() {
                               </div>
                             )}
                             <div className="text-xs text-muted-foreground mt-2">
-                              {household.memberIds?.length || 0} members
+                              {(patients ?? []).filter(p => p.householdId === household.id).length} members
                             </div>
                           </button>
                         ))}

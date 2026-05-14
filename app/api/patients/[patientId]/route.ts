@@ -171,22 +171,50 @@ export async function PUT(
       }
     }
 
-    // Update patient - merge preferences if present
+    // Update patient — explicit field allowlist (don't spread `body` to
+    // avoid leaking arbitrary keys / Timestamp objects into Firestore).
+    // Use `in body` (not truthy check) so callers can explicitly clear a
+    // field by passing null / '' / 0.
     const updateData: any = {
       lastModified: now
     }
 
-    // Add only the fields from body (don't spread entire objects with Timestamps)
+    // Identity & profile basics
+    if ('name' in body) updateData.name = body.name
+    if ('gender' in body) updateData.gender = body.gender
+    if ('relationship' in body) updateData.relationship = body.relationship
+    if ('photo' in body) updateData.photo = body.photo
+    if ('nickname' in body) updateData.nickname = body.nickname
+
+    // Emergency / medical identifiers
+    if ('bloodType' in body) updateData.bloodType = body.bloodType
+    if ('emergencyContacts' in body) updateData.emergencyContacts = body.emergencyContacts
+
+    // Vitals profile (goal/lifestyle data, distinct from logged vitals)
+    if ('height' in body) updateData.height = body.height
+    if ('heightUnit' in body) updateData.heightUnit = body.heightUnit
+    if ('weightUnit' in body) updateData.weightUnit = body.weightUnit
+    if ('activityLevel' in body) updateData.activityLevel = body.activityLevel
+    if ('weightGoal' in body) updateData.weightGoal = body.weightGoal
+    if ('targetWeight' in body) updateData.targetWeight = body.targetWeight
+    if ('targetWeightUnit' in body) updateData.targetWeightUnit = body.targetWeightUnit
+
+    // Health
+    if ('healthConditions' in body) updateData.healthConditions = body.healthConditions
+    if ('conditionDetails' in body) updateData.conditionDetails = body.conditionDetails
+    if ('medications' in body) updateData.medications = body.medications
+
+    // Food profile
+    if ('foodAllergies' in body) updateData.foodAllergies = body.foodAllergies
+    if ('preferredFoods' in body) updateData.preferredFoods = body.preferredFoods
+    if ('aversions' in body) updateData.aversions = body.aversions
+    if ('preparationNeeds' in body) updateData.preparationNeeds = body.preparationNeeds
+    if ('dietaryPreferences' in body) updateData.dietaryPreferences = body.dietaryPreferences
+
+    // Other structured slots
     if (body.preferences) updateData.preferences = mergedPreferences
-    if (body.emergencyContacts) updateData.emergencyContacts = body.emergencyContacts
-    if (body.photo) updateData.photo = body.photo
-    if (body.healthConditions) updateData.healthConditions = body.healthConditions
-    if (body.foodAllergies) updateData.foodAllergies = body.foodAllergies
-    if (body.conditionDetails) updateData.conditionDetails = body.conditionDetails
-    if (body.medications) updateData.medications = body.medications
-    if (body.dietaryPreferences) updateData.dietaryPreferences = body.dietaryPreferences
-    if (body.lifestyle) updateData.lifestyle = body.lifestyle
-    if (body.bodyMeasurements) updateData.bodyMeasurements = body.bodyMeasurements
+    if ('lifestyle' in body) updateData.lifestyle = body.lifestyle
+    if ('bodyMeasurements' in body) updateData.bodyMeasurements = body.bodyMeasurements
 
     await patientRef.update(updateData)
 

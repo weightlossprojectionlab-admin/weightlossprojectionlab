@@ -57,18 +57,15 @@ const getWizardSteps = (isPet: boolean, isNewborn: boolean, hasSelectedType: boo
   // Step 2: Vitals
   steps.push({
     id: 'vitals',
-    title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Health vitals',
-    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Height and weight for health tracking'
+    title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Current weight',
+    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Just the seed weight — height, goals, and conditions live on the patient profile after creation.'
   });
 
-  // Step 3: Conditions
-  steps.push({
-    id: 'conditions',
-    title: isPet ? 'Pet health conditions' : isNewborn ? 'Newborn health concerns' : 'Health conditions',
-    subtitle: isPet ? 'Common pet health issues' : isNewborn ? 'Any known conditions or concerns' : 'Confirm AI-detected conditions'
-  });
+  // Conditions step removed 2026-05-11 (Phase 1 E2.1) — conditions are
+  // now edited post-onboarding via the patient detail page Info tab
+  // (PatientFieldEditor) rather than gating wizard completion.
 
-  // Step 4: Review
+  // Step 3: Review
   steps.push({
     id: 'review',
     title: 'Review & create',
@@ -448,7 +445,7 @@ const PET_BREEDS: Record<string, string[]> = {
 
 interface FamilyMemberData {
   // Step 0: Type selection
-  memberType: '' | 'human' | 'pet'
+  memberType: '' | 'human' | 'pet' | 'newborn'
 
   // Step 1: Basic Info
   name: string
@@ -539,7 +536,12 @@ export default function FamilyMemberOnboardingWizard() {
   })
 
   const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
-  const isNewborn = data.relationship === 'Newborn'
+  // Newborn detection keys off `memberType === 'newborn'` (the third
+  // type-selection option). The legacy `data.relationship === 'Newborn'`
+  // is preserved as a fallback for patients in flight from an older
+  // form state, but the slim wizard no longer collects relationship
+  // at all — see E2.2 / project_household_deferred.md.
+  const isNewborn = data.memberType === 'newborn' || data.relationship === 'Newborn'
   const hasSelectedType = data.memberType !== ''
   const WIZARD_STEPS = getWizardSteps(isPet, isNewborn, hasSelectedType)
   const currentStepData = WIZARD_STEPS[currentStep]
@@ -564,13 +566,18 @@ export default function FamilyMemberOnboardingWizard() {
     // Validation before moving forward
     if (currentStepData.id === 'type_selection') {
       if (!data.memberType) {
-        toast.error('Please select whether you are adding a human or pet')
+        toast.error('Please select who you are adding')
         return
       }
-      // Auto-set relationship based on type
-      if (data.memberType === 'pet') {
-        setData({ ...data, relationship: 'Pet' })
-      }
+      // Auto-set relationship based on type. Newborn defaults to
+      // 'Newborn' (preserves the existing newborn UX strings); pet
+      // defaults to 'Pet'. Adult humans leave relationship empty —
+      // user picks via the Info tab editor post-create.
+      // Type-selection auto-config moved to the buttons' onClick
+      // handlers (handleNext is never called for type_selection
+      // because the wizard auto-advances off it when memberType is
+      // picked). Keeping this block empty so the validation gate
+      // above still runs.
     }
 
     if (currentStepData.id === 'basic_info') {
@@ -584,7 +591,10 @@ export default function FamilyMemberOnboardingWizard() {
         }
         // Pet creation allowed - subscription check removed for pets
       } else {
-        if (!data.name || !data.dateOfBirth || !data.relationship || !data.gender) {
+        // Adult humans + newborns: relationship is NOT required at
+        // wizard time (set post-create via the Info tab editor for
+        // adult humans; defaulted to 'child' at create for newborns).
+        if (!data.name || !data.dateOfBirth || !data.gender) {
           toast.error('Please fill in all required fields')
           return
         }
@@ -615,8 +625,15 @@ export default function FamilyMemberOnboardingWizard() {
             return
           }
         }
-      } else if (data.relationship === 'Newborn') {
-        // Newborns: birth weight and feeding preference required
+      } else if (isNewborn) {
+        // Newborns: birth weight and feeding preference required.
+        // Uses the canonical isNewborn (defined once at the top of
+        // the component) — earlier this branch keyed off
+        // `data.relationship === 'Newborn'` directly, which drifted
+        // out of sync with the new memberType='newborn' path. The
+        // single-source-of-truth `isNewborn` derived variable is
+        // semantically the right primitive: "is this patient a
+        // newborn?" is one question, not two.
         if (!data.currentWeight) {
           toast.error('Please enter birth weight')
           return
@@ -626,19 +643,12 @@ export default function FamilyMemberOnboardingWizard() {
           return
         }
       } else {
-        // For humans, weight is required
+        // For humans, the slim wizard collects only currentWeight as
+        // the seed for the vitals timeline. Height, goals, activity
+        // level, and target weight are now edited post-create via the
+        // patient detail page Info tab (PatientFieldEditor).
         if (!data.currentWeight) {
           toast.error('Please enter current weight')
-          return
-        }
-
-        // Height is required for humans
-        if (data.heightUnit === 'imperial' && !data.heightFeet) {
-          toast.error('Please enter height')
-          return
-        }
-        if (data.heightUnit === 'metric' && !data.heightCm) {
-          toast.error('Please enter height')
           return
         }
       }
@@ -730,11 +740,22 @@ export default function FamilyMemberOnboardingWizard() {
         age: age,
         isMinor: isMinor,
         lifeStage: lifeStage,
-        relationship: data.relationship,
         type: isPet ? 'pet' : 'human',
         createdAt: Timestamp.now(),
-        updatedAt: Timestamp.now()
+        updatedAt: Timestamp.now(),
       }
+
+      // Relationship default at create-time. Pet → 'pet'. Newborn →
+      // 'child' (newborns ARE children to the account owner). Adult
+      // humans: leave undefined; caregiver sets via the Info tab
+      // editor post-create. The field is optional on PatientProfile
+      // as of E2.2.
+      if (isPet) {
+        patientData.relationship = 'pet'
+      } else if (data.memberType === 'newborn') {
+        patientData.relationship = 'child'
+      }
+      // adult human: relationship is not written; field stays absent.
 
       // Add pet-specific fields
       if (isPet) {
@@ -752,8 +773,8 @@ export default function FamilyMemberOnboardingWizard() {
         // Add human-specific fields
         if (data.gender) patientData.gender = data.gender
 
-        // Add newborn-specific fields
-        if (data.relationship === 'Newborn') {
+        // Add newborn-specific fields (canonical isNewborn check)
+        if (isNewborn) {
           patientData.isNewborn = true
           patientData.lifeStage = 'newborn'
           if (data.feedingPreference) patientData.feedingPreference = data.feedingPreference
@@ -963,8 +984,11 @@ export default function FamilyMemberOnboardingWizard() {
         return renderBasicInfoStep()
       case 'vitals':
         return renderVitalsStep()
-      case 'conditions':
-        return renderConditionsStep()
+      // 'conditions' case removed 2026-05-11 — see getWizardSteps note.
+      // The renderConditionsStep function and its support state remain
+      // in this file for now (referenced by getPediatricConditions and
+      // shared types) but are no longer reachable through the wizard.
+      // Cleanup pass can remove them after the slim ships green.
       case 'review':
         return renderReviewStep()
       default:
@@ -976,10 +1000,10 @@ export default function FamilyMemberOnboardingWizard() {
     return (
       <div className="space-y-6">
         <p className="text-center text-muted-foreground mb-8">
-          Are you adding a human family member or a pet?
+          Who are you adding?
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* Human Option */}
           <button
             type="button"
@@ -999,10 +1023,53 @@ export default function FamilyMemberOnboardingWizard() {
             </p>
           </button>
 
+          {/* Newborn Option — distinct from generic Human because
+              newborns trigger a richer birth-data flow (gestation,
+              NICU, feeding, pediatrician). Setting memberType='newborn'
+              alone is enough — every downstream check reads `isNewborn`
+              (which is defined OR-of memberType + legacy relationship
+              string at the top of the component). The auto-config for
+              lbs weight unit + account-owner primary caregiver MUST
+              fire on click because the wizard auto-advances off
+              type-selection, so handleNext is never invoked for this
+              step. */}
+          <button
+            type="button"
+            onClick={() => {
+              const updates: Partial<FamilyMemberData> = {
+                memberType: 'newborn',
+                weightUnit: 'lbs',
+              }
+              if (!data.primaryCaregivers?.length && user) {
+                updates.primaryCaregivers = [
+                  {
+                    name: user.displayName || user.email || 'Account Owner',
+                    relationship: 'Parent',
+                    userId: user.uid,
+                  },
+                ]
+              }
+              setData({ ...data, ...updates })
+            }}
+            className={`
+              p-8 rounded-2xl border-2 transition-all text-center
+              ${data.memberType === 'newborn'
+                ? 'bg-primary text-primary-foreground border-primary shadow-lg scale-105'
+                : 'bg-accent border-border hover:border-primary/50 hover:scale-105'
+              }
+            `}
+          >
+            <div className="text-5xl mb-4">👶</div>
+            <h3 className="text-xl font-semibold mb-2">Newborn</h3>
+            <p className="text-sm opacity-80">
+              New baby — birth details, feeding, pediatrician
+            </p>
+          </button>
+
           {/* Pet Option */}
           <button
             type="button"
-            onClick={() => setData({ ...data, memberType: 'pet' })}
+            onClick={() => setData({ ...data, memberType: 'pet', relationship: 'Pet' })}
             className={`
               p-8 rounded-2xl border-2 transition-all text-center
               ${data.memberType === 'pet'
@@ -1370,8 +1437,8 @@ export default function FamilyMemberOnboardingWizard() {
   function renderVitalsStep() {
     const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
 
-    // For newborns, show pediatric-specific vitals
-    if (data.relationship === 'Newborn') {
+    // For newborns, show pediatric-specific vitals (canonical isNewborn)
+    if (isNewborn) {
       return renderNewbornVitalsStep()
     }
 
@@ -1566,7 +1633,12 @@ export default function FamilyMemberOnboardingWizard() {
       );
     }
 
-    // For humans, use the standard vitals form
+    // For adult humans, the slim wizard shows ONLY the seed weight.
+    // Height, activity level, weight goal, and target weight all live
+    // on the patient detail page Info tab as PatientFieldEditor cells
+    // post-onboarding. VitalsFormSection's existing flags
+    // (showGoals=false, hideHeight=true) achieve the slim view
+    // without forking the component.
     return (
       <VitalsFormSection
         data={{
@@ -1578,12 +1650,12 @@ export default function FamilyMemberOnboardingWizard() {
           heightUnit: data.heightUnit,
           activityLevel: data.activityLevel,
           targetWeight: data.targetWeight,
-          weightGoal: data.weightGoal
+          weightGoal: data.weightGoal,
         }}
         onChange={(updates) => setData({ ...data, ...updates })}
         required={true}
-        showGoals={!isPet}
-        hideHeight={isPet}
+        showGoals={false}
+        hideHeight={true}
       />
     )
   }
@@ -1809,36 +1881,12 @@ export default function FamilyMemberOnboardingWizard() {
           />
         </div>
 
-        {/* Relationship (only for humans) */}
-        {!isPet && (
-          <div>
-            <label className="block text-sm font-medium mb-2">Relationship *</label>
-            <select
-              value={data.relationship}
-              onChange={(e) => {
-                const rel = e.target.value
-                const updates: Partial<FamilyMemberData> = { relationship: rel }
-                // Auto-configure for newborns
-                if (rel === 'Newborn') {
-                  updates.weightUnit = 'lbs'
-                  // Auto-add account owner as primary caregiver
-                  if (!data.primaryCaregivers?.length && user) {
-                    updates.primaryCaregivers = [
-                      { name: user.displayName || user.email || 'Account Owner', relationship: 'Parent', userId: user.uid }
-                    ]
-                  }
-                }
-                setData({ ...data, ...updates })
-              }}
-              className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
-            >
-              <option value="">Select relationship</option>
-              {RELATIONSHIPS.filter(rel => rel !== 'Pet').map(rel => (
-                <option key={rel} value={rel}>{rel}</option>
-              ))}
-            </select>
-          </div>
-        )}
+        {/* Relationship dropdown removed 2026-05-11 (Phase 1 E2.2) —
+            adult humans don't pick a relationship at wizard time. The
+            field is set post-create via the patient detail page Info
+            tab (PatientFieldEditor). Newborns auto-default to
+            'Newborn' / 'child' via the type-selection step. Pets
+            auto-default to 'Pet'. */}
 
         {/* Pet-specific fields */}
         {isPet && (
@@ -1994,28 +2042,9 @@ export default function FamilyMemberOnboardingWizard() {
           </div>
         )}
 
-        {/* Blood type — optional for humans + pets. Useful for
-            emergency identification. 'Unknown' is a valid stored
-            value (the user genuinely doesn't know). */}
-        <div>
-          <label className="block text-sm font-medium mb-2">Blood Type (optional)</label>
-          <select
-            value={data.bloodType || ''}
-            onChange={(e) => setData({ ...data, bloodType: e.target.value })}
-            className="w-full px-4 py-3 rounded-xl border-2 border-border bg-background focus:border-primary focus:outline-none transition-colors"
-          >
-            <option value="">— Skip —</option>
-            <option value="A+">A+</option>
-            <option value="A-">A−</option>
-            <option value="B+">B+</option>
-            <option value="B-">B−</option>
-            <option value="AB+">AB+</option>
-            <option value="AB-">AB−</option>
-            <option value="O+">O+</option>
-            <option value="O-">O−</option>
-            <option value="unknown">Unknown</option>
-          </select>
-        </div>
+        {/* Blood type removed from wizard 2026-05-11 (Phase 1 E2.1) —
+            now edited post-onboarding via the patient detail page Info
+            tab (PatientFieldEditor). Minimizing wizard friction. */}
 
         {/* Option: Scan Driver's License (only for 17+) */}
         {!isPet && (() => {
@@ -2129,7 +2158,9 @@ export default function FamilyMemberOnboardingWizard() {
                   {lifeStageResult.label}
                 </span>
               </p>
-              {!isPet && <p><span className="text-white/70">Relationship:</span> {data.relationship}</p>}
+              {!isPet && data.relationship && (
+                <p><span className="text-white/70">Relationship:</span> {data.relationship}</p>
+              )}
               {!isPet && <p><span className="text-white/70">Gender:</span> {data.gender}</p>}
               {isPet && <p><span className="text-white/70">Species:</span> {data.species}</p>}
               {isPet && data.breed && <p><span className="text-white/70">Breed:</span> {data.breed}</p>}
@@ -2166,7 +2197,7 @@ export default function FamilyMemberOnboardingWizard() {
           )}
 
           {/* Newborn-specific review */}
-          {data.relationship === 'Newborn' && (
+          {isNewborn && (
             <div className="pt-4 border-t border-white/20">
               <h3 className="font-semibold mb-2 text-white">Newborn Details</h3>
               <div className="space-y-1 text-sm text-white/90">

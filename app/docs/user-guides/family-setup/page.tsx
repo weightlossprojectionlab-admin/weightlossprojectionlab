@@ -260,19 +260,19 @@ export default function FamilySetupPage() {
       <h2 id="billing">Family Account Billing</h2>
       <p>One subscription covers your entire family:</p>
 
-      <h3>Family Plan Includes</h3>
+      <h3>Family Plan Tiers</h3>
       <ul>
-        <li>Up to 6 family member profiles</li>
-        <li>Unlimited caregivers</li>
-        <li>All premium features for everyone</li>
-        <li>Priority support</li>
+        <li><strong>Family Basic</strong> — up to 5 members, up to 5 external caregivers</li>
+        <li><strong>Family Plus</strong> — up to 10 members, up to 10 external caregivers</li>
+        <li><strong>Family Premium</strong> — up to 20 members per household across up to 10 households, up to 50 external caregivers</li>
+        <li>All premium features for everyone on the plan</li>
+        <li>Priority support on Family Plus and above</li>
       </ul>
 
-      <h3>Additional Members</h3>
+      <h3>Need More Members?</h3>
       <ul>
-        <li>$2/month per additional family member over 6</li>
-        <li>No limit on total family size</li>
-        <li>Prorate when adding mid-cycle</li>
+        <li>Upgrade to the next tier — caps double at each step</li>
+        <li>Family Premium supports multiple households for sandwich-generation caregivers</li>
       </ul>
 
       <h2 id="tips">Family Account Tips</h2>

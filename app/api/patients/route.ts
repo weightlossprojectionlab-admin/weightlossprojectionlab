@@ -15,6 +15,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { errorResponse, unauthorizedResponse } from '@/lib/api-response'
 import { verifyAuthToken } from '@/lib/rbac-middleware'
 import { checkCaregiverEligibility } from '@/lib/caregiver-eligibility'
+import { getMaxPatients } from '@/lib/feature-gates'
 
 // GET /api/patients - List all patients for the authenticated user
 export async function GET(request: NextRequest) {
@@ -195,9 +196,16 @@ export async function POST(request: NextRequest) {
       })
       .length
 
-    // Get seat limit from subscription (use new fields, fallback to legacy)
-    const maxSeats = subscription?.maxSeats || subscription?.maxPatients || 1 // Default to 1 if no subscription
+    // Seat limit = total patient cap for this plan (canonical
+    // PLAN_CAPS lookup — see lib/feature-gates.ts). Falls back to
+    // stored subscription.maxSeats only for plans not in the
+    // canonical map (forward-compat for future practitioner tiers).
     const plan = subscription?.plan || 'free'
+    const maxSeats =
+      getMaxPatients(plan) ||
+      subscription?.maxSeats ||
+      subscription?.maxPatients ||
+      1
 
     if (currentSeats >= maxSeats) {
       logger.warn('[API /patients POST] Seat limit reached', {
@@ -207,11 +215,13 @@ export async function POST(request: NextRequest) {
         plan
       })
 
-      // Determine suggested upgrade based on current plan
+      // Determine suggested upgrade based on current plan. Total-seat
+      // numbers reflect the new bounded reality: family_premium is
+      // 20 × 10 = 200 (NOT unlimited).
       let suggestedPlan = 'family_basic'
       let message = 'You have reached your seat limit. Upgrade to add more family members.'
 
-      if (plan === 'free' || plan === 'single') {
+      if (plan === 'free' || plan === 'single' || plan === 'single_plus') {
         suggestedPlan = 'family_basic'
         message = `You have ${currentSeats}/${maxSeats} seats. Upgrade to Family Basic (5 seats) for $19.99/month.`
       } else if (plan === 'family_basic') {
@@ -219,7 +229,7 @@ export async function POST(request: NextRequest) {
         message = `You have ${currentSeats}/${maxSeats} seats. Upgrade to Family Plus (10 seats) for $29.99/month.`
       } else if (plan === 'family_plus') {
         suggestedPlan = 'family_premium'
-        message = `You have ${currentSeats}/${maxSeats} seats. Upgrade to Family Premium (unlimited) for $39.99/month.`
+        message = `You have ${currentSeats}/${maxSeats} seats. Upgrade to Family Premium (up to 200 across 10 households) for $39.99/month.`
       }
 
       return NextResponse.json(
@@ -259,9 +269,17 @@ export async function POST(request: NextRequest) {
         })()
       : undefined
 
+    // Household assignment is the caregiver's choice — handled via
+    // /api/households (canonical model in types/household.ts).
+    // Patients can exist unassigned until the caregiver picks/creates
+    // a household. Honour an explicit householdId if the request
+    // included one.
+    const householdId = (profileData as any).householdId
+
     const newPatient: PatientProfile = {
       id: patientId,
       userId,
+      ...(householdId ? { householdId } : {}),
       ...profileData,
       // Unified Family Member + Caregiver Model
       accountStatus: 'owner', // First patient is always the account owner

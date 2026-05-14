@@ -71,14 +71,13 @@ export function HouseholdSwitcher() {
                             {household.nickname}
                           </span>
                         )}
-                        <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
-                          <span>{household.memberIds.length} members</span>
-                          {household.kitchenConfig?.hasSharedInventory && (
+                        {household.kitchenConfig?.hasSharedInventory && (
+                          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2">
                             <span className="px-1.5 py-0.5 bg-primary/10 text-primary rounded text-[10px] font-medium">
                               Shared
                             </span>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     </button>
                   )}

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import type { Household, HouseholdFormData } from '@/types/household'
+import { getMaxMembersPerHousehold, getMaxHouseholds } from '@/lib/feature-gates'
 
 /**
  * GET /api/households
@@ -104,47 +105,94 @@ export async function POST(request: NextRequest) {
     // Parse request body
     const body: HouseholdFormData = await request.json()
 
-    // Validate required fields
-    if (!body.name || !body.address?.street || !body.address?.city || !body.address?.state) {
+    // Validation: a household needs a name and at least one resident.
+    // Address is optional — kitchen/shopping logic works on the
+    // household + its members; the address is informational metadata
+    // for future geo-aware shopping. Empty households are not a thing
+    // (semantically a vacant building).
+    if (!body.name || !body.name.trim()) {
       return NextResponse.json(
-        { error: 'Missing required fields: name and complete address required' },
+        { error: 'Household name is required' },
+        { status: 400 }
+      )
+    }
+    const memberIds = body.memberIds ?? []
+    if (memberIds.length === 0) {
+      return NextResponse.json(
+        { error: 'A household must have at least one member' },
         { status: 400 }
       )
     }
 
-    // Verify caregiver has access to all specified patients
-    if (body.memberIds && body.memberIds.length > 0) {
-      for (const patientId of body.memberIds) {
-        const patientDoc = await adminDb.collection('patients').doc(patientId).get()
+    // Plan-cap gates — read caregiver's plan from their user doc,
+    // resolve canonical caps via lib/feature-gates.PLAN_CAPS.
+    const userDoc = await adminDb.collection('users').doc(caregiverId).get()
+    const plan: string = userDoc.data()?.subscription?.plan ?? 'free'
+    const maxMembersPerHousehold = getMaxMembersPerHousehold(plan)
+    const maxHouseholds = getMaxHouseholds(plan)
 
-        if (!patientDoc.exists) {
-          return NextResponse.json(
-            { error: `Patient not found: ${patientId}` },
-            { status: 404 }
-          )
-        }
+    // Gate 1: Per-household member cap. The new household being
+    // created can't exceed `maxMembersPerHousehold` for this plan.
+    if (memberIds.length > maxMembersPerHousehold) {
+      return NextResponse.json(
+        {
+          error: 'HOUSEHOLD_MEMBER_CAP',
+          message: `Your ${plan} plan allows up to ${maxMembersPerHousehold} member${maxMembersPerHousehold === 1 ? '' : 's'} per household. You picked ${memberIds.length}.`,
+          plan,
+          cap: maxMembersPerHousehold,
+          attempted: memberIds.length,
+        },
+        { status: 403 }
+      )
+    }
 
-        const patientData = patientDoc.data()
-        if (patientData?.userId !== caregiverId) {
-          return NextResponse.json(
-            { error: `Unauthorized: You do not have access to patient ${patientId}` },
-            { status: 403 }
-          )
-        }
+    // Gate 2: Per-account household count. New household must not
+    // push the caregiver over `maxHouseholds`. Query active
+    // households they own (exclude soft-deleted).
+    const existingHouseholdsSnap = await adminDb
+      .collection('households')
+      .where('primaryCaregiverId', '==', caregiverId)
+      .where('isActive', '==', true)
+      .get()
+    if (existingHouseholdsSnap.size >= maxHouseholds) {
+      return NextResponse.json(
+        {
+          error: 'HOUSEHOLD_COUNT_CAP',
+          message: `Your ${plan} plan allows up to ${maxHouseholds} household${maxHouseholds === 1 ? '' : 's'}. You already have ${existingHouseholdsSnap.size}.`,
+          plan,
+          cap: maxHouseholds,
+          current: existingHouseholdsSnap.size,
+        },
+        { status: 403 }
+      )
+    }
+
+    // Verify caregiver owns each declared member. Patients live at
+    // users/{ownerUserId}/patients/{patientId} (nested) — if a doc
+    // exists at the caregiver's nested path, ownership is implicit.
+    for (const patientId of memberIds) {
+      const patientDoc = await adminDb
+        .collection('users').doc(caregiverId)
+        .collection('patients').doc(patientId)
+        .get()
+
+      if (!patientDoc.exists) {
+        return NextResponse.json(
+          { error: `Patient not found: ${patientId}` },
+          { status: 404 }
+        )
       }
     }
 
-    // Create household
+    // Create household doc. Note: no memberIds, no primaryResidentId.
+    // Membership is a property of the patient (Patient.householdId),
+    // not the household. "Who lives here?" is a patient query.
     const householdRef = adminDb.collection('households').doc()
     const now = new Date().toISOString()
 
-    const household: Household = {
+    const householdDoc: any = {
       id: householdRef.id,
-      name: body.name,
-      nickname: body.nickname,
-      address: body.address,
-      memberIds: body.memberIds || [],
-      primaryResidentId: body.primaryResidentId,
+      name: body.name.trim(),
       primaryCaregiverId: caregiverId,
       kitchenConfig: body.kitchenConfig || {
         hasSharedInventory: true,
@@ -155,38 +203,39 @@ export async function POST(request: NextRequest) {
       updatedAt: now,
       isActive: true
     }
-
-    // Remove undefined values before saving to Firestore
-    const cleanedHousehold: any = {}
-    for (const [key, value] of Object.entries(household)) {
-      if (value !== undefined) {
-        cleanedHousehold[key] = value
-      }
+    if (body.nickname) householdDoc.nickname = body.nickname.trim()
+    if (body.address?.street || body.address?.city || body.address?.state) {
+      householdDoc.address = body.address
     }
 
-    await householdRef.set(cleanedHousehold)
+    await householdRef.set(householdDoc)
 
-    // Update patient profiles with householdId
+    // Cascade Patient.householdId onto each new member. Single-field
+    // assignment naturally enforces single-residence-per-patient: any
+    // patient previously in another household has their householdId
+    // overwritten here, atomically moving them. No cleanup of an old
+    // memberIds[] array is needed because that array no longer exists.
     const batch = adminDb.batch()
-    for (const patientId of household.memberIds) {
-      const patientRef = adminDb.collection('patients').doc(patientId)
+    for (const patientId of memberIds) {
+      const patientRef = adminDb
+        .collection('users').doc(caregiverId)
+        .collection('patients').doc(patientId)
       batch.update(patientRef, {
-        householdId: household.id,
-        residenceType: patientId === body.primaryResidentId ? 'full_time' : 'full_time',
+        householdId: householdRef.id,
         lastModified: now
       })
     }
     await batch.commit()
 
     logger.info('[Households API] Created household', {
-      householdId: household.id,
+      householdId: householdRef.id,
       caregiverId,
-      memberCount: household.memberIds.length
+      memberCount: memberIds.length
     })
 
     return NextResponse.json({
       success: true,
-      household
+      household: householdDoc
     }, { status: 201 })
   } catch (error: any) {
     logger.error('[API /households POST] Error creating household', error as Error)

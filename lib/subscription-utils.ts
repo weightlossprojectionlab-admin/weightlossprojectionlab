@@ -6,7 +6,13 @@
  */
 
 import { SubscriptionPlan, UserSubscription, User } from '@/types'
-import { getUserSubscription } from './feature-gates'
+import {
+  getUserSubscription,
+  getMaxMembersPerHousehold,
+  getMaxHouseholds,
+  getMaxCaregivers,
+  getMaxPatients,
+} from './feature-gates'
 
 // ============================================================
 // Subscription state predicates
@@ -130,46 +136,22 @@ export function getPlanRelationship(
 }
 
 /**
- * Format seat limit for display
- * Returns "Unlimited" for limits >= 999, otherwise returns the number as a string
- *
- * @param limit - The seat limit number
- * @returns Formatted string for display
- *
- * @example
- * formatSeatLimit(5)    // "5"
- * formatSeatLimit(999)  // "Unlimited"
- * formatSeatLimit(1000) // "Unlimited"
+ * Format a numeric limit for display. As of the 2026-05-11 plan-cap
+ * reconciliation, NO plan is unlimited — Family Premium is bounded at
+ * 20 members per household × 10 households = 200 total. The
+ * "Unlimited" branch is preserved for legacy callers that may pass
+ * stale stored limits (999), but the canonical PLAN_CAPS doesn't use
+ * 999 anymore.
  */
 export function formatSeatLimit(limit: number | undefined): string {
-  if (limit === undefined || limit === null) {
-    return '0'
-  }
-  if (limit >= 999) {
-    return 'Unlimited'
-  }
+  if (limit === undefined || limit === null) return '0'
+  if (limit >= 999) return 'Unlimited'
   return limit.toString()
 }
 
-/**
- * Format caregiver limit for display
- * Returns "Unlimited" for limits >= 999, otherwise returns the number as a string
- *
- * @param limit - The caregiver limit number
- * @returns Formatted string for display
- *
- * @example
- * formatCaregiverLimit(2)    // "2"
- * formatCaregiverLimit(999)  // "Unlimited"
- * formatCaregiverLimit(1000) // "Unlimited"
- */
 export function formatCaregiverLimit(limit: number | undefined): string {
-  if (limit === undefined || limit === null) {
-    return '0'
-  }
-  if (limit >= 999) {
-    return 'Unlimited'
-  }
+  if (limit === undefined || limit === null) return '0'
+  if (limit >= 999) return 'Unlimited'
   return limit.toString()
 }
 
@@ -209,31 +191,23 @@ export function getPlanDisplayName(plan: SubscriptionPlan): string {
  * getPlanLimits('family_premium')
  * // { seats: "Unlimited", caregivers: "Unlimited" }
  */
+/**
+ * Get formatted limits for display. Reads from the canonical
+ * `PLAN_CAPS` (in lib/feature-gates.ts) — single source of truth.
+ *
+ * "seats" here = total patient cap (= maxMembersPerHousehold ×
+ * maxHouseholds). For premium that's 20 × 10 = 200; for family_basic
+ * it's 5 × 1 = 5. The display string captures the total, since the
+ * structural per-household × max-households breakdown is shown
+ * separately in plan-details marketing copy.
+ */
 export function getPlanLimits(plan: SubscriptionPlan): {
   seats: string
   caregivers: string
 } {
-  const seatLimits: Record<SubscriptionPlan, number> = {
-    free: 1,
-    single: 1,
-    single_plus: 1,
-    family_basic: 5,
-    family_plus: 10,
-    family_premium: 20,
-  }
-
-  const caregiverLimits: Record<SubscriptionPlan, number> = {
-    free: 0,
-    single: 0,
-    single_plus: 3,
-    family_basic: 5,
-    family_plus: 10,
-    family_premium: 50,
-  }
-
   return {
-    seats: formatSeatLimit(seatLimits[plan]),
-    caregivers: formatCaregiverLimit(caregiverLimits[plan]),
+    seats: formatSeatLimit(getMaxPatients(plan)),
+    caregivers: formatCaregiverLimit(getMaxCaregivers(plan)),
   }
 }
 
@@ -253,33 +227,25 @@ export function isFamilyPlan(plan: SubscriptionPlan): boolean {
 }
 
 /**
- * Check if a plan has unlimited seats
- * Returns true for plans with 999+ seats (family_premium)
+ * Check if a plan has unlimited seats.
  *
- * @param plan - The subscription plan
- * @returns true if the plan has unlimited seats
+ * As of the 2026-05-11 plan-cap reconciliation: NO plan is unlimited
+ * anymore. Family Premium is bounded at 20 members/household × 10
+ * households = 200 total. Both predicates kept for back-compat — they
+ * now always return `false`. Callers that needed an "unlimited"
+ * branch should be reviewed; in the new world the right question is
+ * "does N exceed `getMaxPatients(plan)`?" not "is the plan unlimited?"
  *
- * @example
- * hasUnlimitedSeats('family_plus')     // false
- * hasUnlimitedSeats('family_premium')  // true
+ * @deprecated Returns `false` for all plans post-reconciliation. Use
+ *   `getMaxPatients(plan)` and compare to the actual count instead.
  */
-export function hasUnlimitedSeats(plan: SubscriptionPlan): boolean {
-  return plan === 'family_premium'
+export function hasUnlimitedSeats(_plan: SubscriptionPlan): boolean {
+  return false
 }
 
-/**
- * Check if a plan has unlimited caregivers
- * Returns true for plans with 999+ caregivers (family_premium)
- *
- * @param plan - The subscription plan
- * @returns true if the plan has unlimited caregivers
- *
- * @example
- * hasUnlimitedCaregivers('family_plus')     // false
- * hasUnlimitedCaregivers('family_premium')  // true
- */
-export function hasUnlimitedCaregivers(plan: SubscriptionPlan): boolean {
-  return plan === 'family_premium'
+/** @deprecated See `hasUnlimitedSeats` — no plan is unlimited anymore. */
+export function hasUnlimitedCaregivers(_plan: SubscriptionPlan): boolean {
+  return false
 }
 
 /**

@@ -206,7 +206,7 @@ export type SubscriptionPlan =
   | 'single_plus'      // Single User Plus: 1 seat, weight loss + medical + 3 caregivers (7-day trial)
   | 'family_basic'     // Family Basic: 5 seats, family features (7-day trial)
   | 'family_plus'      // Family Plus: 10 seats, premium features (POPULAR) (7-day trial)
-  | 'family_premium'   // Family Premium: Unlimited seats, all features (7-day trial)
+  | 'family_premium'   // Family Premium: 20 members × 10 households = 200 max, all features (7-day trial)
 
 // Billing Interval
 export type BillingInterval = 'monthly' | 'yearly'
@@ -221,34 +221,39 @@ export const SUBSCRIPTION_PRICING = {
   family_premium: { monthly: 3999, yearly: 39900 }, // $39.99/mo or $399/yr (17% off)
 } as const
 
-// Seat Limits per Plan
+// Seat Limits per Plan — TOTAL patient cap (members/household × households).
+// Mirror of PLAN_CAPS in lib/feature-gates.ts. Keep in sync; canonical
+// runtime check is `getMaxPatients(plan)` from feature-gates.
 export const SEAT_LIMITS = {
   free: 1,
   single: 1,
   single_plus: 1,
-  family_basic: 5,
-  family_plus: 10,
-  family_premium: 999, // Unlimited (using 999 as max)
+  family_basic: 5,           // 5 × 1
+  family_plus: 10,           // 10 × 1
+  family_premium: 200,       // 20 × 10 (bounded — no longer "unlimited")
 } as const
 
-// External Caregiver Limits per Plan
+// External Caregiver Limits per Plan — mirror of PLAN_CAPS.maxCaregivers.
 export const EXTERNAL_CAREGIVER_LIMITS = {
   free: 0,
   single: 0,
   single_plus: 3,
   family_basic: 5,
   family_plus: 10,
-  family_premium: 999, // Unlimited
+  family_premium: 50,        // bounded (was 999 unlimited)
 } as const
 
-// Household Limits by Subscription Tier
+// Household Limits by Subscription Tier — mirror of PLAN_CAPS.maxHouseholds.
+// family_basic and family_plus collapse to ONE household per the
+// 2026-05-11 household restructure (marketing copy in plan-details.ts
+// only promises a single household for these tiers).
 export const HOUSEHOLD_LIMITS = {
-  free: 1,              // Free: 1 household (trial)
-  single: 1,            // Single: 1 household
-  single_plus: 2,       // Single+: 2 households (your home + parent's home)
-  family_basic: 3,      // Family Basic: 3 households
-  family_plus: 5,       // Family Plus: 5 households (complex families)
-  family_premium: 10,   // Family Premium: 10 households (sandwich-generation cap)
+  free: 1,
+  single: 1,
+  single_plus: 1,
+  family_basic: 1,
+  family_plus: 1,
+  family_premium: 10,
 } as const
 
 // Household Duty Limits by Subscription Tier

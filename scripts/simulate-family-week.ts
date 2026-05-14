@@ -245,29 +245,26 @@ async function readSubstrate(householdId: string | undefined): Promise<{
     household = { id: snap.docs[0].id, ...snap.docs[0].data() }
   }
 
-  const memberIds: string[] = household.memberIds ?? []
-
-  // Patients (in batches of 30 — Firestore "in" cap)
+  // Membership is derived from Patient.householdId (single source of
+  // truth). Patients live in the primary caregiver's nested collection.
+  const ownerForPatients = household.primaryCaregiverId ?? household.createdBy
   const patients: PatientView[] = []
-  for (let i = 0; i < memberIds.length; i += 30) {
-    const slice = memberIds.slice(i, i + 30)
-    if (slice.length === 0) continue
-    const snap = await db
-      .collection('patients')
-      .where('__name__', 'in', slice)
-      .get()
-    for (const d of snap.docs) {
-      const data = d.data()
-      patients.push({
-        id: d.id,
-        name: data.name ?? 'Unknown',
-        type: data.type ?? 'human',
-        dateOfBirth: data.dateOfBirth,
-        species: data.species,
-        status: 'active',
-        lifeStage: data.lifeStage,
-      })
-    }
+  const memberSnap = await db
+    .collection('users').doc(ownerForPatients)
+    .collection('patients')
+    .where('householdId', '==', household.id)
+    .get()
+  for (const d of memberSnap.docs) {
+    const data = d.data()
+    patients.push({
+      id: d.id,
+      name: data.name ?? 'Unknown',
+      type: data.type ?? 'human',
+      dateOfBirth: data.dateOfBirth,
+      species: data.species,
+      status: 'active',
+      lifeStage: data.lifeStage,
+    })
   }
 
   // Inventory — owned by household primary caregiver (legacy: userId field)

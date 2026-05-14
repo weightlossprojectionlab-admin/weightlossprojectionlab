@@ -144,7 +144,7 @@ export default function ProfileBlogPage() {
             />
             <Screenshot
               src="/screenshots/settings/subscription-account-desktop-light.png"
-              alt="Account Information showing email, account created date (11/2/2025), and Subscription section with Family Premium plan badge, 5 of unlimited family members indicator, Active status, and View Plans button"
+              alt="Account Information showing email, account created date (11/2/2025), and Subscription section with Family Premium plan badge, 5 of 20 family members indicator, Active status, and View Plans button"
               caption="Account & Subscription - Manage your plan and family members"
               zoomable
             />

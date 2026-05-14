@@ -7,10 +7,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { FieldValue } from 'firebase-admin/firestore'
 import { adminDb, verifyIdToken } from '@/lib/firebase-admin'
 import { checkHouseholdAccess } from '@/lib/household-access'
 import { logger } from '@/lib/logger'
 import type { Household } from '@/types/household'
+import { getMaxMembersPerHousehold } from '@/lib/feature-gates'
 
 interface RouteParams {
   params: Promise<{
@@ -54,8 +56,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
     const household = { id: householdId, ...access.household } as Household
 
-    // Get patients in household
+    // Members are derived from Patient.householdId (single source of
+    // truth). The household doc itself stores no memberIds array.
     const patientsQuery = await adminDb
+      .collection('users').doc(household.primaryCaregiverId)
       .collection('patients')
       .where('householdId', '==', householdId)
       .get()
@@ -122,24 +126,110 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Parse updates
     const body = await request.json()
-    const allowedUpdates = ['name', 'nickname', 'address', 'kitchenConfig', 'preferences', 'memberIds', 'primaryResidentId']
+    // Note: `memberIds` is ephemeral (used to cascade Patient.householdId)
+    // and is NOT persisted on the household doc. `primaryResidentId` no
+    // longer exists.
+    const allowedUpdates = ['name', 'nickname', 'address', 'kitchenConfig', 'preferences']
 
+    const now = new Date().toISOString()
     const updates: any = {
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     }
 
+    // Three states per optional field:
+    //   - body[key] === undefined  → caller doesn't want to touch it
+    //   - body[key] === null       → caller wants to CLEAR it (delete field)
+    //   - body[key] === <value>    → set new value
+    // This matters for nickname and address (and would matter for
+    // kitchenConfig if we ever expose its blanking). Without explicit
+    // null-handling, a blanked-out form field can't clear the prior
+    // stored value.
     for (const key of allowedUpdates) {
-      if (body[key] !== undefined) {
-        updates[key] = body[key]
+      if (!(key in body)) continue
+      const value = body[key]
+      if (value === undefined) continue
+      if (value === null) {
+        updates[key] = FieldValue.delete()
+      } else {
+        updates[key] = value
       }
     }
 
-    // Remove any nested undefined values
-    const cleanedUpdates: any = {}
-    for (const [key, value] of Object.entries(updates)) {
-      if (value !== undefined) {
-        cleanedUpdates[key] = value
+    const cleanedUpdates = updates
+
+    // Membership update: if `memberIds` is in the body, diff against
+    // the *actual* current members (patients with householdId == this
+    // household) and cascade Patient.householdId writes. Setting a
+    // patient's householdId to this household atomically moves them
+    // from any prior household — no other cleanup needed because no
+    // household stores a memberIds[] array.
+    if (body.memberIds !== undefined) {
+      const requestedIds = body.memberIds as string[]
+
+      // Plan-cap gate: per-household member cap. Use the caregiver's
+      // plan (read from user doc) and reject if the requested set
+      // would exceed it. Removal-only edits stay allowed even at cap.
+      const userDoc = await adminDb.collection('users').doc(userId).get()
+      const plan: string = userDoc.data()?.subscription?.plan ?? 'free'
+      const cap = getMaxMembersPerHousehold(plan)
+      if (requestedIds.length > cap) {
+        return NextResponse.json(
+          {
+            error: 'HOUSEHOLD_MEMBER_CAP',
+            message: `Your ${plan} plan allows up to ${cap} member${cap === 1 ? '' : 's'} per household. You picked ${requestedIds.length}.`,
+            plan,
+            cap,
+            attempted: requestedIds.length,
+          },
+          { status: 403 }
+        )
       }
+
+      // Read the actual current membership from the patient side.
+      const currentMembersSnap = await adminDb
+        .collection('users').doc(userId)
+        .collection('patients')
+        .where('householdId', '==', householdId)
+        .get()
+      const currentIds = currentMembersSnap.docs.map(d => d.id)
+
+      const added = requestedIds.filter(id => !currentIds.includes(id))
+      const removed = currentIds.filter(id => !requestedIds.includes(id))
+
+      // Verify ownership of newly-added patients before any writes.
+      for (const patientId of added) {
+        const patientDoc = await adminDb
+          .collection('users').doc(userId)
+          .collection('patients').doc(patientId)
+          .get()
+        if (!patientDoc.exists) {
+          return NextResponse.json(
+            { error: `Patient not found: ${patientId}` },
+            { status: 404 }
+          )
+        }
+      }
+
+      const memberBatch = adminDb.batch()
+      for (const patientId of added) {
+        const patientRef = adminDb
+          .collection('users').doc(userId)
+          .collection('patients').doc(patientId)
+        memberBatch.update(patientRef, {
+          householdId,
+          lastModified: now
+        })
+      }
+      for (const patientId of removed) {
+        const patientRef = adminDb
+          .collection('users').doc(userId)
+          .collection('patients').doc(patientId)
+        memberBatch.update(patientRef, {
+          householdId: null,
+          lastModified: now
+        })
+      }
+      await memberBatch.commit()
     }
 
     await adminDb.collection('households').doc(householdId).update(cleanedUpdates)
@@ -214,17 +304,26 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       updatedAt: new Date().toISOString()
     })
 
-    // Remove householdId from all patients
-    const batch = adminDb.batch()
-    for (const patientId of household.memberIds) {
-      const patientRef = adminDb.collection('patients').doc(patientId)
-      batch.update(patientRef, {
-        householdId: null,
-        residenceType: null,
-        lastModified: new Date().toISOString()
-      })
+    // Clear Patient.householdId on every patient who lived here.
+    // Members are derived from the patient query — no household-side
+    // memberIds[] to consult.
+    const now = new Date().toISOString()
+    const membersSnap = await adminDb
+      .collection('users').doc(userId)
+      .collection('patients')
+      .where('householdId', '==', householdId)
+      .get()
+
+    if (!membersSnap.empty) {
+      const batch = adminDb.batch()
+      for (const doc of membersSnap.docs) {
+        batch.update(doc.ref, {
+          householdId: null,
+          lastModified: now
+        })
+      }
+      await batch.commit()
     }
-    await batch.commit()
 
     logger.info('[Households API] Deleted household', {
       householdId,
