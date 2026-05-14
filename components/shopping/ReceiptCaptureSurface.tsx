@@ -373,7 +373,9 @@ export function ReceiptCaptureSurface({
           <div className="text-base font-semibold">Snap receipt</div>
           <div className="text-xs text-white/70">
             {captures.length === 0
-              ? 'Center the receipt and tap capture'
+              ? torchSupported
+                ? 'Hold flat in good light · tap 💡 if it’s dim'
+                : 'Hold flat in good light'
               : `${captures.length} of ${maxCaptures} captures`}
           </div>
         </div>
@@ -495,6 +497,27 @@ export function ReceiptCaptureSurface({
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {/* Prominent "Turn on flash" prompt — surfaces above the
+            capture button when the device supports torch but it's
+            currently off. The small toggle in the top-right corner
+            wasn't discoverable enough; users reported repeatedly
+            scanning under poor light without realizing the flash
+            was available. This stays visible until the user toggles
+            torch on (or off via the corner button), so it's a
+            persistent reminder, not a one-time hint. */}
+        {torchSupported && !torchOn && isLive && (
+          <div className="flex items-center justify-center mb-3">
+            <button
+              type="button"
+              onClick={toggleTorch}
+              className="px-4 py-2 min-h-[40px] bg-yellow-400/95 hover:bg-yellow-300 active:scale-[0.97] text-black rounded-full text-sm font-semibold flex items-center gap-2 shadow-md"
+            >
+              <BoltIcon className="w-4 h-4" />
+              <span>Turn on flash</span>
+            </button>
           </div>
         )}
 
