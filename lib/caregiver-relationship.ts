@@ -230,3 +230,67 @@ export async function upsertPatientFamilyMember(
     .doc(familyMemberId)
   await ref.set(data, { merge: true })
 }
+
+/**
+ * Cascade owner-side patient-access revoke → household_duties.
+ *
+ * Semantic intent: when the owner removes a caregiver's access to one or
+ * more patients (Patient Access Matrix UI / surgical DELETE on
+ * /patients/[id]/family/[memberId]), the caregiver can no longer
+ * fulfill duties tied to those patients. Strip them from each affected
+ * duty's `assignedTo[]` and clear `claimedBy` if they held the claim.
+ *
+ * Without this cascade, the caregiver still sees the duty on their
+ * shift view (assignedTo array-contains them), and could even claim/
+ * complete it post-revoke — a real consistency hole between the access
+ * Matrix and the duties surface. Phase 0d shipped the claim semantic;
+ * this closes the cross-surface drift.
+ *
+ * Scope:
+ *   • Only duties where userId === ownerUserId AND forPatientId is
+ *     in revokedPatientIds — duties for OTHER patients (or no patient)
+ *     are unaffected.
+ *   • Empty assignedTo[] post-strip is left as-is (orphan duty,
+ *     visible to owner for reassignment). Better than auto-deactivating
+ *     or deleting — the owner should see the consequence and act.
+ *
+ * Returns counters for the caller to log / surface to the owner.
+ */
+export async function cascadeRevokedAccess(
+  ownerUserId: string,
+  caregiverUid: string,
+  revokedPatientIds: string[],
+): Promise<{ dutiesUpdated: number; claimsCleared: number }> {
+  let dutiesUpdated = 0
+  let claimsCleared = 0
+  if (!ownerUserId || !caregiverUid || revokedPatientIds.length === 0) {
+    return { dutiesUpdated, claimsCleared }
+  }
+  const now = new Date().toISOString()
+  for (const patientId of revokedPatientIds) {
+    const snap = await adminDb
+      .collection('household_duties')
+      .where('userId', '==', ownerUserId)
+      .where('forPatientId', '==', patientId)
+      .where('assignedTo', 'array-contains', caregiverUid)
+      .get()
+    for (const doc of snap.docs) {
+      const data = doc.data() || {}
+      const newAssignedTo = (Array.isArray(data.assignedTo) ? data.assignedTo : [])
+        .filter((id: string) => id !== caregiverUid)
+      const updates: Record<string, any> = {
+        assignedTo: newAssignedTo,
+        lastModified: now,
+        modifiedBy: ownerUserId,
+      }
+      if (data.claimedBy === caregiverUid) {
+        updates.claimedBy = null
+        updates.claimedAt = null
+        claimsCleared += 1
+      }
+      await doc.ref.update(updates)
+      dutiesUpdated += 1
+    }
+  }
+  return { dutiesUpdated, claimsCleared }
+}

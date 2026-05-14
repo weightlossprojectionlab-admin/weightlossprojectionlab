@@ -13,6 +13,7 @@ import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
 import { canAssignRole, validateRoleAssignment } from '@/lib/family-roles'
+import { cascadeRevokedAccess } from '@/lib/caregiver-relationship'
 import type { FamilyRole, FamilyMember, FamilyMemberPermissions } from '@/types/medical'
 
 interface UpdateMemberRequest {
@@ -202,6 +203,14 @@ export async function PATCH(
       }
     }
 
+    // Phase 0f — capture the BEFORE patientsAccess so we can compute
+    // which patient ids were revoked by this update. Diff is computed
+    // post-write below so the cascade fires AFTER the source-of-truth
+    // record has flipped.
+    const beforePatientsAccess = Array.isArray(member.patientsAccess)
+      ? member.patientsAccess
+      : []
+
     // Step 8: Update the member document
     await memberRef.update({
       ...updateData,
@@ -219,9 +228,37 @@ export async function PATCH(
       updates: Object.keys(updates)
     })
 
+    // Phase 0f cascade — if patientsAccess shrank (any patient ids
+    // present in `before` but absent in `after`), strip the caregiver
+    // from every household_duty tied to that (owner, patient) pair
+    // and clear their claim if held. Adding patients is unaffected;
+    // only revokes cascade.
+    let cascade = { dutiesUpdated: 0, claimsCleared: 0 }
+    if (updates.patientsAccess) {
+      const afterSet = new Set(updates.patientsAccess)
+      const revokedPatientIds = beforePatientsAccess.filter((id) => !afterSet.has(id))
+      if (revokedPatientIds.length > 0) {
+        cascade = await cascadeRevokedAccess(
+          ownerUserId,
+          member.userId,
+          revokedPatientIds,
+        )
+        if (cascade.dutiesUpdated > 0 || cascade.claimsCleared > 0) {
+          logger.info('[API /family/members/[id] PATCH] Cascaded revoke to household_duties', {
+            ownerUserId,
+            caregiverUid: member.userId,
+            revokedPatientIds,
+            dutiesUpdated: cascade.dutiesUpdated,
+            claimsCleared: cascade.claimsCleared,
+          })
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      data: updatedMember
+      data: updatedMember,
+      cascade,
     })
   } catch (error: any) {
     logger.error('[API /family/members/[id] PATCH] Error updating member', error as Error)

@@ -11,6 +11,7 @@ import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import { logger } from '@/lib/logger'
 import { familyMemberPermissionsSchema } from '@/lib/validations/medical'
+import { cascadeRevokedAccess } from '@/lib/caregiver-relationship'
 import type { FamilyMember } from '@/types/medical'
 
 export async function PUT(
@@ -213,9 +214,29 @@ export async function DELETE(
       })
     }
 
+    // Phase 0f cascade — caregiver no longer has access to this patient,
+    // so strip them from every duty tied to this (owner, patient) pair
+    // and clear claimedBy if they held the claim. Prevents the
+    // caregiver from still seeing / completing duties post-revoke.
+    const cascade = await cascadeRevokedAccess(
+      ownerUserId,
+      member.userId,
+      [patientId],
+    )
+    if (cascade.dutiesUpdated > 0 || cascade.claimsCleared > 0) {
+      logger.info('[API /patients/[id]/family/[memberId] DELETE] Cascaded revoke to household_duties', {
+        ownerUserId,
+        caregiverUid: member.userId,
+        patientId,
+        dutiesUpdated: cascade.dutiesUpdated,
+        claimsCleared: cascade.claimsCleared,
+      })
+    }
+
     return NextResponse.json({
       success: true,
-      message: 'Family member access removed'
+      message: 'Family member access removed',
+      cascade,
     })
   } catch (error: any) {
     logger.error('[API /patients/[id]/family/[memberId] DELETE] Error removing family member access', error as Error)
