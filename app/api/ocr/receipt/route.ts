@@ -120,6 +120,8 @@ Extract the receipt as STRUCTURED JSON. Return ONLY valid JSON (no markdown, no 
 
 {
   "store": "merchant name from the receipt header (e.g., 'Costco', 'Walmart', 'Whole Foods'). null if not visible.",
+  "storeAddress": "physical address of the store as printed at the top of the receipt (e.g., '478 Clubhouse Dr, Middletown, NJ 07748' or '101 Main St'). Combine multi-line address into one string. null if not visible.",
+  "storeHours": "store hours as printed on the receipt (e.g., 'Mon-Sun 6am-11pm', 'Open 24 Hours', '7-10 Daily'). null if not visible.",
   "date": "transaction date as printed (any format — '2026-05-07', '05/07/26', 'May 7, 2026'). null if not visible.",
   "items": [
     {
@@ -140,8 +142,9 @@ CRITICAL RULES:
 
 **Prices are CENTS, not dollars.** $3.49 = 349. $11.00 = 1100. $0.79 = 79. NEVER return decimal numbers for any *Cents field.
 
-**Skip non-product lines:**
-  - Skip header/footer junk: store address, cashier ID, register #, transaction #, "Thank you", "Member savings"
+**Skip non-product lines from items[]:**
+  - Skip header/footer junk: cashier ID, register #, transaction #, "Thank you", "Member savings"
+  - The store ADDRESS and HOURS belong in their own fields (storeAddress, storeHours) — do NOT skip them, do NOT put them in items[].
   - Skip subtotal/tax/total LINES (those go into subtotalCents/taxCents/totalCents fields)
   - Skip discount/coupon lines that are NOT a separate product (e.g. "INSTANT SAVINGS -$2.00 on prior line")
   - Each entry in items[] must represent one product the customer took home
@@ -164,7 +167,7 @@ CRITICAL RULES:
 **Confidence** — be honest. Faded thermal paper, glare, blur, partial captures, mid-receipt text cuts: drop confidence accordingly. The UI uses this to decide whether to surface a "review carefully" warning.
 
 If you cannot read ANY items (image too blurry / not a receipt), return:
-{ "store": null, "date": null, "items": [], "subtotalCents": null, "taxCents": null, "totalCents": null, "confidence": 0 }`
+{ "store": null, "storeAddress": null, "storeHours": null, "date": null, "items": [], "subtotalCents": null, "taxCents": null, "totalCents": null, "confidence": 0 }`
 
     const result = await model.generateContent([prompt, ...imageParts])
     const response = await result.response

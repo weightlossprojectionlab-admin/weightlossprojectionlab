@@ -27,6 +27,14 @@ const ReceiptItemSchema = z.object({
 
 export const ReceiptOCRResponseSchema = z.object({
   store: z.string().nullable().optional(),
+  /** Phase 0h — physical store address as printed at the top of the
+   *  receipt (free-text, OCR-reported). Feeds the ML substrate for
+   *  per-location reorder timing + proximity-aware store picker. */
+  storeAddress: z.string().nullable().optional(),
+  /** Phase 0h — store hours as printed on the receipt (free-text,
+   *  e.g. "Mon-Sun 6am-11pm"). Feeds time-of-day shopping pattern
+   *  ML and open-now inference. */
+  storeHours: z.string().nullable().optional(),
   /** Stringified date as it appears on the receipt — UI normalizes. */
   date: z.string().nullable().optional(),
   items: z.array(ReceiptItemSchema),

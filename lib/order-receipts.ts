@@ -161,6 +161,10 @@ export async function saveOrderReceipt(
   }
   if (options.householdId) docPayload.householdId = options.householdId
   if (ocrResult.store) docPayload.store = ocrResult.store
+  // Phase 0h — capture address + hours from OCR; feeds the ML
+  // substrate (per-location reorder timing, time-of-day patterns).
+  if (ocrResult.storeAddress) docPayload.storeAddress = ocrResult.storeAddress
+  if (ocrResult.storeHours) docPayload.storeHours = ocrResult.storeHours
   if (ocrResult.date) docPayload.receiptDate = ocrResult.date
   if (ocrResult.totalCents != null) docPayload.totalCents = ocrResult.totalCents
   if (ocrResult.subtotalCents != null) docPayload.subtotalCents = ocrResult.subtotalCents
@@ -202,6 +206,44 @@ export async function updateReceiptLines(
   const cleaned = lines.map(stripUndefinedFromLine)
   const ref = doc(db, ORDER_RECEIPTS_COLLECTION, receiptId)
   await updateDoc(ref, { items: cleaned })
+}
+
+/**
+ * Phase 0h — update editable header metadata on a DRAFT receipt:
+ * receiptDate (for "I snapped this 3 days late" or OCR misreads),
+ * storeAddress, storeHours, store name. The applyOrderReceipt flow
+ * reads receiptDate as the canonical purchase date for every line's
+ * purchaseHistory entry, so allowing the user to correct it before
+ * apply is the difference between accurate inventory + ML data and
+ * silently-stale prices.
+ *
+ * Caller-supplied undefined / empty values are skipped (no clobber);
+ * pass `null` to explicitly clear a field. Doesn't transition state.
+ */
+export async function updateReceiptMetadata(
+  receiptId: string,
+  patch: {
+    store?: string | null
+    storeAddress?: string | null
+    storeHours?: string | null
+    receiptDate?: string | null
+  },
+): Promise<void> {
+  const updates: Record<string, any> = {}
+  for (const key of ['store', 'storeAddress', 'storeHours', 'receiptDate'] as const) {
+    const v = patch[key]
+    if (v === undefined) continue
+    if (v === null || v === '') {
+      // Caller asked to clear. Use Firestore's null sentinel so a
+      // future read sees the absence cleanly.
+      updates[key] = null
+    } else {
+      updates[key] = v
+    }
+  }
+  if (Object.keys(updates).length === 0) return
+  const ref = doc(db, ORDER_RECEIPTS_COLLECTION, receiptId)
+  await updateDoc(ref, updates)
 }
 
 function stripUndefinedFromLine(line: OrderReceiptLine): OrderReceiptLine {

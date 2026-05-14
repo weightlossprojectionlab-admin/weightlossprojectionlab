@@ -44,6 +44,7 @@ import {
   heartbeatReceiptLock,
   releaseReceiptLock,
   updateReceiptLines,
+  updateReceiptMetadata,
   voidOrderReceipt,
 } from '@/lib/order-receipts'
 import { isReceiptLockStale } from '@/lib/order-receipt-utils'
@@ -379,6 +380,20 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
           Couldn&apos;t claim the editor lock. The doc may have stale lock state — try reopening.
         </div>
       )}
+
+      {/* Phase 0h — receipt metadata editor (draft + lock held) /
+          read-only display (everywhere else). Captures the data ML
+          needs from past receipts: visit date, store address, hours.
+          30-day cap on date input reflects the physical reality that
+          thermal receipts older than that are usually too faded to
+          scan accurately. Each field saves onBlur to the receipt doc
+          via updateReceiptMetadata; no per-keystroke writes. */}
+      <ReceiptMetadataPanel
+        receiptId={receiptId}
+        receipt={receipt}
+        editable={editable}
+      />
+
       {lockState.status === 'error' && (
         <div className="px-5 py-2 bg-destructive/10 border-b border-destructive/30 text-xs text-destructive">
           Lock error: {lockState.message}
@@ -628,6 +643,197 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
           )}
         </footer>
       )}
+    </div>
+  )
+}
+
+// ============================================================
+// Phase 0h — ReceiptMetadataPanel
+// ============================================================
+
+/**
+ * Best-effort parse of the free-text OCR date into a YYYY-MM-DD string
+ * suitable for an <input type="date">. Returns empty string when the
+ * input is unparseable (the input then renders as empty, prompting the
+ * user to enter the date themselves). Doesn't validate against the
+ * 30-day window — the min/max attributes on the input handle that
+ * UX-side; the underlying field accepts any date the user types or
+ * the OCR returns.
+ */
+function ocrDateToInputValue(raw: string | undefined | null): string {
+  if (!raw) return ''
+  const trimmed = raw.trim()
+  if (!trimmed) return ''
+  // Native Date parse handles a surprising number of receipt formats
+  // (ISO, US slashes, "May 7 2026", etc.). Anything it can't parse
+  // falls through to empty.
+  const parsed = new Date(trimmed)
+  if (Number.isNaN(parsed.getTime())) return ''
+  const y = parsed.getFullYear()
+  const m = String(parsed.getMonth() + 1).padStart(2, '0')
+  const d = String(parsed.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+function isoToday(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+function isoThirtyDaysAgo(): string {
+  const d = new Date()
+  d.setDate(d.getDate() - 30)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const dd = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dd}`
+}
+
+interface ReceiptMetadataPanelProps {
+  receiptId: string
+  receipt: OrderReceipt
+  editable: boolean
+}
+
+function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataPanelProps) {
+  // Local controlled values so the user can edit smoothly without each
+  // keystroke racing a Firestore round-trip. Persist onBlur (and onChange
+  // for the date input — date pickers commit cleanly, no debouncing
+  // needed). Seed from the receipt; track which field the user has
+  // touched so we don't clobber their in-progress edit when the
+  // snapshot listener fires.
+  const [dateValue, setDateValue] = useState(() => ocrDateToInputValue(receipt.receiptDate))
+  const [addressValue, setAddressValue] = useState(receipt.storeAddress ?? '')
+  const [hoursValue, setHoursValue] = useState(receipt.storeHours ?? '')
+  const [touched, setTouched] = useState<{ date: boolean; address: boolean; hours: boolean }>({
+    date: false,
+    address: false,
+    hours: false,
+  })
+
+  // Re-seed values from the receipt when the doc updates AND the user
+  // hasn't started editing that field. Lets the OCR-extracted values
+  // appear after the initial Gemini round-trip without clobbering a
+  // user's in-flight edit.
+  useEffect(() => {
+    if (!touched.date) setDateValue(ocrDateToInputValue(receipt.receiptDate))
+    if (!touched.address) setAddressValue(receipt.storeAddress ?? '')
+    if (!touched.hours) setHoursValue(receipt.storeHours ?? '')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [receipt.receiptDate, receipt.storeAddress, receipt.storeHours])
+
+  const minDate = isoThirtyDaysAgo()
+  const maxDate = isoToday()
+
+  // Read-only render — show fields only when populated. Date is
+  // already in the header subtitle so we don't repeat it here.
+  if (!editable) {
+    if (!receipt.storeAddress && !receipt.storeHours) return null
+    return (
+      <div className="px-5 py-3 border-b border-border text-xs text-muted-foreground space-y-1">
+        {receipt.storeAddress && (
+          <p className="leading-snug">📍 {receipt.storeAddress}</p>
+        )}
+        {receipt.storeHours && (
+          <p className="leading-snug">🕒 {receipt.storeHours}</p>
+        )}
+      </div>
+    )
+  }
+
+  // Editable render — three labeled inputs. Date input is the
+  // ML-critical field; surfaced first.
+  const saveField = async (
+    field: 'receiptDate' | 'storeAddress' | 'storeHours',
+    value: string,
+  ) => {
+    try {
+      await updateReceiptMetadata(receiptId, { [field]: value || null } as any)
+    } catch (err) {
+      logger.warn('[OrderReceiptDetail] updateReceiptMetadata failed', {
+        receiptId,
+        field,
+        error: (err as Error)?.message,
+      })
+      toast.error('Save failed — try again')
+    }
+  }
+
+  return (
+    <div className="px-5 py-4 border-b border-border space-y-3 bg-muted/20">
+      <div>
+        <label
+          htmlFor={`receipt-${receiptId}-date`}
+          className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5"
+        >
+          Visit date
+        </label>
+        <input
+          id={`receipt-${receiptId}-date`}
+          type="date"
+          min={minDate}
+          max={maxDate}
+          value={dateValue}
+          onChange={(e) => {
+            setDateValue(e.target.value)
+            setTouched((t) => ({ ...t, date: true }))
+          }}
+          onBlur={() => void saveField('receiptDate', dateValue)}
+          className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground focus:border-primary focus:outline-none min-h-[44px] text-sm"
+        />
+        <p className="text-[11px] text-muted-foreground/80 mt-1">
+          Thermal receipts older than 30 days are usually too faded to
+          read accurately — that&apos;s why the date is capped at 30
+          days ago.
+        </p>
+      </div>
+
+      <div>
+        <label
+          htmlFor={`receipt-${receiptId}-address`}
+          className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5"
+        >
+          Store address
+        </label>
+        <input
+          id={`receipt-${receiptId}-address`}
+          type="text"
+          value={addressValue}
+          onChange={(e) => {
+            setAddressValue(e.target.value)
+            setTouched((t) => ({ ...t, address: true }))
+          }}
+          onBlur={() => void saveField('storeAddress', addressValue.trim())}
+          placeholder="e.g. 478 Clubhouse Dr, Middletown, NJ"
+          maxLength={200}
+          className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[44px] text-sm"
+        />
+      </div>
+
+      <div>
+        <label
+          htmlFor={`receipt-${receiptId}-hours`}
+          className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-1.5"
+        >
+          Store hours
+        </label>
+        <input
+          id={`receipt-${receiptId}-hours`}
+          type="text"
+          value={hoursValue}
+          onChange={(e) => {
+            setHoursValue(e.target.value)
+            setTouched((t) => ({ ...t, hours: true }))
+          }}
+          onBlur={() => void saveField('storeHours', hoursValue.trim())}
+          placeholder="e.g. Mon-Sun 6am-11pm"
+          maxLength={120}
+          className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[44px] text-sm"
+        />
+      </div>
     </div>
   )
 }

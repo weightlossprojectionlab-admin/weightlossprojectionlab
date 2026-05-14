@@ -418,6 +418,17 @@ export interface OrderReceipt {
   status: 'draft' | 'applied' | 'void'
   /** Source merchant from OCR. May be null on poor-quality receipts. */
   store?: string
+  /** Phase 0h — physical store address as printed at the top of the
+   *  receipt. Free-text, OCR-reported. Feeds the ML substrate (per-
+   *  location reorder timing, proximity-aware store picker). Receipts
+   *  vary wildly in how they print address; structured parsing is a
+   *  later concern. May be empty when OCR confidence is low. */
+  storeAddress?: string
+  /** Phase 0h — store hours as printed on the receipt. Free-text
+   *  ("Mon-Sun 6am-11pm"). Feeds time-of-day shopping pattern ML and
+   *  open-now inference. Receipts print this in many shapes; structured
+   *  per-day parsing is deferred until the data accumulates. */
+  storeHours?: string
   /** Date as printed on the receipt — string for raw display. */
   receiptDate?: string
   /** OCR-reported confidence 0-100. */
