@@ -279,10 +279,15 @@ export function ReceiptCaptureSurface({
    * when there's no receipt. Receipts are uniquely BRIGHT (white
    * thermal paper) AND TEXTURED (small black text). Require both.
    *
-   * Thresholds tuned for thermal receipts:
-   *   sharp  ← edgeScore >= 14 AND meanLuma >= 120
-   *   ok     ← edgeScore >= 8  AND meanLuma >= 90
-   *   blurry ← everything else (low edges OR dim scene)
+   * Thresholds tuned for thermal receipts under typical indoor
+   * light. Lowered after real-world testing showed clearly-readable
+   * captures (UPC + total + line items all human-legible) were
+   * scoring 'blurry' under the prior thresholds. Receipts are gray-
+   * on-gray with fine text — they don't generate as much edge
+   * density as text on a high-contrast background.
+   *   sharp  ← edgeScore >= 11 AND meanLuma >= 100
+   *   ok     ← edgeScore >= 6  AND meanLuma >= 70
+   *   blurry ← everything else (very low edges OR very dim scene)
    *
    * Cost: ~14k pixel reads + arithmetic per tick at 4 Hz. Sub-ms on
    * a mid-tier phone. Pauses at maxCaptures.
@@ -337,20 +342,23 @@ export function ReceiptCaptureSurface({
         const meanLuma = lumaSum / lumaCount
 
         let next: 'measuring' | 'blurry' | 'ok' | 'sharp'
-        if (edgeScore >= 14 && meanLuma >= 120) next = 'sharp'
-        else if (edgeScore >= 8 && meanLuma >= 90) next = 'ok'
+        if (edgeScore >= 11 && meanLuma >= 100) next = 'sharp'
+        else if (edgeScore >= 6 && meanLuma >= 70) next = 'ok'
         else next = 'blurry'
 
         setSharpness((prev) => (prev === next ? prev : next))
 
         // "Step back" / too-close detector. If we've been 'blurry'
-        // for 4+ seconds continuously AND luma is healthy (so it's
+        // for 6+ seconds continuously AND luma is healthy (so it's
         // not just a dim scene), the most likely cause is the phone
-        // is closer than its minimum focus distance. Hint the user.
+        // is closer than its minimum focus distance. Hint matches
+        // the lowered luma floor (70) and bumped wait time so the
+        // nudge only fires when truly stuck — clearly-readable
+        // receipts shouldn't trigger it.
         const now = Date.now()
-        if (next === 'blurry' && meanLuma >= 90) {
+        if (next === 'blurry' && meanLuma >= 70) {
           if (blurStartRef.current == null) blurStartRef.current = now
-          else if (now - blurStartRef.current > 4000) setShowTooCloseHint(true)
+          else if (now - blurStartRef.current > 6000) setShowTooCloseHint(true)
         } else {
           blurStartRef.current = null
           if (showTooCloseHint) setShowTooCloseHint(false)
