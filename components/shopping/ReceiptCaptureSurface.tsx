@@ -251,17 +251,27 @@ export function ReceiptCaptureSurface({
 
   /**
    * Real-time sharpness check — samples the live video to a 120×120
-   * offscreen canvas every 300 ms and computes an edge-magnitude
-   * proxy (sum of absolute differences between adjacent grayscale
-   * pixels). Thresholds tuned empirically against thermal receipts:
-   *   <7   → blurry (hands moving, way out of focus, too far away)
-   *   7-14 → ok (usable but not pristine)
-   *   >=14 → sharp (crisp; capture encouraged)
+   * offscreen canvas every 300 ms and computes two signals on the
+   * region inside the dashed frame (NOT the whole frame, since the
+   * outside of the frame is dimmed and irrelevant to OCR):
    *
-   * Cost: ~14k pixel reads + simple arithmetic per tick. Well under
-   * 1ms on a mid-tier phone. Runs only when the stream is live AND
-   * the user hasn't reached the max-capture cap (no point scoring
-   * sharpness once the user can't capture more).
+   *   • edgeScore — sum of absolute differences between adjacent
+   *     grayscale pixels (BT.601 luma). Cheap Laplacian proxy.
+   *   • meanLuma  — average brightness 0-255.
+   *
+   * Both signals are needed because edges alone false-positive on
+   * cluttered backgrounds (wood grain, kitchen counter) — those have
+   * high edge density and look "sharp" to a naïve detector even
+   * when there's no receipt. Receipts are uniquely BRIGHT (white
+   * thermal paper) AND TEXTURED (small black text). Require both.
+   *
+   * Thresholds tuned for thermal receipts:
+   *   sharp  ← edgeScore >= 14 AND meanLuma >= 120
+   *   ok     ← edgeScore >= 8  AND meanLuma >= 90
+   *   blurry ← everything else (low edges OR dim scene)
+   *
+   * Cost: ~14k pixel reads + arithmetic per tick at 4 Hz. Sub-ms on
+   * a mid-tier phone. Pauses at maxCaptures.
    */
   useEffect(() => {
     if (!isLive || !isOpen) return
@@ -273,7 +283,9 @@ export function ReceiptCaptureSurface({
       const video = videoRef.current
       const canvas = focusCanvasRef.current
       if (!video || !canvas) return
-      if (video.videoWidth === 0 || video.videoHeight === 0) return
+      const srcW = video.videoWidth
+      const srcH = video.videoHeight
+      if (srcW === 0 || srcH === 0) return
       const W = 120
       const H = 120
       canvas.width = W
@@ -281,9 +293,19 @@ export function ReceiptCaptureSurface({
       const ctx = canvas.getContext('2d', { willReadFrequently: true })
       if (!ctx) return
       try {
-        ctx.drawImage(video, 0, 0, W, H)
+        // Sample only the ROI matching the dashed alignment frame
+        // (72% width × 78% height, centered). The black dimming
+        // outside that frame would skew the score and pollute the
+        // signal we care about — what's INSIDE the frame.
+        const roiW = srcW * 0.72
+        const roiH = srcH * 0.78
+        const roiX = (srcW - roiW) / 2
+        const roiY = (srcH - roiH) / 2
+        ctx.drawImage(video, roiX, roiY, roiW, roiH, 0, 0, W, H)
         const data = ctx.getImageData(0, 0, W, H).data
         let edgeSum = 0
+        let lumaSum = 0
+        let lumaCount = 0
         for (let y = 1; y < H - 1; y++) {
           for (let x = 1; x < W - 1; x++) {
             const i = (y * W + x) * 4
@@ -292,11 +314,18 @@ export function ReceiptCaptureSurface({
             const below =
               0.299 * data[i + W * 4] + 0.587 * data[i + W * 4 + 1] + 0.114 * data[i + W * 4 + 2]
             edgeSum += Math.abs(center - right) + Math.abs(center - below)
+            lumaSum += center
+            lumaCount++
           }
         }
-        const score = edgeSum / ((W - 2) * (H - 2))
-        const next =
-          score < 7 ? 'blurry' : score < 14 ? 'ok' : 'sharp'
+        const edgeScore = edgeSum / ((W - 2) * (H - 2))
+        const meanLuma = lumaSum / lumaCount
+
+        let next: 'measuring' | 'blurry' | 'ok' | 'sharp'
+        if (edgeScore >= 14 && meanLuma >= 120) next = 'sharp'
+        else if (edgeScore >= 8 && meanLuma >= 90) next = 'ok'
+        else next = 'blurry'
+
         setSharpness((prev) => (prev === next ? prev : next))
       } catch {
         // getImageData can throw on tainted canvases; non-fatal.
