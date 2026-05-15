@@ -787,19 +787,30 @@ export function ReceiptCaptureSurface({
                 thumbnail strip. */}
             {captures.length === 0 ? (
               <div className="absolute inset-x-0 bottom-3 flex items-center justify-center pointer-events-none px-4">
-                <div className="text-center text-white bg-black/85 px-4 py-2.5 rounded-lg max-w-[92%] shadow-lg">
-                  <p className="text-sm font-semibold leading-tight">
+                <div
+                  className="text-center bg-black/85 px-4 py-2.5 rounded-lg max-w-[92%] shadow-lg"
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+                >
+                  {/* Explicit text-white on each <p> — relying on
+                      inheritance from a parent text-white was getting
+                      overridden by some global <p> reset in production,
+                      surfacing the title in a muted color over the
+                      dark video. Set the color at every leaf. */}
+                  <p className="text-sm font-bold leading-tight text-white">
                     Hold steady · fill the box with the receipt
                   </p>
-                  <p className="text-xs leading-snug mt-1 text-white">
+                  <p className="text-xs leading-snug mt-1 text-white font-medium">
                     Long receipt? Capture in sections — overlap each shot by ~20% so we don&apos;t miss a line.
                   </p>
                 </div>
               </div>
             ) : captures.length < maxCaptures ? (
               <div className="absolute inset-x-0 bottom-3 flex items-center justify-center pointer-events-none px-4">
-                <div className="text-center text-white bg-black/85 px-3 py-2 rounded-lg max-w-[92%] shadow-lg">
-                  <p className="text-xs font-semibold leading-snug">
+                <div
+                  className="text-center bg-black/85 px-3 py-2 rounded-lg max-w-[92%] shadow-lg"
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+                >
+                  <p className="text-xs font-bold leading-snug text-white">
                     Slide the receipt up so this shot overlaps the previous one
                   </p>
                 </div>
