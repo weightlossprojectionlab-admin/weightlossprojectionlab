@@ -60,6 +60,11 @@ type ExtendedConstraintSet = MediaTrackConstraintSet & {
   exposureMode?: string
   whiteBalanceMode?: string
   torch?: boolean
+  // Tap-to-focus: a 0-1 normalized point inside the camera frame.
+  // When supported (most modern Android Chrome + some iOS), the
+  // camera re-acquires focus around that point. Sometimes also
+  // accepted as an array of points; we always pass one.
+  pointsOfInterest?: Array<{ x: number; y: number }>
 }
 
 export interface ReceiptCaptureSurfaceProps {
@@ -109,6 +114,15 @@ export function ReceiptCaptureSurface({
   // Reusable offscreen canvas for the sharpness sample — kept across
   // intervals so we don't churn DOM nodes 4× a second.
   const focusCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  // Tap-to-focus visual ring — { x, y } in viewport pixels (relative
+  // to the video element), { ts } so the ring fades out after 1s.
+  const [focusRing, setFocusRing] = useState<{ x: number; y: number; ts: number } | null>(null)
+  // Track how long sharpness has been 'blurry' so we can nudge the
+  // user to "step back" — autofocus can't help if the receipt is
+  // inside the phone's minimum focus distance (~10-30 cm). When we've
+  // been blurry for >4 seconds in a row, surface the hint.
+  const blurStartRef = useRef<number | null>(null)
+  const [showTooCloseHint, setShowTooCloseHint] = useState(false)
   // Native track dimensions captured after the stream starts. Used to
   // decide whether the captured frame needs a 90° rotation to come out
   // portrait — on many phones the browser ignores our portrait
@@ -327,6 +341,19 @@ export function ReceiptCaptureSurface({
         else next = 'blurry'
 
         setSharpness((prev) => (prev === next ? prev : next))
+
+        // "Step back" / too-close detector. If we've been 'blurry'
+        // for 4+ seconds continuously AND luma is healthy (so it's
+        // not just a dim scene), the most likely cause is the phone
+        // is closer than its minimum focus distance. Hint the user.
+        const now = Date.now()
+        if (next === 'blurry' && meanLuma >= 90) {
+          if (blurStartRef.current == null) blurStartRef.current = now
+          else if (now - blurStartRef.current > 4000) setShowTooCloseHint(true)
+        } else {
+          blurStartRef.current = null
+          if (showTooCloseHint) setShowTooCloseHint(false)
+        }
       } catch {
         // getImageData can throw on tainted canvases; non-fatal.
       }
@@ -339,6 +366,67 @@ export function ReceiptCaptureSurface({
       clearInterval(interval)
     }
   }, [isLive, isOpen, captures.length, maxCaptures])
+
+  /**
+   * Tap-to-focus — translate a viewport tap on the video into a 0-1
+   * normalized point and ask the camera to re-acquire focus there.
+   * Standard pattern in every native camera app; the browser-side
+   * equivalent uses `pointsOfInterest` in MediaTrackConstraints.
+   *
+   * Browser support is partial: most modern Android Chrome accepts
+   * it; iOS Safari quietly ignores. We feature-detect by setting
+   * focusMode to 'single-shot' alongside the point — when that's
+   * not supported, the camera at minimum gets a fresh autofocus
+   * kick from the constraint application itself. The visual ring
+   * fires regardless so the user gets feedback even on browsers
+   * where the underlying focus call is a no-op.
+   */
+  const handleTapToFocus = async (e: React.MouseEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget
+    const rect = video.getBoundingClientRect()
+    if (rect.width === 0 || rect.height === 0) return
+    const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height))
+    setFocusRing({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      ts: Date.now(),
+    })
+    const stream = streamRef.current
+    if (!stream) return
+    const track = stream.getVideoTracks()[0]
+    if (!track) return
+    try {
+      const caps = (typeof track.getCapabilities === 'function'
+        ? track.getCapabilities()
+        : {}) as ExtendedTrackCapabilities
+      const advanced: ExtendedConstraintSet[] = []
+      // Some browsers accept pointsOfInterest only on the same
+      // constraint set as a focusMode flip — try single-shot first
+      // so the camera re-acquires; fall back to a bare POI write.
+      if (caps.focusMode?.includes('single-shot')) {
+        advanced.push({ focusMode: 'single-shot', pointsOfInterest: [{ x, y }] })
+      } else if (caps.focusMode?.includes('continuous')) {
+        // Some implementations re-focus on a continuous-mode constraint
+        // re-application even without single-shot — worth a try.
+        advanced.push({ focusMode: 'continuous', pointsOfInterest: [{ x, y }] })
+      } else {
+        advanced.push({ pointsOfInterest: [{ x, y }] })
+      }
+      await track.applyConstraints({ advanced } as MediaTrackConstraints)
+    } catch (err) {
+      logger.debug('[ReceiptCapture] tap-to-focus failed', {
+        message: (err as Error).message,
+      })
+    }
+  }
+
+  // Auto-clear the focus ring after 900 ms so it fades out cleanly.
+  useEffect(() => {
+    if (!focusRing) return
+    const timer = setTimeout(() => setFocusRing(null), 900)
+    return () => clearTimeout(timer)
+  }, [focusRing])
 
   /**
    * Toggle the device torch (rear flash). Only available when the
@@ -585,8 +673,31 @@ export function ReceiptCaptureSurface({
               playsInline
               autoPlay
               muted
-              className="absolute inset-0 w-full h-full object-cover bg-black"
+              onClick={handleTapToFocus}
+              className="absolute inset-0 w-full h-full object-cover bg-black cursor-pointer"
             />
+            {/* Tap-to-focus ring — visual feedback for the moment the
+                user taps. Persists ~900 ms then fades, matching the
+                native iOS / Android camera affordance. Pointer-events-
+                none so the ring doesn't eat subsequent taps. */}
+            {focusRing && (
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  left: focusRing.x - 28,
+                  top: focusRing.y - 28,
+                  width: 56,
+                  height: 56,
+                }}
+                aria-hidden
+              >
+                <div className="w-full h-full rounded-full border-2 border-yellow-300 animate-ping opacity-80" />
+                <div
+                  className="absolute inset-0 m-auto rounded-full border-2 border-yellow-300"
+                  style={{ width: 32, height: 32, top: 12, left: 12 }}
+                />
+              </div>
+            )}
             {/* Frame guide: dashed rectangle, ~70% width × 80% height
                 so the user gets a strong "put the receipt here" hint.
                 White stroke + soft outer shadow makes it readable on
@@ -649,6 +760,19 @@ export function ReceiptCaptureSurface({
                           ? 'Out of focus — hold still'
                           : 'Checking focus…'}
                   </span>
+                </div>
+              </div>
+            )}
+
+            {/* Step-back hint — fires after ~4s of continuous 'blurry'
+                with healthy luma. Most common cause of "I can't get it
+                in focus": the phone is closer than its minimum focus
+                distance (~10-30 cm). Sits under the focus chip with a
+                "tap to focus" tip so the user has a clear next action. */}
+            {showTooCloseHint && captures.length < maxCaptures && (
+              <div className="absolute inset-x-0 top-14 flex items-center justify-center pointer-events-none px-4">
+                <div className="bg-yellow-400/95 text-black px-3 py-2 rounded-lg text-xs font-medium text-center max-w-[90%] shadow-md">
+                  Can&apos;t focus? Step back ~6&quot; or tap the receipt to focus.
                 </div>
               </div>
             )}
