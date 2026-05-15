@@ -143,7 +143,14 @@ export async function saveOrderReceipt(
       route: 'inventory',
     }
     if (it.normalizedName) line.normalizedName = it.normalizedName
-    if (it.quantity != null) line.quantity = it.quantity
+    // Quantity defaults to 1 when the receipt didn't print one — the
+    // most common case is single-line items where the qty is implicit
+    // (one product = one row). Weighed items also land here ("1.42 LB
+    // @ 2.99/LB"); for those, qty=1 means "one package of the weighed
+    // item" which is semantically correct for inventory + ML purposes.
+    // Eliminates the null-handling branch in every downstream consumer
+    // (apply, display, ML feature extraction).
+    line.quantity = it.quantity != null && it.quantity > 0 ? it.quantity : 1
     if (it.unitPriceCents != null) line.unitPriceCents = it.unitPriceCents
     if (it.totalPriceCents != null) line.totalPriceCents = it.totalPriceCents
     return line
