@@ -330,7 +330,7 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
               Back
             </button>
             <span
-              className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${statusBadgeTone(receipt.status)}`}
+              className={`text-[11px] font-bold tracking-wide px-2 py-0.5 rounded ${statusBadgeTone(receipt.status)}`}
             >
               {receipt.status.toUpperCase()}
             </span>
@@ -427,7 +427,7 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
                   {/* Editable controls — only for draft + lock-held + not held by other */}
                   <div className="grid grid-cols-3 gap-2">
                     <label className="block">
-                      <span className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
                         Qty
                       </span>
                       <input
@@ -445,7 +445,7 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
                       />
                     </label>
                     <label className="block">
-                      <span className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
                         Unit $
                       </span>
                       <input
@@ -469,7 +469,7 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
                       />
                     </label>
                     <label className="block">
-                      <span className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">
+                      <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
                         Total $
                       </span>
                       <input
@@ -494,7 +494,7 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
                     </label>
                   </div>
                   <label className="block">
-                    <span className="block text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">
+                    <span className="block text-[11px] font-semibold uppercase tracking-wide text-muted-foreground mb-0.5">
                       Cleaner name (optional)
                     </span>
                     <input
@@ -546,7 +546,7 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
                                   matchedItemName: undefined,
                                 })
                               }
-                              className="ml-1 text-[10px] text-muted-foreground hover:underline"
+                              className="ml-1 text-[11px] font-medium text-muted-foreground hover:text-foreground hover:underline"
                             >
                               clear
                             </button>
@@ -734,7 +734,7 @@ function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataP
     if (!receipt.storeAddress && !receipt.storeHours && !receipt.transactionCode)
       return null
     return (
-      <div className="px-5 py-3 border-b border-border text-xs text-muted-foreground space-y-1">
+      <div className="px-5 py-3 border-b border-border text-sm text-foreground/80 space-y-1.5">
         {receipt.storeAddress && (
           <p className="leading-snug">📍 {receipt.storeAddress}</p>
         )}
@@ -742,7 +742,7 @@ function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataP
           <p className="leading-snug">🕒 {receipt.storeHours}</p>
         )}
         {receipt.transactionCode && (
-          <p className="leading-snug font-mono text-[11px] truncate">
+          <p className="leading-snug font-mono text-xs text-foreground/80 truncate">
             🧾 TC# {receipt.transactionCode}
           </p>
         )}
@@ -790,7 +790,7 @@ function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataP
           onBlur={() => void saveField('receiptDate', dateValue)}
           className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground focus:border-primary focus:outline-none min-h-[44px] text-sm"
         />
-        <p className="text-[11px] text-muted-foreground/80 mt-1">
+        <p className="text-xs text-muted-foreground mt-1.5 leading-snug">
           Thermal receipts older than 30 days are usually too faded to
           read accurately — that&apos;s why the date is capped at 30
           days ago.
@@ -815,7 +815,7 @@ function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataP
           onBlur={() => void saveField('storeAddress', addressValue.trim())}
           placeholder="e.g. 478 Clubhouse Dr, Middletown, NJ"
           maxLength={200}
-          className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[44px] text-sm"
+          className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/75 focus:border-primary focus:outline-none min-h-[44px] text-sm"
         />
       </div>
 
@@ -837,7 +837,7 @@ function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataP
           onBlur={() => void saveField('storeHours', hoursValue.trim())}
           placeholder="e.g. Mon-Sun 6am-11pm"
           maxLength={120}
-          className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[44px] text-sm"
+          className="w-full px-3 py-2.5 bg-card border-2 border-border rounded-xl text-foreground placeholder:text-muted-foreground/75 focus:border-primary focus:outline-none min-h-[44px] text-sm"
         />
       </div>
     </div>

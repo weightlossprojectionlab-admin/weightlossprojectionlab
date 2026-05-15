@@ -618,7 +618,7 @@ export function ReceiptCaptureSurface({
         </button>
         <div className="text-center min-w-0 flex-1">
           <div className="text-base font-semibold">Snap receipt</div>
-          <div className="text-xs text-white/70">
+          <div className="text-xs text-white/90 font-medium">
             {captures.length === 0
               ? torchSupported
                 ? 'Hold flat in good light · tap 💡 if it’s dim'
@@ -781,18 +781,18 @@ export function ReceiptCaptureSurface({
             {captures.length === 0 ? (
               <div className="absolute inset-x-0 bottom-3 flex items-center justify-center pointer-events-none px-4">
                 <div className="text-center text-white bg-black/60 px-4 py-2 rounded-lg max-w-[90%]">
-                  <p className="text-sm font-medium leading-tight">
+                  <p className="text-sm font-semibold leading-tight">
                     Hold steady · fill the box with the receipt
                   </p>
-                  <p className="text-[11px] opacity-80 leading-tight mt-0.5">
+                  <p className="text-xs leading-snug mt-1 text-white/95">
                     Long receipt? Capture in sections — overlap each shot by ~20% so we don&apos;t miss a line.
                   </p>
                 </div>
               </div>
             ) : captures.length < maxCaptures ? (
               <div className="absolute inset-x-0 bottom-3 flex items-center justify-center pointer-events-none px-4">
-                <div className="text-center text-white bg-black/60 px-3 py-1.5 rounded-lg max-w-[90%]">
-                  <p className="text-[11px] opacity-90 leading-tight">
+                <div className="text-center text-white bg-black/70 px-3 py-2 rounded-lg max-w-[90%]">
+                  <p className="text-xs font-medium leading-snug">
                     Slide the receipt up so this shot overlaps the previous one
                   </p>
                 </div>
@@ -887,7 +887,7 @@ export function ReceiptCaptureSurface({
         </div>
 
         {!canCaptureMore && captures.length >= maxCaptures && (
-          <p className="text-center text-xs text-white/70">
+          <p className="text-center text-xs text-white/90 font-medium">
             Max captures reached. Tap Done to process.
           </p>
         )}

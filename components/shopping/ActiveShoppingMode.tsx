@@ -498,7 +498,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
               <div className="font-semibold truncate">
                 ✓ Got {qtySummary}
               </div>
-              <div className="text-xs opacity-80 truncate">
+              <div className="text-xs opacity-95 truncate">
                 {fulfilledItem.productName}
               </div>
             </div>
@@ -1497,7 +1497,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
                             })
                           }
                         }}
-                        className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 opacity-60 cursor-zoom-in"
+                        className="w-20 h-20 bg-muted rounded flex items-center justify-center overflow-hidden flex-shrink-0 opacity-75 cursor-zoom-in"
                       >
                         {item.imageUrl ? (
                           <img
@@ -1509,13 +1509,13 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
                           <span className="text-3xl pointer-events-none">📦</span>
                         )}
                       </button>
-                      <div className="flex-1 min-w-0 opacity-60">
-                        <p className="font-medium text-foreground truncate line-through">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-muted-foreground truncate line-through">
                           <span className="font-bold">{item.quantity || 1} ×</span>{' '}
                           {item.productName}
                         </p>
                       </div>
-                      <span className="text-success opacity-60">✓</span>
+                      <span className="text-success" aria-label="Done">✓</span>
                       {/* Trash — drop the item from the list entirely (e.g.
                           "I scanned this but decided to put it back"). Full
                           opacity so the destructive affordance reads cleanly
@@ -2231,7 +2231,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
               }}
               placeholder="0 12345 67890 12"
               maxLength={14}
-              className="w-full px-4 py-3.5 bg-background border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[52px] font-mono text-base tracking-wider"
+              className="w-full px-4 py-3.5 bg-background border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/75 focus:border-primary focus:outline-none min-h-[52px] font-mono text-base tracking-wider"
             />
             <button
               type="button"
@@ -2267,7 +2267,7 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
               }}
               placeholder="e.g. Bananas"
               maxLength={120}
-              className="w-full px-4 py-3.5 bg-background border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none min-h-[52px] text-base"
+              className="w-full px-4 py-3.5 bg-background border-2 border-border rounded-2xl text-foreground placeholder:text-muted-foreground/75 focus:border-primary focus:outline-none min-h-[52px] text-base"
             />
             <button
               type="button"
