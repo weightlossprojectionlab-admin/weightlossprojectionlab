@@ -185,7 +185,11 @@ If you cannot read ANY items (image too blurry / not a receipt), return:
         textPreview: cleanedText.slice(0, 200),
       })
       return NextResponse.json(
-        { error: 'Could not parse receipt. Please retake the photo with better lighting.' },
+        {
+          error: 'Couldn’t read the receipt',
+          details:
+            'Turn on the flash if you haven’t, hold the phone steady, and re-capture under good light. Thermal receipts older than ~30 days are usually too faded to scan.',
+        },
         { status: 502 }
       )
     }
@@ -201,7 +205,10 @@ If you cannot read ANY items (image too blurry / not a receipt), return:
         })),
       })
       return NextResponse.json(
-        { error: 'Receipt data was malformed. Please retake the photo.' },
+        {
+          error: 'Receipt data was malformed',
+          details: 'Re-capture in better light and try again.',
+        },
         { status: 502 }
       )
     }
