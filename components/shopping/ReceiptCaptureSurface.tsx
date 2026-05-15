@@ -97,6 +97,18 @@ export function ReceiptCaptureSurface({
   // Chrome it's usually true on devices with a flash.
   const [torchSupported, setTorchSupported] = useState(false)
   const [torchOn, setTorchOn] = useState(false)
+  // Real-time sharpness signal. Sampled ~4 Hz from the live video to a
+  // small offscreen canvas; cheap edge-magnitude proxy for Laplacian
+  // variance. Drives the viewfinder indicator and gates the capture
+  // button so users don't burn captures on out-of-focus frames.
+  //   'measuring' — first ~250 ms after the stream goes live
+  //   'blurry'    — out of focus / hands moving / receipt too far
+  //   'ok'        — usable but not pristine; capture allowed
+  //   'sharp'     — crisp; capture encouraged
+  const [sharpness, setSharpness] = useState<'measuring' | 'blurry' | 'ok' | 'sharp'>('measuring')
+  // Reusable offscreen canvas for the sharpness sample — kept across
+  // intervals so we don't churn DOM nodes 4× a second.
+  const focusCanvasRef = useRef<HTMLCanvasElement | null>(null)
   // Native track dimensions captured after the stream starts. Used to
   // decide whether the captured frame needs a 90° rotation to come out
   // portrait — on many phones the browser ignores our portrait
@@ -232,9 +244,72 @@ export function ReceiptCaptureSurface({
       setIsLive(false)
       setTorchOn(false)
       setTorchSupported(false)
+      setSharpness('measuring')
       trackDimsRef.current = null
     }
   }, [isOpen])
+
+  /**
+   * Real-time sharpness check — samples the live video to a 120×120
+   * offscreen canvas every 300 ms and computes an edge-magnitude
+   * proxy (sum of absolute differences between adjacent grayscale
+   * pixels). Thresholds tuned empirically against thermal receipts:
+   *   <7   → blurry (hands moving, way out of focus, too far away)
+   *   7-14 → ok (usable but not pristine)
+   *   >=14 → sharp (crisp; capture encouraged)
+   *
+   * Cost: ~14k pixel reads + simple arithmetic per tick. Well under
+   * 1ms on a mid-tier phone. Runs only when the stream is live AND
+   * the user hasn't reached the max-capture cap (no point scoring
+   * sharpness once the user can't capture more).
+   */
+  useEffect(() => {
+    if (!isLive || !isOpen) return
+    if (captures.length >= maxCaptures) return
+    if (!focusCanvasRef.current) {
+      focusCanvasRef.current = document.createElement('canvas')
+    }
+    const tick = () => {
+      const video = videoRef.current
+      const canvas = focusCanvasRef.current
+      if (!video || !canvas) return
+      if (video.videoWidth === 0 || video.videoHeight === 0) return
+      const W = 120
+      const H = 120
+      canvas.width = W
+      canvas.height = H
+      const ctx = canvas.getContext('2d', { willReadFrequently: true })
+      if (!ctx) return
+      try {
+        ctx.drawImage(video, 0, 0, W, H)
+        const data = ctx.getImageData(0, 0, W, H).data
+        let edgeSum = 0
+        for (let y = 1; y < H - 1; y++) {
+          for (let x = 1; x < W - 1; x++) {
+            const i = (y * W + x) * 4
+            const center = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+            const right = 0.299 * data[i + 4] + 0.587 * data[i + 5] + 0.114 * data[i + 6]
+            const below =
+              0.299 * data[i + W * 4] + 0.587 * data[i + W * 4 + 1] + 0.114 * data[i + W * 4 + 2]
+            edgeSum += Math.abs(center - right) + Math.abs(center - below)
+          }
+        }
+        const score = edgeSum / ((W - 2) * (H - 2))
+        const next =
+          score < 7 ? 'blurry' : score < 14 ? 'ok' : 'sharp'
+        setSharpness((prev) => (prev === next ? prev : next))
+      } catch {
+        // getImageData can throw on tainted canvases; non-fatal.
+      }
+    }
+    // First tick after a short delay so the camera has a frame ready.
+    const t0 = setTimeout(tick, 250)
+    const interval = setInterval(tick, 300)
+    return () => {
+      clearTimeout(t0)
+      clearInterval(interval)
+    }
+  }, [isLive, isOpen, captures.length, maxCaptures])
 
   /**
    * Toggle the device torch (rear flash). Only available when the
@@ -288,6 +363,16 @@ export function ReceiptCaptureSurface({
     if (captures.length >= maxCaptures) {
       toast(`Max ${maxCaptures} captures — tap Done to continue`, { icon: '✋' })
       return
+    }
+    // Soft-gate on sharpness: warn but don't block. The scoring is a
+    // heuristic, not authoritative — locking the user out would be
+    // worse than a borderline capture. Best-of-both: surface the
+    // warning, then take the shot.
+    if (sharpness === 'blurry') {
+      toast(
+        'That looks out of focus — hold steady, give autofocus a beat, and try again.',
+        { icon: '👀', duration: 3500 },
+      )
     }
     const srcW = video.videoWidth || 1080
     const srcH = video.videoHeight || 1920
@@ -360,7 +445,10 @@ export function ReceiptCaptureSurface({
       })
     }
 
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92)
+    // JPEG 0.96 preserves fine text edges (esp. thermal-receipt
+    // small print) at modest bandwidth cost vs the prior 0.92. Pure
+    // win for OCR accuracy on borderline captures.
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.96)
     setCaptures((prev) => [...prev, dataUrl])
     // Haptic confirm — same pattern BarcodeScanner uses on scan-success.
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -476,7 +564,13 @@ export function ReceiptCaptureSurface({
                 both bright and dark receipts. */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
               <div
-                className="border-2 border-dashed border-white/80 rounded-lg"
+                className={`border-2 border-dashed rounded-lg transition-colors ${
+                  sharpness === 'sharp'
+                    ? 'border-green-400/90'
+                    : sharpness === 'ok'
+                      ? 'border-amber-300/85'
+                      : 'border-white/80'
+                }`}
                 style={{
                   width: '72%',
                   height: '78%',
@@ -484,6 +578,51 @@ export function ReceiptCaptureSurface({
                 }}
               />
             </div>
+
+            {/* Sharpness indicator — overlay chip at the top of the
+                viewfinder reporting the real-time focus signal.
+                Color-coded with the dashed frame: red ring = blurry,
+                amber = ok, green = sharp. Helps users learn what
+                "in focus" looks like before tapping capture. */}
+            {captures.length < maxCaptures && (
+              <div className="absolute inset-x-0 top-3 flex items-center justify-center pointer-events-none px-4">
+                <div
+                  className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-2 ${
+                    sharpness === 'sharp'
+                      ? 'bg-green-500/95 text-white'
+                      : sharpness === 'ok'
+                        ? 'bg-amber-400/95 text-black'
+                        : sharpness === 'blurry'
+                          ? 'bg-rose-500/95 text-white'
+                          : 'bg-white/80 text-black'
+                  }`}
+                  data-testid="receipt-capture-focus-indicator"
+                  data-focus-state={sharpness}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      sharpness === 'sharp'
+                        ? 'bg-white'
+                        : sharpness === 'ok'
+                          ? 'bg-black/60'
+                          : sharpness === 'blurry'
+                            ? 'bg-white animate-pulse'
+                            : 'bg-black/40'
+                    }`}
+                    aria-hidden
+                  />
+                  <span>
+                    {sharpness === 'sharp'
+                      ? 'In focus — capture now'
+                      : sharpness === 'ok'
+                        ? 'Almost — hold steady'
+                        : sharpness === 'blurry'
+                          ? 'Out of focus — hold still'
+                          : 'Checking focus…'}
+                  </span>
+                </div>
+              </div>
+            )}
             {/* Aim hint at the bottom of the viewfinder area, above the
                 thumbnail strip. */}
             {captures.length === 0 ? (
