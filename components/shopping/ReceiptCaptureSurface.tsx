@@ -88,7 +88,7 @@ export function ReceiptCaptureSurface({
   isOpen,
   onClose,
   onComplete,
-  maxCaptures = 8,
+  maxCaptures = 10,
 }: ReceiptCaptureSurfaceProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
@@ -308,11 +308,12 @@ export function ReceiptCaptureSurface({
       if (!ctx) return
       try {
         // Sample only the ROI matching the dashed alignment frame
-        // (72% width × 78% height, centered). The black dimming
-        // outside that frame would skew the score and pollute the
-        // signal we care about — what's INSIDE the frame.
-        const roiW = srcW * 0.72
-        const roiH = srcH * 0.78
+        // (90% width × 93% height, centered — sized so the user
+        // doesn't have to get closer than the camera's minimum focus
+        // distance to fill it). Skinny margin still excludes the
+        // black-dimmed border + any UI chrome at top/bottom edges.
+        const roiW = srcW * 0.90
+        const roiH = srcH * 0.93
         const roiX = (srcW - roiW) / 2
         const roiY = (srcH - roiH) / 2
         ctx.drawImage(video, roiX, roiY, roiW, roiH, 0, 0, W, H)
@@ -709,12 +710,18 @@ export function ReceiptCaptureSurface({
                     ? 'border-green-400/90'
                     : sharpness === 'ok'
                       ? 'border-amber-300/85'
-                      : 'border-white/80'
+                      : 'border-white/85'
                 }`}
                 style={{
-                  width: '72%',
-                  height: '78%',
-                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.35)',
+                  // Wider + taller alignment box: phones can't focus
+                  // closer than ~10-30 cm, so a small box forced users
+                  // inside that range and the image blurred. 90×93%
+                  // lets a long receipt fill the frame from a focusable
+                  // distance. ROI sharpness sampling above tracks the
+                  // same dimensions.
+                  width: '90%',
+                  height: '93%',
+                  boxShadow: '0 0 0 9999px rgba(0,0,0,0.25)',
                 }}
               />
             </div>
@@ -780,19 +787,19 @@ export function ReceiptCaptureSurface({
                 thumbnail strip. */}
             {captures.length === 0 ? (
               <div className="absolute inset-x-0 bottom-3 flex items-center justify-center pointer-events-none px-4">
-                <div className="text-center text-white bg-black/60 px-4 py-2 rounded-lg max-w-[90%]">
+                <div className="text-center text-white bg-black/85 px-4 py-2.5 rounded-lg max-w-[92%] shadow-lg">
                   <p className="text-sm font-semibold leading-tight">
                     Hold steady · fill the box with the receipt
                   </p>
-                  <p className="text-xs leading-snug mt-1 text-white/95">
+                  <p className="text-xs leading-snug mt-1 text-white">
                     Long receipt? Capture in sections — overlap each shot by ~20% so we don&apos;t miss a line.
                   </p>
                 </div>
               </div>
             ) : captures.length < maxCaptures ? (
               <div className="absolute inset-x-0 bottom-3 flex items-center justify-center pointer-events-none px-4">
-                <div className="text-center text-white bg-black/70 px-3 py-2 rounded-lg max-w-[90%]">
-                  <p className="text-xs font-medium leading-snug">
+                <div className="text-center text-white bg-black/85 px-3 py-2 rounded-lg max-w-[92%] shadow-lg">
+                  <p className="text-xs font-semibold leading-snug">
                     Slide the receipt up so this shot overlaps the previous one
                   </p>
                 </div>
