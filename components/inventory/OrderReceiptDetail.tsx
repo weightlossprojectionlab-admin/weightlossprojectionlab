@@ -731,7 +731,8 @@ function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataP
   // Read-only render — show fields only when populated. Date is
   // already in the header subtitle so we don't repeat it here.
   if (!editable) {
-    if (!receipt.storeAddress && !receipt.storeHours) return null
+    if (!receipt.storeAddress && !receipt.storeHours && !receipt.transactionCode)
+      return null
     return (
       <div className="px-5 py-3 border-b border-border text-xs text-muted-foreground space-y-1">
         {receipt.storeAddress && (
@@ -739,6 +740,11 @@ function ReceiptMetadataPanel({ receiptId, receipt, editable }: ReceiptMetadataP
         )}
         {receipt.storeHours && (
           <p className="leading-snug">🕒 {receipt.storeHours}</p>
+        )}
+        {receipt.transactionCode && (
+          <p className="leading-snug font-mono text-[11px] truncate">
+            🧾 TC# {receipt.transactionCode}
+          </p>
         )}
       </div>
     )

@@ -122,11 +122,13 @@ Extract the receipt as STRUCTURED JSON. Return ONLY valid JSON (no markdown, no 
   "store": "merchant name from the receipt header (e.g., 'Costco', 'Walmart', 'Whole Foods'). null if not visible.",
   "storeAddress": "physical address of the store as printed at the top of the receipt (e.g., '478 Clubhouse Dr, Middletown, NJ 07748' or '101 Main St'). Combine multi-line address into one string. null if not visible.",
   "storeHours": "store hours as printed on the receipt (e.g., 'Mon-Sun 6am-11pm', 'Open 24 Hours', '7-10 Daily'). null if not visible.",
+  "transactionCode": "the transaction code / receipt reference printed near the receipt-level barcode at the bottom (Walmart labels it 'TC#' followed by 4-5 groups of digits like '5020 4127 6951 9320 2400'; Costco prints similar; ShopRite uses 'Reference:' followed by a long number). Concatenate all digit groups into one space-separated string EXACTLY as printed. null if not visible. DIFFERENT from the per-line UPCs — this is the receipt-level barcode, usually one per receipt at the bottom.",
   "date": "transaction date as printed (any format — '2026-05-07', '05/07/26', 'May 7, 2026'). null if not visible.",
   "items": [
     {
       "rawName": "the exact text printed on the line (e.g., 'GV WHL MILK 1G', 'KS BANANA 3LB')",
       "normalizedName": "your best-guess clean product name (e.g., 'Great Value Whole Milk 1 Gallon', 'Kirkland Signature Banana 3lb'). null if you can't expand abbreviations confidently.",
+      "upc": "the UPC / EAN / GTIN printed next to the product name on the same line (12 or 13 digits, e.g. '084099774460'). Walmart and most grocery chains print this between the product name and the price. Return as a STRING of digits only, no spaces or dashes. null if not visible on this line.",
       "quantity": numeric unit count if printed (e.g., 2 for '2 @ 3.49'); otherwise null,
       "unitPriceCents": per-unit price in INTEGER CENTS (349 for $3.49). null when only a line total is printed.,
       "totalPriceCents": line total in INTEGER CENTS (698 for $6.98). null if not visible.
@@ -143,11 +145,20 @@ CRITICAL RULES:
 **Prices are CENTS, not dollars.** $3.49 = 349. $11.00 = 1100. $0.79 = 79. NEVER return decimal numbers for any *Cents field.
 
 **Skip non-product lines from items[]:**
-  - Skip header/footer junk: cashier ID, register #, transaction #, "Thank you", "Member savings"
+  - Skip header/footer junk: cashier ID, register #, "Thank you", "Member savings"
   - The store ADDRESS and HOURS belong in their own fields (storeAddress, storeHours) — do NOT skip them, do NOT put them in items[].
+  - The receipt-level transaction code (TC#, Reference) belongs in transactionCode — do NOT put it in items[].
   - Skip subtotal/tax/total LINES (those go into subtotalCents/taxCents/totalCents fields)
-  - Skip discount/coupon lines that are NOT a separate product (e.g. "INSTANT SAVINGS -$2.00 on prior line")
+  - Skip discount/coupon lines that are NOT a separate product:
+    • "INSTANT SAVINGS -$2.00 on prior line"
+    • "On Sale You Saved 1.00" (ShopRite pattern — savings annotation under the prior item line, NOT a separate item)
+    • "Member Savings", "Coupon", "Manufacturer Coupon"
   - Each entry in items[] must represent one product the customer took home
+
+**UPC extraction is high-leverage:**
+  - When you see a digit string next to a product name (e.g. "SHOE MAT 843624126510 6.24"), the digits ARE the UPC. Capture them — downstream code looks up the canonical product in our catalog using this number, which fixes the cases where the printed name is a cryptic abbreviation you couldn't expand.
+  - Strip spaces / dashes from the digit string; return only the digits.
+  - If you're uncertain whether a digit string is a UPC vs. a quantity vs. some other number: UPCs are 12 or 13 digits (sometimes 8 for UPC-E or 14 for GTIN). Quantities are 1-3 digits. Long numeric strings between the name and the price ARE the UPC.
 
 **Multi-quantity lines** (e.g., "BANANA 3 @ 0.79  2.37"):
   - quantity: 3
@@ -167,7 +178,7 @@ CRITICAL RULES:
 **Confidence** — be honest. Faded thermal paper, glare, blur, partial captures, mid-receipt text cuts: drop confidence accordingly. The UI uses this to decide whether to surface a "review carefully" warning.
 
 If you cannot read ANY items (image too blurry / not a receipt), return:
-{ "store": null, "storeAddress": null, "storeHours": null, "date": null, "items": [], "subtotalCents": null, "taxCents": null, "totalCents": null, "confidence": 0 }`
+{ "store": null, "storeAddress": null, "storeHours": null, "transactionCode": null, "date": null, "items": [], "subtotalCents": null, "taxCents": null, "totalCents": null, "confidence": 0 }`
 
     const result = await model.generateContent([prompt, ...imageParts])
     const response = await result.response

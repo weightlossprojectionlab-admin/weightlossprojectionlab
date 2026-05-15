@@ -41,6 +41,7 @@ import {
 import { db } from './firebase'
 import { logger } from './logger'
 import { addManualShoppingItem } from './shopping-operations'
+import { lookupBarcodeWithCache } from './cached-product-lookup'
 import { pickPriceCents } from './receipt-matcher'
 import { COLLECTIONS } from '@/constants/firestore'
 import {
@@ -121,6 +122,53 @@ async function findDuplicateByFingerprint(
   }
 }
 
+/**
+ * Phase 0i — dedup by retailer-printed transaction code (Walmart TC#,
+ * etc.). Strictly stronger than the store+total fingerprint when
+ * present, since the TC# is unique within the retailer's own system
+ * for a given trip. We try this FIRST in saveOrderReceipt and only
+ * fall back to the heuristic fingerprint when no TC was captured.
+ *
+ * Normalizes the TC by stripping non-digits before comparing so two
+ * scans of the same receipt that read "5020 4127" vs "5020-4127" vs
+ * "50204127" still match.
+ */
+async function findDuplicateByTransactionCode(
+  transactionCode: string,
+  options: SaveOrderReceiptOptions,
+): Promise<{ id: string; receiptNumber: string } | null> {
+  const normalized = transactionCode.replace(/\D/g, '')
+  if (!normalized) return null
+  try {
+    const baseQuery = options.householdId
+      ? query(
+          collection(db, ORDER_RECEIPTS_COLLECTION),
+          where('householdId', '==', options.householdId),
+          where('transactionCodeNormalized', '==', normalized),
+          firestoreLimit(5),
+        )
+      : query(
+          collection(db, ORDER_RECEIPTS_COLLECTION),
+          where('userId', '==', options.userId),
+          where('transactionCodeNormalized', '==', normalized),
+          firestoreLimit(5),
+        )
+    const snap = await getDocs(baseQuery)
+    for (const d of snap.docs) {
+      const data = d.data() as OrderReceipt
+      if (data.status !== 'void') {
+        return { id: d.id, receiptNumber: data.receiptNumber }
+      }
+    }
+    return null
+  } catch (err) {
+    logger.warn('[OrderReceipts] TC# duplicate check failed', {
+      message: (err as Error).message,
+    })
+    return null
+  }
+}
+
 export async function saveOrderReceipt(
   ocrResult: ReceiptOCRResponse,
   options: SaveOrderReceiptOptions,
@@ -130,7 +178,19 @@ export async function saveOrderReceipt(
   }
 
   const fingerprint = computeReceiptFingerprint(ocrResult)
-  const dupe = await findDuplicateByFingerprint(fingerprint, options)
+  // Phase 0i — prefer the receipt-printed transaction code (TC#) as
+  // the dedup key when present. Stronger than the heuristic
+  // fingerprint because the TC# uniquely identifies a trip in the
+  // retailer's own system; the fingerprint can collide on two
+  // identical small trips (e.g. coffee runs that produced the same
+  // store + total + first 3 names). Falls back to the heuristic
+  // fingerprint when the receipt didn't print a TC or OCR missed it.
+  const normalizedTC = ocrResult.transactionCode
+    ? ocrResult.transactionCode.replace(/\D/g, '')
+    : ''
+  const dupe = normalizedTC
+    ? await findDuplicateByTransactionCode(normalizedTC, options)
+    : await findDuplicateByFingerprint(fingerprint, options)
 
   // Build the draft lines — every parsed item starts routed to
   // 'inventory'. The user can change routes per line in the detail
@@ -143,6 +203,13 @@ export async function saveOrderReceipt(
       route: 'inventory',
     }
     if (it.normalizedName) line.normalizedName = it.normalizedName
+    // Phase 0i — UPC captured per-line drives the catalog enrichment
+    // pass below. Strip any spaces/dashes Gemini might have included
+    // despite the digits-only instruction.
+    if (it.upc) {
+      const clean = String(it.upc).replace(/\D/g, '')
+      if (clean.length >= 8) line.upc = clean
+    }
     // Quantity defaults to 1 when the receipt didn't print one — the
     // most common case is single-line items where the qty is implicit
     // (one product = one row). Weighed items also land here ("1.42 LB
@@ -155,6 +222,41 @@ export async function saveOrderReceipt(
     if (it.totalPriceCents != null) line.totalPriceCents = it.totalPriceCents
     return line
   })
+
+  // Phase 0i — UPC-driven catalog enrichment. For every line whose UPC
+  // was extractable from the receipt, look it up in product_database
+  // and overwrite normalizedName with the canonical product name.
+  // Turns "SY CHEESEE 84909774460" → "Quickie All-Purpose Squeegee"
+  // (or whatever the catalog has). Brand/image/category are stashed
+  // on the line for the apply-flow to use when creating fresh
+  // ShoppingItem rows. Lookups run in parallel; failures are
+  // non-fatal — the OCR rawName + normalizedName stay as a fallback.
+  await Promise.all(
+    lines.map(async (line) => {
+      if (!line.upc) return
+      try {
+        const lookup = await lookupBarcodeWithCache(line.upc)
+        const product = lookup?.product
+        if (lookup?.status === 1 && product?.product_name) {
+          line.normalizedName = product.product_name
+          if (product.brands) line.catalogBrand = product.brands
+          const img = product.image_front_url || product.image_url
+          if (img) line.catalogImageUrl = img
+          if (product.categories) {
+            // categories field is sometimes a comma-separated string;
+            // first segment is the most general.
+            const first = String(product.categories).split(',')[0]?.trim()
+            if (first) line.catalogCategory = first
+          }
+        }
+      } catch (err) {
+        logger.debug('[OrderReceipts] catalog lookup failed', {
+          upc: line.upc,
+          error: (err as Error).message,
+        })
+      }
+    }),
+  )
 
   const receiptNumber = generateReceiptNumber()
   const docPayload: Record<string, unknown> = {
@@ -172,6 +274,13 @@ export async function saveOrderReceipt(
   // substrate (per-location reorder timing, time-of-day patterns).
   if (ocrResult.storeAddress) docPayload.storeAddress = ocrResult.storeAddress
   if (ocrResult.storeHours) docPayload.storeHours = ocrResult.storeHours
+  // Phase 0i — capture the receipt-level transaction code (TC#). Store
+  // both as-printed (for display/audit) and digits-only (for the
+  // indexed dedup query above).
+  if (ocrResult.transactionCode) {
+    docPayload.transactionCode = ocrResult.transactionCode
+    if (normalizedTC) docPayload.transactionCodeNormalized = normalizedTC
+  }
   if (ocrResult.date) docPayload.receiptDate = ocrResult.date
   if (ocrResult.totalCents != null) docPayload.totalCents = ocrResult.totalCents
   if (ocrResult.subtotalCents != null) docPayload.subtotalCents = ocrResult.subtotalCents
@@ -260,6 +369,11 @@ function stripUndefinedFromLine(line: OrderReceiptLine): OrderReceiptLine {
     route: line.route,
   }
   if (line.normalizedName) out.normalizedName = line.normalizedName
+  // Phase 0i — preserve catalog-enrichment fields across edits.
+  if (line.upc) out.upc = line.upc
+  if (line.catalogBrand) out.catalogBrand = line.catalogBrand
+  if (line.catalogImageUrl) out.catalogImageUrl = line.catalogImageUrl
+  if (line.catalogCategory) out.catalogCategory = line.catalogCategory
   if (line.quantity != null) out.quantity = line.quantity
   if (line.unitPriceCents != null) out.unitPriceCents = line.unitPriceCents
   if (line.totalPriceCents != null) out.totalPriceCents = line.totalPriceCents

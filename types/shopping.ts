@@ -364,8 +364,25 @@ export interface OrderReceiptLine {
   lineId: string
   /** Raw text as printed on the receipt — read-only baseline. */
   rawName: string
-  /** Gemini's normalized form OR a user-edited cleaner name. */
+  /** Gemini's normalized form OR a user-edited cleaner name. When the
+   *  line has a `upc` that hits product_database, this is overwritten
+   *  with the catalog's canonical productName at save time (Phase 0i)
+   *  — so "SY CHEESEE 84909774460" becomes "Quickie All-Purpose
+   *  Squeegee" regardless of how mangled Gemini's text read was. */
   normalizedName?: string
+  /** Phase 0i — UPC / EAN / GTIN as printed on the receipt next to
+   *  the product name (Walmart, Costco, most grocery chains do this).
+   *  When present, drives the catalog lookup that fills normalizedName
+   *  + brand + imageUrl + category with ground truth from
+   *  product_database. Gemini reads digits much more reliably than
+   *  cryptic product abbreviations, so this is the accuracy lever. */
+  upc?: string
+  /** Phase 0i — catalog match metadata. When set, the line was
+   *  resolved against product_database via its UPC; downstream apply
+   *  uses these for richer ShoppingItem creation. */
+  catalogBrand?: string
+  catalogImageUrl?: string
+  catalogCategory?: string
   quantity?: number
   unitPriceCents?: number
   totalPriceCents?: number
@@ -429,6 +446,15 @@ export interface OrderReceipt {
    *  open-now inference. Receipts print this in many shapes; structured
    *  per-day parsing is deferred until the data accumulates. */
   storeHours?: string
+  /** Phase 0i — transaction code (TC#) as printed in the receipt-
+   *  level barcode + text (Walmart prints `TC# 5020 4127 6951 ...`).
+   *  Encodes store + register + transaction reference; uniquely
+   *  identifies the trip in the retailer's own system. We use it as
+   *  the canonical dedup key when present — strictly better than the
+   *  store+total+name fingerprint, which can false-positive on two
+   *  identical small trips (e.g. coffee runs). Falls back to the
+   *  fingerprint when TC# is absent (most non-Walmart receipts). */
+  transactionCode?: string
   /** Date as printed on the receipt — string for raw display. */
   receiptDate?: string
   /** OCR-reported confidence 0-100. */

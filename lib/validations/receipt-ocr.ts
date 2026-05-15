@@ -17,6 +17,12 @@ const ReceiptItemSchema = z.object({
   rawName: z.string().min(1),
   /** Best-effort cleaned-up product name (e.g. "Great Value Whole Milk Gallon"). */
   normalizedName: z.string().nullable().optional(),
+  /** Phase 0i — UPC / EAN / GTIN as printed on the receipt next to
+   *  the line (Walmart, Costco, most grocery chains print this).
+   *  Numeric string, typically 12 or 13 digits. When present, drives
+   *  catalog lookup so the product name comes from product_database
+   *  (ground truth) instead of Gemini's text read of the abbreviation. */
+  upc: z.string().nullable().optional(),
   /** Unit count if printed; many receipts only show a single line per unit. */
   quantity: z.number().nullable().optional(),
   /** Per-unit price in cents (integer). null when only a line total is printed. */
@@ -35,6 +41,11 @@ export const ReceiptOCRResponseSchema = z.object({
    *  e.g. "Mon-Sun 6am-11pm"). Feeds time-of-day shopping pattern
    *  ML and open-now inference. */
   storeHours: z.string().nullable().optional(),
+  /** Phase 0i — receipt-level transaction code (Walmart prints `TC#
+   *  5020 4127 6951 9320 2400`, Costco a similar reference). Numeric
+   *  + space-separated string. When present, becomes the canonical
+   *  dedup key — strictly better than the store+total fingerprint. */
+  transactionCode: z.string().nullable().optional(),
   /** Stringified date as it appears on the receipt — UI normalizes. */
   date: z.string().nullable().optional(),
   items: z.array(ReceiptItemSchema),
