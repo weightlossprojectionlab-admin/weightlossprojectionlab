@@ -43,6 +43,10 @@ import {
   isSecureContext,
   permissionErrorMessage,
 } from '@/lib/camera-helpers'
+import {
+  loadDocumentScanner,
+  correctReceiptPerspective,
+} from '@/lib/document-scanner'
 
 /**
  * MediaTrackCapabilities / Constraints lack standardized typings for the
@@ -123,6 +127,16 @@ export function ReceiptCaptureSurface({
   // been blurry for >4 seconds in a row, surface the hint.
   const blurStartRef = useRef<number | null>(null)
   const [showTooCloseHint, setShowTooCloseHint] = useState(false)
+  // Phase 0j — document scanner (jscanify + opencv.js) lazy-load.
+  // 'idle' → not started; 'loading' → CDN scripts in flight; 'ready'
+  // → perspective correction available; 'unavailable' → load failed.
+  // Drives the small "Preparing scanner…" indicator at the top of
+  // the viewfinder so the user knows there's a one-time wait on
+  // first open. Subsequent opens find the libs cached + flip to
+  // 'ready' almost immediately.
+  const [scannerState, setScannerState] = useState<'idle' | 'loading' | 'ready' | 'unavailable'>(
+    'idle',
+  )
   // Native track dimensions captured after the stream starts. Used to
   // decide whether the captured frame needs a 90° rotation to come out
   // portrait — on many phones the browser ignores our portrait
@@ -150,6 +164,19 @@ export function ReceiptCaptureSurface({
     setError(null)
     setCaptures([])
     setIsLive(false)
+
+    // Phase 0j — kick off the document scanner lazy-load in parallel
+    // with camera setup. By the time the user takes their first
+    // capture (typically ≥2s after open), the WASM is loaded and
+    // perspective correction runs synchronously inside handleCapture.
+    // First-ever open pays the ~8 MB download; subsequent opens are
+    // browser-cache instant.
+    setScannerState('loading')
+    ;(async () => {
+      const Ctor = await loadDocumentScanner()
+      if (cancelled) return
+      setScannerState(Ctor ? 'ready' : 'unavailable')
+    })()
 
     ;(async () => {
       try {
@@ -483,7 +510,7 @@ export function ReceiptCaptureSurface({
    *    the OCR accuracy improvement. Even a 12-shot Costco receipt
    *    stays well under the 10MB request limit.
    */
-  const handleCapture = () => {
+  const handleCapture = async () => {
     const video = videoRef.current
     if (!video || !isLive) return
     if (captures.length >= maxCaptures) {
@@ -574,7 +601,22 @@ export function ReceiptCaptureSurface({
     // JPEG 0.96 preserves fine text edges (esp. thermal-receipt
     // small print) at modest bandwidth cost vs the prior 0.92. Pure
     // win for OCR accuracy on borderline captures.
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.96)
+    const rawDataUrl = canvas.toDataURL('image/jpeg', 0.96)
+
+    // Phase 0j — perspective correction. If the document scanner
+    // (jscanify + opencv.js) is loaded and finds a paper contour in
+    // the frame, the receipt is unwarped to a flat top-down view
+    // BEFORE we hand it to OCR. Receipts photographed at an angle /
+    // with a curl produce vastly better Gemini reads after this
+    // step. Falls back to the raw frame on any failure (scanner not
+    // loaded yet, no contour found, exception) — never blocks the
+    // capture. The user gets feedback regardless via the haptic
+    // buzz below.
+    const dataUrl =
+      scannerState === 'ready'
+        ? await correctReceiptPerspective(rawDataUrl).catch(() => rawDataUrl)
+        : rawDataUrl
+
     setCaptures((prev) => [...prev, dataUrl])
     // Haptic confirm — same pattern BarcodeScanner uses on scan-success.
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
@@ -779,7 +821,25 @@ export function ReceiptCaptureSurface({
               </div>
             )}
 
-            {/* Step-back hint — fires after ~4s of continuous 'blurry'
+            {/* Phase 0j scanner-load indicator. Only surfaces during
+                the first-ever open (8 MB WASM download); subsequent
+                opens find the lib cached + this flips to 'ready'
+                fast enough that the user doesn't see it. Pinned
+                just under the focus chip. */}
+            {scannerState === 'loading' && captures.length < maxCaptures && (
+              <div className="absolute inset-x-0 top-14 flex items-center justify-center pointer-events-none px-4">
+                <div
+                  className="bg-black/85 text-white px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-md"
+                  style={{ textShadow: '0 1px 2px rgba(0,0,0,0.6)' }}
+                  data-testid="receipt-capture-scanner-loading"
+                >
+                  <span className="w-2 h-2 rounded-full bg-yellow-300 animate-pulse" aria-hidden />
+                  <span>Preparing scanner…</span>
+                </div>
+              </div>
+            )}
+
+            {/* Step-back hint — fires after ~6s of continuous 'blurry'
                 with healthy luma. Most common cause of "I can't get it
                 in focus": the phone is closer than its minimum focus
                 distance (~10-30 cm). Sits under the focus chip with a
