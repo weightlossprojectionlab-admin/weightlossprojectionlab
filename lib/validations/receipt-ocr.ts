@@ -37,6 +37,12 @@ export const ReceiptOCRResponseSchema = z.object({
    *  receipt (free-text, OCR-reported). Feeds the ML substrate for
    *  per-location reorder timing + proximity-aware store picker. */
   storeAddress: z.string().nullable().optional(),
+  /** Store phone number as printed on the receipt. Short formatted
+   *  text — much harder for Gemini to hallucinate than the address
+   *  block. Useful as a verification cross-check AND as a key for
+   *  resolving the canonical address via a store-locator API when
+   *  the printed address is unreadable. */
+  storePhone: z.string().nullable().optional(),
   /** Phase 0h — store hours as printed on the receipt (free-text,
    *  e.g. "Mon-Sun 6am-11pm"). Feeds time-of-day shopping pattern
    *  ML and open-now inference. */

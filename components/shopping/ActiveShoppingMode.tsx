@@ -1580,19 +1580,44 @@ export function ActiveShoppingMode({ isOpen, onClose, items, dutyId, sessionId, 
           // whether the user captured anything. Mid-trip just dismisses.
           if (wasPostCheckout) onClose()
         }}
-        onComplete={async (images) => {
+        onComplete={async (captures) => {
+          const images = captures.map((c) => c.dataUrl)
+          const correctedFlags = captures.map((c) => c.corrected)
+          const failureReasons = captures.map((c) => c.failureReason)
+          const correctedCount = correctedFlags.filter(Boolean).length
+          // Reconciliation context — the post-checkout flow has a
+          // scanned cart we can hand to Gemini as ground truth. Items
+          // already came from UPC catalog lookups during in-store
+          // scanning; Gemini's job collapses to "find the price for
+          // each, flag extras." Mid-trip captures don't pass this
+          // because the trip is still being assembled — falling back
+          // to cold-OCR there is fine, those captures rarely apply.
+          const wasPostCheckout = receiptCaptureMode === 'post-checkout'
+          const knownItems = wasPostCheckout
+            ? orderedSessionRows.found.map((item) => ({
+                name: item.productName,
+                upc: item.barcode ?? null,
+                quantity: item.quantity ?? null,
+              }))
+            : undefined
           logger.info('[Receipt OCR] Sending captures to server', {
             count: images.length,
+            correctedCount,
+            knownItemCount: knownItems?.length ?? 0,
             mode: receiptCaptureMode,
           })
-          const wasPostCheckout = receiptCaptureMode === 'post-checkout'
           // Close the camera first so the processing overlay is the only
           // surface visible while Gemini runs.
           setReceiptCaptureMode('closed')
           setReceiptOcrProcessing(true)
           let reviewOpened = false
           try {
-            const result = await extractReceiptFromImages(images)
+            const result = await extractReceiptFromImages(
+              images,
+              correctedFlags,
+              knownItems,
+              failureReasons,
+            )
             logger.info('[Receipt OCR] Extraction complete', {
               store: result.store,
               itemCount: result.items.length,

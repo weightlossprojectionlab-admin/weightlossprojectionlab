@@ -4952,11 +4952,19 @@ function KitchenInventoryContent() {
         <ReceiptCaptureSurface
           isOpen={poCaptureOpen}
           onClose={() => setPoCaptureOpen(false)}
-          onComplete={async (images) => {
+          onComplete={async (captures) => {
+            const images = captures.map((c) => c.dataUrl)
+            const correctedFlags = captures.map((c) => c.corrected)
+            const failureReasons = captures.map((c) => c.failureReason)
             setPoCaptureOpen(false)
             setPoProcessing(true)
             try {
-              const ocr = await extractReceiptFromImages(images)
+              const ocr = await extractReceiptFromImages(
+                images,
+                correctedFlags,
+                undefined,
+                failureReasons,
+              )
               const userId = auth.currentUser?.uid
               if (!userId) {
                 toast.error('Sign-in not loaded yet — try again in a moment.')

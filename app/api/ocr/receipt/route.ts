@@ -48,7 +48,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { images } = body as { images?: string[] }
+    const { images, correctedFlags, knownItems, failureReasons } = body as {
+      images?: string[]
+      correctedFlags?: boolean[]
+      knownItems?: Array<{ name: string; upc?: string | null; quantity?: number | null }>
+      failureReasons?: Array<string | null | undefined>
+    }
 
     if (!Array.isArray(images) || images.length === 0) {
       return NextResponse.json(
@@ -56,6 +61,39 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+    // Reconciliation context: when the caller provides the user's
+    // already-scanned cart (in-store flow), Gemini's job changes from
+    // cold-OCR-everything to match-prices-and-flag-extras — much less
+    // hallucination surface because item names come from UPC catalog
+    // lookups, not from re-reading cryptic abbreviations. When absent
+    // (PO / retroactive flow — user didn't shop with the app), the
+    // route falls back to the cold-OCR prompt.
+    const hasKnownItems =
+      Array.isArray(knownItems) && knownItems.length > 0 &&
+      knownItems.every((k) => typeof k?.name === 'string' && k.name.length > 0)
+    const safeKnownItems = hasKnownItems ? knownItems! : null
+    // Phase 0j telemetry: how many of the captured frames had jscanify
+    // perspective correction applied vs. silently fell back to raw.
+    // Helps us correlate Gemini behavior (esp. address hallucination)
+    // with whether the geometry was actually fixed. Absent on older
+    // clients — log as `unknown` in that case.
+    const correctedCount = Array.isArray(correctedFlags)
+      ? correctedFlags.filter(Boolean).length
+      : null
+
+    // Aggregate the per-frame failure reasons into a tag → count map so
+    // the log line is short and scannable. Without this, with N=6
+    // captures every scan would have ~6 lines of reason strings; with
+    // this we see `{ 'no-contour': 6 }` at a glance.
+    const failureReasonCounts: Record<string, number> | null = (() => {
+      if (!Array.isArray(failureReasons) || failureReasons.length === 0) return null
+      const counts: Record<string, number> = {}
+      for (const r of failureReasons) {
+        if (typeof r !== 'string' || r.length === 0) continue
+        counts[r] = (counts[r] ?? 0) + 1
+      }
+      return Object.keys(counts).length > 0 ? counts : null
+    })()
     if (images.length > 12) {
       return NextResponse.json(
         { error: 'Too many images. Cap is 12 per receipt — re-capture a longer receipt in fewer wider sections.' },
@@ -82,6 +120,9 @@ export async function POST(request: NextRequest) {
     logger.info('[Receipt OCR] Processing receipt', {
       userId,
       imageCount: images.length,
+      correctedCount,
+      knownItemCount: safeKnownItems?.length ?? 0,
+      failureReasonCounts,
     })
 
     const imageParts = images.map((img) => {
@@ -98,15 +139,45 @@ export async function POST(request: NextRequest) {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
+      // The legacy @google/generative-ai SDK doesn't type
+      // thinkingConfig, but it forwards generationConfig as-is to the
+      // REST API, which DOES honor thinkingBudget. Without this, 2.5
+      // Flash dynamically allocates thinking tokens out of the same
+      // maxOutputTokens pool — at 16384 we observed 67s renders that
+      // STILL truncated mid-items[] because thinking consumed most of
+      // the budget. thinkingBudget: 0 disables thinking entirely;
+      // receipt OCR is transcription, not reasoning, so we don't need
+      // it. Migrating to @google/genai (the new unified SDK) would
+      // expose this property properly; this cast is the bridge until
+      // that migration happens.
       generationConfig: {
-        temperature: 0.2,
+        // Higher than the usual structured-extraction default (0.2)
+        // on purpose: Gemini 2.5 Flash at temperature 0.2 + a field
+        // asking for a long digit string (transactionCode) + zeros
+        // visible elsewhere on the receipt (AID fields etc.) caused a
+        // degenerate generation loop — the model latched onto "0" and
+        // emitted it until maxOutputTokens, blowing JSON parse with
+        // "Unterminated string". responseMimeType: 'application/json'
+        // enforces structure independently, so temperature is free to
+        // do its actual job — token-level diversity that prevents
+        // loops. 0.4 is in the production OCR-pipeline range.
+        temperature: 0.4,
         topK: 32,
         topP: 1,
-        // Receipts are list-heavy — Costco runs can hit ~80 items.
-        // Bigger budget than the medication route (1024) so we don't
-        // truncate mid-line and break JSON parse.
-        maxOutputTokens: 4096,
-      },
+        // Long receipts can produce 8k+ tokens of JSON. 16384 covers
+        // the multi-section Costco case with headroom; well below the
+        // model's 65536 ceiling. Combined with thinkingBudget:0, this
+        // means the full budget goes to actual JSON.
+        maxOutputTokens: 16384,
+        // Gemini 2.5 Flash thinks-out-loud by default — without this,
+        // response.text() returns the model's planning preamble
+        // ("The user wants to extract structured JSON...") concatenated
+        // with the JSON, and the JSON.parse below blows up. Constraining
+        // the response MIME type to JSON suppresses the thinking prefix
+        // and gives us a parseable payload.
+        responseMimeType: 'application/json',
+        thinkingConfig: { thinkingBudget: 0 },
+      } as any,
     })
 
     const sectionsHeader =
@@ -114,13 +185,44 @@ export async function POST(request: NextRequest) {
         ? `You are looking at ${images.length} sequential photos of ONE printed receipt — the user captured it in sections because it's long. Stitch the line items together IN ORDER (image 1 first, image 2 next, etc.). If a single line is split across two photos, deduplicate it; do not double-count.`
         : `You are looking at ONE photo of a printed receipt.`
 
-    const prompt = `${sectionsHeader}
+    // Cart-context block — only when the caller passed knownItems
+    // (in-store flow with a scanned cart). Reframes the task: instead
+    // of reading items from scratch (where Gemini hallucinates from
+    // cryptic abbreviations), it matches PRINTED LINES to user-scanned
+    // KNOWN ITEMS by name proximity / UPC equality, extracts the
+    // price, and flags any printed lines that don't match. Much less
+    // hallucination surface — the items are authoritative ground
+    // truth from the user's UPC scans, not Gemini's interpretation.
+    const cartContextBlock = safeKnownItems
+      ? `
+
+THE USER ALREADY SCANNED THEIR CART IN-STORE. Here is the list of items they confirmed putting in their cart, with UPCs where they were captured. These are GROUND TRUTH — the names below come from UPC-based catalog lookups, not from reading the receipt. Your job is to MATCH each printed receipt line to an entry in this list and extract the price. Do NOT invent item names; use the printed receipt text only to find the matching cart entry by fuzzy name proximity or UPC equality.
+
+User's cart (${safeKnownItems.length} item${safeKnownItems.length === 1 ? '' : 's'}):
+${safeKnownItems
+          .map(
+            (k, idx) =>
+              `  ${idx + 1}. ${k.name}${k.upc ? ` [UPC: ${k.upc}]` : ''}${
+                typeof k.quantity === 'number' && k.quantity > 0 ? ` × ${k.quantity}` : ''
+              }`,
+          )
+          .join('\n')}
+
+For each printed receipt line:
+  - If it matches a cart item (by UPC if the receipt prints one, otherwise by name proximity — abbreviations like "GV WHL MILK 1G" should match cart entries like "Great Value Whole Milk 1 Gallon"), emit it in items[] with rawName = printed text, normalizedName = the cart-list name (verbatim), upc = printed UPC if any, totalPriceCents = the printed price.
+  - If you cannot confidently match it to ANY cart item, STILL emit it in items[] with normalizedName = null — the downstream review screen will surface it to the user as "extra / impulse buy."
+  - Do NOT fabricate cart items that aren't in the list above. The cart list is authoritative.
+`
+      : ''
+
+    const prompt = `${sectionsHeader}${cartContextBlock}
 
 Extract the receipt as STRUCTURED JSON. Return ONLY valid JSON (no markdown, no code blocks, no commentary) with this exact structure:
 
 {
   "store": "merchant name from the receipt header (e.g., 'Costco', 'Walmart', 'Whole Foods'). null if not visible.",
-  "storeAddress": "physical address of the store as printed at the top of the receipt (e.g., '478 Clubhouse Dr, Middletown, NJ 07748' or '101 Main St'). Combine multi-line address into one string. null if not visible.",
+  "storeAddress": "physical address of the store EXACTLY AS PRINTED on this specific receipt (e.g., '478 Clubhouse Dr, Middletown, NJ 07748' or '101 Main St'). Combine multi-line address into one string preserving the printed order. null if the address text is not visible or you cannot read every line with confidence.",
+  "storePhone": "store phone number as printed on the receipt (e.g., '(732) 554-2076' or '732-554-2076'). Keep the formatting the receipt uses. null if not visible.",
   "storeHours": "store hours as printed on the receipt (e.g., 'Mon-Sun 6am-11pm', 'Open 24 Hours', '7-10 Daily'). null if not visible.",
   "transactionCode": "the transaction code / receipt reference printed near the receipt-level barcode at the bottom (Walmart labels it 'TC#' followed by 4-5 groups of digits like '5020 4127 6951 9320 2400'; Costco prints similar; ShopRite uses 'Reference:' followed by a long number). Concatenate all digit groups into one space-separated string EXACTLY as printed. null if not visible. DIFFERENT from the per-line UPCs — this is the receipt-level barcode, usually one per receipt at the bottom.",
   "date": "transaction date as printed (any format — '2026-05-07', '05/07/26', 'May 7, 2026'). null if not visible.",
@@ -141,6 +243,8 @@ Extract the receipt as STRUCTURED JSON. Return ONLY valid JSON (no markdown, no 
 }
 
 CRITICAL RULES:
+
+**DO NOT GUESS THE STORE ADDRESS.** This is the most important rule. You know many real store addresses for major chains (Sprouts, Costco, Walmart, etc.) from your training data — DO NOT use that knowledge here. Return ONLY what you can read on THIS receipt's printed pixels, character-by-character. If the printed address is blurry, cut off, partially obscured, or you can't read every line clearly, return null — DO NOT fill in a plausible-looking address from memory. A null address is FAR more useful than a fabricated one because downstream code can look up the canonical address from storePhone or transactionCode; a fabricated address poisons that pipeline. Cross-check: if the ZIP code you read doesn't match the state you read (e.g. "Tampa FL 07721" — 07721 is a NJ ZIP), at least one is wrong and you should return null rather than guess which.
 
 **Prices are CENTS, not dollars.** $3.49 = 349. $11.00 = 1100. $0.79 = 79. NEVER return decimal numbers for any *Cents field.
 
@@ -186,9 +290,20 @@ If you cannot read ANY items (image too blurry / not a receipt), return:
 
     const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
 
+    // Sanitize raw control characters INSIDE string literals. Gemini
+    // (even with responseMimeType: 'application/json') occasionally
+    // emits literal \n / \r / \t inside string values rather than the
+    // escaped \\n / \\r / \\t the JSON spec requires. The resulting
+    // payload looks valid to a human but breaks JSON.parse with
+    // "Bad control character in string literal". This walker tracks
+    // string-literal context (with proper escape handling) and
+    // converts in-string control chars to their JSON-escape form;
+    // everything outside strings is passed through untouched.
+    const sanitizedJson = sanitizeJsonControlChars(cleanedText)
+
     let parsedRaw: unknown
     try {
-      parsedRaw = JSON.parse(cleanedText)
+      parsedRaw = JSON.parse(sanitizedJson)
     } catch (parseErr) {
       logger.warn('[Receipt OCR] JSON parse failed', {
         userId,
@@ -229,9 +344,14 @@ If you cannot read ANY items (image too blurry / not a receipt), return:
     logger.info('[Receipt OCR] Successfully extracted receipt', {
       userId,
       store: data.store,
+      storeAddress: data.storeAddress,
+      storePhone: data.storePhone,
+      date: data.date,
       itemCount: data.items.length,
       totalCents: data.totalCents,
       confidence: data.confidence,
+      correctedCount,
+      imageCount: images.length,
     })
 
     return NextResponse.json({
@@ -248,4 +368,66 @@ If you cannot read ANY items (image too blurry / not a receipt), return:
       { status: 500 }
     )
   }
+}
+
+/**
+ * Walk a JSON string and escape any raw control characters that appear
+ * INSIDE string literals. Text outside strings (whitespace, structural
+ * tokens) is passed through unchanged.
+ *
+ * Gemini occasionally returns payloads with literal \n / \r / \t inside
+ * string values instead of the \\n / \\r / \\t the JSON spec requires;
+ * those break JSON.parse with "Bad control character in string literal."
+ * This is cheap defense-in-depth and rarely fires on a well-behaved
+ * response (untouched output is still valid JSON).
+ */
+function sanitizeJsonControlChars(raw: string): string {
+  let result = ''
+  let inString = false
+  let escapeNext = false
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (escapeNext) {
+      result += ch
+      escapeNext = false
+      continue
+    }
+    if (ch === '\\' && inString) {
+      result += ch
+      escapeNext = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      result += ch
+      continue
+    }
+    if (inString) {
+      const code = ch.charCodeAt(0)
+      if (code < 0x20) {
+        switch (ch) {
+          case '\n':
+            result += '\\n'
+            break
+          case '\r':
+            result += '\\r'
+            break
+          case '\t':
+            result += '\\t'
+            break
+          case '\b':
+            result += '\\b'
+            break
+          case '\f':
+            result += '\\f'
+            break
+          default:
+            result += '\\u' + code.toString(16).padStart(4, '0')
+        }
+        continue
+      }
+    }
+    result += ch
+  }
+  return result
 }

@@ -141,13 +141,53 @@ function waitForCv(timeoutMs = 30_000): Promise<void> {
  * Always falls back to the raw input on failure — callers can treat
  * the return value as "best available". The OCR pipeline never sees
  * a broken image from this layer.
+ *
+ * Returns `{ dataUrl, applied, reason? }`:
+ *   • dataUrl — the corrected JPEG, or the raw input if anything failed
+ *   • applied — true ONLY when jscanify produced a corrected canvas;
+ *     false when the scanner library wasn't loaded, no contour was
+ *     found, or any exception occurred. UIs use this to badge
+ *     thumbnails and telemetry uses it to gauge feature efficacy.
+ *   • reason — short tag describing WHY correction was skipped (only
+ *     set when applied=false). Used by callers to telemeter the failure
+ *     mode so we can diagnose silent fallbacks (correctedCount=0
+ *     across many captures) without having to remote-debug the phone.
  */
-export async function correctReceiptPerspective(rawDataUrl: string): Promise<string> {
-  if (typeof window === 'undefined') return rawDataUrl
+export type ReceiptPerspectiveFailureReason =
+  | 'no-window'
+  | 'scanner-unavailable'
+  | 'image-load-failed'
+  | 'no-contour'
+  | 'exception'
+
+export interface ReceiptPerspectiveResult {
+  dataUrl: string
+  applied: boolean
+  reason?: ReceiptPerspectiveFailureReason
+  exceptionMessage?: string
+}
+export async function correctReceiptPerspective(
+  rawDataUrl: string,
+): Promise<ReceiptPerspectiveResult> {
+  if (typeof window === 'undefined') {
+    return { dataUrl: rawDataUrl, applied: false, reason: 'no-window' }
+  }
   const Scanner = await loadDocumentScanner()
-  if (!Scanner) return rawDataUrl
+  if (!Scanner) {
+    return { dataUrl: rawDataUrl, applied: false, reason: 'scanner-unavailable' }
+  }
+  let img: HTMLImageElement
   try {
-    const img = await loadImage(rawDataUrl)
+    img = await loadImage(rawDataUrl)
+  } catch (err) {
+    return {
+      dataUrl: rawDataUrl,
+      applied: false,
+      reason: 'image-load-failed',
+      exceptionMessage: (err as Error).message,
+    }
+  }
+  try {
     const scanner = new Scanner()
     // Output dimensions: match the source aspect so we don't squash
     // anything. extractPaper draws onto its own canvas at the
@@ -159,14 +199,23 @@ export async function correctReceiptPerspective(rawDataUrl: string): Promise<str
       img.naturalHeight || 1920,
     )
     if (!corrected || typeof corrected.toDataURL !== 'function') {
-      return rawDataUrl
+      // jscanify returned no canvas — most commonly because findContours
+      // couldn't lock onto a 4-corner paper outline (low-contrast
+      // background, off-frame edges, dim ambient light, etc.).
+      return { dataUrl: rawDataUrl, applied: false, reason: 'no-contour' }
     }
-    return corrected.toDataURL('image/jpeg', 0.96)
+    return { dataUrl: corrected.toDataURL('image/jpeg', 0.96), applied: true }
   } catch (err) {
+    const message = (err as Error).message
     logger.debug('[document-scanner] correction failed, using raw frame', {
-      error: (err as Error).message,
+      error: message,
     })
-    return rawDataUrl
+    return {
+      dataUrl: rawDataUrl,
+      applied: false,
+      reason: 'exception',
+      exceptionMessage: message,
+    }
   }
 }
 

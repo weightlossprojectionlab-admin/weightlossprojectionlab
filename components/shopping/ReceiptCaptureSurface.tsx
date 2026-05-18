@@ -71,15 +71,34 @@ type ExtendedConstraintSet = MediaTrackConstraintSet & {
   pointsOfInterest?: Array<{ x: number; y: number }>
 }
 
+/**
+ * One captured receipt frame plus a flag for whether Phase 0j
+ * perspective correction actually fired (true) vs. silently fell
+ * back to the raw frame (false, e.g. when jscanify couldn't find
+ * a 4-corner contour or the scanner library wasn't loaded yet).
+ * `failureReason` is set ONLY when corrected=false; carries a short
+ * tag from the document scanner so server telemetry can distinguish
+ * "no-contour" (most common — receipt-edge detection failed) from
+ * "scanner-unavailable" (library load failed) from "exception".
+ */
+export interface ReceiptCapture {
+  dataUrl: string
+  corrected: boolean
+  failureReason?: string
+}
+
 export interface ReceiptCaptureSurfaceProps {
   isOpen: boolean
   onClose: () => void
   /**
    * Called when the user taps Done with at least one capture.
-   * Receives an array of base64 image data URLs (image/jpeg) ready to
-   * post to the OCR endpoint or process locally.
+   * Receives an array of captured frames with per-frame correction
+   * metadata. Consumers usually only need the dataUrls, but the
+   * `corrected` flag is forwarded to the OCR endpoint for telemetry
+   * so we can correlate Gemini behavior with whether the image had
+   * been geometry-corrected.
    */
-  onComplete: (images: string[]) => void
+  onComplete: (captures: ReceiptCapture[]) => void
   /**
    * Cap on captures per session. Long Costco receipts can run ~6 sections;
    * default 8 is generous. Past this, the capture button disables and
@@ -96,7 +115,7 @@ export function ReceiptCaptureSurface({
 }: ReceiptCaptureSurfaceProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
-  const [captures, setCaptures] = useState<string[]>([])
+  const [captures, setCaptures] = useState<ReceiptCapture[]>([])
   const [isLive, setIsLive] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -612,12 +631,40 @@ export function ReceiptCaptureSurface({
     // loaded yet, no contour found, exception) — never blocks the
     // capture. The user gets feedback regardless via the haptic
     // buzz below.
-    const dataUrl =
-      scannerState === 'ready'
-        ? await correctReceiptPerspective(rawDataUrl).catch(() => rawDataUrl)
-        : rawDataUrl
+    let dataUrl = rawDataUrl
+    let corrected = false
+    let failureReason: string | undefined
+    if (scannerState === 'ready') {
+      try {
+        const result = await correctReceiptPerspective(rawDataUrl)
+        dataUrl = result.dataUrl
+        corrected = result.applied
+        if (!result.applied) failureReason = result.reason
+      } catch (err) {
+        // Defensive — correctReceiptPerspective already swallows errors
+        // and returns { applied: false, reason: 'exception' }, but a
+        // thrown promise rejection would skip our metadata. Treat as
+        // fallback and record the reason.
+        dataUrl = rawDataUrl
+        corrected = false
+        failureReason = 'thrown'
+      }
+    } else {
+      // Scanner state was something other than 'ready' when this
+      // capture fired — most likely the user hit the shutter before
+      // the WASM finished loading. Record this distinctly from a
+      // contour-detection miss.
+      failureReason = `scanner-state-${scannerState}`
+    }
+    logger.info('[ReceiptCapture] frame captured', {
+      corrected,
+      failureReason,
+      scannerState,
+      sourceWidth: srcW,
+      sourceHeight: srcH,
+    })
 
-    setCaptures((prev) => [...prev, dataUrl])
+    setCaptures((prev) => [...prev, { dataUrl, corrected, failureReason }])
     // Haptic confirm — same pattern BarcodeScanner uses on scan-success.
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
@@ -897,16 +944,27 @@ export function ReceiptCaptureSurface({
             className="flex items-center gap-2 overflow-x-auto py-1"
             aria-label="Captured frames"
           >
-            {captures.map((src, i) => (
+            {captures.map((cap, i) => (
               <div
                 key={i}
                 className="relative flex-shrink-0 rounded-md overflow-hidden border border-white/20"
               >
                 <img
-                  src={src}
-                  alt={`Capture ${i + 1}`}
+                  src={cap.dataUrl}
+                  alt={`Capture ${i + 1}${cap.corrected ? ' (perspective-corrected)' : ''}`}
                   className="h-20 w-14 object-cover"
                 />
+                {/* Phase 0j badge — green dot when jscanify successfully
+                    unwarped the frame; absent otherwise. Lets the user
+                    see which captures had geometry correction applied
+                    without having to compare them to the live view. */}
+                {cap.corrected && (
+                  <span
+                    className="absolute bottom-0.5 left-0.5 h-2 w-2 rounded-full bg-emerald-400 ring-1 ring-black/60"
+                    aria-label="Perspective corrected"
+                    title="Perspective corrected"
+                  />
+                )}
                 <button
                   type="button"
                   onClick={() => handleRemoveCapture(i)}
