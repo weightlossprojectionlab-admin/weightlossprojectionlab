@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Test Receipt — Target Avenel (Bounty Paper Towels)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root { color-scheme: light; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #888;
+        font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 32px 16px;
+      }
+      .receipt {
+        width: 360px;
+        background: #ffffff;
+        color: #111;
+        padding: 22px 18px 28px;
+        font-size: 13px;
+        line-height: 1.45;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+      }
+      .center { text-align: center; }
+      .bold   { font-weight: 700; }
+      .big    { font-size: 19px; letter-spacing: 1px; }
+      .tagline { font-size: 10px; letter-spacing: 0.5px; font-style: italic; }
+      .small  { font-size: 11px; }
+      hr      { border: none; border-top: 1px dashed #555; margin: 10px 0; }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .row .amt { font-variant-numeric: tabular-nums; }
+      .meta {
+        font-size: 11px;
+        color: #333;
+        letter-spacing: 0.3px;
+      }
+      .footer {
+        margin-top: 14px;
+        text-align: center;
+        font-size: 11px;
+        letter-spacing: 0.4px;
+      }
+      .barcode {
+        margin-top: 8px;
+        height: 36px;
+        background: repeating-linear-gradient(
+          to right,
+          #111 0 2px,
+          #fff 2px 4px,
+          #111 4px 7px,
+          #fff 7px 9px,
+          #111 9px 11px,
+          #fff 11px 16px
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <div class="receipt" aria-label="Synthetic Target receipt for Bounty paper towels">
+      <div class="center bold big">TARGET</div>
+      <div class="center tagline">Expect More. Pay Less.</div>
+
+      <hr />
+
+      <div class="center small">T-2891</div>
+      <div class="center small">1320 St Georges Ave</div>
+      <div class="center small">Avenel, NJ 07001</div>
+      <div class="center small">(732) 396-1000</div>
+
+      <hr />
+
+      <div class="row small">
+        <span>05/18/2026</span>
+        <span>15:33:42</span>
+      </div>
+      <div class="small">Cashier: SHARON   Reg: 07</div>
+
+      <hr />
+
+      <!-- Single item — household paper, NJ taxable, with both
+           Target's DPCI (internal SKU) and the manufacturer's UPC
+           printed below the line, the way a real Target receipt does. -->
+      <div class="row">
+        <span>BOUNTY S-A-S 6 MR</span>
+        <span class="amt">22.99 T</span>
+      </div>
+      <div class="meta">DPCI: 234-08-0245</div>
+      <div class="meta">UPC: 037000737184</div>
+
+      <hr />
+
+      <div class="row">
+        <span>SUBTOTAL</span>
+        <span class="amt">22.99</span>
+      </div>
+      <div class="row">
+        <span>NJ 6.625% Tax</span>
+        <span class="amt">1.52</span>
+      </div>
+      <div class="row bold">
+        <span>TOTAL</span>
+        <span class="amt">$24.51</span>
+      </div>
+
+      <hr />
+
+      <div class="row small">
+        <span>VISA ****0392</span>
+        <span>APPROVED</span>
+      </div>
+      <div class="small">AUTH: 547821  AID: A0000000031010</div>
+
+      <div class="footer">
+        <div class="bold">REC# 1130 1542 8893 1942 2891</div>
+        <div class="barcode" aria-hidden="true"></div>
+        <div class="small" style="margin-top:10px">*** Save your receipt for returns ***</div>
+        <div class="small" style="margin-top:4px">Thank you for choosing Target</div>
+      </div>
+    </div>
+  </body>
+</html>

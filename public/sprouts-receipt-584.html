@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Test Receipt — Sprouts Cliffwood (long, $584.19, yesterday)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      :root { color-scheme: light; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #888;
+        font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 32px 16px;
+      }
+      .receipt {
+        width: 360px;
+        background: #ffffff;
+        color: #111;
+        padding: 22px 18px 28px;
+        font-size: 13px;
+        line-height: 1.45;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+      }
+      .center { text-align: center; }
+      .bold   { font-weight: 700; }
+      .big    { font-size: 17px; letter-spacing: 0.5px; }
+      .small  { font-size: 11px; }
+      hr      { border: none; border-top: 1px dashed #555; margin: 10px 0; }
+      .row {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .row .amt { font-variant-numeric: tabular-nums; }
+      .upc {
+        font-size: 11px;
+        color: #333;
+        letter-spacing: 0.5px;
+      }
+      .indent { padding-left: 14px; color: #444; font-size: 11px; }
+      .tc {
+        margin-top: 14px;
+        text-align: center;
+        font-size: 12px;
+        letter-spacing: 0.5px;
+      }
+      .barcode {
+        margin-top: 6px;
+        height: 36px;
+        background: repeating-linear-gradient(
+          to right,
+          #111 0 2px,
+          #fff 2px 4px,
+          #111 4px 7px,
+          #fff 7px 9px,
+          #111 9px 11px,
+          #fff 11px 16px
+        );
+      }
+    </style>
+  </head>
+  <body>
+    <div class="receipt" aria-label="Long synthetic test receipt, $584.19 total, dated 05/17/2026">
+      <div class="center bold big">SPROUTS FARMERS MARKET</div>
+      <div class="center small">327 Highway 35</div>
+      <div class="center small">Cliffwood, NJ 07721</div>
+      <div class="center small">(732) 554-2076</div>
+      <div class="center small">Store Hours MON-SUN 7AM-10PM</div>
+
+      <hr />
+
+      <div class="row small">
+        <span>05/17/2026</span>
+        <span>11:23:46</span>
+      </div>
+      <div class="small">CASHIER: 104   REG: 05</div>
+
+      <hr />
+
+      <!-- ===== PRODUCE ===== -->
+      <div class="row"><span>ORG BANANAS</span><span class="amt">1.94 F</span></div>
+      <div class="indent">2.45 lb @ 0.79/lb</div>
+
+      <div class="row"><span>GALA APPLES 3LB</span><span class="amt">4.99 F</span></div>
+
+      <div class="row"><span>AVOCADO</span><span class="amt">3.98 F</span></div>
+      <div class="indent">2 @ 1.99</div>
+      <div class="upc">767119318395</div>
+
+      <div class="row"><span>ROMA TOMATOES</span><span class="amt">2.39 F</span></div>
+      <div class="indent">1.20 lb @ 1.99/lb</div>
+
+      <div class="row"><span>ORG SPINACH 5OZ</span><span class="amt">3.99 F</span></div>
+      <div class="row"><span>BABY CARROTS 1LB</span><span class="amt">1.99 F</span></div>
+      <div class="row"><span>LEMONS</span><span class="amt">3.16 F</span></div>
+      <div class="indent">4 @ 0.79</div>
+      <div class="row"><span>GARLIC HEAD</span><span class="amt">0.99 F</span></div>
+
+      <div class="row"><span>WHITE ONION</span><span class="amt">1.27 F</span></div>
+      <div class="indent">0.85 lb @ 1.49/lb</div>
+
+      <div class="row"><span>ORG STRAWBERRIES 1LB</span><span class="amt">5.99 F</span></div>
+      <div class="row"><span>BLUEBERRIES PINT</span><span class="amt">4.99 F</span></div>
+      <div class="row"><span>KALE BUNCH</span><span class="amt">2.49 F</span></div>
+
+      <!-- ===== MEAT / SEAFOOD ===== -->
+      <div class="row"><span>ORG GRASS-FED RIBEYE</span><span class="amt">30.38 F</span></div>
+      <div class="indent">1.60 lb @ 18.99/lb</div>
+
+      <div class="row"><span>LAMB CHOPS</span><span class="amt">27.59 F</span></div>
+      <div class="indent">1.20 lb @ 22.99/lb</div>
+
+      <div class="row"><span>WILD AHI TUNA STEAK</span><span class="amt">17.49 F</span></div>
+      <div class="indent">0.70 lb @ 24.99/lb</div>
+
+      <div class="row"><span>ORG CHKN THIGHS</span><span class="amt">10.78 F</span></div>
+      <div class="indent">1.80 lb @ 5.99/lb</div>
+
+      <div class="row"><span>85% LEAN GRD BEEF</span><span class="amt">11.19 F</span></div>
+      <div class="indent">1.40 lb @ 7.99/lb</div>
+
+      <div class="row"><span>WILD SALMON FILLET</span><span class="amt">15.74 F</span></div>
+      <div class="indent">1.05 lb @ 14.99/lb</div>
+
+      <div class="row"><span>ORG TURKEY BURGERS</span><span class="amt">9.99 F</span></div>
+      <div class="row"><span>PROSCIUTTO 4OZ</span><span class="amt">9.99 F</span></div>
+      <div class="row"><span>DELI ROAST BEEF</span><span class="amt">7.99 F</span></div>
+      <div class="indent">0.50 lb</div>
+
+      <!-- ===== DAIRY / EGGS / CHEESE ===== -->
+      <div class="row"><span>ORG WHL MILK 1G</span><span class="amt">5.99 F</span></div>
+
+      <div class="row"><span>LG EGGS</span><span class="amt">5.49 F</span></div>
+      <div class="upc">021130049134</div>
+
+      <div class="row"><span>BUTTER UNSALTED 1LB</span><span class="amt">5.99 F</span></div>
+      <div class="row"><span>SHARP CHEDDAR 8OZ</span><span class="amt">4.49 F</span></div>
+      <div class="row"><span>ARTISAN GOAT CHEESE 5OZ</span><span class="amt">8.99 F</span></div>
+      <div class="row"><span>BRIE WHEEL 8OZ</span><span class="amt">11.99 F</span></div>
+
+      <div class="row"><span>AUSSIE YOGURT 32OZ</span><span class="amt">5.99 F</span></div>
+      <div class="upc">00795709020021</div>
+
+      <div class="row"><span>HALF &amp; HALF QT</span><span class="amt">3.99 F</span></div>
+      <div class="row"><span>ORG GRK YOGURT 32OZ</span><span class="amt">7.49 F</span></div>
+
+      <!-- ===== BAKERY ===== -->
+      <div class="row"><span>SOURDOUGH BREAD</span><span class="amt">4.99 F</span></div>
+      <div class="row"><span>WW BAGELS 6CT</span><span class="amt">4.99 F</span></div>
+      <div class="row"><span>CORN TORTILLAS 12CT</span><span class="amt">2.99 F</span></div>
+
+      <!-- ===== PANTRY ===== -->
+      <div class="row"><span>OAT CEREAL</span><span class="amt">4.99 F</span></div>
+      <div class="upc">016000275645</div>
+
+      <div class="row"><span>COND MILK</span><span class="amt">2.49 F</span></div>
+      <div class="upc">078742433042</div>
+
+      <div class="row"><span>OLIVE OIL EXV 500ML</span><span class="amt">14.99 F</span></div>
+      <div class="row"><span>WW PENNE 1LB</span><span class="amt">2.49 F</span></div>
+      <div class="row"><span>BROWN RICE LNG 2LB</span><span class="amt">5.99 F</span></div>
+      <div class="row"><span>BLK BEANS 15OZ CAN</span><span class="amt">1.49 F</span></div>
+      <div class="row"><span>ALMOND BUTTER 16OZ</span><span class="amt">11.99 F</span></div>
+      <div class="row"><span>RAW HONEY 12OZ</span><span class="amt">9.99 F</span></div>
+      <div class="row"><span>MAPLE SYRUP DRK 12OZ</span><span class="amt">14.99 F</span></div>
+      <div class="row"><span>ORG QUINOA 1LB</span><span class="amt">5.99 F</span></div>
+      <div class="row"><span>MUSHROOM COFFEE BLEND</span><span class="amt">19.99 F</span></div>
+
+      <!-- ===== SPECIALTY / FERMENTED ===== -->
+      <div class="row"><span>ORG SAUERKRAUT 16OZ</span><span class="amt">5.99 F</span></div>
+      <div class="row"><span>BONE BROTH CHKN 32OZ</span><span class="amt">7.99 F</span></div>
+
+      <!-- ===== SNACKS ===== -->
+      <div class="row"><span>CHOC PB YOG RSN</span><span class="amt">6.49 F</span></div>
+      <div class="upc">00041143090541</div>
+
+      <div class="row"><span>ORG TORT CHIPS</span><span class="amt">3.99 F</span></div>
+      <div class="row"><span>TRAIL MIX BULK 1LB</span><span class="amt">9.99 F</span></div>
+      <div class="row"><span>KIND BARS 6CT</span><span class="amt">9.99 F</span></div>
+      <div class="row"><span>DARK CHOC 70%</span><span class="amt">3.99</span></div>
+
+      <!-- ===== BEVERAGES ===== -->
+      <div class="row"><span>KOMBUCHA GINGER 16OZ</span><span class="amt">4.49 F</span></div>
+      <div class="row"><span>SPARK H2O LIME 12PK</span><span class="amt">5.49 F</span></div>
+      <div class="row"><span>ORG COLD BREW 32OZ</span><span class="amt">6.99 F</span></div>
+      <div class="row"><span>ORG ROOIBOS TEA</span><span class="amt">4.99 F</span></div>
+      <div class="row"><span>COCONUT WATER 33OZ</span><span class="amt">4.99 F</span></div>
+
+      <!-- ===== FROZEN ===== -->
+      <div class="row"><span>ORG FROZ BLUBRY 12OZ</span><span class="amt">6.99 F</span></div>
+      <div class="row"><span>WILD COD FILLETS 12OZ</span><span class="amt">11.99 F</span></div>
+      <div class="row"><span>ORG SPNCH FROZ 10OZ</span><span class="amt">3.49 F</span></div>
+      <div class="row"><span>VAN BEAN ICE CRM PT</span><span class="amt">5.99</span></div>
+
+      <!-- ===== SUPPLEMENTS (taxable) ===== -->
+      <div class="row"><span>ORG WHEY PROT VAN 2LB</span><span class="amt">34.99</span></div>
+      <div class="row"><span>MAG GLYCINATE 60CT</span><span class="amt">19.99</span></div>
+      <div class="row"><span>ORG VITAMIN D3 90CT</span><span class="amt">24.99</span></div>
+      <div class="row"><span>COLLAGEN PEPTIDES 16OZ</span><span class="amt">29.99</span></div>
+
+      <!-- ===== HOUSEHOLD (taxable) ===== -->
+      <div class="row"><span>DISH SOAP NATURAL</span><span class="amt">4.99</span></div>
+      <div class="row"><span>PAPER TOWELS 6PK</span><span class="amt">8.99</span></div>
+
+      <hr />
+
+      <div class="row"><span>Subtotal</span><span class="amt">575.86</span></div>
+      <div class="row"><span>Tax</span><span class="amt">8.33</span></div>
+      <div class="row bold"><span>TOTAL</span><span class="amt">$584.19</span></div>
+
+      <hr />
+
+      <div class="row small">
+        <span>MASTERCARD ****1160</span>
+        <span>APPROVED</span>
+      </div>
+      <div class="small">AUTH: 192847  AID: A0000000041010</div>
+
+      <div class="tc">
+        <div class="bold">TC# 5917 3804 2156 0742 9831</div>
+        <div class="barcode" aria-hidden="true"></div>
+        <div class="small" style="margin-top:8px">Thank you for shopping at Sprouts!</div>
+      </div>
+    </div>
+  </body>
+</html>
