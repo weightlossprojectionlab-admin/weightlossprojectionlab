@@ -86,7 +86,12 @@ setup('sign in', async ({ page }) => {
     )
   }
 
-  await page.waitForURL(AUTHENTICATED_URL, { timeout: MODE === 'manual' ? 5 * 60_000 : 30_000 })
+  // 30s is enough on a warm dev server but the destination route
+  // (/dashboard etc.) cold-compiles on first hit after a server
+  // restart — observed 60s+ for /auth itself, similar for /dashboard.
+  // Manual mode keeps 5 min for the OAuth human round-trip; password
+  // mode gets 2 min to absorb cold-compile cost.
+  await page.waitForURL(AUTHENTICATED_URL, { timeout: MODE === 'manual' ? 5 * 60_000 : 2 * 60_000 })
   await expect(page).toHaveURL(AUTHENTICATED_URL)
 
   await page.context().storageState({ path: AUTH_FILE })
