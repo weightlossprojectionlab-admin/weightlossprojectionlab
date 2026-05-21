@@ -6,8 +6,10 @@
 'use client'
 // Force dynamic renderingexport const dynamic = 'force-dynamic'
 
+import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAppointments } from '@/hooks/useAppointments'
+import { usePatients } from '@/hooks/usePatients'
 import { PageHeader } from '@/components/ui/PageHeader'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { CalendarDaysIcon, PlusIcon } from '@heroicons/react/24/outline'
@@ -28,6 +30,32 @@ function AppointmentsContent() {
   // appointments but can't schedule new ones.
   const addAppointmentLock = useLockedAction()
   const { appointments, loading } = useAppointments()
+  const { patients } = usePatients()
+
+  // Hide appointments belonging to archived/deleted patients. The
+  // Patient model's `status` field ('active' | 'archived' | 'deleted')
+  // is set by the soft-delete / archive flow but the appointments
+  // collection has its own records keyed by patientId — they don't
+  // get cascaded out when a patient is archived. Result before this
+  // filter: an archived family member's old appointments dominated
+  // the /appointments list with ghost rows.
+  //
+  // We hide rather than delete (HIPAA retention requires keeping
+  // history) and surface the count so the user knows there's
+  // hidden context.
+  const activePatientIds = useMemo(() => {
+    const set = new Set<string>()
+    for (const p of patients) {
+      if (!p.status || p.status === 'active') set.add(p.id)
+    }
+    return set
+  }, [patients])
+
+  const visibleAppointments = useMemo(
+    () => appointments.filter((apt) => !apt.patientId || activePatientIds.has(apt.patientId)),
+    [appointments, activePatientIds],
+  )
+  const hiddenAppointmentsCount = appointments.length - visibleAppointments.length
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr)
@@ -48,8 +76,8 @@ function AppointmentsContent() {
   }
 
   const now = new Date()
-  const upcomingAppointments = appointments.filter(apt => new Date(apt.dateTime) >= now)
-  const pastAppointments = appointments.filter(apt => new Date(apt.dateTime) < now)
+  const upcomingAppointments = visibleAppointments.filter(apt => new Date(apt.dateTime) >= now)
+  const pastAppointments = visibleAppointments.filter(apt => new Date(apt.dateTime) < now)
 
   return (
     <div className="min-h-screen bg-background">
@@ -75,11 +103,21 @@ function AppointmentsContent() {
           </button>
         </div>
 
+        {/* Notice when archived/deleted family members have hidden
+            appointments. Kept in the data for HIPAA retention but
+            not surfaced on the active list. */}
+        {!loading && hiddenAppointmentsCount > 0 && (
+          <div className="mb-6 px-4 py-3 bg-muted rounded-lg text-sm text-muted-foreground">
+            {hiddenAppointmentsCount} appointment{hiddenAppointmentsCount === 1 ? '' : 's'} hidden
+            (for archived or removed family members). Restore the family member to see them here.
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground dark:text-muted-foreground">Loading appointments...</p>
           </div>
-        ) : appointments.length === 0 ? (
+        ) : visibleAppointments.length === 0 ? (
           <div className="text-center py-12 bg-card rounded-lg shadow-sm">
             <CalendarDaysIcon className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
