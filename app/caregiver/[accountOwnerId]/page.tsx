@@ -417,23 +417,25 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
           console.error('Failed to fetch patients:', result.error)
         }
 
-        // Look up the household(s) owned by the account owner so we can
-        // show duties assigned to this caregiver
+        // Look up household(s) the *requesting user* belongs to as
+        // either primary caregiver or additional caregiver. The earlier
+        // version queried `createdBy == accountOwnerId` which (a) used
+        // a non-canonical field name (the household model uses
+        // `primaryCaregiverId`, not `createdBy`) and (b) asked
+        // Firestore to return docs that don't belong to the requester,
+        // which the rules correctly reject with "Missing or
+        // insufficient permissions". This matches the canonical
+        // scoping pattern at app/api/households/route.ts:34-50.
         try {
           const householdsRef = collection(db, 'households')
-          const ownedQuery = query(householdsRef, where('createdBy', '==', accountOwnerId))
-          const ownedSnapshot = await getDocs(ownedQuery)
-
-          // Also search households where this caregiver is listed
-          const assignedQuery = query(
-            householdsRef,
-            where('additionalCaregiverIds', 'array-contains', user.uid)
-          )
-          const assignedSnapshot = await getDocs(assignedQuery)
+          const [primarySnap, additionalSnap] = await Promise.all([
+            getDocs(query(householdsRef, where('primaryCaregiverId', '==', user.uid))),
+            getDocs(query(householdsRef, where('additionalCaregiverIds', 'array-contains', user.uid))),
+          ])
 
           const allIds = new Set<string>()
-          ownedSnapshot.docs.forEach(d => allIds.add(d.id))
-          assignedSnapshot.docs.forEach(d => allIds.add(d.id))
+          for (const d of primarySnap.docs) allIds.add(d.id)
+          for (const d of additionalSnap.docs) allIds.add(d.id)
 
           const firstId = allIds.values().next().value
           if (firstId) {
@@ -646,22 +648,30 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
                     onClick={() => router.push(`/patients/${patient.id}`)}
                     className="bg-card rounded-lg border-2 border-border p-6 hover:border-primary transition-colors text-left"
                   >
+                    {/* Defensive against patients with no name yet
+                        (e.g. newborn flow that defers naming, or
+                        half-completed creates). Previously crashed
+                        the whole dashboard with `Cannot read
+                        properties of undefined (reading 'charAt')`
+                        when any patient in the list lacked .name. */}
                     <div className="flex items-start gap-4">
                       {patient.photo ? (
                         <img
                           src={patient.photo}
-                          alt={patient.name}
+                          alt={patient.name ?? 'Unnamed patient'}
                           className="w-16 h-16 rounded-full object-cover"
                         />
                       ) : (
                         <div className="w-16 h-16 rounded-full bg-primary-light flex items-center justify-center">
                           <span className="text-primary font-semibold text-xl">
-                            {patient.name.charAt(0).toUpperCase()}
+                            {(patient.name?.trim().charAt(0) || '?').toUpperCase()}
                           </span>
                         </div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-foreground truncate">{patient.name}</h3>
+                        <h3 className="font-semibold text-foreground truncate">
+                          {patient.name?.trim() || 'Unnamed patient'}
+                        </h3>
                         <p className="text-sm text-muted-foreground capitalize">{patient.relationship}</p>
                         {patient.dateOfBirth && (
                           <p className="text-sm text-muted-foreground mt-1">
