@@ -696,7 +696,25 @@ export function ReceiptCaptureSurface({
 
   if (!isOpen) return null
 
-  const canCaptureMore = isLive && captures.length < maxCaptures
+  // Phase 0j stability gate: don't allow shutter taps until the
+  // document scanner has resolved one way or the other. While
+  // scannerState is 'idle' (initial) or 'loading' (CDN fetch in
+  // flight), tapping the shutter captures the frame BEFORE WASM
+  // is ready — perspective correction silently no-ops, telemetry
+  // records failureReason='scanner-state-loading', and the user
+  // gets a worse OCR result than they would have if they'd waited
+  // a second or two. We observed this firing on every captured
+  // frame across multiple test runs.
+  //
+  // 'ready' = WASM loaded, correction will fire.
+  // 'unavailable' = CDN load failed; capture still proceeds with
+  //                 raw frame (graceful fallback). Worst case is
+  //                 ~30s wait while waitForCv times out — bounded.
+  //
+  // The "Preparing scanner…" pill already renders during 'loading'
+  // so the user sees WHY the shutter is briefly inactive.
+  const isScannerStable = scannerState === 'ready' || scannerState === 'unavailable'
+  const canCaptureMore = isLive && captures.length < maxCaptures && isScannerStable
 
   return (
     // Full-bleed always — receipt capture is a focused task, no
