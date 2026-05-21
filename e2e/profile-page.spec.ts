@@ -134,6 +134,70 @@ test.describe('/profile — render battery', () => {
     ).toHaveCount(0)
   })
 
+  test('Vital Sign Reminders section renders for own profile', async ({ page }) => {
+    // Ensure we're on the own-profile view — Vital Sign Reminders also
+    // shows for human patients, but the scope badge text changes per
+    // subject. Asserting "You" anchors this test to own-profile state.
+    const dropdown = page.locator('select').filter({ hasText: /My Profile/i }).first()
+    if (await dropdown.isVisible().catch(() => false)) {
+      const selfOption = dropdown.locator('option', { hasText: /\(My Profile\)/i }).first()
+      const selfValue = await selfOption.getAttribute('value')
+      if (selfValue) await dropdown.selectOption(selfValue)
+    }
+
+    // Section is gated by !isPetProfile && (hasFeature('health_medical')
+    // || no features chosen). Default seed accounts hit the second
+    // branch, so the section should render. If a future onboarding
+    // change removes that fallback, this assertion will catch it.
+    const sectionHeading = page.getByRole('heading', { name: /Vital Sign Reminders/i, level: 2 })
+    await expect(sectionHeading).toBeVisible({ timeout: 15_000 })
+
+    // The pill on the heading row identifies whose reminders these
+    // are. For own profile it reads "You" (vs "{Name}" when a family
+    // member is selected).
+    await expect(page.getByText(/^You$/).first()).toBeVisible()
+  })
+
+  test('Vital Sign Reminders lists at least one vital with a toggle', async ({ page }) => {
+    const dropdown = page.locator('select').filter({ hasText: /My Profile/i }).first()
+    if (await dropdown.isVisible().catch(() => false)) {
+      const selfOption = dropdown.locator('option', { hasText: /\(My Profile\)/i }).first()
+      const selfValue = await selfOption.getAttribute('value')
+      if (selfValue) await dropdown.selectOption(selfValue)
+    }
+
+    await expect(
+      page.getByRole('heading', { name: /Vital Sign Reminders/i, level: 2 }),
+    ).toBeVisible({ timeout: 15_000 })
+
+    // Each applicable vital renders an H3 like "Weight Reminders" or
+    // "Blood Pressure Reminders". The exact set comes from
+    // getApplicableVitalTypes() which is age + species aware — for the
+    // own-profile (adult human) the list always contains weight at
+    // minimum. Assert "ends with 'Reminders'" instead of pinning a
+    // specific vital so age-gated changes don't break the spec.
+    const vitalHeadings = page.getByRole('heading', { level: 3 }).filter({ hasText: /\bReminders$/ })
+    const count = await vitalHeadings.count()
+    expect(count, 'expected at least one vital reminder row').toBeGreaterThan(0)
+
+    // Each vital row has a toggle button (a 6×11 pill). Pick the first
+    // vital, walk up to its row container, find the toggle inside.
+    const firstVital = vitalHeadings.first()
+    const row = firstVital.locator('xpath=ancestor::div[contains(@class, "border-b")][1]')
+    const toggle = row.locator('button').first()
+    await expect(toggle).toBeVisible()
+
+    // If the toggle is in the ON state (bg-primary class), the
+    // frequency dropdown + "Send Test Reminder" button should be
+    // visible inside the same row. This is a read-only state check
+    // — we never click the toggle.
+    const toggleClasses = (await toggle.getAttribute('class')) ?? ''
+    if (toggleClasses.includes('bg-primary')) {
+      await expect(row.locator('select')).toBeVisible()
+      await expect(row.getByRole('button', { name: /Send Test Reminder/i })).toBeVisible()
+    }
+  })
+
   test('Account Information visible when viewing own profile', async ({ page }) => {
     // If the selector auto-picked a family member, switch back to self
     // first. The "Me / My Profile" option always exists.
