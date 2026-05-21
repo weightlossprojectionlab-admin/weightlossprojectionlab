@@ -456,6 +456,81 @@ function ProgressContent() {
     return points
   }, [weightData, timeRange])
 
+  // Layer 2 — weight-goal ETA. From the same linear-fit slope used
+  // for projection, compute when (if ever) the user reaches their
+  // target weight at the current pace. Returns one of three states
+  // that drive the colored chip rendered below the Weight Trend chart:
+  //
+  //   on-pace   — heading toward target; ETA ≤ user's targetDate (or
+  //               no targetDate set). Green.
+  //   slipping  — heading toward target but ETA > targetDate. Yellow.
+  //               Quantifies the gap so the user can self-correct.
+  //   off-track — trend is flat or moving away from target. Red.
+  //   achieved  — already at or past target. Green celebratory.
+  //
+  // Null when there's no target or insufficient data — the chip just
+  // doesn't render in those cases, no degraded placeholder.
+  const weightGoalEta = useMemo(() => {
+    const target = activeProfile?.goals?.targetWeight
+    if (typeof target !== 'number' || !weightData || weightData.length < 2) return null
+
+    const first = weightData[0]
+    const last = weightData[weightData.length - 1]
+    const firstTime = new Date(first.date).getTime()
+    const lastTime = new Date(last.date).getTime()
+    const daysSpan = (lastTime - firstTime) / (24 * 60 * 60 * 1000)
+    if (daysSpan <= 0) return null
+
+    const slopePerDay = (last.weight - first.weight) / daysSpan
+    const currentWeight = last.weight
+
+    // Already at goal — celebratory short-circuit.
+    if (Math.abs(currentWeight - target) < 0.5) {
+      return { status: 'achieved' as const, target, currentWeight }
+    }
+
+    // Direction analysis. Slope under 0.01 lb/day is treated as flat
+    // — sub-noise rate that wouldn't reach a meaningful goal delta
+    // in any reasonable horizon.
+    const goalIsLoss = target < currentWeight
+    const trendIsLoss = slopePerDay < -0.01
+    const trendIsGain = slopePerDay > 0.01
+    const onRightTrack =
+      (goalIsLoss && trendIsLoss) || (!goalIsLoss && trendIsGain)
+
+    if (!onRightTrack) {
+      return {
+        status: 'off-track' as const,
+        target,
+        currentWeight,
+        slopePerDay,
+      }
+    }
+
+    const remainingDelta = Math.abs(currentWeight - target)
+    const dailyPace = Math.abs(slopePerDay)
+    const daysToGoal = Math.ceil(remainingDelta / dailyPace)
+
+    const etaDate = new Date(last.date)
+    etaDate.setDate(etaDate.getDate() + daysToGoal)
+
+    // Compare ETA against user-stated goal date if present. Slipping
+    // = on-the-right-track but won't make the self-set deadline.
+    const targetDateRaw = activeProfile?.goals?.targetDate
+    const targetDate = targetDateRaw ? new Date(targetDateRaw) : null
+    const isSlipping = targetDate ? etaDate > targetDate : false
+
+    return {
+      status: isSlipping ? ('slipping' as const) : ('on-pace' as const),
+      target,
+      currentWeight,
+      daysToGoal,
+      etaDate,
+      targetDate,
+      dailyPace,
+    }
+  }, [activeProfile, weightData])
+
   // Forward projection for daily calorie intake — same linear-fit
   // approach as weightData, but starting at i=1 (tomorrow) to avoid
   // rendering a duplicate bar at today's date. Bars don't benefit
@@ -1302,7 +1377,10 @@ function ProgressContent() {
                 dashed line for forward projection (linear-fit on the
                 same trend, extended by `timeRange` days). The chart
                 renders both in one view so a user sees where they
-                came from AND where they're headed if the trend holds. */}
+                came from AND where they're headed if the trend holds.
+                Layer 2 ETA chip below the chart turns the projection
+                into an accountability signal: when will they hit
+                target, and are they on pace? */}
             <div className="bg-card rounded-lg shadow-sm p-6">
               <h2 className="text-xl font-bold text-foreground mb-4">Weight Trend & Projection</h2>
               <WeightTrendChart
@@ -1311,6 +1389,52 @@ function ProgressContent() {
                 targetWeight={targetWeight}
                 loading={loading}
               />
+              {weightGoalEta && (
+                <div
+                  data-testid="weight-goal-eta"
+                  data-status={weightGoalEta.status}
+                  className={`mt-4 px-4 py-3 rounded-lg text-sm font-medium ${
+                    weightGoalEta.status === 'achieved' || weightGoalEta.status === 'on-pace'
+                      ? 'bg-success-light text-success-dark border border-success/30'
+                      : weightGoalEta.status === 'slipping'
+                        ? 'bg-warning-light text-warning-dark border border-warning/30'
+                        : 'bg-error-light text-error-dark border border-error/30'
+                  }`}
+                >
+                  {weightGoalEta.status === 'achieved' && (
+                    <>🎉 Goal reached — you're at your target weight of {weightGoalEta.target} lbs.</>
+                  )}
+                  {weightGoalEta.status === 'on-pace' && (
+                    <>
+                      🟢 At this rate you&apos;ll hit {weightGoalEta.target} lbs on{' '}
+                      <strong>{weightGoalEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+                      (~{weightGoalEta.daysToGoal} day{weightGoalEta.daysToGoal === 1 ? '' : 's'} from today).
+                    </>
+                  )}
+                  {weightGoalEta.status === 'slipping' && (
+                    <>
+                      🟡 At this rate you&apos;ll hit {weightGoalEta.target} lbs on{' '}
+                      <strong>{weightGoalEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+                      (~{weightGoalEta.daysToGoal} days).{' '}
+                      {weightGoalEta.targetDate && (
+                        <>Goal date was {weightGoalEta.targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
+                      )}
+                    </>
+                  )}
+                  {weightGoalEta.status === 'off-track' && (
+                    <>
+                      🔴 Current trend is{' '}
+                      {Math.abs(weightGoalEta.slopePerDay) < 0.01
+                        ? 'flat'
+                        : weightGoalEta.slopePerDay > 0
+                          ? 'moving away from your goal'
+                          : 'moving away from your goal'}
+                      . Your target is {weightGoalEta.target} lbs and you&apos;re at{' '}
+                      {weightGoalEta.currentWeight.toFixed(1)} lbs.
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Calorie Intake Chart — historical bars + projected

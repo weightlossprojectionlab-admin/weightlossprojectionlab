@@ -98,6 +98,21 @@ test.describe('/progress — render battery', () => {
     ).toBeVisible()
   })
 
+  test('weight-goal ETA chip renders with a known status', async ({ page }) => {
+    // Layer 2 accountability signal: the chip under the Weight
+    // Trend chart turns the projection into a goal-attainment ETA.
+    // Renders one of four colored states (achieved / on-pace /
+    // slipping / off-track) driven by data — we don't assert on
+    // WHICH status appears (that depends on the test user's weight
+    // trend at any given moment), only that the chip exists and
+    // carries a recognized status. Catches regressions where the
+    // logic returns null or renders a state we don't expect.
+    const chip = page.getByTestId('weight-goal-eta')
+    await expect(chip).toBeVisible()
+    const status = await chip.getAttribute('data-status')
+    expect(['achieved', 'on-pace', 'slipping', 'off-track']).toContain(status)
+  })
+
   test('daily calorie intake & projection chart section heading visible', async ({ page }) => {
     await expect(
       page.getByRole('heading', { name: /^Daily Calorie Intake & Projection$/i, level: 2 }),
