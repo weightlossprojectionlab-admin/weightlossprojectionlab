@@ -205,6 +205,8 @@ export async function GET(request: NextRequest) {
           photo: patientData.photo,
           type,
           relationship: patientData.relationship,
+          dateOfBirth: patientData.dateOfBirth ?? null,
+          gender: patientData.gender ?? null,
           activeMedications: medicationsSnapshot.size,
           lastVitalCheck: latestVital ? (latestVital.data().recordedAt || latestVital.data().timestamp) : null,
           latestWeight: latestWeight ? {

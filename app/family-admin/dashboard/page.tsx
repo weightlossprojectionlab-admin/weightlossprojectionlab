@@ -572,7 +572,7 @@ function PatientSnapshotCard({ patient, onClick }: any) {
         ) : (
           <div className="w-14 h-14 rounded-full bg-primary-light flex items-center justify-center">
             <span className="text-primary font-semibold text-xl">
-              {patient.name.charAt(0).toUpperCase()}
+              {(patient.name?.trim().charAt(0) || '?').toUpperCase()}
             </span>
           </div>
         )}

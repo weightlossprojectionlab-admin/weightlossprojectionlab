@@ -46,6 +46,8 @@ export interface PatientSnapshot {
   photo?: string
   type: 'human' | 'pet'
   relationship: string
+  dateOfBirth?: string | null
+  gender?: string | null
   activeMedications: number
   lastVitalCheck: string | null
   latestWeight: {
