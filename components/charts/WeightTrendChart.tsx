@@ -8,9 +8,17 @@ interface WeightTrendChartProps {
   data: WeightDataPoint[]
   targetWeight?: number
   loading?: boolean
+  /**
+   * Forward-looking projection points. When present, rendered as a
+   * dashed continuation of the historical line and a vertical "Today"
+   * reference line is drawn at the boundary. Caller computes these
+   * (typically a linear-fit extrapolation from `data`); the chart
+   * just draws what it's given.
+   */
+  projectionData?: WeightDataPoint[]
 }
 
-export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendChartProps) {
+export function WeightTrendChart({ data, targetWeight, loading, projectionData }: WeightTrendChartProps) {
   const { resolvedTheme } = useTheme()
   if (loading) {
     return (
@@ -31,17 +39,39 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
     )
   }
 
-  // Format data for Recharts
-  const chartData = data.map(point => ({
-    date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    weight: point.weight,
-    fullDate: point.date
-  }))
+  const hasProjection = (projectionData?.length ?? 0) > 0
+  // Format data for Recharts. Merge historical + projection into a
+  // single array so they share the X-axis; the two metrics use
+  // different dataKeys (weight vs projected) so each <Line> can pick
+  // up only its own segment. The boundary between them is the last
+  // historical point — that's where the dashed projection picks up.
+  const chartData = [
+    ...data.map((point) => ({
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      weight: point.weight,
+      projected: null as number | null,
+      fullDate: point.date,
+    })),
+    ...(hasProjection ? projectionData! : []).map((point) => ({
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      weight: null as number | null,
+      projected: point.weight,
+      fullDate: point.date,
+    })),
+  ]
+  // The last historical point is the "today" anchor where the dashed
+  // projection picks up. Use its formatted label for the ReferenceLine
+  // so it lands on the right tick.
+  const todayLabel = chartData[data.length - 1]?.date
 
-  // Calculate min/max for Y-axis domain
-  const weights = data.map(d => d.weight)
-  const minWeight = Math.min(...weights, targetWeight || Infinity)
-  const maxWeight = Math.max(...weights)
+  // Calculate min/max for Y-axis domain — include projection so the
+  // dashed line doesn't clip out of view when the trend extends far.
+  const allWeights = [
+    ...data.map((d) => d.weight),
+    ...(hasProjection ? projectionData!.map((d) => d.weight) : []),
+  ]
+  const minWeight = Math.min(...allWeights, targetWeight || Infinity)
+  const maxWeight = Math.max(...allWeights)
   const padding = (maxWeight - minWeight) * 0.1 || 5
   const yDomain = [
     Math.floor(minWeight - padding),
@@ -97,7 +127,26 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
             />
           )}
 
-          {/* Weight trend line */}
+          {/* "Today" boundary — vertical divider between history and
+              projection. Only rendered when there's a projection to
+              divide from. */}
+          {hasProjection && todayLabel && (
+            <ReferenceLine
+              x={todayLabel}
+              stroke={axisColor}
+              strokeDasharray="2 4"
+              label={{
+                value: 'Today',
+                position: 'top',
+                fill: axisColor,
+                fontSize: 11,
+              }}
+            />
+          )}
+
+          {/* Historical weight line — solid, with dots for actual
+              logged readings. Recharts skips null values, so this line
+              only draws across the historical segment of chartData. */}
           <Line
             type="monotone"
             dataKey="weight"
@@ -105,19 +154,47 @@ export function WeightTrendChart({ data, targetWeight, loading }: WeightTrendCha
             strokeWidth={3}
             dot={{ fill: 'hsl(var(--primary))', r: 4 }}
             activeDot={{ r: 6 }}
+            connectNulls={false}
+            isAnimationActive={false}
           />
+
+          {/* Forward projection — dashed, no dots (these are predicted,
+              not measured). Connects from the last historical point
+              because we duplicate the last value at projection[0] via
+              the page's slope math. */}
+          {hasProjection && (
+            <Line
+              type="monotone"
+              dataKey="projected"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              dot={false}
+              activeDot={{ r: 5, strokeDasharray: '0' }}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
 
       {/* Legend */}
-      <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+      <div className="flex items-center justify-center gap-6 mt-4 text-sm flex-wrap">
         <div className="flex items-center gap-2">
-          <div className="w-4 h-1 bg-primary rounded" />
-          <span className="text-foreground">Weight Trend</span>
+          <div className="w-6 h-1 bg-primary rounded" />
+          <span className="text-foreground">Weight Trend (so far)</span>
         </div>
+        {hasProjection && (
+          <div className="flex items-center gap-2">
+            <svg width="24" height="6" aria-hidden>
+              <line x1="0" y1="3" x2="24" y2="3" stroke="hsl(var(--primary))" strokeWidth="2" strokeDasharray="6 4" />
+            </svg>
+            <span className="text-foreground">Projected (if trend continues)</span>
+          </div>
+        )}
         {targetWeight && (
           <div className="flex items-center gap-2">
-            <div className="w-4 h-1 bg-primary border-t-2 border-dashed" />
+            <div className="w-6 h-1 bg-primary border-t-2 border-dashed" />
             <span className="text-foreground">Goal Weight</span>
           </div>
         )}

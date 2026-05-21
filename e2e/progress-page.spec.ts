@@ -24,15 +24,46 @@ import { test, expect } from '@playwright/test'
 test.describe('/progress — render battery', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/progress')
-    // The page renders the header immediately but gates the chart
-    // sections behind `{!loading && ...}` while it subscribes to
-    // Firestore for weight + meal data. Wait for the first chart's
-    // section heading to appear before each assertion so the rest
-    // can use the default 5s timeout reliably. 30s absorbs cold
-    // Firestore + lazy-import latency on a dev server.
-    await expect(
-      page.getByRole('heading', { name: /^Weight Trend$/i, level: 2 }),
-    ).toBeVisible({ timeout: 30_000 })
+
+    // Identity-of-subject: /progress requires an explicit Patient as
+    // its subject before charts render. Depending on patient count
+    // the page lands in one of three states:
+    //   - 0 patients → empty state (the spec needs at least one;
+    //                  see scripts/promote-chris-to-patient.ts)
+    //   - 1 patient  → page auto-selects via useEffect + URL replace
+    //   - 2+ patients → "Pick a family member…" combobox is shown
+    //                   and the user must choose
+    //
+    // Wait for the page to settle into one of TWO valid post-load
+    // states — either the picker is visible (need to pick) or the
+    // chart heading is already visible (auto-selected). The
+    // immediate-isVisible check we tried first raced with the dev
+    // server's cold compile and surfaced as a flake on the first
+    // test of each run.
+    const picker = page
+      .getByRole('combobox')
+      .filter({ has: page.getByRole('option', { name: /Pick a family member/i }) })
+    const chartHeading = page.getByRole('heading', { name: /^Weight Trend & Projection$/i, level: 2 })
+
+    await Promise.race([
+      picker.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => {}),
+      chartHeading.waitFor({ state: 'visible', timeout: 30_000 }).catch(() => {}),
+    ])
+
+    if (await picker.isVisible().catch(() => false)) {
+      // Pick the first non-placeholder option. Index 0 is the
+      // disabled "Pick a family member…" placeholder; index 1 is
+      // the first real patient. Order is by Firestore query result —
+      // doesn't matter for the spec, we just need a named subject
+      // so charts can render.
+      await picker.selectOption({ index: 1 })
+    }
+
+    // Final gate: the chart heading must be visible before any
+    // individual assertion runs. After picker.selectOption the page
+    // re-renders for the picked patient + the heading appears within
+    // the lazy-import + Firestore latency window.
+    await expect(chartHeading).toBeVisible({ timeout: 30_000 })
   })
 
   test('page header — title + share button + help affordance', async ({ page }) => {
@@ -48,20 +79,22 @@ test.describe('/progress — render battery', () => {
     await expect(page.getByRole('button', { name: /^Share/i }).first()).toBeVisible()
   })
 
-  test('time-range selector section visible', async ({ page }) => {
-    // "Time Range" is the h2 above the day-count buttons (7/30/90/etc).
-    // Rendered unconditionally near the top of the main column.
+  test('time-window selector section visible', async ({ page }) => {
+    // "Time Window" is the h2 above the day-count buttons (7/30/90/etc).
+    // Rendered unconditionally near the top of the main column. Drives
+    // both the historical lookback AND the forward projection horizon.
     await expect(
-      page.getByRole('heading', { name: /^Time Range$/i, level: 2 }),
+      page.getByRole('heading', { name: /^Time Window$/i, level: 2 }),
     ).toBeVisible()
   })
 
-  test('weight trend chart section heading visible', async ({ page }) => {
+  test('weight trend & projection chart section heading visible', async ({ page }) => {
     // The chart component itself is lazy-loaded behind a skeleton, but
     // the section heading is rendered by the page (not the chart bundle)
-    // so it's visible immediately.
+    // so it's visible immediately. Heading became "Weight Trend &
+    // Projection" when we added the forward-projection layer.
     await expect(
-      page.getByRole('heading', { name: /^Weight Trend$/i, level: 2 }),
+      page.getByRole('heading', { name: /^Weight Trend & Projection$/i, level: 2 }),
     ).toBeVisible()
   })
 

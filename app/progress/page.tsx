@@ -424,12 +424,62 @@ function ProgressContent() {
   // Check if the active profile has completed onboarding
   const hasCompletedOnboarding = activeProfile && activeProfile.goals && activeProfile.goals.dailyCalorieGoal && activeProfile.height
 
-  // Determine if we're in single user mode (no family members) or family mode
-  const isSingleUserMode = patients.length < 2
-  const isFamilyMode = patients.length >= 2
+  // Forward projection — linear-fit extrapolation from the historical
+  // weightData, extended `timeRange` days into the future. This is the
+  // simplest honest "if trend continues..." curve; the deficit-based
+  // useWeightProjection hook answers a different question ("are you
+  // on track to your goal?") and isn't right for plotting the chart.
+  // The first projection point reuses the last historical value so the
+  // dashed line visually connects to the solid one.
+  const projectedWeightData = useMemo(() => {
+    if (!weightData || weightData.length < 2) return []
+    const first = weightData[0]
+    const last = weightData[weightData.length - 1]
+    const firstTime = new Date(first.date).getTime()
+    const lastTime = new Date(last.date).getTime()
+    const daysSpan = (lastTime - firstTime) / (24 * 60 * 60 * 1000)
+    if (daysSpan <= 0) return []
+    const slopePerDay = (last.weight - first.weight) / daysSpan
+    const lastDate = new Date(last.date)
+    const points: typeof weightData = []
+    // Start at i=0 so the projection visually connects to the last
+    // historical dot; advance one day per step out to timeRange.
+    for (let i = 0; i <= timeRange; i++) {
+      const futureDate = new Date(lastDate)
+      futureDate.setDate(futureDate.getDate() + i)
+      points.push({
+        date: futureDate.toISOString().split('T')[0],
+        weight: Math.round((last.weight + slopePerDay * i) * 10) / 10,
+        timestamp: futureDate,
+      })
+    }
+    return points
+  }, [weightData, timeRange])
 
-  // Show dropdown only if: family mode AND no patientId in URL (no context established)
-  const showPatientSelector = isFamilyMode && !patientIdParam
+  // Identity-of-subject: /progress needs an explicit Patient as the
+  // subject — never default silently to caregiver data masquerading
+  // as "Your Progress." That muddle hid which family member's
+  // numbers were being charted, especially for Family Premium
+  // accounts where the caregiver almost never has their own goal.
+  //
+  // Rules:
+  //   - 0 patients → empty state, prompt to add one (no charts)
+  //   - 1 patient → auto-select it (URL replace so refresh keeps context)
+  //   - 2+ patients → require explicit selection (URL param or selector)
+  const hasNoPatients = patients.length === 0
+  const showPatientSelector = patients.length > 1 && !selectedPatientId
+
+  // When the user has exactly one patient and no URL context, treat
+  // that patient as the implicit subject — they have no other choice
+  // to make, but we still want a named subject + URL-stable context
+  // for refresh / sharing / bookmarking.
+  useEffect(() => {
+    if (!selectedPatientId && patients.length === 1) {
+      const onlyPatient = patients[0]
+      setSelectedPatientId(onlyPatient.id)
+      router.replace(`/progress?patientId=${onlyPatient.id}`)
+    }
+  }, [patients, selectedPatientId, router])
 
   // Feature access checks
   const hasAdvancedAnalytics = canAccessFeature(user as any, 'advanced-analytics')
@@ -480,27 +530,44 @@ function ProgressContent() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
-        title={patientProfile ? `${patientProfile.name}'s Progress` : isSingleUserMode ? "Your Progress & Trends" : "Progress & Trends"}
-        subtitle={patientProfile ? `Tracking ${patientProfile.name}'s weight loss journey` : "Visualize your weight loss journey with interactive charts"}
+        title={
+          patientProfile
+            ? patientProfile.relationship === 'self'
+              ? `Your Progress (${patientProfile.name})`
+              : `${patientProfile.name}'s Progress`
+            : hasNoPatients
+              ? 'Add a family member to start tracking'
+              : 'Choose a family member'
+        }
+        subtitle={
+          patientProfile
+            ? patientProfile.relationship === 'self'
+              ? 'Your weight loss journey, projected forward from your history'
+              : `${patientProfile.name}'s weight loss journey, projected forward from their history`
+            : hasNoPatients
+              ? 'Once added, you can chart their progress and see where their trend is heading.'
+              : 'Pick whose progress you want to view.'
+        }
         actions={
           <div className="flex items-center gap-3">
-            {/* Family Member Selector - Only show in family mode without URL context */}
+            {/* Family Member Selector — shown when the caller hasn't
+                established a subject yet (2+ patients, no URL context).
+                The empty "My Progress" option that used to live here
+                was removed: it was the path back into silent
+                caregiver-data-as-self mode, which is exactly the
+                identity-of-subject muddle this refactor closes. */}
             {showPatientSelector && (
               <select
                 value={selectedPatientId || ''}
                 onChange={(e) => {
-                  const newPatientId = e.target.value || null
+                  const newPatientId = e.target.value
+                  if (!newPatientId) return
                   setSelectedPatientId(newPatientId)
-                  // Update URL
-                  if (newPatientId) {
-                    router.push(`/progress?patientId=${newPatientId}`)
-                  } else {
-                    router.push('/progress')
-                  }
+                  router.push(`/progress?patientId=${newPatientId}`)
                 }}
                 className="px-3 py-2 border border-border rounded-lg bg-card text-foreground text-sm"
               >
-                <option value="">My Progress</option>
+                <option value="" disabled>Pick a family member…</option>
                 {patients.map((patient) => (
                   <option key={patient.id} value={patient.id}>
                     {patient.name}
@@ -614,8 +681,8 @@ function ProgressContent() {
             <div className="bg-card rounded-lg shadow-sm p-4 mb-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-foreground">Time Range</h2>
-                  <p className="text-sm text-muted-foreground">Select the period to visualize</p>
+                  <h2 className="text-lg font-semibold text-foreground">Time Window</h2>
+                  <p className="text-sm text-muted-foreground">How far back to look — and how far ahead to project</p>
                 </div>
                 <div className="flex gap-2">
                   {[7, 14, 30, 60, 90].map((days) => (
@@ -1152,7 +1219,14 @@ function ProgressContent() {
                   <div className="bg-warning-light0" style={{ width: `${summaryStats.macroPercentages.carbs}%` }} />
                   <div className="bg-success-light0" style={{ width: `${summaryStats.macroPercentages.fat}%` }} />
                 </div>
-                {profile?.goals?.macroTargets && (
+                {/* Guard on activeProfile (which can be the patient
+                    OR the caregiver), not on `profile` (the caregiver
+                    only). Before the identity-of-subject refactor
+                    these were the same object, so this guard happened
+                    to work; now activeProfile is the selected patient
+                    and the inner read crashed when the patient had no
+                    macroTargets even though the caregiver did. */}
+                {activeProfile?.goals?.macroTargets && (
                   <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-2">
                     Goal: {activeProfile.goals.macroTargets.protein}% / {activeProfile.goals.macroTargets.carbs}% / {activeProfile.goals.macroTargets.fat}%
                   </p>
@@ -1168,11 +1242,16 @@ function ProgressContent() {
         {/* Charts */}
         {!loading && (
           <div className="space-y-6">
-            {/* Weight Trend Chart */}
+            {/* Weight Trend Chart — solid line for measured history,
+                dashed line for forward projection (linear-fit on the
+                same trend, extended by `timeRange` days). The chart
+                renders both in one view so a user sees where they
+                came from AND where they're headed if the trend holds. */}
             <div className="bg-card rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">Weight Trend</h2>
+              <h2 className="text-xl font-bold text-foreground mb-4">Weight Trend & Projection</h2>
               <WeightTrendChart
                 data={weightData}
+                projectionData={projectedWeightData}
                 targetWeight={targetWeight}
                 loading={loading}
               />
