@@ -6,6 +6,7 @@ import { collection, onSnapshot } from 'firebase/firestore'
 import { useRouter } from 'next/navigation'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { getPermissions } from '@/lib/admin/permissions'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import { getAdminAuthToken } from '@/lib/admin/api'
 import { logger } from '@/lib/logger'
 import { getCSRFToken } from '@/lib/csrf'
@@ -1239,8 +1240,8 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
                                   </div>
                                 )}
                                 {patient.relationship && (
-                                  <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 capitalize">
-                                    {patient.relationship}
+                                  <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700">
+                                    {getPatientBadgeLabel(patient)}
                                   </span>
                                 )}
                                 <span className={`px-2 py-0.5 text-xs rounded-full font-medium ${
@@ -1339,7 +1340,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
                             <span className="text-sm">
                               {patient.type === 'pet' ? '🐾' : '🧑'} {patient.name}
                               {patient.relationship && (
-                                <span className="ml-1 text-xs text-muted-foreground">({patient.relationship})</span>
+                                <span className="ml-1 text-xs text-muted-foreground">({getPatientBadgeLabel(patient)})</span>
                               )}
                             </span>
                           </label>

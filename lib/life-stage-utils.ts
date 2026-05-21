@@ -97,11 +97,11 @@ export function getHumanLifeStage(dob: string): LifeStageResult {
  *     human life stages or relationship-with-gender semantics.
  */
 export function getPatientBadgeLabel(patient: {
-  type?: 'human' | 'pet'
-  dateOfBirth?: string
-  relationship?: string
-  gender?: string
-  species?: string
+  type?: 'human' | 'pet' | null
+  dateOfBirth?: string | null
+  relationship?: string | null
+  gender?: string | null
+  species?: string | null
 }): string {
   if (patient.type === 'pet') {
     if (patient.species && patient.species.length > 0) {

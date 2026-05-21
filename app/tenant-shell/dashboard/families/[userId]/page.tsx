@@ -18,6 +18,7 @@ import { notFound } from 'next/navigation'
 import { getTenantBySlug } from '@/lib/tenant-server'
 import { loadClientDetail, formatDate, isActive } from '../../_lib/load-families'
 import FamiliesAuthGuard from '../FamiliesAuthGuard'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 
 export const dynamic = 'force-dynamic'
 
@@ -197,7 +198,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
                         {patient.name}
                       </h4>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {patient.relationship || patient.type}
+                        {getPatientBadgeLabel(patient) || patient.type}
                       </p>
                       <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         patient.type === 'pet'

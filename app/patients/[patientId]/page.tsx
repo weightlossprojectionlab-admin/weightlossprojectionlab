@@ -56,7 +56,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { calculateAge } from '@/lib/age-utils'
-import { getHumanLifeStage, getHumanLifeStageNotices } from '@/lib/life-stage-utils'
+import { getHumanLifeStage, getHumanLifeStageNotices, getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import InfantFeedingLog from '@/components/patients/InfantFeedingLog'
 import { capitalizeName } from '@/lib/utils'
 import { useDashboardData } from '@/hooks/useDashboardData'
@@ -890,9 +890,11 @@ function PatientDetailContent() {
               ) : (
                 <>
                   {patient.type && `${patient.type} • `}
-                  {patient.type === 'human' && patient.dateOfBirth
-                    ? getHumanLifeStage(patient.dateOfBirth).label
-                    : patient.relationship?.replace(/-/g, ' ')}
+                  {/* Unified badge label — gender-aware relationship
+                      for adults, life-stage for minors. Replaces the
+                      lifeStage-or-raw-relationship fallback that lost
+                      the relationship semantic for adults. */}
+                  {getPatientBadgeLabel(patient)}
                 </>
               )}
             </span>

@@ -20,6 +20,7 @@ import { isFeatureEnabled } from '@/lib/featureFlags'
 import type { CaregiverContext } from '@/types'
 import type { PatientProfile } from '@/types/medical'
 import type { HouseholdDuty, DutyStatus, DutyPriority } from '@/types/household-duties'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 
 interface CaregiverDashboardPageProps {
   params: Promise<{
@@ -672,7 +673,7 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
                         <h3 className="font-semibold text-foreground truncate">
                           {patient.name?.trim() || 'Unnamed patient'}
                         </h3>
-                        <p className="text-sm text-muted-foreground capitalize">{patient.relationship}</p>
+                        <p className="text-sm text-muted-foreground">{getPatientBadgeLabel(patient)}</p>
                         {patient.dateOfBirth && (
                           <p className="text-sm text-muted-foreground mt-1">
                             {calculateAge(patient.dateOfBirth)} years old

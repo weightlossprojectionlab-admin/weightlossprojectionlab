@@ -13,6 +13,7 @@ import { useInvitations } from '@/hooks/useInvitations'
 import { PERMISSION_PRESETS, PERMISSION_LABELS, getSensitivePermissionWarnings } from '@/lib/family-permissions'
 import { RoleSelector } from './RoleSelector'
 import { hasAdminPrivileges, getDefaultPermissionsForRole } from '@/lib/family-roles'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import type { FamilyMemberPermissions, PatientProfile, FamilyRole } from '@/types/medical'
 import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
@@ -272,7 +273,7 @@ export function InviteModal({
                         className="w-4 h-4 text-primary rounded focus:ring-purple-500"
                       />
                       <span className="text-foreground">
-                        {patient.name} ({patient.relationship})
+                        {patient.name} ({getPatientBadgeLabel(patient)})
                       </span>
                     </label>
                   ))}

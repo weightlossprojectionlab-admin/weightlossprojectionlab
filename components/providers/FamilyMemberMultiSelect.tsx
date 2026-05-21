@@ -8,6 +8,7 @@
 
 import { useState } from 'react'
 import type { PatientProfile } from '@/types/medical'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 
 interface FamilyMemberMultiSelectProps {
   patients: PatientProfile[]
@@ -190,8 +191,8 @@ export function FamilyMemberMultiSelect({
                           {patient.name}
                         </div>
                         {patient.relationship && (
-                          <div className="text-sm text-muted-foreground capitalize">
-                            {patient.relationship}
+                          <div className="text-sm text-muted-foreground">
+                            {getPatientBadgeLabel(patient)}
                           </div>
                         )}
                       </div>

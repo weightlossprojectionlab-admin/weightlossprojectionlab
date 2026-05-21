@@ -6,6 +6,7 @@ import { ParsedMedicationData } from '@/lib/medication-parser'
 import { uploadMedicationImage, uploadMedicationImageRecord } from '@/lib/medication-image-upload'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useAuth } from '@/hooks/useAuth'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { PatientProfile, MedicationImage } from '@/types/medical'
@@ -296,7 +297,7 @@ export function MedicationReviewModal({
                   <option key={patient.id} value={patient.id}>
                     {patient.type === 'pet' ? '🐾 ' : '👤 '}
                     {patient.name}
-                    {patient.relationship ? ` (${patient.relationship})` : ''}
+                    {patient.relationship ? ` (${getPatientBadgeLabel(patient)})` : ''}
                   </option>
                 ))}
               </select>

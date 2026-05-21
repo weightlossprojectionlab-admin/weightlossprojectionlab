@@ -14,6 +14,7 @@ import { useState } from 'react'
 import { XMarkIcon, ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { PatientProfile, ExternalCaregiverRole, ExternalCaregiverAccessLevel } from '@/types/medical'
 import { NameInput } from '@/components/form/NameInput'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import toast from 'react-hot-toast'
 
 interface ExternalCaregiverInvitationFlowProps {
@@ -414,8 +415,8 @@ export function ExternalCaregiverInvitationFlow({
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="font-medium text-foreground">{patient.name}</div>
-                            <div className="text-sm text-muted-foreground capitalize">
-                              {patient.relationship} • {patient.type}
+                            <div className="text-sm text-muted-foreground">
+                              {getPatientBadgeLabel(patient)} • {patient.type}
                             </div>
                           </div>
                           {formData.patientsAccess.includes(patient.id) && (

@@ -14,6 +14,7 @@ import AppointmentWizard, { AppointmentData } from '@/components/wizards/Appoint
 import { useAuth } from '@/hooks/useAuth'
 import { usePatients } from '@/hooks/usePatients'
 import { useProviders } from '@/hooks/useProviders'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAppointments } from '@/hooks/useAppointments'
 import { FeatureGate } from '@/components/subscription'
@@ -148,8 +149,8 @@ function NewAppointmentContent() {
                     className="w-full text-left p-4 border-2 border-border rounded-lg hover:border-primary transition-colors"
                   >
                     <div className="font-semibold text-foreground">{patient.name}</div>
-                    <div className="text-sm text-muted-foreground capitalize">
-                      {patient.relationship}
+                    <div className="text-sm text-muted-foreground">
+                      {getPatientBadgeLabel(patient)}
                     </div>
                   </button>
                 ))

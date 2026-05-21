@@ -23,6 +23,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAppointments } from '@/hooks/useAppointments'
 import { usePatients } from '@/hooks/usePatients'
 import { useProviders } from '@/hooks/useProviders'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import toast from 'react-hot-toast'
 import { UserIcon } from '@heroicons/react/24/outline'
@@ -172,7 +173,7 @@ export function AppointmentForm({
             <option value="">Select a patient</option>
             {patients.map(patient => (
               <option key={patient.id} value={patient.id}>
-                {patient.name} ({patient.relationship})
+                {patient.name} ({getPatientBadgeLabel(patient)})
               </option>
             ))}
           </select>

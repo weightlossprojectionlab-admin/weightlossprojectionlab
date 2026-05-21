@@ -19,6 +19,7 @@ import { useHouseholds } from '@/hooks/useHouseholds'
 import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { InviteModal } from '@/components/family/InviteModal'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import { TransferOwnershipModal } from '@/components/family/TransferOwnershipModal'
 import { HouseholdManager } from '@/components/households/HouseholdManager'
 import { DutyListView } from '@/components/household/DutyListView'
@@ -378,7 +379,7 @@ function FamilyDashboardContent() {
                               <div className="flex flex-col items-center gap-1">
                                 <span>{patient.name}</span>
                                 <span className="text-xs text-muted-foreground font-normal">
-                                  ({patient.relationship})
+                                  ({getPatientBadgeLabel(patient)})
                                 </span>
                               </div>
                             </th>

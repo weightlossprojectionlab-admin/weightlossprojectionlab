@@ -10,6 +10,7 @@ import EditMedicationModal from '@/components/health/EditMedicationModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { medicalOperations } from '@/lib/medical-operations'
 import { PatientProfile, PatientMedication } from '@/types/medical'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { logger } from '@/lib/logger'
@@ -277,8 +278,8 @@ function MedicationsContent() {
                       }`}>
                         {patient.name}
                       </div>
-                      <div className="text-xs text-muted-foreground capitalize">
-                        {patient.relationship || 'Family'}
+                      <div className="text-xs text-muted-foreground">
+                        {getPatientBadgeLabel(patient) || 'Family'}
                       </div>
                     </div>
                     {selectedPatientId === patient.id && (

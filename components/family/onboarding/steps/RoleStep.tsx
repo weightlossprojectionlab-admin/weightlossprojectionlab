@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { usePatients } from '@/hooks/usePatients'
 import { RelationshipType } from '@/types/caregiver-profile'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 
 interface RoleStepProps {
   data: {
@@ -148,7 +149,7 @@ export function RoleStep({ data, onChange }: RoleStepProps) {
                   <div>
                     <h4 className="font-semibold text-foreground">{patient.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {patient.relationship} • {patient.type === 'pet' ? patient.species : `Age ${patient.age || 'N/A'}`}
+                      {getPatientBadgeLabel(patient)} • {patient.type === 'pet' ? patient.species : `Age ${patient.age || 'N/A'}`}
                     </p>
                   </div>
                 </div>

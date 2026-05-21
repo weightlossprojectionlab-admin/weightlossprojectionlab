@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation'
 import { useMedicalDashboard } from '@/hooks/useMedicalDashboard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import {
   UserGroupIcon,
   BuildingOffice2Icon,
@@ -199,8 +200,8 @@ function MedicalDashboardContent() {
                             <p className="font-medium text-foreground">
                               {patient.name}
                             </p>
-                            <p className="text-sm text-muted-foreground capitalize">
-                              {patient.relationship}
+                            <p className="text-sm text-muted-foreground">
+                              {getPatientBadgeLabel(patient)}
                             </p>
                           </div>
                           <span className="text-xs px-2 py-1 bg-primary-light dark:bg-purple-900/20 text-primary-dark dark:text-purple-400 rounded capitalize">

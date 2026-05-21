@@ -14,6 +14,7 @@ import type { FamilyMember, FamilyRole, PatientProfile, FamilyMemberPermissions 
 import { RoleSelector } from './RoleSelector'
 import { ROLE_LABELS, ROLE_DESCRIPTIONS } from '@/lib/family-roles'
 import { XMarkIcon, UserGroupIcon, ShieldCheckIcon } from '@heroicons/react/24/outline'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 
 interface EditMemberModalProps {
   isOpen: boolean
@@ -261,8 +262,8 @@ export function EditMemberModal({
                               />
                               <div>
                                 <h5 className="font-semibold text-foreground">{patient.name}</h5>
-                                <p className="text-sm text-muted-foreground capitalize">
-                                  {patient.relationship || patient.type}
+                                <p className="text-sm text-muted-foreground">
+                                  {getPatientBadgeLabel(patient) || patient.type}
                                 </p>
                               </div>
                             </div>

@@ -6,6 +6,7 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { UserCircleIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { capitalizeName } from '@/lib/utils'
+import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import toast from 'react-hot-toast'
 
 interface PatientSelectorProps {
@@ -178,9 +179,9 @@ export function PatientSelector({
                   }`}>
                     {capitalizeName(patient.name)}
                   </div>
-                  <div className="text-xs text-muted-foreground capitalize">
-                    {patient.relationship}
-                    {patient.type === 'pet' && ` • ${patient.species}`}
+                  <div className="text-xs text-muted-foreground">
+                    {getPatientBadgeLabel(patient)}
+                    {patient.type === 'pet' && patient.species && ` • ${patient.species}`}
                   </div>
                 </div>
                 {patient.id === selectedPatientId && (
