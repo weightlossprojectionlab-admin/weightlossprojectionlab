@@ -73,6 +73,74 @@ export function getHumanLifeStage(dob: string): LifeStageResult {
 }
 
 /**
+ * Compute the user-facing badge label for a Patient — the single
+ * short string shown on patient cards. Combines age and relationship
+ * honestly:
+ *
+ *   - MINORS (newborn / infant / toddler / child / teen):
+ *     show the life-stage label. A 5-year-old offspring is "Child",
+ *     a 14-year-old is "Teen" — age-appropriate even though the
+ *     stored `relationship` is the same.
+ *
+ *   - ADULTS / SENIORS:
+ *     show a gender-aware relationship label ("Son" / "Daughter" /
+ *     "Father" / "Mother" / "Brother" / "Sister" / "Husband" / etc.).
+ *     This is what fixes the "25-year-old labeled as child" bug —
+ *     `relationship: 'child'` is offspring-of-owner, not an age
+ *     category. The previous PatientCard logic compared raw
+ *     relationship strings case-incorrectly (`'Child'` vs stored
+ *     `'child'`), so the badge always fell through to the raw
+ *     relationship value.
+ *
+ *   - PETS:
+ *     species (capitalized) if present, else "Pet". Pets don't have
+ *     human life stages or relationship-with-gender semantics.
+ */
+export function getPatientBadgeLabel(patient: {
+  type?: 'human' | 'pet'
+  dateOfBirth?: string
+  relationship?: string
+  gender?: string
+  species?: string
+}): string {
+  if (patient.type === 'pet') {
+    if (patient.species && patient.species.length > 0) {
+      return patient.species.charAt(0).toUpperCase() + patient.species.slice(1)
+    }
+    return 'Pet'
+  }
+
+  const stage = patient.dateOfBirth
+    ? getHumanLifeStage(patient.dateOfBirth)
+    : { stage: 'adult', label: 'Adult' }
+
+  // Minors: age category is the most informative single label.
+  if (['newborn', 'infant', 'toddler', 'child', 'teen'].includes(stage.stage)) {
+    return stage.label
+  }
+
+  // Adults / seniors: prefer gender-aware relationship label.
+  const isMale = patient.gender === 'male'
+  const isFemale = patient.gender === 'female'
+  switch (patient.relationship) {
+    case 'self':
+      return 'You'
+    case 'spouse':
+      return isMale ? 'Husband' : isFemale ? 'Wife' : 'Spouse'
+    case 'parent':
+      return isMale ? 'Father' : isFemale ? 'Mother' : 'Parent'
+    case 'child':
+      return isMale ? 'Son' : isFemale ? 'Daughter' : stage.label
+    case 'sibling':
+      return isMale ? 'Brother' : isFemale ? 'Sister' : 'Sibling'
+    case 'grandparent':
+      return isMale ? 'Grandfather' : isFemale ? 'Grandmother' : 'Grandparent'
+    default:
+      return stage.label
+  }
+}
+
+/**
  * Format human age for display with appropriate precision
  * - Newborns: "X days" or "X weeks"
  * - Infants: "X months"

@@ -16,7 +16,7 @@ import { shouldShowWeightReminder } from '@/lib/weight-reminder-logic'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useRouter } from 'next/navigation'
 import { useAccount } from '@/contexts/AccountContext'
-import { formatHumanAgeDisplay, getHumanLifeStage } from '@/lib/life-stage-utils'
+import { formatHumanAgeDisplay, getHumanLifeStage, getPatientBadgeLabel } from '@/lib/life-stage-utils'
 import { getSpeciesEmoji } from '@/lib/pet-health-config'
 
 interface PatientCardProps {
@@ -282,7 +282,16 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {patient.relationship ? (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
-                    {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
+                    {/* getPatientBadgeLabel picks the right semantic
+                        label based on life stage + gender +
+                        relationship. Minors → age category (Newborn /
+                        Infant / Child / Teen); adults → gender-aware
+                        relationship (Son / Daughter / Father / Wife /
+                        Brother / etc.). Replaced the prior case-
+                        incorrect ['Newborn','Child'] check that always
+                        fell through to the raw relationship and made
+                        25-year-olds read as "child". */}
+                    {getPatientBadgeLabel(patient)}
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground italic">
@@ -478,7 +487,16 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {patient.relationship ? (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getRelationshipColor(patient.relationship)}`}>
-                    {['Newborn', 'Child'].includes(patient.relationship) ? lifeStageLabel : patient.relationship}
+                    {/* getPatientBadgeLabel picks the right semantic
+                        label based on life stage + gender +
+                        relationship. Minors → age category (Newborn /
+                        Infant / Child / Teen); adults → gender-aware
+                        relationship (Son / Daughter / Father / Wife /
+                        Brother / etc.). Replaced the prior case-
+                        incorrect ['Newborn','Child'] check that always
+                        fell through to the raw relationship and made
+                        25-year-olds read as "child". */}
+                    {getPatientBadgeLabel(patient)}
                   </span>
                 ) : (
                   <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-muted text-muted-foreground italic">
