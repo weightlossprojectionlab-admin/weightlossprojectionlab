@@ -7,9 +7,17 @@ import { useTheme } from '@/hooks/useTheme'
 interface CalorieIntakeChartProps {
   data: CalorieDataPoint[]
   loading?: boolean
+  /**
+   * Forward-looking projection points. When present, rendered as
+   * lighter-opacity bars to the right of "Today" — same data-shape
+   * as `data` but representing what the user is projected to eat
+   * if their recent pattern continues. Caller computes via linear
+   * fit on the historical daily totals; the chart just draws.
+   */
+  projectionData?: CalorieDataPoint[]
 }
 
-export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
+export function CalorieIntakeChart({ data, loading, projectionData }: CalorieIntakeChartProps) {
   const { resolvedTheme } = useTheme()
 
   if (loading) {
@@ -31,14 +39,33 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
     )
   }
 
-  // Format data for Recharts
-  const chartData = data.map(point => ({
-    date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    calories: point.calories,
-    goal: point.goal,
-    fullDate: point.date,
-    overGoal: point.calories > point.goal
-  }))
+  const hasProjection = (projectionData?.length ?? 0) > 0
+
+  // Merge historical + projection bars. Two dataKeys ("calories"
+  // vs "projected") let each segment use its own Bar element with
+  // its own styling — recharts skips null values, so each Bar only
+  // draws its segment of chartData. Order matters: historical first,
+  // projection appended — that places projected bars to the right of
+  // the "Today" divider.
+  const chartData = [
+    ...data.map((point) => ({
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      calories: point.calories,
+      projected: null as number | null,
+      goal: point.goal,
+      fullDate: point.date,
+      overGoal: point.calories > point.goal,
+    })),
+    ...(hasProjection ? projectionData! : []).map((point) => ({
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      calories: null as number | null,
+      projected: point.calories,
+      goal: point.goal,
+      fullDate: point.date,
+      overGoal: point.calories > point.goal,
+    })),
+  ]
+  const todayLabel = chartData[data.length - 1]?.date
 
   // Calculate average goal (they should all be the same, but just in case)
   const avgGoal = data.length > 0 ? data[0].goal : 2000
@@ -97,22 +124,60 @@ export function CalorieIntakeChart({ data, loading }: CalorieIntakeChartProps) {
             }}
           />
 
-          {/* Calorie bars */}
+          {/* "Today" boundary — vertical divider between historical
+              bars and projected bars. Only rendered when there's a
+              projection to divide from. */}
+          {hasProjection && todayLabel && (
+            <ReferenceLine
+              x={todayLabel}
+              stroke={axisColor}
+              strokeDasharray="2 4"
+              label={{
+                value: 'Today',
+                position: 'top',
+                fill: axisColor,
+                fontSize: 11,
+              }}
+            />
+          )}
+
+          {/* Historical calorie bars — solid primary. */}
           <Bar
             dataKey="calories"
             fill="hsl(var(--primary))"
             radius={[4, 4, 0, 0]}
             name="Calories"
+            isAnimationActive={false}
           />
+
+          {/* Projected calorie bars — same primary but lower opacity
+              so they read as "predicted, not measured." Rendered to
+              the right of the Today divider. */}
+          {hasProjection && (
+            <Bar
+              dataKey="projected"
+              fill="hsl(var(--primary))"
+              fillOpacity={0.35}
+              radius={[4, 4, 0, 0]}
+              name="Projected"
+              isAnimationActive={false}
+            />
+          )}
         </BarChart>
       </ResponsiveContainer>
 
       {/* Stats summary */}
-      <div className="flex items-center justify-center gap-6 mt-4 text-sm">
+      <div className="flex items-center justify-center gap-6 mt-4 text-sm flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-primary rounded" />
           <span className="text-foreground">Daily Intake</span>
         </div>
+        {hasProjection && (
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 bg-primary rounded opacity-35" />
+            <span className="text-foreground">Projected (if pattern continues)</span>
+          </div>
+        )}
         <div className="flex items-center gap-2">
           <div className="w-4 h-1 bg-success border-t-2 border-dashed" />
           <span className="text-foreground">Calorie Goal</span>

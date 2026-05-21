@@ -9,9 +9,17 @@ interface StepCountChartProps {
   loading?: boolean
   isTrackingEnabled?: boolean
   todaysSteps?: number
+  /**
+   * Forward-looking projection points. When present, rendered as
+   * lighter-opacity bars to the right of "Today" — same data-shape
+   * as `data` representing what the user is projected to walk if
+   * their recent pattern continues. Caller computes via linear fit
+   * on the historical daily totals; the chart just draws.
+   */
+  projectionData?: StepDataPoint[]
 }
 
-export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }: StepCountChartProps) {
+export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps, projectionData }: StepCountChartProps) {
   const { resolvedTheme } = useTheme()
 
   if (loading) {
@@ -99,14 +107,32 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
     )
   }
 
-  // Format data for Recharts
-  const chartData = data.map(point => ({
-    date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    steps: point.steps,
-    goal: point.goal,
-    fullDate: point.date,
-    metGoal: point.steps >= point.goal
-  }))
+  const hasProjection = (projectionData?.length ?? 0) > 0
+
+  // Merge historical + projection bars. Same two-dataKey pattern
+  // as the calorie chart — historical bars use dataKey "steps" with
+  // full opacity; projected bars use dataKey "projected" with lower
+  // opacity. Order matters so projected bars land to the right of
+  // the "Today" divider.
+  const chartData = [
+    ...data.map((point) => ({
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      steps: point.steps,
+      projected: null as number | null,
+      goal: point.goal,
+      fullDate: point.date,
+      metGoal: point.steps >= point.goal,
+    })),
+    ...(hasProjection ? projectionData! : []).map((point) => ({
+      date: new Date(point.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      steps: null as number | null,
+      projected: point.steps,
+      goal: point.goal,
+      fullDate: point.date,
+      metGoal: point.steps >= point.goal,
+    })),
+  ]
+  const todayLabel = chartData[data.length - 1]?.date
 
   // Calculate average goal
   const avgGoal = data.length > 0 ? data[0].goal : 10000
@@ -161,11 +187,44 @@ export function StepCountChart({ data, loading, isTrackingEnabled, todaysSteps }
             stroke="hsl(var(--success))"
             strokeDasharray="3 3"
           />
+
+          {/* "Today" boundary — vertical divider between historical
+              bars and projected bars. Only rendered when there's a
+              projection to divide from. */}
+          {hasProjection && todayLabel && (
+            <ReferenceLine
+              x={todayLabel}
+              stroke={axisColor}
+              strokeDasharray="2 4"
+              label={{
+                value: 'Today',
+                position: 'top',
+                fill: axisColor,
+                fontSize: 11,
+              }}
+            />
+          )}
+
+          {/* Historical step bars — solid primary. */}
           <Bar
             dataKey="steps"
             fill="hsl(var(--primary))"
             radius={[4, 4, 0, 0]}
+            isAnimationActive={false}
           />
+
+          {/* Projected step bars — same primary, lower opacity. */}
+          {hasProjection && (
+            <Bar
+              dataKey="projected"
+              fill="hsl(var(--primary))"
+              fillOpacity={0.35}
+              radius={[4, 4, 0, 0]}
+              name="Projected"
+              isAnimationActive={false}
+            />
+          )}
+
           <Bar
             dataKey="goal"
             fill="transparent"

@@ -98,9 +98,9 @@ test.describe('/progress — render battery', () => {
     ).toBeVisible()
   })
 
-  test('daily calorie intake chart section heading visible', async ({ page }) => {
+  test('daily calorie intake & projection chart section heading visible', async ({ page }) => {
     await expect(
-      page.getByRole('heading', { name: /^Daily Calorie Intake$/i, level: 2 }),
+      page.getByRole('heading', { name: /^Daily Calorie Intake & Projection$/i, level: 2 }),
     ).toBeVisible()
   })
 
@@ -113,10 +113,14 @@ test.describe('/progress — render battery', () => {
     ).toBeVisible()
   })
 
-  test('daily step count chart section heading visible', async ({ page }) => {
+  test('daily step count & projection chart section heading visible', async ({ page }) => {
     // Same dual-branch pattern as macronutrients (gated vs. fallback).
+    // For the gated path (hasTrendAnalysis=true) heading is the
+    // renamed "& Projection" version; the fallback upgrade-prompt
+    // path still uses the original "Daily Step Count" heading.
+    // Match either so the spec works on both subscription tiers.
     await expect(
-      page.getByRole('heading', { name: /^Daily Step Count$/i, level: 2 }).first(),
+      page.getByRole('heading', { name: /^Daily Step Count( & Projection)?$/i, level: 2 }).first(),
     ).toBeVisible()
   })
 

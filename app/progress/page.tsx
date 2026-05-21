@@ -456,6 +456,62 @@ function ProgressContent() {
     return points
   }, [weightData, timeRange])
 
+  // Forward projection for daily calorie intake — same linear-fit
+  // approach as weightData, but starting at i=1 (tomorrow) to avoid
+  // rendering a duplicate bar at today's date. Bars don't benefit
+  // from the visual connect-point that the line chart's i=0 overlap
+  // gives — they just look like two stacked bars at the same label.
+  // Result is per-day projected intake to the RIGHT of the "Today"
+  // divider in CalorieIntakeChart.
+  const projectedCalorieData = useMemo(() => {
+    if (!calorieData || calorieData.length < 2) return []
+    const first = calorieData[0]
+    const last = calorieData[calorieData.length - 1]
+    const firstTime = new Date(first.date).getTime()
+    const lastTime = new Date(last.date).getTime()
+    const daysSpan = (lastTime - firstTime) / (24 * 60 * 60 * 1000)
+    if (daysSpan <= 0) return []
+    const slopePerDay = (last.calories - first.calories) / daysSpan
+    const lastDate = new Date(last.date)
+    const points: typeof calorieData = []
+    for (let i = 1; i <= timeRange; i++) {
+      const futureDate = new Date(lastDate)
+      futureDate.setDate(futureDate.getDate() + i)
+      points.push({
+        date: futureDate.toISOString().split('T')[0],
+        calories: Math.max(0, Math.round(last.calories + slopePerDay * i)),
+        goal: last.goal,
+        timestamp: futureDate,
+      })
+    }
+    return points
+  }, [calorieData, timeRange])
+
+  // Forward projection for daily step count — same shape as calories.
+  const projectedStepData = useMemo(() => {
+    if (!stepData || stepData.length < 2) return []
+    const first = stepData[0]
+    const last = stepData[stepData.length - 1]
+    const firstTime = new Date(first.date).getTime()
+    const lastTime = new Date(last.date).getTime()
+    const daysSpan = (lastTime - firstTime) / (24 * 60 * 60 * 1000)
+    if (daysSpan <= 0) return []
+    const slopePerDay = (last.steps - first.steps) / daysSpan
+    const lastDate = new Date(last.date)
+    const points: typeof stepData = []
+    for (let i = 1; i <= timeRange; i++) {
+      const futureDate = new Date(lastDate)
+      futureDate.setDate(futureDate.getDate() + i)
+      points.push({
+        date: futureDate.toISOString().split('T')[0],
+        steps: Math.max(0, Math.round(last.steps + slopePerDay * i)),
+        goal: last.goal,
+        timestamp: futureDate,
+      })
+    }
+    return points
+  }, [stepData, timeRange])
+
   // Identity-of-subject: /progress needs an explicit Patient as the
   // subject — never default silently to caregiver data masquerading
   // as "Your Progress." That muddle hid which family member's
@@ -1257,11 +1313,15 @@ function ProgressContent() {
               />
             </div>
 
-            {/* Calorie Intake Chart */}
+            {/* Calorie Intake Chart — historical bars + projected
+                bars (lower opacity) extending `timeRange` days ahead.
+                Layer 1 rinse of the same projection pattern shipped
+                on WeightTrendChart. */}
             <div className="bg-card rounded-lg shadow-sm p-6">
-              <h2 className="text-xl font-bold text-foreground mb-4">Daily Calorie Intake</h2>
+              <h2 className="text-xl font-bold text-foreground mb-4">Daily Calorie Intake & Projection</h2>
               <CalorieIntakeChart
                 data={calorieData}
+                projectionData={projectedCalorieData}
                 loading={loading}
               />
             </div>
@@ -1297,12 +1357,16 @@ function ProgressContent() {
               </div>
             )}
 
-            {/* Step Count Chart - Trend Analysis Feature */}
+            {/* Step Count Chart - Trend Analysis Feature.
+                Historical bars + projected bars (lower opacity)
+                extending `timeRange` days ahead. Same projection
+                pattern as the Weight + Calorie charts. */}
             {hasTrendAnalysis ? (
               <div className="bg-card rounded-lg shadow-sm p-6">
-                <h2 className="text-xl font-bold text-foreground mb-4">Daily Step Count</h2>
+                <h2 className="text-xl font-bold text-foreground mb-4">Daily Step Count & Projection</h2>
                 <StepCountChart
                   data={stepData}
+                  projectionData={projectedStepData}
                   loading={loading}
                   isTrackingEnabled={isStepTrackingEnabled}
                   todaysSteps={todaysSteps}
