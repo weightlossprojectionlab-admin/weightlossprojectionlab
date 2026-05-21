@@ -108,6 +108,24 @@ export async function GET(request: NextRequest) {
       if (data.status === 'deleted' || data.status === 'archived') return false
       return true
     })
+    const activePatientIds = new Set(activePatients.map(doc => doc.id))
+
+    // Match the bell badge: legacy notifications were written without the
+    // `archived` field, so server-side `where('archived','==',false)` would
+    // silently drop them. Filter in JS instead — same logic as
+    // useNotifications' onSnapshot listener.
+    const visibleUnreadNotifications = unreadNotificationsSnapshot.docs.filter(
+      doc => doc.data()?.archived !== true
+    )
+
+    // Don't surface appointments for archived/deleted patients. The
+    // appointments subcollection isn't cascaded when a patient is archived
+    // (HIPAA retention), so the raw count overstates upcoming work.
+    // Appointments with no patientId (rare legacy rows) are kept.
+    const visibleUpcomingAppointments = upcomingAppointmentsSnapshot.docs.filter(doc => {
+      const patientId = doc.data().patientId
+      return !patientId || activePatientIds.has(patientId)
+    })
 
     logger.info('[GET /api/dashboard/stats] Patients snapshot size', {
       size: patientsSnapshot.size,
@@ -124,15 +142,15 @@ export async function GET(request: NextRequest) {
       },
       familyMembers: familyMembersSnapshot.size,
       notifications: {
-        unread: unreadNotificationsSnapshot.size,
-        urgent: unreadNotificationsSnapshot.docs.filter(doc => doc.data().priority === 'urgent').length
+        unread: visibleUnreadNotifications.length,
+        urgent: visibleUnreadNotifications.filter(doc => doc.data().priority === 'urgent').length
       },
       recommendations: {
         active: recommendationsSnapshot.size,
         urgent: recommendationsSnapshot.docs.filter(doc => doc.data().urgency === 'urgent').length
       },
       appointments: {
-        upcoming: upcomingAppointmentsSnapshot.size
+        upcoming: visibleUpcomingAppointments.length
       },
       actionItems: {
         total: actionItemsSnapshot.size,
@@ -225,7 +243,7 @@ export async function GET(request: NextRequest) {
       data: {
         stats,
         patientSnapshots,
-        upcomingAppointments: upcomingAppointmentsSnapshot.docs.slice(0, 3).map(doc => ({
+        upcomingAppointments: visibleUpcomingAppointments.slice(0, 3).map(doc => ({
           id: doc.id,
           ...doc.data()
         })),
