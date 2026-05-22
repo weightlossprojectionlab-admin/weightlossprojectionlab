@@ -2713,7 +2713,7 @@ function PatientDetailContent() {
                   Patient Settings
                 </h2>
                 <p className="text-sm text-muted-foreground mb-6">
-                  Manage {patient.name}'s profile settings and data
+                  Manage {capitalizeName(patient.name)}'s profile settings and data
                 </p>
 
                 {/* Edit Name — three discrete inputs (First / Middle / Last).
