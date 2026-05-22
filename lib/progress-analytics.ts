@@ -184,10 +184,12 @@ export function calculateLifestyleImpact(
 
   // Recreational drugs warning
   let recreationalDrugsWarning: string | null = null
-  if (lifestyle.recreationalDrugs === 'regular') {
-    recreationalDrugsWarning = 'Regular recreational drug use can significantly impact metabolism, appetite, and overall health progress.'
-  } else if (lifestyle.recreationalDrugs === 'occasional') {
-    recreationalDrugsWarning = 'Be aware that recreational substances can affect hunger signals and recovery.'
+  if (lifestyle.recreationalDrugs === 'cannabis-regular') {
+    recreationalDrugsWarning = 'Regular cannabis use can significantly impact metabolism, appetite, and overall health progress.'
+  } else if (lifestyle.recreationalDrugs === 'cannabis-occasional') {
+    recreationalDrugsWarning = 'Be aware that cannabis can affect hunger signals and recovery.'
+  } else if (lifestyle.recreationalDrugs === 'other') {
+    recreationalDrugsWarning = 'Non-prescribed substance use can affect metabolism and recovery. Please consult your healthcare provider.'
   }
 
   return {

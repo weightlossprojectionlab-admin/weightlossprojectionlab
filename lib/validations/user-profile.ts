@@ -49,7 +49,11 @@ export const LifestyleSchema = z.object({
   smokingQuitDate: z.string().datetime().optional(),
   alcoholFrequency: z.enum(['never', 'light', 'moderate', 'heavy']),
   weeklyDrinks: z.number().min(0),
-  recreationalDrugs: z.enum(['no', 'occasional', 'regular']),
+  // Mirrors the AdvancedHealthProfile button values. 'other' is the
+  // "consult healthcare provider" escape hatch; cannabis is split out
+  // because its metabolic profile differs from other substances and
+  // analytics warnings branch on the distinction.
+  recreationalDrugs: z.enum(['no', 'cannabis-occasional', 'cannabis-regular', 'other']),
   drugTypes: z.array(z.string()).optional(),
 })
 
@@ -59,6 +63,7 @@ export const BodyMeasurementsSchema = z.object({
   chest: z.number().positive().optional(),
   arms: z.number().positive().optional(),
   thighs: z.number().positive().optional(),
+  neck: z.number().positive().optional(),
 })
 
 // Medication schema - matches the comprehensive structure from types/index.ts
@@ -93,6 +98,10 @@ export const UserProfileSchema = z.object({
   currentWeight: z.number().positive(),
   activityLevel: z.enum(['sedentary', 'lightly-active', 'moderately-active', 'very-active', 'extremely-active']),
   healthConditions: z.array(z.string()).optional(),
+  // Per-condition questionnaire responses keyed by conditionKey then
+  // questionId. Values are heterogeneous (strings, numbers, arrays)
+  // depending on each question's input type.
+  conditionDetails: z.record(z.string(), z.record(z.string(), z.unknown())).optional(),
   foodAllergies: z.array(z.string()).optional(),
   medications: z.array(MedicationSchema).optional(),
   lifestyle: LifestyleSchema.optional(),

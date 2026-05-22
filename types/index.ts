@@ -371,7 +371,7 @@ export interface UserProfile {
     weeklyDrinks: number // Average number of drinks
 
     // Recreational Drugs
-    recreationalDrugs: 'no' | 'occasional' | 'regular'
+    recreationalDrugs: 'no' | 'cannabis-occasional' | 'cannabis-regular' | 'other'
     drugTypes?: string[] // ['marijuana', 'stimulants', etc.]
   }
 
@@ -382,6 +382,7 @@ export interface UserProfile {
     chest?: number
     arms?: number
     thighs?: number
+    neck?: number
   }
 
   // Completion Status
