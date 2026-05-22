@@ -96,6 +96,22 @@ export function getHumanLifeStage(dob: string): LifeStageResult {
  *     species (capitalized) if present, else "Pet". Pets don't have
  *     human life stages or relationship-with-gender semantics.
  */
+/**
+ * Canonical display-name for everyday UI surfaces (dashboard cards,
+ * lists, dropdowns, hero headers). Returns the patient's nickname
+ * when set, falling back to the legal full name. Formal/medical
+ * surfaces (settings page header, exported reports, audit logs)
+ * should bypass this helper and use `name` directly so the legal
+ * record remains visible where it matters.
+ */
+export function getPatientDisplayName(patient: {
+  name: string
+  nickname?: string | null
+}): string {
+  const trimmed = patient.nickname?.trim()
+  return trimmed || patient.name
+}
+
 export function getPatientBadgeLabel(patient: {
   type?: 'human' | 'pet' | null
   dateOfBirth?: string | null

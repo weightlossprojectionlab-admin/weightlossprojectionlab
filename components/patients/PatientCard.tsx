@@ -16,7 +16,7 @@ import { shouldShowWeightReminder } from '@/lib/weight-reminder-logic'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useRouter } from 'next/navigation'
 import { useAccount } from '@/contexts/AccountContext'
-import { formatHumanAgeDisplay, getHumanLifeStage, getPatientBadgeLabel } from '@/lib/life-stage-utils'
+import { formatHumanAgeDisplay, getHumanLifeStage, getPatientBadgeLabel, getPatientDisplayName } from '@/lib/life-stage-utils'
 import { getSpeciesEmoji } from '@/lib/pet-health-config'
 
 interface PatientCardProps {
@@ -266,7 +266,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               {patient.photo ? (
                 <img
                   src={patient.photo}
-                  alt={patient.name}
+                  alt={getPatientDisplayName(patient)}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -277,7 +277,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
             {/* Name and Info */}
             <div>
               <h3 className="font-bold text-xl text-foreground">
-                {patient.name}
+                {getPatientDisplayName(patient)}
               </h3>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {patient.relationship ? (
@@ -471,7 +471,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               {patient.photo ? (
                 <img
                   src={patient.photo}
-                  alt={patient.name}
+                  alt={getPatientDisplayName(patient)}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -482,7 +482,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
             {/* Name and Info */}
             <div>
               <h3 className="font-bold text-xl text-foreground">
-                {patient.name}
+                {getPatientDisplayName(patient)}
               </h3>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
                 {patient.relationship ? (

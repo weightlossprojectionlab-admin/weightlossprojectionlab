@@ -51,6 +51,7 @@ import { getApplicableVitalTypes } from '@/lib/vital-applicability'
 import { getCSRFToken } from '@/lib/csrf'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
+import { getPatientBadgeLabel, getPatientDisplayName } from '@/lib/life-stage-utils'
 import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
 import { FeatureEnabledModal } from '@/components/subscription/FeatureEnabledModal'
 import type { FeaturePreference, SubscriptionPlan } from '@/types'
@@ -499,7 +500,7 @@ function ProfileContent() {
           throw new Error(errorData.error || 'Failed to update patient profile')
         }
 
-        toast.success(`${currentlyViewingMember.name}'s health profile updated successfully!`)
+        toast.success(`${getPatientDisplayName(currentlyViewingMember)}'s health profile updated successfully!`)
 
         // Refresh the patient data by refetching from the updated response
         const result = await response.json()
@@ -565,13 +566,13 @@ function ProfileContent() {
             <div className="flex-1">
               <h1 className="text-xl font-semibold text-foreground">
                 {currentlyViewingMember
-                  ? `${currentlyViewingMember.name}'s Profile`
+                  ? `${getPatientDisplayName(currentlyViewingMember)}'s Profile`
                   : 'Your Profile & Settings'
                 }
               </h1>
               {currentlyViewingMember && (
                 <p className="text-description-sm">
-                  Managing {currentlyViewingMember.relationship}&apos;s health information
+                  Managing {getPatientBadgeLabel(currentlyViewingMember)}&apos;s health information
                 </p>
               )}
             </div>
@@ -594,11 +595,11 @@ function ProfileContent() {
                   ⭐ Currently Viewing
                 </div>
                 <h2 className="text-2xl font-bold text-foreground">
-                  {currentlyViewingMember ? currentlyViewingMember.name : (user?.displayName || 'You')}
+                  {currentlyViewingMember ? getPatientDisplayName(currentlyViewingMember) : (user?.displayName || 'You')}
                 </h2>
                 <p className="text-description mt-1">
                   {currentlyViewingMember
-                    ? `${currentlyViewingMember.relationship}'s Health Profile`
+                    ? `${getPatientBadgeLabel(currentlyViewingMember)}'s Health Profile`
                     : 'Your Personal Health Profile'
                   }
                 </p>
@@ -610,7 +611,7 @@ function ProfileContent() {
                   Family Member
                 </span>
                 <span className="text-description-sm">
-                  {currentlyViewingMember.relationship}
+                  {getPatientBadgeLabel(currentlyViewingMember)}
                 </span>
               </div>
             )}
@@ -633,7 +634,7 @@ function ProfileContent() {
                 <option value={user?.uid || ''}>🙋 {user?.displayName || 'Me'} (My Profile)</option>
                 {familyMembers.map(member => (
                   <option key={member.id} value={member.id}>
-                    👥 {member.name} ({member.relationship})
+                    👥 {getPatientDisplayName(member)} ({getPatientBadgeLabel(member)})
                   </option>
                 ))}
               </select>
@@ -988,11 +989,11 @@ function ProfileContent() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">⏰ Vital Sign Reminders</h2>
             <span className="text-xs px-2 py-1 bg-primary/10 text-primary rounded">
-              {currentlyViewingMember ? currentlyViewingMember.name : 'You'}
+              {currentlyViewingMember ? getPatientDisplayName(currentlyViewingMember) : 'You'}
             </span>
           </div>
           <p className="text-description mb-6">
-            Configure reminders to log vital signs at regular intervals for <strong>{currentlyViewingMember ? currentlyViewingMember.name : 'yourself'}</strong>. Each family member has their own reminder settings. For advanced schedules with specific times, use the Vitals Wizard in the patient detail page.
+            Configure reminders to log vital signs at regular intervals for <strong>{currentlyViewingMember ? getPatientDisplayName(currentlyViewingMember) : 'yourself'}</strong>. Each family member has their own reminder settings. For advanced schedules with specific times, use the Vitals Wizard in the patient detail page.
           </p>
 
           <div className="space-y-6">

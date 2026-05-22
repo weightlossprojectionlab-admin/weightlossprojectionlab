@@ -34,7 +34,7 @@ import {
   EnvelopeIcon
 } from '@heroicons/react/24/outline'
 import { capitalizeName } from '@/lib/utils'
-import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
+import { getPatientBadgeLabel, getPatientDisplayName } from '@/lib/life-stage-utils'
 
 import { getCSRFToken } from '@/lib/csrf'
 export default function FamilyAdminDashboardPage() {
@@ -566,18 +566,18 @@ function PatientSnapshotCard({ patient, onClick }: any) {
         {patient.photo ? (
           <img
             src={patient.photo}
-            alt={patient.name}
+            alt={getPatientDisplayName(patient)}
             className="w-14 h-14 rounded-full object-cover"
           />
         ) : (
           <div className="w-14 h-14 rounded-full bg-primary-light flex items-center justify-center">
             <span className="text-primary font-semibold text-xl">
-              {(patient.name?.trim().charAt(0) || '?').toUpperCase()}
+              {(getPatientDisplayName(patient).trim().charAt(0) || '?').toUpperCase()}
             </span>
           </div>
         )}
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-foreground truncate">{capitalizeName(patient.name)}</h3>
+          <h3 className="font-bold text-foreground truncate">{capitalizeName(getPatientDisplayName(patient))}</h3>
           <p className="text-sm text-muted-foreground">{getPatientBadgeLabel(patient)}</p>
           <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
             patient.type === 'pet' ? 'bg-green-100 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'

@@ -56,7 +56,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import { calculateAge } from '@/lib/age-utils'
-import { getHumanLifeStage, getHumanLifeStageNotices, getPatientBadgeLabel } from '@/lib/life-stage-utils'
+import { getHumanLifeStage, getHumanLifeStageNotices, getPatientBadgeLabel, getPatientDisplayName } from '@/lib/life-stage-utils'
 import InfantFeedingLog from '@/components/patients/InfantFeedingLog'
 import { capitalizeName } from '@/lib/utils'
 import { useDashboardData } from '@/hooks/useDashboardData'
@@ -1846,7 +1846,7 @@ function PatientDetailContent() {
                         WPL-Powered Meal Logging
                       </h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Use our advanced meal logger with WPL photo analysis, nutrition tracking, and barcode scanning for {patient.name}
+                        Use our advanced meal logger with WPL photo analysis, nutrition tracking, and barcode scanning for {getPatientDisplayName(patient)}
                       </p>
                       <Link
                         href={`/log-meal?patientId=${patientId}`}
@@ -2007,7 +2007,7 @@ function PatientDetailContent() {
               {/* Appointment List */}
               <div className="bg-card rounded-lg shadow-sm p-6">
                 <h2 className="text-lg font-bold text-foreground mb-4">
-                  {patient.name}'s Appointments
+                  {getPatientDisplayName(patient)}'s Appointments
                 </h2>
                 <AppointmentList patientId={patientId} />
               </div>
@@ -2716,11 +2716,29 @@ function PatientDetailContent() {
                   Manage {patient.name}'s profile settings and data
                 </p>
 
-                {/* Edit Name */}
+                {/* Edit Name — three discrete inputs (First / Middle / Last).
+                    The combined `patient.name` is auto-maintained so legacy
+                    consumers keep working without a migration. */}
                 <PatientNameEditor
                   patientId={patientId}
-                  currentName={patient.name}
-                  onNameUpdated={(newName) => setPatient({ ...patient, name: newName })}
+                  currentFirst={patient.firstName || ''}
+                  currentMiddle={patient.middleName || ''}
+                  currentLast={patient.lastName || ''}
+                  currentFullName={patient.name}
+                  onNameUpdated={(parts) => setPatient({
+                    ...patient,
+                    firstName: parts.firstName,
+                    middleName: parts.middleName,
+                    lastName: parts.lastName,
+                    name: parts.name,
+                  })}
+                />
+
+                {/* Edit Nickname (optional) */}
+                <PatientNicknameEditor
+                  patientId={patientId}
+                  currentNickname={patient.nickname || ''}
+                  onNicknameUpdated={(newNickname) => setPatient({ ...patient, nickname: newNickname })}
                 />
 
                 {/* Danger Zone - Delete Patient */}
@@ -3696,22 +3714,30 @@ function PatientDetailContent() {
 }
 
 /** Inline patient name editor for the Settings tab */
-function PatientNameEditor({ patientId, currentName, onNameUpdated }: {
+// Nickname editor — sibling of PatientNameEditor. Optional field with
+// empty-clear semantics: saving an empty string removes the nickname.
+// Display surfaces should prefer `nickname || name` so the medical
+// record (formal name) remains intact while everyday UI uses the
+// nickname when set.
+function PatientNicknameEditor({ patientId, currentNickname, onNicknameUpdated }: {
   patientId: string
-  currentName: string
-  onNameUpdated: (name: string) => void
+  currentNickname: string
+  onNicknameUpdated: (nickname: string) => void
 }) {
   const [editing, setEditing] = useState(false)
-  const [name, setName] = useState(currentName)
+  const [nickname, setNickname] = useState(currentNickname)
   const [saving, setSaving] = useState(false)
 
   const handleSave = async () => {
-    const trimmed = name.trim()
-    if (!trimmed || trimmed === currentName) {
+    // Proper-case the nickname so "penny" → "Penny". Allow empty
+    // string (clears the nickname).
+    const trimmed = nickname.trim()
+    const cased = trimmed ? capitalizeName(trimmed) : ''
+    if (cased === currentNickname) {
       setEditing(false)
-      setName(currentName)
       return
     }
+    setNickname(cased)
 
     setSaving(true)
     try {
@@ -3724,7 +3750,152 @@ function PatientNameEditor({ patientId, currentName, onNameUpdated }: {
           'Authorization': `Bearer ${token}`,
           'X-CSRF-Token': csrfToken,
         },
-        body: JSON.stringify({ name: trimmed }),
+        // Empty string clears the nickname (the PUT route's `in body`
+        // check honors explicit empty values).
+        body: JSON.stringify({ nickname: cased }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Failed to update nickname' }))
+        throw new Error(err.error || 'Failed to update nickname')
+      }
+
+      onNicknameUpdated(trimmed)
+      setEditing(false)
+      toast.success(trimmed ? 'Nickname updated' : 'Nickname removed')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update nickname')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mb-6">
+      <label className="block text-sm font-semibold text-foreground mb-2">
+        Nickname <span className="text-muted-foreground font-normal">(optional)</span>
+      </label>
+      {editing ? (
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave()
+              if (e.key === 'Escape') { setEditing(false); setNickname(currentNickname) }
+            }}
+            autoFocus
+            placeholder="e.g. Penny, Chrissy"
+            className="flex-1 px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
+          <button
+            onClick={() => { setEditing(false); setNickname(currentNickname) }}
+            className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 text-sm font-medium"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <span className={currentNickname ? 'text-foreground' : 'text-muted-foreground italic'}>
+            {currentNickname ? capitalizeName(currentNickname) : 'Not set'}
+          </span>
+          <button
+            onClick={() => setEditing(true)}
+            className="text-sm text-primary hover:text-primary/80 font-medium"
+          >
+            {currentNickname ? 'Edit' : 'Add'}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PatientNameEditor({
+  patientId,
+  currentFirst,
+  currentMiddle,
+  currentLast,
+  currentFullName,
+  onNameUpdated,
+}: {
+  patientId: string
+  currentFirst: string
+  currentMiddle: string
+  currentLast: string
+  currentFullName: string
+  onNameUpdated: (parts: { firstName: string; middleName: string; lastName: string; name: string }) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [first, setFirst] = useState(currentFirst)
+  const [middle, setMiddle] = useState(currentMiddle)
+  const [last, setLast] = useState(currentLast)
+  const [saving, setSaving] = useState(false)
+
+  // Display string for the non-editing state. Prefer the parts if any
+  // are set; fall back to the legacy combined `currentFullName` so
+  // patients that pre-date the parts still show their name.
+  const displayedName = (first || middle || last)
+    ? [first, middle, last].filter(Boolean).join(' ').trim()
+    : currentFullName
+
+  const handleCancel = () => {
+    setEditing(false)
+    setFirst(currentFirst)
+    setMiddle(currentMiddle)
+    setLast(currentLast)
+  }
+
+  const handleSave = async () => {
+    // Proper-case each part on save: "penny" → "Penny", "MARY" → "Mary",
+    // "o'brien" → "O'Brien". capitalizeName handles apostrophes and
+    // multi-word values (e.g. "van der berg" → "Van Der Berg"). Done
+    // on save, not on each keystroke, so the user can still type
+    // freely in the input.
+    const f = capitalizeName(first.trim())
+    const m = capitalizeName(middle.trim())
+    const l = capitalizeName(last.trim())
+    if (!f || !l) {
+      toast.error('First and Last name are required')
+      return
+    }
+    const combined = [f, m, l].filter(Boolean).join(' ')
+    if (f === currentFirst && m === currentMiddle && l === currentLast) {
+      setEditing(false)
+      return
+    }
+    // Reflect the proper-cased values back into the inputs so the
+    // user sees what was saved.
+    setFirst(f)
+    setMiddle(m)
+    setLast(l)
+
+    setSaving(true)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const csrfToken = getCSRFToken()
+      const res = await fetch(`/api/patients/${patientId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({
+          firstName: f,
+          middleName: m,
+          lastName: l,
+          name: combined,
+        }),
       })
 
       if (!res.ok) {
@@ -3732,7 +3903,7 @@ function PatientNameEditor({ patientId, currentName, onNameUpdated }: {
         throw new Error(err.error || 'Failed to update name')
       }
 
-      onNameUpdated(trimmed)
+      onNameUpdated({ firstName: f, middleName: m, lastName: l, name: combined })
       setEditing(false)
       toast.success('Name updated')
     } catch (err) {
@@ -3744,37 +3915,75 @@ function PatientNameEditor({ patientId, currentName, onNameUpdated }: {
 
   return (
     <div className="mb-6">
-      <label className="block text-sm font-semibold text-foreground mb-2">Patient Name</label>
+      <label className="block text-sm font-semibold text-foreground mb-2">
+        Legal Full Name
+      </label>
+      <p className="text-xs text-muted-foreground mb-3">
+        Used on medical records, reports, and formal documents. For everyday display, set a Nickname below.
+      </p>
       {editing ? (
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave()
-              if (e.key === 'Escape') { setEditing(false); setName(currentName) }
-            }}
-            autoFocus
-            className="flex-1 px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </button>
-          <button
-            onClick={() => { setEditing(false); setName(currentName) }}
-            className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 text-sm font-medium"
-          >
-            Cancel
-          </button>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                First <span className="text-error">*</span>
+              </label>
+              <input
+                type="text"
+                value={first}
+                onChange={(e) => setFirst(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') handleCancel() }}
+                autoFocus
+                placeholder="Jane"
+                className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Middle <span className="text-muted-foreground font-normal">(optional)</span>
+              </label>
+              <input
+                type="text"
+                value={middle}
+                onChange={(e) => setMiddle(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') handleCancel() }}
+                placeholder="Eleanor"
+                className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Last <span className="text-error">*</span>
+              </label>
+              <input
+                type="text"
+                value={last}
+                onChange={(e) => setLast(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Escape') handleCancel() }}
+                placeholder="Smith"
+                className="w-full px-3 py-2 border border-border bg-background text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              />
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+            >
+              {saving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={handleCancel}
+              className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 text-sm font-medium"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex items-center gap-3">
-          <span className="text-foreground">{currentName}</span>
+          <span className="text-foreground">{capitalizeName(displayedName)}</span>
           <button
             onClick={() => setEditing(true)}
             className="text-sm text-primary hover:text-primary/80 font-medium"
