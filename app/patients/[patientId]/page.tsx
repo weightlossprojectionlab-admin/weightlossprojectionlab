@@ -2101,6 +2101,16 @@ function PatientDetailContent() {
                   type="select"
                   options={RELATIONSHIP_OPTIONS}
                   value={patient.relationship}
+                  // Use the same helper that powers the page header,
+                  // so the field's display matches the badge ("Son"
+                  // vs raw "Child"). One question, one answer — the
+                  // helper. KNOWN LIMITATION: relationship's subject
+                  // is implicitly "the account holder of this
+                  // household" — breaks for multi-household, hired
+                  // caregivers, and self-as-patient cases. See
+                  // memory/project_relationship_subject_ambiguity;
+                  // subsumed by the queued family-tree edge schema.
+                  displayLabel={getPatientBadgeLabel(patient)}
                   canEdit={canEditProfile}
                   onUpdated={(v) => setPatient({ ...patient, relationship: v })}
                 />
