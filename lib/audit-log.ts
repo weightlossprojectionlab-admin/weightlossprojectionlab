@@ -125,6 +125,7 @@ export const PATIENT_TRACKED_FIELDS: ReadonlyArray<{ field: string; label: strin
   { field: 'middleName', label: 'Middle Name', dataType: 'string' },
   { field: 'lastName', label: 'Last Name', dataType: 'string' },
   { field: 'nickname', label: 'Nickname', dataType: 'string' },
+  { field: 'displayPreference', label: 'Display Preference', dataType: 'string' },
   { field: 'gender', label: 'Gender', dataType: 'string' },
   { field: 'relationship', label: 'Relationship', dataType: 'string' },
   { field: 'dateOfBirth', label: 'Date of Birth', dataType: 'string' },

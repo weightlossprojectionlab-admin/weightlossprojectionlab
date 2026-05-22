@@ -2741,6 +2741,19 @@ function PatientDetailContent() {
                   onNicknameUpdated={(newNickname) => setPatient({ ...patient, nickname: newNickname })}
                 />
 
+                {/* Per-patient display preference. Governs which name
+                    everyday surfaces (dashboards, lists, hero cards,
+                    family-member selectors) render. Formal surfaces
+                    (this page's H1, archive type-to-confirm, audit
+                    logs) always use the legal name regardless. */}
+                <PatientDisplayPreferenceEditor
+                  patientId={patientId}
+                  currentPreference={patient.displayPreference || 'nickname'}
+                  legalName={patient.name}
+                  nickname={patient.nickname || ''}
+                  onPreferenceUpdated={(pref) => setPatient({ ...patient, displayPreference: pref })}
+                />
+
                 {/* Danger Zone - Delete Patient */}
                 <div className="border-t border-border pt-6">
                   <h3 className="text-md font-semibold text-foreground mb-2 flex items-center gap-2">
@@ -3714,6 +3727,104 @@ function PatientDetailContent() {
 }
 
 /** Inline patient name editor for the Settings tab */
+// Display preference editor — chooses which name (legal or nickname)
+// shows on everyday surfaces. Save-on-change, no separate Save button:
+// a two-option radio with explicit confirmation friction adds nothing
+// since the choice is reversible. Formal surfaces (this page's H1,
+// audit logs, archive confirmation) bypass this preference and always
+// use the legal name.
+function PatientDisplayPreferenceEditor({
+  patientId,
+  currentPreference,
+  legalName,
+  nickname,
+  onPreferenceUpdated,
+}: {
+  patientId: string
+  currentPreference: 'legal' | 'nickname'
+  legalName: string
+  nickname: string
+  onPreferenceUpdated: (pref: 'legal' | 'nickname') => void
+}) {
+  const [saving, setSaving] = useState(false)
+  const hasNickname = nickname.trim().length > 0
+
+  const handleChange = async (pref: 'legal' | 'nickname') => {
+    if (pref === currentPreference) return
+    setSaving(true)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const csrfToken = getCSRFToken()
+      const res = await fetch(`/api/patients/${patientId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': csrfToken,
+        },
+        body: JSON.stringify({ displayPreference: pref }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Failed to update preference' }))
+        throw new Error(err.error || 'Failed to update preference')
+      }
+      onPreferenceUpdated(pref)
+      // No success toast — the radio's selected state IS the confirmation.
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update preference')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="mb-6">
+      <label className="block text-sm font-semibold text-foreground mb-2">
+        Display in lists & dashboards as
+      </label>
+      <p className="text-xs text-muted-foreground mb-3">
+        This patient's name on everyday surfaces — family dashboards, patient lists, the account switcher. Medical records and formal documents always use the legal full name.
+      </p>
+      <div className="space-y-2">
+        <label className="flex items-start gap-3 p-3 rounded-lg border border-border cursor-pointer hover:bg-muted/50 transition-colors">
+          <input
+            type="radio"
+            name={`displayPreference-${patientId}`}
+            value="nickname"
+            checked={currentPreference === 'nickname'}
+            onChange={() => handleChange('nickname')}
+            disabled={saving}
+            className="mt-1"
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-foreground">
+              Nickname {!hasNickname && <span className="text-muted-foreground font-normal">(falls back to legal name when not set)</span>}
+            </div>
+            <div className="text-xs text-muted-foreground mt-0.5">
+              {hasNickname ? capitalizeName(nickname) : capitalizeName(legalName)}
+            </div>
+          </div>
+        </label>
+        <label className="flex items-start gap-3 p-3 rounded-lg border border-border cursor-pointer hover:bg-muted/50 transition-colors">
+          <input
+            type="radio"
+            name={`displayPreference-${patientId}`}
+            value="legal"
+            checked={currentPreference === 'legal'}
+            onChange={() => handleChange('legal')}
+            disabled={saving}
+            className="mt-1"
+          />
+          <div className="flex-1">
+            <div className="text-sm font-medium text-foreground">Legal full name</div>
+            <div className="text-xs text-muted-foreground mt-0.5">{capitalizeName(legalName)}</div>
+          </div>
+        </label>
+      </div>
+    </div>
+  )
+}
+
 // Nickname editor — sibling of PatientNameEditor. Optional field with
 // empty-clear semantics: saving an empty string removes the nickname.
 // Display surfaces should prefer `nickname || name` so the medical

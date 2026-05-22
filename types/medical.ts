@@ -52,6 +52,10 @@ export interface PatientProfile {
   middleName?: string // Legal middle name (optional)
   lastName?: string   // Legal family name
   nickname?: string   // Optional everyday nickname (e.g. "Penny" for "Penelope")
+  /** Per-patient display rule for everyday surfaces. Honored by
+   *  getPatientDisplayName. Defaults to 'nickname' when unset
+   *  (matches the original nickname-wins behavior). */
+  displayPreference?: 'legal' | 'nickname'
   photo?: string
   dateOfBirth: string // ISO 8601
   age?: number // Computed age in years

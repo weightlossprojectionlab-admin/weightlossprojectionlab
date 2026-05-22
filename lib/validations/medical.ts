@@ -51,6 +51,7 @@ export const patientProfileSchema = z.object({
   middleName: z.string().max(60).optional(),
   lastName: z.string().min(1).max(60).optional(),
   nickname: z.string().max(60).optional(),
+  displayPreference: z.enum(['legal', 'nickname']).optional(),
   photo: z.string().url('Invalid photo URL').optional(),
   dateOfBirth: z.string().datetime('Invalid date format'),
   relationship: z.enum(['self', 'spouse', 'parent', 'child', 'sibling', 'grandparent', 'pet']).optional(),

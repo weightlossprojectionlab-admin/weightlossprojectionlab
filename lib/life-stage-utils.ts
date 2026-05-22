@@ -107,7 +107,12 @@ export function getHumanLifeStage(dob: string): LifeStageResult {
 export function getPatientDisplayName(patient: {
   name: string
   nickname?: string | null
+  /** Per-patient override. 'legal' forces the legal full name even
+   *  when a nickname exists. Undefined / 'nickname' keeps the
+   *  default nickname-or-name rule. */
+  displayPreference?: 'legal' | 'nickname' | null
 }): string {
+  if (patient.displayPreference === 'legal') return patient.name
   const trimmed = patient.nickname?.trim()
   return trimmed || patient.name
 }
