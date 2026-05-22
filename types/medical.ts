@@ -42,8 +42,16 @@ export interface PatientProfile {
    *  unassigned until the caregiver creates / picks a household. */
   householdId?: string
   type: 'human' | 'pet'
+  /** Legal full name. Maintained automatically by the patient editor
+   *  as "First Middle Last" concatenated from the parts below.
+   *  Display surfaces should still read this field directly — it's
+   *  the source of truth and works for legacy patients written before
+   *  the parts existed. */
   name: string
-  nickname?: string // Optional nickname/preferred name
+  firstName?: string  // Legal given name
+  middleName?: string // Legal middle name (optional)
+  lastName?: string   // Legal family name
+  nickname?: string   // Optional everyday nickname (e.g. "Penny" for "Penelope")
   photo?: string
   dateOfBirth: string // ISO 8601
   age?: number // Computed age in years

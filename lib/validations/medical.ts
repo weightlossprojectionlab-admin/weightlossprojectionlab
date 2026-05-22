@@ -44,6 +44,13 @@ export const patientProfileSchema = z.object({
   householdId: z.string().min(1).optional(),
   type: z.enum(['human', 'pet']),
   name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  // Legal name parts — patient editor writes these alongside `name`
+  // (which is auto-concatenated). Optional in schema so legacy
+  // patients without parts pass validation.
+  firstName: z.string().min(1).max(60).optional(),
+  middleName: z.string().max(60).optional(),
+  lastName: z.string().min(1).max(60).optional(),
+  nickname: z.string().max(60).optional(),
   photo: z.string().url('Invalid photo URL').optional(),
   dateOfBirth: z.string().datetime('Invalid date format'),
   relationship: z.enum(['self', 'spouse', 'parent', 'child', 'sibling', 'grandparent', 'pet']).optional(),

@@ -149,26 +149,27 @@ export async function PUT(
       lastModified: now
     }
 
-    // For partial updates (like preferences), skip full schema validation
-    // Only validate if required fields are being updated
-    const isPartialUpdate = Object.keys(body).length < 5 && !body.name && !body.dateOfBirth
-
-    if (!isPartialUpdate) {
-      // Full validation for complete updates
-      const validationResult = patientProfileSchema.safeParse(updatedPatient)
-      if (!validationResult.success) {
-        logger.warn('[API /patients/[id] PUT] Validation failed', {
-          errors: validationResult.error.format()
-        })
-        return NextResponse.json(
-          {
-            success: false,
-            error: 'Validation failed',
-            details: validationResult.error.format()
-          },
-          { status: 400 }
-        )
-      }
+    // Validate only the fields actually present in the body. Using
+    // `.partial()` so missing fields don't fail — this is an UPDATE,
+    // not a create, and existing patients may pre-date current schema
+    // requirements. Previously a single-field rename (e.g. PatientName-
+    // Editor sending `{ name: 'Penny' }`) would force full-record
+    // validation, failing whenever the existing doc was missing any
+    // required field (e.g. legacy patients without dateOfBirth).
+    const validationResult = patientProfileSchema.partial().safeParse(body)
+    if (!validationResult.success) {
+      logger.warn('[API /patients/[id] PUT] Validation failed', {
+        errors: validationResult.error.format(),
+        bodyKeys: Object.keys(body)
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Validation failed',
+          details: validationResult.error.format()
+        },
+        { status: 400 }
+      )
     }
 
     // Update patient — explicit field allowlist (don't spread `body` to
@@ -181,6 +182,9 @@ export async function PUT(
 
     // Identity & profile basics
     if ('name' in body) updateData.name = body.name
+    if ('firstName' in body) updateData.firstName = body.firstName
+    if ('middleName' in body) updateData.middleName = body.middleName
+    if ('lastName' in body) updateData.lastName = body.lastName
     if ('gender' in body) updateData.gender = body.gender
     if ('relationship' in body) updateData.relationship = body.relationship
     if ('photo' in body) updateData.photo = body.photo
