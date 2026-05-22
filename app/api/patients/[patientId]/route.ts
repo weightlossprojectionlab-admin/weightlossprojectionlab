@@ -16,6 +16,7 @@ import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
 import { mergePatientPreferences } from '@/lib/services/patient-preferences'
+import { writeAuditEntry } from '@/lib/audit-log'
 
 // GET /api/patients/[patientId] - Get a single patient
 export async function GET(
@@ -311,41 +312,34 @@ export async function DELETE(
 
     await patientRef.update(deletionData)
 
-    // Create audit log for deletion (HIPAA compliance)
-    try {
-      const auditLogRef = adminDb
-        .collection('users')
-        .doc(ownerUserId)
-        .collection('auditLogs')
-        .doc()
-
-      await auditLogRef.set({
-        entityType: 'patient',
-        entityId: patientId,
-        entityName: patientData.name || 'Unknown Patient',
-        patientId: patientId,
-        userId: ownerUserId,
-        action: 'deleted',
-        performedBy: userId,
-        performedByName: patientData.name || 'Unknown',
-        performedAt: new Date().toISOString(),
-        changes: [{
-          field: 'status',
-          oldValue: patientData.status || 'active',
-          newValue: 'deleted',
-          fieldLabel: 'Patient Status',
-          dataType: 'string'
-        }],
-        metadata: {
-          deletionReason: deletionReason,
-          ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
-          userAgent: request.headers.get('user-agent') || 'unknown'
-        }
-      })
-    } catch (auditError: any) {
-      // Log but don't fail the operation if audit logging fails
-      logger.error('[API /patients/[id] DELETE] Failed to create audit log', auditError instanceof Error ? auditError : undefined)
-    }
+    // Create audit log for deletion (HIPAA compliance).
+    // Uses the shared writeAuditEntry primitive — same on-disk shape as
+    // the previous inline writer (preserving query compatibility for
+    // existing entries), now extracted so future writers (PUT field-
+    // diff, medication changes, etc.) emit the same structure.
+    // See memory/project_audit_log_primitives.md.
+    await writeAuditEntry({
+      entityType: 'patient',
+      entityId: patientId,
+      entityName: patientData.name || 'Unknown Patient',
+      userId: ownerUserId,
+      action: 'deleted',
+      performedBy: userId,
+      // Note: original writer used patientData.name here too — appears
+      // to have been a bug (this should be the actor's display name,
+      // not the patient's). Preserved as-is for pure refactor; fix in
+      // a follow-up commit that also threads actor profile lookup.
+      performedByName: patientData.name || 'Unknown',
+      changes: [{
+        field: 'status',
+        oldValue: patientData.status || 'active',
+        newValue: 'deleted',
+        fieldLabel: 'Patient Status',
+        dataType: 'string',
+      }],
+      metadata: { deletionReason },
+      request,
+    })
 
     logger.info('[API /patients/[id] DELETE] Patient soft-deleted successfully', {
       userId,
