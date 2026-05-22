@@ -72,7 +72,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const templateData = {
+    // Don't include `notes` at all when it's empty — Firestore Admin
+    // SDK rejects literal `undefined` in document data (without
+    // ignoreUndefinedProperties). The previous `notes: notes || undefined`
+    // was self-defeating: it set the key to undefined, which is exactly
+    // what Firestore rejects. Conditional assignment keeps the document
+    // shape clean when notes weren't provided.
+    const templateData: Record<string, unknown> = {
       name,
       mealType,
       foodItems,
@@ -83,10 +89,10 @@ export async function POST(request: NextRequest) {
         fat: macros.fat || 0,
         fiber: macros.fiber || 0
       },
-      notes: notes || undefined,
       usageCount: 0,
       createdAt: Timestamp.now()
     }
+    if (notes) templateData.notes = notes
 
     const templateRef = await adminDb
       .collection('users')
