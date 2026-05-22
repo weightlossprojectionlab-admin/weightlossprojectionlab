@@ -18,6 +18,7 @@ import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import toast from 'react-hot-toast'
 import type { PatientProfile } from '@/types/medical'
+import { InlineEditButton } from '@/components/ui/InlineEditButton'
 
 type PreparationNeeds = NonNullable<PatientProfile['preparationNeeds']>
 
@@ -158,13 +159,7 @@ export function PreparationNeedsEditor({ patientId, value, canEdit, onUpdated }:
           )}
         </div>
         {!editing && canEdit && (
-          <button
-            data-write="true"
-            onClick={startEdit}
-            className="text-sm text-primary hover:text-primary/80 font-medium flex-shrink-0"
-          >
-            Edit
-          </button>
+          <InlineEditButton onClick={startEdit} aria-label="Edit preparation needs" />
         )}
       </div>
 
@@ -235,13 +230,13 @@ export function PreparationNeedsEditor({ patientId, value, canEdit, onUpdated }:
               data-write="true"
               onClick={save}
               disabled={saving}
-              className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+              className="min-h-11 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 active:bg-primary/80 disabled:opacity-50 text-sm font-medium"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={cancelEdit}
-              className="px-3 py-1.5 bg-muted text-foreground rounded-lg hover:bg-muted/80 text-sm font-medium"
+              className="min-h-11 px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 active:bg-muted/60 text-sm font-medium"
             >
               Cancel
             </button>

@@ -674,7 +674,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 e.preventDefault()
                 onEdit()
               }}
-              className="px-3 py-1.5 text-sm text-muted-foreground hover:text-primary hover:bg-purple-50 rounded-lg transition-colors"
+              className="inline-flex items-center min-h-11 px-3 text-sm text-muted-foreground hover:text-primary hover:bg-purple-50 active:bg-purple-100 rounded-lg transition-colors"
             >
               Edit
             </button>
@@ -685,7 +685,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                 e.preventDefault()
                 onDelete()
               }}
-              className="px-3 py-1.5 text-sm text-muted-foreground hover:text-error hover:bg-error-light rounded-lg transition-colors"
+              className="inline-flex items-center min-h-11 px-3 text-sm text-muted-foreground hover:text-error hover:bg-error-light active:bg-error-light/80 rounded-lg transition-colors"
             >
               Remove
             </button>

@@ -19,6 +19,7 @@ import { useState } from 'react'
 import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import toast from 'react-hot-toast'
+import { InlineEditButton } from '@/components/ui/InlineEditButton'
 
 export type FieldOption = { value: string; label: string }
 
@@ -30,6 +31,14 @@ interface BaseProps {
   label: string
   canEdit: boolean
   emptyLabel?: string
+  /** Optional override for the rendered display label when NOT
+   *  editing. Use when the raw stored value isn't the right thing
+   *  to show — e.g. `relationship: 'child'` displays as 'Son' /
+   *  'Daughter' via getPatientBadgeLabel. The dropdown still picks
+   *  from canonical storage values; this only changes what the
+   *  user sees in the collapsed display row. Keeps the "what's
+   *  this person to me?" answer defined once (the helper). */
+  displayLabel?: string
   /** Called with the saved value on success. Used to optimistically
    *  update the parent's local patient state without a refetch. */
   onUpdated: (newValue: any) => void
@@ -76,7 +85,7 @@ interface TagInputProps extends BaseProps {
 type Props = TextProps | NumberProps | SelectProps | MultiSelectProps | TagInputProps
 
 export function PatientFieldEditor(props: Props) {
-  const { patientId, field, label, canEdit, emptyLabel = 'Not recorded', onUpdated } = props
+  const { patientId, field, label, canEdit, emptyLabel = 'Not recorded', displayLabel, onUpdated } = props
 
   const [editing, setEditing] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -153,6 +162,14 @@ export function PatientFieldEditor(props: Props) {
   }
 
   const displayValue = () => {
+    // Override hook: when the parent passes a smart label (e.g.
+    // gender-aware relationship "Son"), render that instead of the
+    // auto-derived value. Caller owns the "what to show" decision
+    // so the helper used elsewhere on the page (getPatientBadgeLabel)
+    // stays the single source of truth.
+    if (displayLabel) {
+      return <span className="text-foreground">{displayLabel}</span>
+    }
     if (props.type === 'multi-select') {
       const arr = (props.value as string[] | undefined) ?? []
       if (arr.length === 0) {
@@ -229,13 +246,7 @@ export function PatientFieldEditor(props: Props) {
           {!editing && <div>{displayValue()}</div>}
         </div>
         {!editing && canEdit && (
-          <button
-            data-write="true"
-            onClick={startEdit}
-            className="text-sm text-primary hover:text-primary/80 font-medium flex-shrink-0"
-          >
-            Edit
-          </button>
+          <InlineEditButton onClick={startEdit} aria-label={`Edit ${label.toLowerCase()}`} />
         )}
       </div>
 
@@ -336,12 +347,15 @@ export function PatientFieldEditor(props: Props) {
               <div className="border border-border bg-background rounded-lg p-2">
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {tags.map(t => (
-                    <span key={t} className={`inline-flex items-center gap-1 text-xs ${chipClass} border px-2 py-1 rounded`}>
+                    <span key={t} className={`inline-flex items-center gap-1 text-xs ${chipClass} border pl-2 pr-1 py-1 rounded`}>
                       {props.tone === 'negative' ? '⚠ ' : ''}{t}
                       <button
                         type="button"
                         onClick={() => removeTag(t)}
-                        className="hover:bg-black/10 dark:hover:bg-white/10 rounded-full px-1 leading-none"
+                        // Larger tap target on the chip's × — chips are
+                        // inline so we can't go full 44px, but min-w-6
+                        // + min-h-6 + flex centering keeps it thumbable.
+                        className="inline-flex items-center justify-center min-w-6 min-h-6 -my-1 hover:bg-black/10 active:bg-black/20 dark:hover:bg-white/10 dark:active:bg-white/20 rounded-full leading-none"
                         aria-label={`Remove ${t}`}
                       >
                         ×
@@ -381,13 +395,13 @@ export function PatientFieldEditor(props: Props) {
               data-write="true"
               onClick={save}
               disabled={saving}
-              className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 text-sm font-medium"
+              className="min-h-11 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 active:bg-primary/80 disabled:opacity-50 text-sm font-medium"
             >
               {saving ? 'Saving...' : 'Save'}
             </button>
             <button
               onClick={cancelEdit}
-              className="px-3 py-1.5 bg-muted text-foreground rounded-lg hover:bg-muted/80 text-sm font-medium"
+              className="min-h-11 px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80 active:bg-muted/60 text-sm font-medium"
             >
               Cancel
             </button>

@@ -293,7 +293,7 @@ export function MedicationCard({
           {onEdit && (
             <button
               onClick={onEdit}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-primary hover:bg-purple-50 rounded-lg transition-colors"
+              className="inline-flex items-center gap-1 min-h-11 px-3 text-sm text-muted-foreground hover:text-primary hover:bg-purple-50 active:bg-purple-100 rounded-lg transition-colors"
               aria-label="Edit medication"
             >
               <PencilIcon className="w-4 h-4" />
@@ -303,7 +303,7 @@ export function MedicationCard({
           {onDelete && (
             <button
               onClick={onDelete}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm text-muted-foreground hover:text-error hover:bg-error-light rounded-lg transition-colors"
+              className="inline-flex items-center gap-1 min-h-11 px-3 text-sm text-muted-foreground hover:text-error hover:bg-error-light active:bg-error-light/80 rounded-lg transition-colors"
               aria-label="Remove medication"
             >
               <TrashIcon className="w-4 h-4" />

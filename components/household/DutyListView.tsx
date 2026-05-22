@@ -481,7 +481,7 @@ export function DutyListView({
                     {getShoppingListUrl(duty) && (
                       <Link
                         href={getShoppingListUrl(duty)!}
-                        className="px-3 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                        className="inline-flex items-center gap-1 min-h-11 px-3 bg-primary hover:bg-primary/90 active:bg-primary/80 text-white rounded-lg text-sm font-medium transition-colors"
                       >
                         <ShoppingCartIcon className="w-4 h-4" />
                         <span>View List</span>
@@ -492,7 +492,7 @@ export function DutyListView({
                       <button
                         onClick={() => handleComplete(duty.id)}
                         disabled={isCompleting}
-                        className="px-3 py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1 min-h-11 px-3 bg-green-600 hover:bg-green-700 active:bg-green-800 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
                       >
                         {isCompleting ? (
                           <>
@@ -510,7 +510,7 @@ export function DutyListView({
 
                     <button
                       onClick={() => handleEdit(duty)}
-                      className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
+                      className="inline-flex items-center gap-1 min-h-11 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white rounded-lg text-sm font-medium transition-colors"
                     >
                       <PencilIcon className="w-4 h-4" />
                       <span>Edit</span>
@@ -519,7 +519,7 @@ export function DutyListView({
                     <button
                       onClick={() => handleDelete(duty.id)}
                       disabled={isDeleting}
-                      className="px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors flex items-center gap-1 disabled:cursor-not-allowed"
+                      className="inline-flex items-center gap-1 min-h-11 px-3 bg-red-600 hover:bg-red-700 active:bg-red-800 disabled:bg-gray-400 text-white rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed"
                     >
                       {isDeleting ? (
                         <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
