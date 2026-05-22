@@ -40,6 +40,7 @@ import { PatientFieldEditor, type FieldOption } from '@/components/patients/Pati
 import { PreparationNeedsEditor } from '@/components/patients/PreparationNeedsEditor'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
+import { ResponsiveModal } from '@/components/ui/ResponsiveModal'
 import DocumentDetailModal from '@/components/documents/DocumentDetailModal'
 import PDFViewerModal from '@/components/documents/PDFViewerModal'
 import MedicationDetailModal from '@/components/health/MedicationDetailModal'
@@ -50,7 +51,7 @@ import TextConfirmModal from '@/components/ui/TextConfirmModal'
 import { AppointmentList } from '@/components/appointments/AppointmentList'
 import EpisodeList from '@/components/health/EpisodeList'
 import EpisodeSummaryWidget from '@/components/health/EpisodeSummaryWidget'
-import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { ChartBarIcon, ShieldCheckIcon, ChevronDownIcon, ChevronUpIcon, ScaleIcon, CameraIcon, FireIcon, StarIcon, DocumentTextIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import AuthGuard from '@/components/auth/AuthGuard'
 import toast from 'react-hot-toast'
@@ -1209,16 +1210,11 @@ function PatientDetailContent() {
                     <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Health Events</span>
                   </button>
 
-                  {/* Documents */}
-                  {canUploadDocuments && (
-                    <button
-                      onClick={() => setShowDocumentUpload(!showDocumentUpload)}
-                      className="w-full aspect-square lg:aspect-auto p-1 lg:px-4 lg:py-3 rounded transition-colors flex flex-col lg:flex-row items-center justify-center lg:justify-start gap-0 lg:gap-2 bg-muted hover:bg-muted/80 text-foreground"
-                    >
-                      <DocumentTextIcon className="w-12 h-12 lg:w-5 lg:h-5" />
-                      <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Docs</span>
-                    </button>
-                  )}
+                  {/* Documents — upload affordance moved to the Recent
+                      Documents card header (the actual semantic home for
+                      document actions). The sidebar is for navigation;
+                      a sidebar "Docs" button that opened a form mid-
+                      sidebar was a category error. */}
 
                   {/* Duties - accessible from /households/duties, not patient profile */}
 
@@ -1243,20 +1239,9 @@ function PatientDetailContent() {
                   )}
                 </div>
 
-                {/* Document Upload Form */}
-                {showDocumentUpload && canUploadDocuments && (
-                  <div className="mt-4">
-                    <DocumentUpload
-                      patientId={patientId}
-                      onSuccess={() => {
-                        setShowDocumentUpload(false)
-                        fetchDocuments()
-                        toast.success('Document uploaded!')
-                      }}
-                      onCancel={() => setShowDocumentUpload(false)}
-                    />
-                  </div>
-                )}
+                {/* Document upload now renders as a ResponsiveModal
+                    near the other modals at the bottom of the page —
+                    triggered from the Recent Documents card. */}
               </div>
             </div>
           </aside>
@@ -2928,10 +2913,26 @@ function PatientDetailContent() {
 
             {/* Recent Documents */}
             <div className="bg-card rounded-lg shadow-sm border border-border p-4">
-              <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                <DocumentTextIcon className="w-5 h-5 text-secondary" />
-                Recent Documents
-              </h3>
+              <div className="flex items-center justify-between mb-3 gap-2">
+                <h3 className="font-semibold text-foreground flex items-center gap-2">
+                  <DocumentTextIcon className="w-5 h-5 text-secondary" />
+                  Recent Documents
+                </h3>
+                {/* Ambient Upload affordance — only when docs exist.
+                    The empty state has its own large "Upload First
+                    Document" CTA, so showing both would duplicate the
+                    same action twice in the same card. */}
+                {canUploadDocuments && documents && documents.length > 0 && (
+                  <button
+                    data-write="true"
+                    onClick={() => setShowDocumentUpload(true)}
+                    className="inline-flex items-center gap-1 min-h-11 px-3 text-sm font-medium text-primary border border-primary/30 bg-primary/5 hover:bg-primary/10 active:bg-primary/15 rounded-lg transition-colors"
+                  >
+                    <ArrowUpTrayIcon className="w-4 h-4" />
+                    Upload
+                  </button>
+                )}
+              </div>
               {loadingDocuments ? (
                 <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
               ) : documents && documents.length > 0 ? (
@@ -3299,6 +3300,27 @@ function PatientDetailContent() {
         onClose={() => setShowInviteModal(false)}
         preSelectedPatientId={patientId}
       />
+
+      {/* Document Upload Modal — centered on desktop, full-screen on
+          mobile (ResponsiveModal handles the breakpoint). Triggered by
+          the Upload button on the Recent Documents card. */}
+      <ResponsiveModal
+        isOpen={showDocumentUpload && canUploadDocuments}
+        onClose={() => setShowDocumentUpload(false)}
+        title="Upload Document"
+        size="lg"
+        mobileFullScreen
+      >
+        <DocumentUpload
+          patientId={patientId}
+          onSuccess={() => {
+            setShowDocumentUpload(false)
+            fetchDocuments()
+            toast.success('Document uploaded!')
+          }}
+          onCancel={() => setShowDocumentUpload(false)}
+        />
+      </ResponsiveModal>
 
       {/* Document Detail Modal */}
       {selectedDocument && (
