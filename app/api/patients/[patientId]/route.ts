@@ -16,7 +16,7 @@ import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
 import { mergePatientPreferences } from '@/lib/services/patient-preferences'
-import { writeAuditEntry } from '@/lib/audit-log'
+import { writeAuditEntry, writeAuditEntries, PATIENT_TRACKED_FIELDS } from '@/lib/audit-log'
 
 // GET /api/patients/[patientId] - Get a single patient
 export async function GET(
@@ -222,6 +222,27 @@ export async function PUT(
     if ('bodyMeasurements' in body) updateData.bodyMeasurements = body.bodyMeasurements
 
     await patientRef.update(updateData)
+
+    // Audit-log identity/health changes. Diffs old vs new over the
+    // canonical tracked fields and writes one entry per request.
+    // No-op when only untracked fields changed (e.g. preferences,
+    // lifestyle blobs). See memory/project_audit_log_primitives.md.
+    const newDoc = { ...existingPatient, ...updateData }
+    await writeAuditEntries({
+      entityType: 'patient',
+      entityId: patientId,
+      entityName: newDoc.name || existingPatient.name || 'Unknown Patient',
+      userId: ownerUserId,
+      action: 'updated',
+      performedBy: userId,
+      // TODO: thread actor displayName lookup (same gap as DELETE
+      // writer noted in lib/audit-log.ts caller comments).
+      performedByName: 'User',
+      oldDoc: existingPatient as unknown as Record<string, unknown>,
+      newDoc: newDoc as unknown as Record<string, unknown>,
+      trackedFields: PATIENT_TRACKED_FIELDS,
+      request,
+    })
 
     logger.info('[API /patients/[id] PUT] Patient updated successfully', { userId, ownerUserId, patientId })
 

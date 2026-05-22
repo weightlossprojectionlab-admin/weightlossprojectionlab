@@ -109,3 +109,105 @@ export async function writeAuditEntry(opts: WriteAuditEntryOptions): Promise<voi
     )
   }
 }
+
+/**
+ * Canonical list of patient fields we audit. Adding a field here
+ * makes it appear in the History tab; removing it stops new
+ * entries from recording it (existing entries are untouched).
+ *
+ * Kept in the audit module rather than per-route so every writer
+ * agrees on what's worth recording.
+ */
+export const PATIENT_TRACKED_FIELDS: ReadonlyArray<{ field: string; label: string; dataType: string }> = [
+  // Identity
+  { field: 'name', label: 'Legal Full Name', dataType: 'string' },
+  { field: 'firstName', label: 'First Name', dataType: 'string' },
+  { field: 'middleName', label: 'Middle Name', dataType: 'string' },
+  { field: 'lastName', label: 'Last Name', dataType: 'string' },
+  { field: 'nickname', label: 'Nickname', dataType: 'string' },
+  { field: 'gender', label: 'Gender', dataType: 'string' },
+  { field: 'relationship', label: 'Relationship', dataType: 'string' },
+  { field: 'dateOfBirth', label: 'Date of Birth', dataType: 'string' },
+  // Medical identifiers
+  { field: 'bloodType', label: 'Blood Type', dataType: 'string' },
+  // Vitals profile (goal/lifestyle, not logged readings)
+  { field: 'height', label: 'Height', dataType: 'number' },
+  { field: 'heightUnit', label: 'Height Unit', dataType: 'string' },
+  { field: 'weightUnit', label: 'Weight Unit', dataType: 'string' },
+  { field: 'activityLevel', label: 'Activity Level', dataType: 'string' },
+  { field: 'weightGoal', label: 'Weight Goal', dataType: 'string' },
+  { field: 'targetWeight', label: 'Target Weight', dataType: 'number' },
+  // Health
+  { field: 'healthConditions', label: 'Health Conditions', dataType: 'array' },
+  { field: 'foodAllergies', label: 'Food Allergies', dataType: 'array' },
+]
+
+export interface WriteAuditEntriesOptions {
+  entityType: AuditEntityType
+  entityId: string
+  entityName: string
+  userId: string
+  action: AuditAction
+  performedBy: string
+  performedByName: string
+  /** The record's state BEFORE the update. */
+  oldDoc: Record<string, unknown>
+  /** The record's state AFTER the update (already merged + persisted, or about to be). */
+  newDoc: Record<string, unknown>
+  /** Which fields to diff. Use PATIENT_TRACKED_FIELDS for patients. */
+  trackedFields: ReadonlyArray<{ field: string; label: string; dataType: string }>
+  metadata?: Record<string, unknown>
+  request?: Request
+}
+
+/**
+ * Diff `oldDoc` against `newDoc` over the tracked fields and emit ONE
+ * audit-log entry capturing every changed field as a single entry's
+ * `changes` array. No-op when nothing tracked actually changed.
+ *
+ * One entry per request keeps the reader's timeline grouped naturally
+ * — a multi-field save shows as one event with N sub-changes, not N
+ * adjacent rows.
+ */
+export async function writeAuditEntries(opts: WriteAuditEntriesOptions): Promise<void> {
+  const changes: AuditLogChange[] = []
+  for (const tracked of opts.trackedFields) {
+    const oldValue = opts.oldDoc[tracked.field]
+    const newValue = opts.newDoc[tracked.field]
+    // Strict diff. Treat undefined and missing as equivalent. For
+    // arrays/objects we compare JSON form — simpler than deep-equal,
+    // and the tracked fields don't include preference blobs deep
+    // enough to make stringification expensive.
+    if (deepEqual(oldValue, newValue)) continue
+    changes.push({
+      field: tracked.field,
+      oldValue: oldValue ?? null,
+      newValue: newValue ?? null,
+      fieldLabel: tracked.label,
+      dataType: tracked.dataType,
+    })
+  }
+
+  if (changes.length === 0) return // nothing tracked changed
+
+  await writeAuditEntry({
+    entityType: opts.entityType,
+    entityId: opts.entityId,
+    entityName: opts.entityName,
+    userId: opts.userId,
+    action: opts.action,
+    performedBy: opts.performedBy,
+    performedByName: opts.performedByName,
+    changes,
+    metadata: opts.metadata,
+    request: opts.request,
+  })
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a == null && b == null) return true
+  if (a == null || b == null) return false
+  if (typeof a !== 'object' || typeof b !== 'object') return false
+  return JSON.stringify(a) === JSON.stringify(b)
+}
