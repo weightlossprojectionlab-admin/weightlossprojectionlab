@@ -50,6 +50,7 @@ import { updateVitalReminders } from '@/lib/services/patient-preferences'
 import { getApplicableVitalTypes } from '@/lib/vital-applicability'
 import { getCSRFToken } from '@/lib/csrf'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
+import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
 import { FeatureEnabledModal } from '@/components/subscription/FeatureEnabledModal'
 import type { FeaturePreference, SubscriptionPlan } from '@/types'
@@ -59,6 +60,10 @@ function ProfileContent() {
   const router = useRouter()
   const { confirm, ConfirmDialog } = useConfirm()
   const { canAccess: hasMedicalFeatures } = useFeatureGate('medications')
+  // "Send Test Reminder" is a developer affordance for verifying the FCM
+  // pipeline — not something family-admins should see. Gate on platform
+  // super-admin status.
+  const { isSuperAdmin } = useAdminAuth()
 
   // Subscription state
   const { subscription, loading: subscriptionLoading } = useSubscription()
@@ -237,7 +242,8 @@ function ProfileContent() {
     try {
       await registerBiometric(user.uid, user.email || '')
       setBiometricEnabled(true)
-      toast.success('Biometric authentication enabled successfully!')
+      // No success toast — the "Enabled" status, green indicator dot,
+      // and "Remove" button replacing "Set Up" are the confirmation.
     } catch (error: any) {
       logger.error('Failed to enable biometrics', error as Error)
       toast.error('Failed to set up biometric authentication: ' + error.message)
@@ -260,7 +266,7 @@ function ProfileContent() {
     if (confirmed) {
       removeBiometricCredential(user.uid)
       setBiometricEnabled(false)
-      toast.success('Biometric authentication removed.')
+      // No success toast — UI state flips back to "Disabled" / "Set Up".
     }
   }
 
@@ -268,11 +274,11 @@ function ProfileContent() {
     try {
       if (stepTrackingEnabled) {
         await disableTracking()
-        toast.success('Automatic step tracking disabled')
       } else {
         await enableTracking()
-        toast.success('Automatic step tracking enabled! Your steps will be counted in the background.')
       }
+      // No success toast — toggle flips visually and the pulsing
+      // green "tracking" dot appears/disappears next to the label.
     } catch (error) {
       logger.error('Toggle step tracking error', error as Error)
       toast.error('Failed to toggle step tracking. Please check device permissions.')
@@ -1131,12 +1137,10 @@ function ProfileContent() {
                           }
 
                           await saveVitalReminders(updatedVitalReminders)
-
-                          toast.success(
-                            !isEnabled
-                              ? `${VITAL_DISPLAY_NAMES[vitalType]} reminders enabled`
-                              : `${VITAL_DISPLAY_NAMES[vitalType]} reminders disabled`
-                          )
+                          // No success toast — the toggle color flip + the
+                          // frequency dropdown appearing/disappearing IS the
+                          // confirmation. Rapid double-taps were stacking
+                          // toasts.
                         } catch (error) {
                           logger.error('[Profile] Failed to update vital reminder settings', error as Error)
                           const errorMsg = error instanceof Error ? error.message : 'Unknown error'
@@ -1179,7 +1183,8 @@ function ProfileContent() {
                             }
 
                             await saveVitalReminders(updatedVitalReminders)
-                            toast.success('Check-in frequency updated')
+                            // No success toast — the dropdown already shows
+                            // the new value the user just picked.
                           } catch (error) {
                             logger.error('[Profile] Failed to update frequency', error as Error)
                             const errorMsg = error instanceof Error ? error.message : 'Unknown error'
@@ -1197,12 +1202,14 @@ function ProfileContent() {
                       <p className="text-description-sm mt-2">
                         You'll be reminded to log your {VITAL_DISPLAY_NAMES[vitalType].toLowerCase()} when it's due
                       </p>
-                      <button
-                        onClick={() => handleSendVitalTestNotification(vitalType)}
-                        className="mt-3 text-sm px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
-                      >
-                        🔔 Send Test Reminder
-                      </button>
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => handleSendVitalTestNotification(vitalType)}
+                          className="mt-3 text-sm px-3 py-1.5 rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors font-medium"
+                        >
+                          🔔 Send Test Reminder
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1285,11 +1292,7 @@ function ProfileContent() {
                         const result = await response.json()
                         setProfileData(result.data)
 
-                        toast.success(
-                          !currentValue
-                            ? 'Feeding reminders enabled'
-                            : 'Feeding reminders disabled'
-                        )
+                        // No success toast — toggle visual flip is the confirmation.
                       } catch (error) {
                         toast.error('Failed to update reminder settings')
                       }
@@ -1367,11 +1370,7 @@ function ProfileContent() {
                         const result = await response.json()
                         setProfileData(result.data)
 
-                        toast.success(
-                          !currentValue
-                            ? 'Vaccination reminders enabled'
-                            : 'Vaccination reminders disabled'
-                        )
+                        // No success toast — toggle visual flip is the confirmation.
                       } catch (error) {
                         toast.error('Failed to update reminder settings')
                       }
@@ -1434,7 +1433,7 @@ function ProfileContent() {
                           const result = await response.json()
                           setProfileData(result.data)
 
-                          toast.success('Reminder timing updated')
+                          // No success toast — dropdown already shows the new value.
                         } catch (error) {
                           toast.error('Failed to update reminder settings')
                         }
@@ -1500,11 +1499,7 @@ function ProfileContent() {
                         const result = await response.json()
                         setProfileData(result.data)
 
-                        toast.success(
-                          !currentValue
-                            ? 'Medication reminders enabled'
-                            : 'Medication reminders disabled'
-                        )
+                        // No success toast — toggle visual flip is the confirmation.
                       } catch (error) {
                         toast.error('Failed to update reminder settings')
                       }

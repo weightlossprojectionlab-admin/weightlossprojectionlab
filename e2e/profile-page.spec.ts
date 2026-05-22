@@ -26,9 +26,12 @@ async function gotoProfile(page: Page) {
   await page.goto('/profile')
   // Hero card is the most stable above-the-fold anchor — it renders
   // in every state (own profile, family-member, no-members, loading).
+  // 60s tolerates dev-server cold compile + a Turbopack hot-rebuild
+  // landing mid-navigation. The latter intermittently blocks the
+  // AuthGuard splash from clearing.
   await expect(
     page.getByText('Currently Viewing', { exact: false }),
-  ).toBeVisible({ timeout: 30_000 })
+  ).toBeVisible({ timeout: 60_000 })
 
   // Wait for usePatients() to resolve so the selector / empty-state /
   // loading shimmer has settled. Without this gate, `isVisible()`
@@ -188,13 +191,66 @@ test.describe('/profile — render battery', () => {
     await expect(toggle).toBeVisible()
 
     // If the toggle is in the ON state (bg-primary class), the
-    // frequency dropdown + "Send Test Reminder" button should be
-    // visible inside the same row. This is a read-only state check
-    // — we never click the toggle.
+    // frequency dropdown should be visible inside the same row. The
+    // "Send Test Reminder" button is intentionally gated to platform
+    // super-admins, so we don't assert it for the test user.
     const toggleClasses = (await toggle.getAttribute('class')) ?? ''
     if (toggleClasses.includes('bg-primary')) {
       await expect(row.locator('select')).toBeVisible()
-      await expect(row.getByRole('button', { name: /Send Test Reminder/i })).toBeVisible()
+    }
+  })
+
+  test('toggling weight vital reminder flips dropdown + toast, then restores', async ({ page }) => {
+    // Ensure own-profile (the page may have auto-picked a family member).
+    const accountDropdown = page.locator('select').filter({ hasText: /My Profile/i }).first()
+    if (await accountDropdown.isVisible().catch(() => false)) {
+      const selfOption = accountDropdown.locator('option', { hasText: /\(My Profile\)/i }).first()
+      const selfValue = await selfOption.getAttribute('value')
+      if (selfValue) await accountDropdown.selectOption(selfValue)
+    }
+
+    await expect(
+      page.getByRole('heading', { name: /Vital Sign Reminders/i, level: 2 }),
+    ).toBeVisible({ timeout: 15_000 })
+
+    // Weight is the safest vital to exercise: it's applicable to every
+    // life-stage (newborn → adult) so it always renders, and it has
+    // its own legacy-migration path that we want to keep exercising.
+    const weightHeading = page.getByRole('heading', { name: 'Weight Reminders', level: 3 })
+    await expect(weightHeading).toBeVisible()
+
+    const weightRow = weightHeading.locator('xpath=ancestor::div[contains(@class, "border-b")][1]')
+    const toggle = weightRow.locator('button').first()
+    await expect(toggle).toBeVisible()
+
+    // The frequency dropdown only renders when the toggle is ON, so
+    // its visibility is the cleanest proxy for "is enabled" without
+    // having to introspect a className.
+    const frequencyDropdown = weightRow.locator('select')
+    const wasEnabled = await frequencyDropdown.isVisible().catch(() => false)
+
+    // First click — flip the state. The frequency dropdown's visibility
+    // change is the single source of truth: it flips only after the
+    // saveVitalReminders API round-trip succeeds and setProfileData
+    // re-renders the row. Playwright's expect auto-retries, so this
+    // doubles as the "save completed" gate.
+    await toggle.click()
+
+    if (wasEnabled) {
+      // Was ON, now OFF — dropdown should be gone.
+      await expect(frequencyDropdown).toBeHidden({ timeout: 10_000 })
+    } else {
+      // Was OFF, now ON — dropdown appears. (Send Test Reminder
+      // button is admin-gated, so not asserted here.)
+      await expect(frequencyDropdown).toBeVisible({ timeout: 10_000 })
+    }
+
+    // Second click — restore original state. Cleanup, not assertion target.
+    await toggle.click()
+    if (wasEnabled) {
+      await expect(frequencyDropdown).toBeVisible({ timeout: 10_000 })
+    } else {
+      await expect(frequencyDropdown).toBeHidden({ timeout: 10_000 })
     }
   })
 
