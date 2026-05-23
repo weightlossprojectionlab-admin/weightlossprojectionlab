@@ -169,13 +169,34 @@ export function setSimulatedSubscription(subscription: UserSubscription | null):
 }
 
 /**
- * Get user's effective subscription (with admin override and dev simulation)
+ * Get user's effective subscription (with admin override and dev simulation).
+ *
+ * Admin bypass semantics:
+ *   - Default (no options): admin gets FULL_ACCESS_SUBSCRIPTION. Right for
+ *     feature-gate queries (`canAccessFeature`, `hasAddon`, etc.) — admins
+ *     should reach every gated feature regardless of what plan their account
+ *     is actually paying for.
+ *   - `skipAdminBypass: true`: returns the admin's REAL subscription (or
+ *     dev simulation / cache / user object). Right for display surfaces that
+ *     answer "what plan am I on?" / "what's my cap?" — those need to match
+ *     what the user actually pays for, not the synthetic family_premium-
+ *     equivalent admin slot. Without this option, the cap display reads 200
+ *     for every admin regardless of their real plan, which contradicts the
+ *     plan badge (which reads from the real subscription elsewhere).
+ *
+ * Dev simulation is honored either way — it's the dev-mode mechanism for
+ * inspecting other plans without changing your account.
  */
-export function getUserSubscription(user: User | null): UserSubscription | null {
+export function getUserSubscription(
+  user: User | null,
+  options?: { skipAdminBypass?: boolean }
+): UserSubscription | null {
   if (!user) return null
 
-  // 1. Admin bypass - full access always
-  if (isSuperAdmin(user.email)) {
+  // 1. Admin bypass — full access for feature-gate callers. Display
+  //    surfaces opt out via `skipAdminBypass: true` so the displayed
+  //    plan/cap matches the user's real subscription.
+  if (!options?.skipAdminBypass && isSuperAdmin(user.email)) {
     return FULL_ACCESS_SUBSCRIPTION
   }
 
@@ -419,9 +440,17 @@ export function hasAddon(user: User | null, addonName: keyof NonNullable<UserSub
  * Get patient limit info. Uses the canonical PLAN_PATIENT_LIMITS
  * map (above) so changes to a plan's cap apply immediately to
  * every user on that plan — no Firestore backfill needed.
+ *
+ * Skips the admin bypass: this is a DISPLAY surface ("you're at X of
+ * Y") so it must reflect the user's REAL paid plan, not the admin
+ * full-access slot. Otherwise admins see "0 of 200" regardless of
+ * actual plan, contradicting the plan badge elsewhere on the page.
+ * Admin still has feature-level access via `canAccessFeature` and
+ * can still exceed the cap via `canAddPatient` — only the display
+ * is honest about the underlying plan.
  */
 export function getPatientLimitInfo(user: User | null, currentPatientCount: number) {
-  const subscription = getUserSubscription(user)
+  const subscription = getUserSubscription(user, { skipAdminBypass: true })
 
   if (!subscription) {
     return {
