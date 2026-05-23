@@ -206,16 +206,28 @@ function analyzePatientHealth(
   // Check dietary preferences - Note: PatientProfile doesn't have structured dietary preferences
   // This would need to be added to the type if needed
 
-  // Check health goals
-  if (patient.weightGoal) {
-    if (patient.weightGoal === 'lose-weight') {
+  // Map primaryMotivation + (current vs target weight) into shopping
+  // needs. Old code branched on a single weightGoal enum that bundled
+  // direction (lose/gain) with motivation (muscle). The new shape
+  // separates them — direction is derived from the numbers, motivation
+  // is the standalone enum.
+  if (patient.primaryMotivation === 'weight' && patient.currentWeight && patient.targetWeight) {
+    if (patient.targetWeight < patient.currentWeight) {
       needs.push('weight_loss')
       priorities.set('weight_loss', 'medium')
-    }
-    if (patient.weightGoal === 'gain-muscle') {
+    } else if (patient.targetWeight > patient.currentWeight) {
       needs.push('weight_gain')
       priorities.set('weight_gain', 'medium')
     }
+    // targetWeight === currentWeight → maintain → no need pushed
+  }
+  if (patient.primaryMotivation === 'body-composition') {
+    // Body comp focus → protein-forward shopping regardless of weight
+    // direction. Use the weight_gain bucket for now (higher-calorie /
+    // higher-protein recs); a dedicated 'body_composition' bucket can
+    // come later if recommendations diverge meaningfully.
+    needs.push('weight_gain')
+    priorities.set('weight_gain', 'medium')
   }
 
   // Age-specific needs
@@ -314,7 +326,7 @@ function buildGeminiPrompt(
 - Medical Conditions: ${patient.healthConditions?.join(', ') || 'None'}
 - Dietary Restrictions: None
 - Allergies: ${patient.foodAllergies?.join(', ') || 'None'}
-- Health Goals: ${patient.weightGoal || 'general health'}
+- Primary Motivation: ${patient.primaryMotivation || 'general health'}
 
 **Current Health Vitals:**
 ${vitals.bloodPressure ? `- Blood Pressure: ${vitals.bloodPressure.systolic}/${vitals.bloodPressure.diastolic} mmHg ${vitals.bloodPressure.isAbnormal ? '(ABNORMAL)' : ''}` : ''}

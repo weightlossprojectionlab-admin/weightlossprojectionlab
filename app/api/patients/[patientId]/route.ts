@@ -201,7 +201,7 @@ export async function PUT(
     if ('heightUnit' in body) updateData.heightUnit = body.heightUnit
     if ('weightUnit' in body) updateData.weightUnit = body.weightUnit
     if ('activityLevel' in body) updateData.activityLevel = body.activityLevel
-    if ('weightGoal' in body) updateData.weightGoal = body.weightGoal
+    if ('primaryMotivation' in body) updateData.primaryMotivation = body.primaryMotivation
     if ('targetWeight' in body) updateData.targetWeight = body.targetWeight
     if ('targetWeightUnit' in body) updateData.targetWeightUnit = body.targetWeightUnit
 

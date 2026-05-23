@@ -51,9 +51,12 @@ type AdultPersona = {
   weightLbs: string
   /** Activity level (REQUIRED on the vitals step). */
   activityLevel: 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
-  /** Optional weight goal — fills the goals subsection. */
-  weightGoal?: 'lose-weight' | 'maintain-weight' | 'gain-muscle' | 'improve-health'
-  /** Optional target weight (lbs). Only filled when weightGoal != maintain-weight. */
+  /** Optional primary motivation — fills the goals subsection.
+   *  Renamed from weightGoal 2026-05-23; old enum conflated weight
+   *  direction (derivable from current vs target) with motivation. */
+  primaryMotivation?: 'weight' | 'body-composition' | 'general-health'
+  /** Optional target weight (lbs). Relevant when primaryMotivation
+   *  is 'weight' or 'body-composition'. */
   targetWeightLbs?: string
   /** Conditions to multi-select on the conditions step. Empty = skip. */
   conditions?: string[]
@@ -74,8 +77,8 @@ function adultPersonas(stamp: number): AdultPersona[] {
       heightInches: '11',
       weightLbs: '178',
       activityLevel: 'active',
-      weightGoal: 'maintain-weight',
-      notes: 'Adult spouse, no chronic conditions, active lifestyle, baseline persona.',
+      primaryMotivation: 'weight',
+      notes: 'Adult spouse, no chronic conditions, active lifestyle, baseline persona (weight-focused without a directional target — current ≈ target).',
     },
     {
       name: `Margaret Hayes ${stamp}`,
@@ -88,7 +91,7 @@ function adultPersonas(stamp: number): AdultPersona[] {
       heightInches: '4',
       weightLbs: '142',
       activityLevel: 'light',
-      weightGoal: 'improve-health',
+      primaryMotivation: 'general-health',
       // Conditions from the static adult list (Hypertension/Diabetes
       // only appear via BMI-based AI suggestions, which a normal-weight
       // persona doesn't trigger).
@@ -106,10 +109,10 @@ function adultPersonas(stamp: number): AdultPersona[] {
       heightInches: '8',
       weightLbs: '160',
       activityLevel: 'sedentary',
-      weightGoal: 'gain-muscle',
+      primaryMotivation: 'body-composition',
       targetWeightLbs: '170',
       conditions: ['Other'],
-      notes: 'Senior grandparent (~86) — special-needs (Alzheimer\'s). Sedentary + gain-muscle to exercise targetWeight wiring; "Other" condition.',
+      notes: 'Senior grandparent (~86) — special-needs (Alzheimer\'s). Sedentary + body-composition to exercise targetWeight wiring; "Other" condition.',
     },
   ]
 }
@@ -239,7 +242,7 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       // Fields NOT asserted (intentionally — wizard no longer collects):
       //  - bloodType: moved to patient detail Info tab editor.
       //  - healthConditions: same.
-      //  - height / activityLevel / weightGoal / targetWeight: same.
+      //  - height / activityLevel / primaryMotivation / targetWeight: same.
       //  - householdId: assignment lives on /family-admin/households,
       //    not the family-member wizard. Persona's `household` field
       //    is documentation-only metadata.

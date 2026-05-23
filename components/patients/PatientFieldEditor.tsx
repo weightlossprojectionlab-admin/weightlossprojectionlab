@@ -5,7 +5,7 @@
  * revert. Mirrors the existing PatientNameEditor pattern but generalized
  * across field types so the patient detail page can drop instances for
  * bloodType, gender, relationship, healthConditions, activityLevel,
- * weightGoal, etc. without a dedicated component per field.
+ * primaryMotivation, etc. without a dedicated component per field.
  *
  * Why this exists: the wizard was the only entry point for static profile
  * fields (bloodType, healthConditions, height, activityLevel, etc.).

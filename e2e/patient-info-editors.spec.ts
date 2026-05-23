@@ -5,7 +5,8 @@
  * Locks in:
  *   - All 9 editor cells from c864ec8 (Phase 1 E1): relationship,
  *     gender, bloodType, height, targetWeight, activityLevel,
- *     weightGoal, healthConditions, foodAllergies.
+ *     primaryMotivation (renamed from weightGoal 2026-05-23),
+ *     healthConditions, foodAllergies.
  *   - The 3 new editor types from 776de71 (Phase 1 E1.1):
  *     preferredFoods (tag-input positive), aversions (tag-input
  *     negative), preparationNeeds (PreparationNeedsEditor nested).

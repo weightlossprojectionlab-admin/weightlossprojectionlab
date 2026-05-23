@@ -463,7 +463,7 @@ interface FamilyMemberData {
   heightUnit: 'imperial' | 'metric'
   activityLevel: '' | 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
   targetWeight: string
-  weightGoal: '' | 'lose-weight' | 'maintain-weight' | 'gain-muscle' | 'improve-health'
+  primaryMotivation: '' | 'weight' | 'body-composition' | 'general-health'
 
   // Step 3: Conditions
   conditions: string[]
@@ -521,7 +521,7 @@ export default function FamilyMemberOnboardingWizard() {
     heightUnit: 'imperial',
     activityLevel: '',
     targetWeight: '',
-    weightGoal: '',
+    primaryMotivation: '',
     conditions: [],
     feedingPreference: '',
     pediatricianName: '',
@@ -884,8 +884,8 @@ export default function FamilyMemberOnboardingWizard() {
           patientData.targetWeightUnit = data.weightUnit
         }
 
-        if (data.weightGoal) {
-          patientData.weightGoal = data.weightGoal
+        if (data.primaryMotivation) {
+          patientData.primaryMotivation = data.primaryMotivation
         }
 
         // Initialize goals object with starting weight
@@ -1650,7 +1650,7 @@ export default function FamilyMemberOnboardingWizard() {
           heightUnit: data.heightUnit,
           activityLevel: data.activityLevel,
           targetWeight: data.targetWeight,
-          weightGoal: data.weightGoal,
+          primaryMotivation: data.primaryMotivation,
         }}
         onChange={(updates) => setData({ ...data, ...updates })}
         required={true}
@@ -2190,7 +2190,7 @@ export default function FamilyMemberOnboardingWizard() {
                   </>
                 )}
                 {data.activityLevel && <p><span className="text-white/70">Activity Level:</span> {data.activityLevel}</p>}
-                {data.weightGoal && <p><span className="text-white/70">Goal:</span> {data.weightGoal.replace(/-/g, ' ')}</p>}
+                {data.primaryMotivation && <p><span className="text-white/70">Motivation:</span> {data.primaryMotivation.replace(/-/g, ' ')}</p>}
                 {data.targetWeight && <p><span className="text-white/70">Target Weight:</span> {data.targetWeight} {data.weightUnit}</p>}
               </div>
             </div>

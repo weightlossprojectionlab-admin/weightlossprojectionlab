@@ -26,7 +26,7 @@ interface VitalsFormData {
   heightUnit: 'imperial' | 'metric'
   activityLevel: '' | 'sedentary' | 'light' | 'moderate' | 'active' | 'very-active'
   targetWeight: string
-  weightGoal: '' | 'lose-weight' | 'maintain-weight' | 'gain-muscle' | 'improve-health'
+  primaryMotivation: '' | 'weight' | 'body-composition' | 'general-health'
 }
 
 interface VitalsFormSectionProps {
@@ -249,9 +249,16 @@ export function VitalsFormSection({
                 {suggestion.target !== parseFloat(data.currentWeight) && (
                   <button
                     type="button"
+                    // Set target weight only — do NOT infer motivation
+                    // from direction. Whether the user wants to gain
+                    // muscle vs gain weight vs recover from illness is
+                    // a question they answer, not one we guess. Old
+                    // code auto-set weightGoal='gain-muscle' if target
+                    // > current and 'lose-weight' otherwise — both
+                    // assumptions were wrong half the time. Removed
+                    // 2026-05-23 with the primaryMotivation rename.
                     onClick={() => onChange({
                       targetWeight: suggestion.target.toString(),
-                      weightGoal: suggestion.target > parseFloat(data.currentWeight) ? 'gain-muscle' : 'lose-weight'
                     })}
                     className="mt-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
                   >
@@ -295,26 +302,33 @@ export function VitalsFormSection({
             <p className="text-sm text-muted-foreground">Set health and weight goals</p>
           </div>
 
-          {/* Weight Goal */}
+          {/* Primary motivation — what the user is actually trying to
+              achieve. Direction (lose/maintain/gain) is derived from
+              targetWeight vs currentWeight elsewhere; this is the
+              motivation only. See types/medical.ts PatientProfile.
+              primaryMotivation for the full rationale. */}
           <div>
             <label className="block text-sm font-medium text-foreground mb-2">
-              Weight Goal
+              Primary Motivation
             </label>
             <select
-              value={data.weightGoal}
-              onChange={(e) => onChange({ weightGoal: e.target.value as any })}
+              value={data.primaryMotivation}
+              onChange={(e) => onChange({ primaryMotivation: e.target.value as any })}
               className="w-full px-4 py-2 border-2 border-border rounded-lg bg-background text-foreground focus:border-primary focus:ring-2 focus:ring-purple-600/20"
             >
-              <option value="">Select a goal</option>
-              <option value="lose-weight">Lose Weight</option>
-              <option value="maintain-weight">Maintain Weight</option>
-              <option value="gain-muscle">Gain Muscle</option>
-              <option value="improve-health">Improve Health</option>
+              <option value="">Select your motivation</option>
+              <option value="weight">Weight (lose, maintain, or gain)</option>
+              <option value="body-composition">Body composition (gain muscle, recomp)</option>
+              <option value="general-health">General health / lifestyle</option>
             </select>
           </div>
 
-          {/* Target Weight */}
-          {data.weightGoal && data.weightGoal !== 'maintain-weight' && (
+          {/* Target Weight — relevant when a specific weight number
+              matters (whether for weight loss/gain OR for body
+              composition where someone wants to stay around X lbs
+              while changing ratio). Hidden for 'general-health'
+              where the weight number isn't the focus. */}
+          {(data.primaryMotivation === 'weight' || data.primaryMotivation === 'body-composition') && (
             <div>
               <label className="block text-sm font-medium text-foreground mb-2">
                 Target Weight

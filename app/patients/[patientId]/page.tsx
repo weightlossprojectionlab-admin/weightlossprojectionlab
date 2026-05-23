@@ -120,11 +120,15 @@ const ACTIVITY_LEVEL_OPTIONS: FieldOption[] = [
   { value: 'active', label: 'Active' },
   { value: 'very-active', label: 'Very active' },
 ]
-const WEIGHT_GOAL_OPTIONS: FieldOption[] = [
-  { value: 'lose-weight', label: 'Lose weight' },
-  { value: 'maintain-weight', label: 'Maintain weight' },
-  { value: 'gain-muscle', label: 'Gain muscle' },
-  { value: 'improve-health', label: 'Improve overall health' },
+// What's the patient's primary motivation? Direction (lose / maintain
+// / gain) is DERIVED from currentWeight vs targetWeight elsewhere —
+// this enum is for the motivation only. Renamed from WEIGHT_GOAL_OPTIONS
+// 2026-05-23 because the old shape conflated "are you trying to drop
+// pounds?" with "what's your overall fitness goal?"
+const PRIMARY_MOTIVATION_OPTIONS: FieldOption[] = [
+  { value: 'weight', label: 'Weight (lose, maintain, or gain)' },
+  { value: 'body-composition', label: 'Body composition (gain muscle, recomp)' },
+  { value: 'general-health', label: 'General health / lifestyle' },
 ]
 // Adult health conditions surfaced in the wizard's HEALTH_CONDITIONS
 // constant. Keeping the labels human-readable; values stored as-is.
@@ -2183,13 +2187,13 @@ function PatientDetailContent() {
                 />
                 <PatientFieldEditor
                   patientId={patientId}
-                  field="weightGoal"
-                  label="Weight goal"
+                  field="primaryMotivation"
+                  label="Primary motivation"
                   type="select"
-                  options={WEIGHT_GOAL_OPTIONS}
-                  value={patient.weightGoal}
+                  options={PRIMARY_MOTIVATION_OPTIONS}
+                  value={patient.primaryMotivation}
                   canEdit={canEditProfile}
-                  onUpdated={(v) => setPatient({ ...patient, weightGoal: v })}
+                  onUpdated={(v) => setPatient({ ...patient, primaryMotivation: v })}
                 />
               </div>
 

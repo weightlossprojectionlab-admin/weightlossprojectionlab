@@ -115,7 +115,22 @@ export interface PatientProfile {
   targetWeight?: number
   weightUnit?: 'lbs' | 'kg' | 'oz' | 'g'
   targetWeightUnit?: 'lbs' | 'kg' | 'oz' | 'g'
-  weightGoal?: 'lose-weight' | 'maintain-weight' | 'gain-muscle' | 'improve-health'
+  /**
+   * The user's primary motivation — distinct from weight direction.
+   * Direction (lose/maintain/gain) is DERIVED from `targetWeight` vs
+   * `currentWeight`. Motivation answers "what are you actually trying
+   * to achieve?" Three semantic categories:
+   *   - 'weight'           — weight as the goal (whether lose/maintain/gain
+   *                          is derived from target vs current)
+   *   - 'body-composition' — body comp focus (e.g., gain muscle, recomp);
+   *                          weight may stay the same or shift either way
+   *   - 'general-health'   — lifestyle/fitness without a weight target
+   * Renamed from `weightGoal` 2026-05-23 — old enum conflated direction
+   * (derivable) with motivation (not derivable). See
+   * memory/project_relationship_subject_ambiguity for the broader
+   * one-question-one-answer pattern this fix exemplifies.
+   */
+  primaryMotivation?: 'weight' | 'body-composition' | 'general-health'
 
   // Check-in preferences (set during onboarding)
   weightCheckInFrequency?: 'daily' | 'weekly' | 'biweekly' | 'monthly'

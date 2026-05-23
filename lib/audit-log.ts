@@ -136,7 +136,7 @@ export const PATIENT_TRACKED_FIELDS: ReadonlyArray<{ field: string; label: strin
   { field: 'heightUnit', label: 'Height Unit', dataType: 'string' },
   { field: 'weightUnit', label: 'Weight Unit', dataType: 'string' },
   { field: 'activityLevel', label: 'Activity Level', dataType: 'string' },
-  { field: 'weightGoal', label: 'Weight Goal', dataType: 'string' },
+  { field: 'primaryMotivation', label: 'Primary Motivation', dataType: 'string' },
   { field: 'targetWeight', label: 'Target Weight', dataType: 'number' },
   // Health
   { field: 'healthConditions', label: 'Health Conditions', dataType: 'array' },

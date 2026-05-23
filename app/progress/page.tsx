@@ -470,7 +470,7 @@ function ProgressContent() {
   //
   // Null when there's no target or insufficient data — the chip just
   // doesn't render in those cases, no degraded placeholder.
-  const weightGoalEta = useMemo(() => {
+  const targetWeightEta = useMemo(() => {
     const target = activeProfile?.goals?.targetWeight
     if (typeof target !== 'number' || !weightData || weightData.length < 2) return null
 
@@ -1389,48 +1389,48 @@ function ProgressContent() {
                 targetWeight={targetWeight}
                 loading={loading}
               />
-              {weightGoalEta && (
+              {targetWeightEta && (
                 <div
                   data-testid="weight-goal-eta"
-                  data-status={weightGoalEta.status}
+                  data-status={targetWeightEta.status}
                   className={`mt-4 px-4 py-3 rounded-lg text-sm font-medium ${
-                    weightGoalEta.status === 'achieved' || weightGoalEta.status === 'on-pace'
+                    targetWeightEta.status === 'achieved' || targetWeightEta.status === 'on-pace'
                       ? 'bg-success-light text-success-dark border border-success/30'
-                      : weightGoalEta.status === 'slipping'
+                      : targetWeightEta.status === 'slipping'
                         ? 'bg-warning-light text-warning-dark border border-warning/30'
                         : 'bg-error-light text-error-dark border border-error/30'
                   }`}
                 >
-                  {weightGoalEta.status === 'achieved' && (
-                    <>🎉 Goal reached — you're at your target weight of {weightGoalEta.target} lbs.</>
+                  {targetWeightEta.status === 'achieved' && (
+                    <>🎉 Goal reached — you're at your target weight of {targetWeightEta.target} lbs.</>
                   )}
-                  {weightGoalEta.status === 'on-pace' && (
+                  {targetWeightEta.status === 'on-pace' && (
                     <>
-                      🟢 At this rate you&apos;ll hit {weightGoalEta.target} lbs on{' '}
-                      <strong>{weightGoalEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
-                      (~{weightGoalEta.daysToGoal} day{weightGoalEta.daysToGoal === 1 ? '' : 's'} from today).
+                      🟢 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
+                      <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+                      (~{targetWeightEta.daysToGoal} day{targetWeightEta.daysToGoal === 1 ? '' : 's'} from today).
                     </>
                   )}
-                  {weightGoalEta.status === 'slipping' && (
+                  {targetWeightEta.status === 'slipping' && (
                     <>
-                      🟡 At this rate you&apos;ll hit {weightGoalEta.target} lbs on{' '}
-                      <strong>{weightGoalEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
-                      (~{weightGoalEta.daysToGoal} days).{' '}
-                      {weightGoalEta.targetDate && (
-                        <>Goal date was {weightGoalEta.targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
+                      🟡 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
+                      <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+                      (~{targetWeightEta.daysToGoal} days).{' '}
+                      {targetWeightEta.targetDate && (
+                        <>Goal date was {targetWeightEta.targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
                       )}
                     </>
                   )}
-                  {weightGoalEta.status === 'off-track' && (
+                  {targetWeightEta.status === 'off-track' && (
                     <>
                       🔴 Current trend is{' '}
-                      {Math.abs(weightGoalEta.slopePerDay) < 0.01
+                      {Math.abs(targetWeightEta.slopePerDay) < 0.01
                         ? 'flat'
-                        : weightGoalEta.slopePerDay > 0
+                        : targetWeightEta.slopePerDay > 0
                           ? 'moving away from your goal'
                           : 'moving away from your goal'}
-                      . Your target is {weightGoalEta.target} lbs and you&apos;re at{' '}
-                      {weightGoalEta.currentWeight.toFixed(1)} lbs.
+                      . Your target is {targetWeightEta.target} lbs and you&apos;re at{' '}
+                      {targetWeightEta.currentWeight.toFixed(1)} lbs.
                     </>
                   )}
                 </div>
