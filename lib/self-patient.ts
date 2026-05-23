@@ -27,20 +27,23 @@ import { doc, setDoc, collection, Timestamp, type Firestore } from 'firebase/fir
 export interface CreateSelfPatientInput {
   /** Firebase Auth UID of the account holder. */
   userId: string
-  /** The Patient's initial `name`. Onboarding passes the user's
-   *  preferred-name answer (the "What should we call you?" screen);
-   *  legacy callers fall back to Firebase Auth displayName or an
-   *  email-derived value. User can edit later via the patient detail
-   *  page. */
+  /** The Patient's initial `name` — the composed legal name when
+   *  parts were provided, or a fallback derived value. */
   displayName: string
-  /** Optional explicit nickname for everyday-display surfaces. When
-   *  the user typed something on the preferred-name screen we use the
-   *  same value for both `name` and `nickname` — so the platform
-   *  immediately calls them what they want to be called. Falls back
-   *  to no nickname (legal `name` only) when undefined. See
-   *  memory/project_patient_name_model for the nickname/legal-name
-   *  display rule. */
+  /** Optional legal-name parts. Onboarding splits the user_identity
+   *  form into First / Middle / Last; legacy callers can pass
+   *  undefined and only `displayName` will be stored. */
+  firstName?: string
+  middleName?: string
+  lastName?: string
+  /** Optional explicit nickname for everyday-display surfaces. */
   nickname?: string
+  /** Optional which-name-wins selector. When the user picks
+   *  'nickname' (the default) everyday surfaces render the nickname;
+   *  'legal' forces the composed legal name even when a nickname
+   *  exists. Pass undefined to omit the field. See
+   *  memory/project_patient_name_model for the rule. */
+  displayPreference?: 'legal' | 'nickname'
   /** Firestore client instance. Caller passes their own — keeps this
    *  module free of an import-time `db` dependency. */
   db: Firestore
@@ -67,7 +70,16 @@ export interface CreateSelfPatientResult {
 export async function createSelfPatient(
   input: CreateSelfPatientInput
 ): Promise<CreateSelfPatientResult> {
-  const { userId, displayName, nickname, db } = input
+  const {
+    userId,
+    displayName,
+    firstName,
+    middleName,
+    lastName,
+    nickname,
+    displayPreference,
+    db,
+  } = input
 
   // Generate a doc ID under the user's patients subcollection.
   const patientRef = doc(collection(db, 'users', userId, 'patients'))
@@ -82,11 +94,14 @@ export async function createSelfPatient(
   // fields (the UI can't distinguish "user said empty" from "we
   // haven't asked yet"). Absent = haven't asked.
   //
-  // When the caller passes a nickname (onboarding does, with the
-  // preferred-name answer), we also set displayPreference='nickname'
-  // so everyday surfaces immediately render the chosen name. The
-  // legal name remains in `name` for formal surfaces. See
-  // memory/project_patient_name_model for the dual-name rule.
+  // Identity write rules (per memory/project_patient_name_model):
+  //   - `name` is always set (legal/formal anchor)
+  //   - `firstName` / `middleName` / `lastName` are written only when
+  //     the caller passes a non-empty value
+  //   - `nickname` written only when non-empty
+  //   - `displayPreference` controls which source consumer surfaces
+  //     render. Omitted when no nickname AND no displayPreference
+  //     passed — the legal `name` becomes the default render.
   const data: Record<string, unknown> = {
     userId,
     name: displayName,
@@ -96,10 +111,15 @@ export async function createSelfPatient(
     createdAt: now,
     lastModified: now,
   }
-  if (nickname && nickname.trim().length > 0) {
-    data.nickname = nickname.trim()
-    data.displayPreference = 'nickname'
-  }
+  const trimmedFirst = firstName?.trim()
+  const trimmedMiddle = middleName?.trim()
+  const trimmedLast = lastName?.trim()
+  const trimmedNickname = nickname?.trim()
+  if (trimmedFirst) data.firstName = trimmedFirst
+  if (trimmedMiddle) data.middleName = trimmedMiddle
+  if (trimmedLast) data.lastName = trimmedLast
+  if (trimmedNickname) data.nickname = trimmedNickname
+  if (displayPreference) data.displayPreference = displayPreference
   await setDoc(patientRef, data)
 
   return { patientId: patientRef.id, createdAt: now.toDate() }

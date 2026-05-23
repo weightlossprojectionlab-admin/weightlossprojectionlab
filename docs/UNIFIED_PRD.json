@@ -4,16 +4,6 @@
     "purpose": "Determine user mode (single/household/caregiver), personalize UI, and drive feature discovery.",
     "screens": [
       {
-        "id": "user_identity",
-        "question": "What should we call you?",
-        "subtitle": "We'll use this name throughout the app. Doesn't have to be your legal name — Mom, Dad, Sis, a nickname all work. You can change it later.",
-        "options": [],
-        "inputType": "text",
-        "placeholder": "Your name or nickname",
-        "maxLength": 60,
-        "sets": "preferredName"
-      },
-      {
         "id": "role_selection",
         "question": "Who will you primarily be managing?",
         "options": ["myself", "family"],
@@ -22,6 +12,14 @@
           "family": "Tracking health with others — partner, kids, parents, siblings, roommates, or anyone you share care with"
         },
         "sets": "userMode"
+      },
+      {
+        "id": "user_identity",
+        "question": "What should we call you?",
+        "subtitle": "Your full name shows up on formal surfaces (medical records, audit log). Your nickname is what we use everywhere else (Mom, Dad, Sis, P, whatever feels right). You can change either later.",
+        "options": [],
+        "inputType": "identity",
+        "sets": "userIdentity"
       },
       {
         "id": "household_identity",

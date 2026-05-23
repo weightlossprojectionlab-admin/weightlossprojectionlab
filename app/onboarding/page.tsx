@@ -103,13 +103,44 @@ function OnboardingContent() {
 
   const screens = prdConfig.onboarding.screens as unknown as OnboardingScreen[]
 
-  // Pre-fill the user_identity text input from Firebase Auth's
-  // displayName (set by OAuth signups, sometimes by email/password
-  // signups). User can edit before submitting. Only seeds once when
-  // they land on onboarding; doesn't overwrite later edits.
+  // Pre-fill the user_identity form from Firebase Auth's displayName
+  // (set by OAuth signups, sometimes by email/password signups). Auth
+  // gives a single string ("Percy Rice") — we split on whitespace and
+  // map tokens to firstName / middleName / lastName the same way the
+  // PatientNameEditor on the detail page does:
+  //   1 token  → firstName
+  //   2 tokens → firstName + lastName
+  //   3 tokens → firstName + middleName + lastName
+  //   4+ tokens → firstName + middleName(joined middles) + lastName
+  // Nickname suggestion is the firstName. Display preference defaults
+  // to 'nickname' (per memory/project_patient_name_model). Only seeds
+  // once when they land on onboarding; doesn't overwrite later edits.
   useEffect(() => {
     if (user?.displayName && !answers.user_identity) {
-      setAnswers((prev) => ({ ...prev, user_identity: user.displayName }))
+      const tokens = user.displayName.trim().split(/\s+/).filter(Boolean)
+      let firstName = ''
+      let middleName = ''
+      let lastName = ''
+      if (tokens.length === 1) {
+        firstName = tokens[0]
+      } else if (tokens.length === 2) {
+        firstName = tokens[0]
+        lastName = tokens[1]
+      } else if (tokens.length >= 3) {
+        firstName = tokens[0]
+        lastName = tokens[tokens.length - 1]
+        middleName = tokens.slice(1, -1).join(' ')
+      }
+      setAnswers((prev) => ({
+        ...prev,
+        user_identity: {
+          firstName,
+          middleName,
+          lastName,
+          nickname: firstName,
+          displayPreference: 'nickname',
+        },
+      }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.displayName])
@@ -414,16 +445,73 @@ function OnboardingContent() {
         completedAt: new Date()
       }
 
-      // Identity fields (Phase 1 + 2.1, 2026-05-23). Both are stored
-      // on the user profile for now; Phase 2.2 will graduate
-      // householdName to a proper Household record. preferredName
-      // doubles as the initial name AND nickname on the self-Patient
-      // (the user can refine via the patient detail page later — see
-      // memory/project_patient_name_model for the legal/nickname
-      // split). Empty strings fall back to undefined so we don't
-      // write "" placeholders.
-      const rawPreferredName = (answers.user_identity as string | undefined)?.trim()
-      const preferredName = rawPreferredName && rawPreferredName.length > 0 ? rawPreferredName : undefined
+      // Identity fields (Phase 1 + 2.1, 2026-05-23). user_identity is
+      // structured { firstName, middleName, lastName, nickname,
+      // displaySource } — the displaySource is which of three buckets
+      // the user picked as their everyday display name:
+      //   'auth'     → use Firebase Auth displayName (stored as nickname
+      //                so the existing display logic renders it without
+      //                expanding the displayPreference enum)
+      //   'legal'    → use the composed First Middle Last
+      //   'nickname' → use the typed nickname
+      // householdName stays on user.profile until Phase 2.2 graduates
+      // it to a proper Household record.
+      const identityAnswer = (answers.user_identity as
+        | {
+            firstName?: string
+            middleName?: string
+            lastName?: string
+            nickname?: string
+            displaySource?: 'auth' | 'legal' | 'nickname'
+          }
+        | undefined) ?? {}
+      const formFirstName = identityAnswer.firstName?.trim() || undefined
+      const formMiddleName = identityAnswer.middleName?.trim() || undefined
+      const formLastName = identityAnswer.lastName?.trim() || undefined
+      const formNickname = identityAnswer.nickname?.trim() || undefined
+      const composedLegalName = [formFirstName, formMiddleName, formLastName].filter(Boolean).join(' ') || undefined
+      const displaySource: 'auth' | 'legal' | 'nickname' = identityAnswer.displaySource ?? 'nickname'
+      const authDisplayName = user.displayName?.trim() || undefined
+
+      // Resolve the values to persist based on displaySource:
+      //   - When 'auth': use auth.displayName as both the canonical
+      //     name and the nickname; everyday-display renders the
+      //     nickname. Legal name parts from the form (if any) are
+      //     still stored but `name` ends up = authDisplayName.
+      //   - When 'legal': composed legal name + form nickname (if any).
+      //   - When 'nickname': composed legal name (if any) + form
+      //     nickname is the everyday display.
+      // The Patient's stored displayPreference is 'legal' or 'nickname'
+      // (the existing enum) — 'auth' collapses to 'nickname' since
+      // we stored the auth name in the nickname field.
+      let resolvedFirstName: string | undefined
+      let resolvedMiddleName: string | undefined
+      let resolvedLastName: string | undefined
+      let resolvedNickname: string | undefined
+      let resolvedDisplayPreference: 'legal' | 'nickname'
+      if (displaySource === 'auth' && authDisplayName) {
+        resolvedFirstName = formFirstName
+        resolvedMiddleName = formMiddleName
+        resolvedLastName = formLastName
+        resolvedNickname = authDisplayName
+        resolvedDisplayPreference = 'nickname'
+      } else if (displaySource === 'legal') {
+        resolvedFirstName = formFirstName
+        resolvedMiddleName = formMiddleName
+        resolvedLastName = formLastName
+        resolvedNickname = formNickname
+        resolvedDisplayPreference = 'legal'
+      } else {
+        // displaySource === 'nickname' (default + fallback)
+        resolvedFirstName = formFirstName
+        resolvedMiddleName = formMiddleName
+        resolvedLastName = formLastName
+        resolvedNickname = formNickname
+        resolvedDisplayPreference = 'nickname'
+      }
+      const resolvedComposedLegalName =
+        [resolvedFirstName, resolvedMiddleName, resolvedLastName].filter(Boolean).join(' ') || undefined
+
       const rawHouseholdName = (answers.household_identity as string | undefined)?.trim()
       const householdName = rawHouseholdName && rawHouseholdName.length > 0 ? rawHouseholdName : undefined
 
@@ -439,7 +527,16 @@ function OnboardingContent() {
           profile: {
             onboardingCompleted: true,
             onboardingCompletedAt: Timestamp.now(),
-            ...(preferredName ? { preferredName } : {}),
+            ...(resolvedFirstName ? { firstName: resolvedFirstName } : {}),
+            ...(resolvedMiddleName ? { middleName: resolvedMiddleName } : {}),
+            ...(resolvedLastName ? { lastName: resolvedLastName } : {}),
+            ...(resolvedComposedLegalName ? { fullName: resolvedComposedLegalName } : {}),
+            ...(resolvedNickname ? { nickname: resolvedNickname } : {}),
+            ...((resolvedComposedLegalName || resolvedNickname) ? { displayPreference: resolvedDisplayPreference } : {}),
+            // displaySource captured for analytics / audit — the
+            // user's stated intent. Resolved displayPreference above
+            // is what consumer surfaces actually consume.
+            identityDisplaySource: displaySource,
             ...(householdName ? { householdName } : {}),
           }
         },
@@ -460,19 +557,43 @@ function OnboardingContent() {
       try {
         const existingSelfPatientId = await findSelfPatientId(user.uid, db)
         if (!existingSelfPatientId) {
-          // Prefer the user_identity answer (they explicitly typed it).
-          // Fall back to Firebase Auth displayName, then email-derived.
-          // The self-Patient's `nickname` ALSO gets seeded from this
-          // value so the everyday display matches what the user said
-          // they want to be called.
-          const displayName = preferredName ?? deriveDisplayName(user.displayName, user.email)
+          // The Patient mirrors the user.profile identity above. Name
+          // resolution follows the displaySource the user picked:
+          //   - 'auth': `name` falls back to authDisplayName, parts
+          //     stay as the form-typed values (may be empty), nickname
+          //     holds the auth name so it renders everyday.
+          //   - 'legal': `name` = composed legal name; parts stored.
+          //   - 'nickname': `name` = composed legal OR nickname; parts
+          //     stored if present.
+          // Email-derived fallback only kicks in if Auth has no
+          // displayName and the user filled nothing in either.
+          let patientName: string
+          if (displaySource === 'auth' && authDisplayName) {
+            patientName = authDisplayName
+          } else if (resolvedComposedLegalName) {
+            patientName = resolvedComposedLegalName
+          } else if (resolvedNickname) {
+            patientName = resolvedNickname
+          } else {
+            patientName = deriveDisplayName(user.displayName, user.email)
+          }
           const { patientId } = await createSelfPatient({
             userId: user.uid,
-            displayName,
+            displayName: patientName,
+            firstName: resolvedFirstName,
+            middleName: resolvedMiddleName,
+            lastName: resolvedLastName,
+            nickname: resolvedNickname,
+            displayPreference: resolvedNickname || resolvedComposedLegalName ? resolvedDisplayPreference : undefined,
             db,
-            nickname: preferredName, // undefined when not provided
           })
-          logger.info('[Onboarding] Self-Patient created', { userId: user.uid, patientId, displayName })
+          logger.info('[Onboarding] Self-Patient created', {
+            userId: user.uid,
+            patientId,
+            patientName,
+            displaySource,
+            displayPreference: resolvedDisplayPreference,
+          })
         }
       } catch (err) {
         // Non-fatal: if self-Patient creation fails, log it and let
@@ -886,6 +1007,222 @@ function OnboardingContent() {
                   Continue
                 </button>
               </div>
+            ) : currentScreen.inputType === 'identity' ? (
+              /* Identity form — First/Middle/Last name + Nickname.
+                 Three-way preferred-name selector at the bottom:
+                 Auth | Full Name | Nickname — user picks which
+                 source drives their everyday-display name. Auth is
+                 a one-tap "use my sign-in name" shortcut (stored as
+                 the nickname so existing display logic renders it).
+                 Mirrors the PatientNameEditor shape from the patient
+                 detail page (memory/project_patient_name_model). */
+              (() => {
+                const identity = (answers[currentScreen.id] as
+                  | {
+                      firstName?: string
+                      middleName?: string
+                      lastName?: string
+                      nickname?: string
+                      displaySource?: 'auth' | 'legal' | 'nickname'
+                    }
+                  | undefined) ?? {}
+                const firstName = identity.firstName ?? ''
+                const middleName = identity.middleName ?? ''
+                const lastName = identity.lastName ?? ''
+                const nickname = identity.nickname ?? ''
+                const displaySource = identity.displaySource ?? 'nickname'
+                const computedLegalPreview = [firstName, middleName, lastName]
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .join(' ')
+                const authName = user?.displayName?.trim() ?? ''
+                // Continue gate: the user must have SOMETHING usable
+                // for the chosen source. Auth needs a non-empty auth
+                // displayName; Legal needs at least first+last;
+                // Nickname needs a non-empty nickname.
+                const canContinue =
+                  (displaySource === 'auth' && authName.length > 0) ||
+                  (displaySource === 'legal' &&
+                    firstName.trim().length > 0 &&
+                    lastName.trim().length > 0) ||
+                  (displaySource === 'nickname' && nickname.trim().length > 0)
+                const updateIdentity = (patch: Partial<typeof identity>) =>
+                  setAnswers({ ...answers, [currentScreen.id]: { ...identity, ...patch } })
+                return (
+                  <div className="space-y-5">
+                    {/* Legal name (First / Middle / Last) */}
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium text-foreground">
+                        Legal Name
+                        <span className="ml-2 text-xs text-muted-foreground font-normal">
+                          (formal surfaces: medical records, audit log)
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-xs text-muted-foreground mb-1">
+                            First {displaySource === 'legal' && <span className="text-primary">*</span>}
+                          </label>
+                          <input
+                            type="text"
+                            value={firstName}
+                            onChange={(e) => updateIdentity({ firstName: e.target.value })}
+                            placeholder="Percy"
+                            maxLength={60}
+                            className="w-full p-3 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-muted-foreground mb-1">
+                            Middle <span className="opacity-70">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={middleName}
+                            onChange={(e) => updateIdentity({ middleName: e.target.value })}
+                            placeholder=""
+                            maxLength={60}
+                            className="w-full p-3 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-muted-foreground mb-1">
+                            Last {displaySource === 'legal' && <span className="text-primary">*</span>}
+                          </label>
+                          <input
+                            type="text"
+                            value={lastName}
+                            onChange={(e) => updateIdentity({ lastName: e.target.value })}
+                            placeholder="Rice"
+                            maxLength={60}
+                            className="w-full p-3 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Nickname */}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Nickname
+                        <span className="ml-2 text-xs text-muted-foreground font-normal">
+                          (what people call you)
+                          {displaySource === 'nickname' && <span className="text-primary ml-1">*</span>}
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        value={nickname}
+                        onChange={(e) => updateIdentity({ nickname: e.target.value })}
+                        placeholder="e.g. Percy, Mom, Sis"
+                        maxLength={60}
+                        className="w-full p-4 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                      />
+                    </div>
+
+                    {/* Preferred-name selector — Auth | Full Name |
+                        Nickname. User picks which source drives the
+                        everyday-display name. The required-fields
+                        asterisks above shift based on the selection so
+                        the user knows what they need to fill in for
+                        the chosen source. */}
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Which would you like us to use everyday?
+                      </label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => updateIdentity({ displaySource: 'auth' })}
+                          disabled={!authName}
+                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${
+                            displaySource === 'auth'
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border bg-accent text-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                            Sign-in
+                          </div>
+                          <div className="font-semibold text-sm break-words">
+                            {authName || <span className="text-muted-foreground italic font-normal">none</span>}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateIdentity({ displaySource: 'legal' })}
+                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors text-left ${
+                            displaySource === 'legal'
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border bg-accent text-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                            Full Name
+                          </div>
+                          <div className="font-semibold text-sm break-words">
+                            {computedLegalPreview || <span className="text-muted-foreground italic font-normal">enter above</span>}
+                          </div>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => updateIdentity({ displaySource: 'nickname' })}
+                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors text-left ${
+                            displaySource === 'nickname'
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border bg-accent text-foreground hover:border-primary/50'
+                          }`}
+                        >
+                          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
+                            Nickname
+                          </div>
+                          <div className="font-semibold text-sm break-words">
+                            {nickname.trim() || <span className="text-muted-foreground italic font-normal">enter above</span>}
+                          </div>
+                        </button>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Persist trimmed identity + advance.
+                        const cleaned = {
+                          firstName: firstName.trim(),
+                          middleName: middleName.trim(),
+                          lastName: lastName.trim(),
+                          nickname: nickname.trim(),
+                          displaySource,
+                        }
+                        const updated = { ...answers, [currentScreen.id]: cleaned }
+                        setAnswers(updated)
+                        if (user) {
+                          const timeSpent = Date.now() - stepStartTime
+                          const answerLabel =
+                            displaySource === 'auth' ? authName
+                            : displaySource === 'legal' ? computedLegalPreview
+                            : cleaned.nickname
+                          trackOnboardingStepCompleted({
+                            userId: user.uid,
+                            step: currentScreen.id as any,
+                            stepNumber: step,
+                            totalSteps: visibleScreens.length,
+                            progressPercentage: Math.round(((step + 1) / visibleScreens.length) * 100),
+                            answer: answerLabel || cleaned.firstName,
+                            timeSpent,
+                          })
+                          setStepStartTime(Date.now())
+                        }
+                        setStep(step + 1)
+                      }}
+                      disabled={!canContinue}
+                      className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Continue
+                    </button>
+                  </div>
+                )
+              })()
             ) : (
             <>
             {/* Options */}
