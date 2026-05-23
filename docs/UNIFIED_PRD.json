@@ -39,7 +39,7 @@
           "other"
         ],
         "optionLabels": {
-          "single_parent_with_kids": "Single Parent",
+          "single_parent_with_kids": "Solo Caregiver",
           "two_parents_with_kids": "Two Parents",
           "couple_no_kids": "Couple",
           "sibling_group": "Sibling Group",
@@ -49,14 +49,14 @@
           "other": "Other"
         },
         "optionDescriptions": {
-          "single_parent_with_kids": "One parent + kids",
+          "single_parent_with_kids": "One adult + dependent kids",
           "two_parents_with_kids": "Two parents + kids",
           "couple_no_kids": "Two adults, no kids",
           "sibling_group": "Adult siblings sharing care",
           "multi_generational": "3+ generations under one roof",
           "caring_for_relative": "Looking after an aging relative",
           "roommates_or_chosen_family": "Friends or partners sharing tracking",
-          "other": "Something else — flexible setup"
+          "other": "My household is unique — let me customize it"
         },
         "sets": "householdComposition",
         "visibleIf": "userMode === 'household'",

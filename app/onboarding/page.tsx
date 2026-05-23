@@ -469,67 +469,71 @@ function OnboardingContent() {
       //   'nickname' → use the typed nickname
       // householdName stays on user.profile until Phase 2.2 graduates
       // it to a proper Household record.
-      const identityAnswer = (answers.user_identity as
+      // user_identity has a unified shape across all branches now:
+      //   { branch: 'dual' | 'caregiver' | 'single',
+      //     primary: { firstName, nickname },
+      //     secondary?: { firstName, nickname } }
+      // Branch tells us what `secondary` semantically represents:
+      //   - 'dual'      → co-account-holder pending invite (spouse,
+      //                   partner, co-sibling, co-caregiver)
+      //   - 'caregiver' → a dependent Patient who'll need their own
+      //                   profile (aging relative receiving care)
+      //   - 'single'    → no secondary; just the user
+      // We store the secondary in differently-named fields per branch
+      // so downstream consumers (spouse-invite flow vs Patient-create
+      // flow) can pick up the right value without re-disambiguating.
+      const rawIdentity = answers.user_identity as
         | {
-            firstName?: string
-            middleName?: string
-            lastName?: string
-            nickname?: string
-            displaySource?: 'auth' | 'legal' | 'nickname'
+            branch?: 'dual' | 'caregiver' | 'single'
+            primary?: { firstName?: string; nickname?: string }
+            secondary?: { firstName?: string; nickname?: string }
           }
-        | undefined) ?? {}
-      const formFirstName = identityAnswer.firstName?.trim() || undefined
-      const formMiddleName = identityAnswer.middleName?.trim() || undefined
-      const formLastName = identityAnswer.lastName?.trim() || undefined
-      const formNickname = identityAnswer.nickname?.trim() || undefined
-      const composedLegalName = [formFirstName, formMiddleName, formLastName].filter(Boolean).join(' ') || undefined
-      const displaySource: 'auth' | 'legal' | 'nickname' = identityAnswer.displaySource ?? 'nickname'
-      const authDisplayName = user.displayName?.trim() || undefined
-
-      // Resolve the values to persist based on displaySource. Each
-      // source now writes to its OWN distinct field — no collapse:
-      //   - 'auth':     authDisplayName populated, displayPreference='auth'.
-      //                 Form's legal-name parts + nickname stored if filled
-      //                 (caregivers may still want them on file even when
-      //                 the everyday display reads from auth).
-      //   - 'legal':    legal parts populated, displayPreference='legal'.
-      //                 Form nickname stored if filled. authDisplayName
-      //                 NOT written.
-      //   - 'nickname': legal parts + nickname stored. displayPreference='nickname'.
-      //                 authDisplayName NOT written.
-      // The three sources produce three distinct downstream renders
-      // via getPatientDisplayName, which reads from the corresponding
-      // field based on displayPreference.
-      let resolvedFirstName: string | undefined
-      let resolvedMiddleName: string | undefined
-      let resolvedLastName: string | undefined
-      let resolvedNickname: string | undefined
-      let resolvedAuthDisplayName: string | undefined
-      let resolvedDisplayPreference: 'auth' | 'legal' | 'nickname'
-      if (displaySource === 'auth' && authDisplayName) {
-        resolvedFirstName = formFirstName
-        resolvedMiddleName = formMiddleName
-        resolvedLastName = formLastName
-        resolvedNickname = formNickname
-        resolvedAuthDisplayName = authDisplayName
-        resolvedDisplayPreference = 'auth'
-      } else if (displaySource === 'legal') {
-        resolvedFirstName = formFirstName
-        resolvedMiddleName = formMiddleName
-        resolvedLastName = formLastName
-        resolvedNickname = formNickname
-        resolvedDisplayPreference = 'legal'
-      } else {
-        // displaySource === 'nickname' (default + fallback when 'auth'
-        // was picked but no authDisplayName exists)
-        resolvedFirstName = formFirstName
-        resolvedMiddleName = formMiddleName
-        resolvedLastName = formLastName
-        resolvedNickname = formNickname
-        resolvedDisplayPreference = 'nickname'
-      }
-      const resolvedComposedLegalName =
-        [resolvedFirstName, resolvedMiddleName, resolvedLastName].filter(Boolean).join(' ') || undefined
+        | undefined
+      const identityBranch = rawIdentity?.branch ?? 'single'
+      const formFirstName = rawIdentity?.primary?.firstName?.trim() || undefined
+      const formNickname = rawIdentity?.primary?.nickname?.trim() || undefined
+      // Legal-name parts not captured at onboarding anymore — they
+      // live on the patient detail page editor for post-create
+      // refinement. middleName/lastName stay undefined.
+      const formMiddleName: string | undefined = undefined
+      const formLastName: string | undefined = undefined
+      const secondaryFirstName = rawIdentity?.secondary?.firstName?.trim() || undefined
+      const secondaryNickname = rawIdentity?.secondary?.nickname?.trim() || undefined
+      const hasSecondary = !!(secondaryFirstName || secondaryNickname)
+      // Route secondary to the appropriate field by branch.
+      // coParent: dual-stakeholder branch (Step 5 spouse-invite picks it up).
+      // pendingCarePatient: caregiver-recipient branch (future flow creates
+      //                     a Patient doc from this).
+      const coParent =
+        hasSecondary && identityBranch === 'dual'
+          ? {
+              ...(secondaryFirstName ? { firstName: secondaryFirstName } : {}),
+              ...(secondaryNickname ? { nickname: secondaryNickname } : {}),
+            }
+          : undefined
+      const pendingCarePatient =
+        hasSecondary && identityBranch === 'caregiver'
+          ? {
+              ...(secondaryFirstName ? { firstName: secondaryFirstName } : {}),
+              ...(secondaryNickname ? { nickname: secondaryNickname } : {}),
+            }
+          : undefined
+      // Simplified persistence now that onboarding captures only
+      // firstName + nickname (no Auth/Legal/Nickname selector at
+      // onboarding — that's deferred to the patient detail editor).
+      const resolvedFirstName = formFirstName
+      const resolvedMiddleName: string | undefined = undefined
+      const resolvedLastName: string | undefined = undefined
+      const resolvedNickname = formNickname
+      const resolvedAuthDisplayName: string | undefined = undefined
+      // displayPreference defaults to 'nickname' when a nickname
+      // exists (so everyday surfaces render it); otherwise stays
+      // undefined and getPatientDisplayName falls back to `name`.
+      const resolvedDisplayPreference: 'legal' | 'nickname' = resolvedNickname ? 'nickname' : 'legal'
+      const resolvedComposedLegalName = resolvedFirstName
+      // displaySource captured for analytics so we know which path
+      // the user took during onboarding (dual vs caregiver vs single).
+      const displaySource = identityBranch
 
       const rawHouseholdName = (answers.household_identity as string | undefined)?.trim()
       const householdName = rawHouseholdName && rawHouseholdName.length > 0 ? rawHouseholdName : undefined
@@ -568,6 +572,16 @@ function OnboardingContent() {
             identityDisplaySource: displaySource,
             ...(householdName ? { householdName } : {}),
             ...(householdComposition ? { householdComposition } : {}),
+            // coParent is the secondary stakeholder captured on the
+            // dual branch (Two Parents / Couple / Sibling Group /
+            // Roommates). Step 5's spouse-invite flow (not yet built)
+            // picks it up to offer an email invite as a co-account-holder.
+            ...(coParent ? { coParent } : {}),
+            // pendingCarePatient is the secondary captured on the
+            // caregiver branch (Caring For Relative / Multi-Gen).
+            // Future flow will create a Patient document for them
+            // (dependent receiving care, not a co-account-holder).
+            ...(pendingCarePatient ? { pendingCarePatient } : {}),
           }
         },
         { merge: true }
@@ -1042,214 +1056,357 @@ function OnboardingContent() {
                 </button>
               </div>
             ) : currentScreen.inputType === 'identity' ? (
-              /* Identity form — First/Middle/Last name + Nickname.
-                 Three-way preferred-name selector at the bottom:
-                 Auth | Full Name | Nickname — user picks which
-                 source drives their everyday-display name. Auth is
-                 a one-tap "use my sign-in name" shortcut (stored as
-                 the nickname so existing display logic renders it).
-                 Mirrors the PatientNameEditor shape from the patient
-                 detail page (memory/project_patient_name_model). */
+              /* Identity form — three branches based on
+                 household_composition. Each branch reframes the
+                 question to match the household structure the user
+                 just declared, so Step 4 validates Step 3 instead of
+                 falling back to a generic profile prompt.
+
+                 Branch A (dual-stakeholder): Two Parents, Couple,
+                   Sibling Group, Roommates / Chosen Family.
+                   Two name rows: you + co-lead.
+                 Branch B (caregiver-recipient): Caring For Relative,
+                   Multi-Gen. Two name rows: you (caregiver) +
+                   relative receiving care (becomes a Patient later).
+                 Branch C (single-user): Single Parent, Other, and
+                   the Myself path. One name row: just you.
+
+                 All branches capture firstName + optional nickname.
+                 Richer identity (First/Middle/Last, Auth/Legal/Nickname
+                 selector) moves entirely to the patient detail page
+                 editor for post-create refinement. */
               (() => {
-                const identity = (answers[currentScreen.id] as
-                  | {
-                      firstName?: string
-                      middleName?: string
-                      lastName?: string
-                      nickname?: string
-                      displaySource?: 'auth' | 'legal' | 'nickname'
-                    }
+                const composition = answers.household_composition as string | undefined
+
+                type IdentityBranch = 'dual' | 'caregiver' | 'single'
+                const dualCompositions = new Set([
+                  'two_parents_with_kids',
+                  'couple_no_kids',
+                  'sibling_group',
+                  'roommates_or_chosen_family',
+                ])
+                const caregiverCompositions = new Set([
+                  'caring_for_relative',
+                  'multi_generational',
+                ])
+                const branch: IdentityBranch = composition && dualCompositions.has(composition)
+                  ? 'dual'
+                  : composition && caregiverCompositions.has(composition)
+                  ? 'caregiver'
+                  : 'single'
+
+                // Composition-driven labels for the two-person branches.
+                const householdLabel =
+                  (answers.household_identity as string | undefined)?.trim() || 'your household'
+                const labels = (() => {
+                  switch (composition) {
+                    case 'two_parents_with_kids':
+                      return {
+                        title: `Who are the primary managers of ${householdLabel}?`,
+                        subtitle:
+                          "You declared two parents — let's set you both up. Parent 2 is optional; you can invite them by email in a moment.",
+                        primaryLabel: 'Parent 1 (You)',
+                        secondaryLabel: 'Parent 2',
+                        secondaryHint: 'Partner — optional, fill in later',
+                      }
+                    case 'couple_no_kids':
+                      return {
+                        title: `Who are the partners in ${householdLabel}?`,
+                        subtitle:
+                          "Set up both of you. Your partner's info is optional — invite them by email in a moment.",
+                        primaryLabel: 'You',
+                        secondaryLabel: 'Your partner',
+                        secondaryHint: 'Optional, fill in later',
+                      }
+                    case 'sibling_group':
+                      return {
+                        title: `Who's coordinating care in ${householdLabel}?`,
+                        subtitle:
+                          'Start with you. Add a co-caregiver sibling now or invite more siblings later.',
+                        primaryLabel: 'You',
+                        secondaryLabel: 'Co-caregiver sibling',
+                        secondaryHint: 'Optional, fill in later',
+                      }
+                    case 'roommates_or_chosen_family':
+                      return {
+                        title: `Who's sharing ${householdLabel}?`,
+                        subtitle:
+                          'Start with you. Add a co-caregiver now or invite more household members later.',
+                        primaryLabel: 'You',
+                        secondaryLabel: 'Co-caregiver',
+                        secondaryHint: 'Optional, fill in later',
+                      }
+                    case 'caring_for_relative':
+                      return {
+                        title: `Who is the primary person receiving care in ${householdLabel}?`,
+                        subtitle:
+                          "You're the caregiver. Add the relative you're caring for so their profile is ready for vitals, meds, and appointments.",
+                        primaryLabel: 'You (Caregiver)',
+                        secondaryLabel: "Relative's name",
+                        secondaryHint: 'Person receiving care — you can fill in later',
+                      }
+                    case 'multi_generational':
+                      return {
+                        title: `Who is the primary person receiving care in ${householdLabel}?`,
+                        subtitle:
+                          'Start with you. Add the relative receiving care; other household members can be added after onboarding.',
+                        primaryLabel: 'You (Primary caregiver)',
+                        secondaryLabel: "Relative receiving care",
+                        secondaryHint: 'You can fill in later',
+                      }
+                    default:
+                      return {
+                        title: "Let's set up your primary profile. What should we call you?",
+                        subtitle:
+                          'Just a first name — you can refine your full legal name, nickname, and display preferences from your profile later.',
+                        primaryLabel: 'You',
+                        secondaryLabel: '',
+                        secondaryHint: '',
+                      }
+                  }
+                })()
+
+                // Shared two-person form for dual + caregiver branches.
+                // Same DOM shape, composition-driven labels. Data shape
+                // is { primary: {firstName, nickname}, secondary?: {firstName, nickname} }
+                // regardless of branch — downstream persistence decides
+                // what secondary becomes (co-account-holder invite vs
+                // dependent Patient).
+                if (branch !== 'single') {
+                  const tp = (answers[currentScreen.id] as
+                    | {
+                        primary?: { firstName?: string; nickname?: string }
+                        secondary?: { firstName?: string; nickname?: string }
+                      }
+                    | undefined) ?? {}
+                  const pFirstName = tp.primary?.firstName ?? ''
+                  const pNickname = tp.primary?.nickname ?? ''
+                  const sFirstName = tp.secondary?.firstName ?? ''
+                  const sNickname = tp.secondary?.nickname ?? ''
+                  const canContinue = pFirstName.trim().length > 0
+                  const updateRow = (
+                    row: 'primary' | 'secondary',
+                    field: 'firstName' | 'nickname',
+                    value: string,
+                  ) =>
+                    setAnswers({
+                      ...answers,
+                      [currentScreen.id]: {
+                        ...tp,
+                        [row]: { ...(tp[row] ?? {}), [field]: value },
+                      },
+                    })
+                  return (
+                    <div className="space-y-5">
+                      <div className="text-center mb-2">
+                        <h3 className="text-xl font-semibold text-foreground">{labels.title}</h3>
+                        <p className="text-sm text-muted-foreground mt-1">{labels.subtitle}</p>
+                      </div>
+
+                      {/* Primary (you) */}
+                      <div className="rounded-xl border-2 border-primary/30 bg-accent p-4 space-y-3">
+                        <div className="text-xs uppercase tracking-wide text-primary font-semibold">
+                          {labels.primaryLabel}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-muted-foreground mb-1">
+                              First name <span className="text-primary">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={pFirstName}
+                              onChange={(e) => updateRow('primary', 'firstName', e.target.value)}
+                              placeholder="e.g. Percy"
+                              maxLength={60}
+                              className="w-full p-3 rounded-xl bg-background text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-muted-foreground mb-1">
+                              Nickname <span className="opacity-70">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={pNickname}
+                              onChange={(e) => updateRow('primary', 'nickname', e.target.value)}
+                              placeholder="e.g. Dad, P"
+                              maxLength={60}
+                              className="w-full p-3 rounded-xl bg-background text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Secondary */}
+                      <div className="rounded-xl border-2 border-border bg-accent/60 p-4 space-y-3">
+                        <div className="text-xs uppercase tracking-wide text-muted-foreground font-semibold">
+                          {labels.secondaryLabel}{' '}
+                          {labels.secondaryHint && (
+                            <span className="normal-case text-muted-foreground font-normal">
+                              — {labels.secondaryHint}
+                            </span>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs text-muted-foreground mb-1">First name</label>
+                            <input
+                              type="text"
+                              value={sFirstName}
+                              onChange={(e) => updateRow('secondary', 'firstName', e.target.value)}
+                              placeholder="Fill in later"
+                              maxLength={60}
+                              className="w-full p-3 rounded-xl bg-background text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs text-muted-foreground mb-1">
+                              Nickname <span className="opacity-70">(optional)</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={sNickname}
+                              onChange={(e) => updateRow('secondary', 'nickname', e.target.value)}
+                              placeholder="e.g. Mom, Grandpa"
+                              maxLength={60}
+                              className="w-full p-3 rounded-xl bg-background text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cleaned = {
+                            branch,
+                            primary: {
+                              firstName: pFirstName.trim(),
+                              nickname: pNickname.trim(),
+                            },
+                            secondary:
+                              sFirstName.trim() || sNickname.trim()
+                                ? {
+                                    firstName: sFirstName.trim(),
+                                    nickname: sNickname.trim(),
+                                  }
+                                : undefined,
+                          }
+                          const updated = { ...answers, [currentScreen.id]: cleaned }
+                          setAnswers(updated)
+                          if (user) {
+                            const timeSpent = Date.now() - stepStartTime
+                            trackOnboardingStepCompleted({
+                              userId: user.uid,
+                              step: currentScreen.id as any,
+                              stepNumber: step,
+                              totalSteps: visibleScreens.length,
+                              progressPercentage: Math.round(((step + 1) / visibleScreens.length) * 100),
+                              answer: cleaned.primary.nickname || cleaned.primary.firstName,
+                              timeSpent,
+                            })
+                            setStepStartTime(Date.now())
+                          }
+                          setStep(step + 1)
+                        }}
+                        disabled={!canContinue}
+                        className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Continue
+                      </button>
+                    </div>
+                  )
+                }
+
+                // ---- Single-user identity capture (Branch C) ----
+                // One row: firstName + nickname. The rich Auth/Legal/
+                // Nickname selector + First/Middle/Last lives on the
+                // patient detail page editor for post-create refinement;
+                // onboarding stays light.
+                const su = (answers[currentScreen.id] as
+                  | { primary?: { firstName?: string; nickname?: string } }
                   | undefined) ?? {}
-                const firstName = identity.firstName ?? ''
-                const middleName = identity.middleName ?? ''
-                const lastName = identity.lastName ?? ''
-                const nickname = identity.nickname ?? ''
-                const displaySource = identity.displaySource ?? 'nickname'
-                const computedLegalPreview = [firstName, middleName, lastName]
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-                  .join(' ')
-                const authName = user?.displayName?.trim() ?? ''
-                // Continue gate: the user must have SOMETHING usable
-                // for the chosen source. Auth needs a non-empty auth
-                // displayName; Legal needs at least first+last;
-                // Nickname needs a non-empty nickname.
-                const canContinue =
-                  (displaySource === 'auth' && authName.length > 0) ||
-                  (displaySource === 'legal' &&
-                    firstName.trim().length > 0 &&
-                    lastName.trim().length > 0) ||
-                  (displaySource === 'nickname' && nickname.trim().length > 0)
-                const updateIdentity = (patch: Partial<typeof identity>) =>
-                  setAnswers({ ...answers, [currentScreen.id]: { ...identity, ...patch } })
+                const suFirstName = su.primary?.firstName ?? ''
+                const suNickname = su.primary?.nickname ?? ''
+                const canContinueSingle = suFirstName.trim().length > 0
+                const updateSingle = (field: 'firstName' | 'nickname', value: string) =>
+                  setAnswers({
+                    ...answers,
+                    [currentScreen.id]: {
+                      ...su,
+                      primary: { ...(su.primary ?? {}), [field]: value },
+                    },
+                  })
                 return (
                   <div className="space-y-5">
-                    {/* Legal name (First / Middle / Last) */}
-                    <div className="space-y-3">
-                      <div className="text-sm font-medium text-foreground">
-                        Legal Name
-                        <span className="ml-2 text-xs text-muted-foreground font-normal">
-                          (formal surfaces: medical records, audit log)
-                        </span>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-xs text-muted-foreground mb-1">
-                            First {displaySource === 'legal' && <span className="text-primary">*</span>}
-                          </label>
-                          <input
-                            type="text"
-                            value={firstName}
-                            onChange={(e) => updateIdentity({ firstName: e.target.value })}
-                            placeholder="Percy"
-                            maxLength={60}
-                            className="w-full p-3 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-muted-foreground mb-1">
-                            Middle <span className="opacity-70">(optional)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={middleName}
-                            onChange={(e) => updateIdentity({ middleName: e.target.value })}
-                            placeholder=""
-                            maxLength={60}
-                            className="w-full p-3 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs text-muted-foreground mb-1">
-                            Last {displaySource === 'legal' && <span className="text-primary">*</span>}
-                          </label>
-                          <input
-                            type="text"
-                            value={lastName}
-                            onChange={(e) => updateIdentity({ lastName: e.target.value })}
-                            placeholder="Rice"
-                            maxLength={60}
-                            className="w-full p-3 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
-                          />
-                        </div>
-                      </div>
+                    <div className="text-center mb-2">
+                      <h3 className="text-xl font-semibold text-foreground">{labels.title}</h3>
+                      <p className="text-sm text-muted-foreground mt-1">{labels.subtitle}</p>
                     </div>
 
-                    {/* Nickname */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Nickname
-                        <span className="ml-2 text-xs text-muted-foreground font-normal">
-                          (what people call you)
-                          {displaySource === 'nickname' && <span className="text-primary ml-1">*</span>}
-                        </span>
-                      </label>
-                      <input
-                        type="text"
-                        value={nickname}
-                        onChange={(e) => updateIdentity({ nickname: e.target.value })}
-                        placeholder="e.g. Percy, Mom, Sis"
-                        maxLength={60}
-                        className="w-full p-4 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
-                      />
-                    </div>
-
-                    {/* Preferred-name selector — Auth | Full Name |
-                        Nickname. User picks which source drives the
-                        everyday-display name. The required-fields
-                        asterisks above shift based on the selection so
-                        the user knows what they need to fill in for
-                        the chosen source. */}
-                    <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
-                        Which would you like us to use everyday?
-                      </label>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => updateIdentity({ displaySource: 'auth' })}
-                          disabled={!authName}
-                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed ${
-                            displaySource === 'auth'
-                              ? 'border-primary bg-primary/10 text-foreground'
-                              : 'border-border bg-accent text-foreground hover:border-primary/50'
-                          }`}
-                        >
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                            Sign-in
-                          </div>
-                          <div className="font-semibold text-sm break-words">
-                            {authName || <span className="text-muted-foreground italic font-normal">none</span>}
-                          </div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateIdentity({ displaySource: 'legal' })}
-                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors text-left ${
-                            displaySource === 'legal'
-                              ? 'border-primary bg-primary/10 text-foreground'
-                              : 'border-border bg-accent text-foreground hover:border-primary/50'
-                          }`}
-                        >
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                            Full Name
-                          </div>
-                          <div className="font-semibold text-sm break-words">
-                            {computedLegalPreview || <span className="text-muted-foreground italic font-normal">enter above</span>}
-                          </div>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateIdentity({ displaySource: 'nickname' })}
-                          className={`p-3 rounded-xl border-2 text-sm font-medium transition-colors text-left ${
-                            displaySource === 'nickname'
-                              ? 'border-primary bg-primary/10 text-foreground'
-                              : 'border-border bg-accent text-foreground hover:border-primary/50'
-                          }`}
-                        >
-                          <div className="text-xs uppercase tracking-wide text-muted-foreground mb-1">
-                            Nickname
-                          </div>
-                          <div className="font-semibold text-sm break-words">
-                            {nickname.trim() || <span className="text-muted-foreground italic font-normal">enter above</span>}
-                          </div>
-                        </button>
+                    <div className="rounded-xl border-2 border-primary/30 bg-accent p-4 space-y-3">
+                      <div className="text-xs uppercase tracking-wide text-primary font-semibold">
+                        {labels.primaryLabel}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs text-muted-foreground mb-1">
+                            First name <span className="text-primary">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={suFirstName}
+                            onChange={(e) => updateSingle('firstName', e.target.value)}
+                            placeholder="e.g. Percy"
+                            maxLength={60}
+                            className="w-full p-3 rounded-xl bg-background text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs text-muted-foreground mb-1">
+                            Nickname <span className="opacity-70">(optional)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={suNickname}
+                            onChange={(e) => updateSingle('nickname', e.target.value)}
+                            placeholder="e.g. P, Sis, Mom"
+                            maxLength={60}
+                            className="w-full p-3 rounded-xl bg-background text-foreground border-2 border-transparent focus:border-primary focus:outline-none transition-colors"
+                          />
+                        </div>
                       </div>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => {
-                        // Persist trimmed identity + advance.
                         const cleaned = {
-                          firstName: firstName.trim(),
-                          middleName: middleName.trim(),
-                          lastName: lastName.trim(),
-                          nickname: nickname.trim(),
-                          displaySource,
+                          branch: 'single' as const,
+                          primary: {
+                            firstName: suFirstName.trim(),
+                            nickname: suNickname.trim(),
+                          },
                         }
                         const updated = { ...answers, [currentScreen.id]: cleaned }
                         setAnswers(updated)
                         if (user) {
                           const timeSpent = Date.now() - stepStartTime
-                          const answerLabel =
-                            displaySource === 'auth' ? authName
-                            : displaySource === 'legal' ? computedLegalPreview
-                            : cleaned.nickname
                           trackOnboardingStepCompleted({
                             userId: user.uid,
                             step: currentScreen.id as any,
                             stepNumber: step,
                             totalSteps: visibleScreens.length,
                             progressPercentage: Math.round(((step + 1) / visibleScreens.length) * 100),
-                            answer: answerLabel || cleaned.firstName,
+                            answer: cleaned.primary.nickname || cleaned.primary.firstName,
                             timeSpent,
                           })
                           setStepStartTime(Date.now())
                         }
                         setStep(step + 1)
                       }}
-                      disabled={!canContinue}
+                      disabled={!canContinueSingle}
                       className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Continue
