@@ -54,16 +54,24 @@ interface OnboardingScreen {
   multiSelect?: boolean
   sets: string
   visibleIf?: string
-  /** When set to 'text', renders a single text input instead of an
-   *  option list. The submitted value flows through `handleTextAnswer`.
-   *  Default (undefined) keeps the existing options behavior so all
-   *  pre-existing screens are unaffected. Added 2026-05-23 for the
-   *  household-identity screen in the onboarding rethink. */
-  inputType?: 'options' | 'text'
+  /** Screen input shape — controls rendering:
+   *    'options'  → option-button list (default behavior; unset is
+   *                 equivalent to this)
+   *    'text'     → single text input + Continue (household name etc.)
+   *    'identity' → First/Middle/Last + Nickname + 3-source selector
+   *                 (Auth | Full Name | Nickname). See user_identity
+   *                 screen for the canonical example.
+   *  Pre-existing screens with no `inputType` continue as 'options'. */
+  inputType?: 'options' | 'text' | 'identity'
   /** Placeholder for text-input screens. */
   placeholder?: string
   /** Max length for text-input answers. Defaults to 100. */
   maxLength?: number
+  /** When true, render the options list as a 2-column grid on sm+
+   *  screens (single column on the narrowest mobile). Useful for
+   *  screens with many short options where vertical scrolling would
+   *  hide later choices. Default false (single column always). */
+  compact?: boolean
 }
 
 // Map onboarding goals to gated features for subscription filtering
@@ -473,28 +481,33 @@ function OnboardingContent() {
       const displaySource: 'auth' | 'legal' | 'nickname' = identityAnswer.displaySource ?? 'nickname'
       const authDisplayName = user.displayName?.trim() || undefined
 
-      // Resolve the values to persist based on displaySource:
-      //   - When 'auth': use auth.displayName as both the canonical
-      //     name and the nickname; everyday-display renders the
-      //     nickname. Legal name parts from the form (if any) are
-      //     still stored but `name` ends up = authDisplayName.
-      //   - When 'legal': composed legal name + form nickname (if any).
-      //   - When 'nickname': composed legal name (if any) + form
-      //     nickname is the everyday display.
-      // The Patient's stored displayPreference is 'legal' or 'nickname'
-      // (the existing enum) — 'auth' collapses to 'nickname' since
-      // we stored the auth name in the nickname field.
+      // Resolve the values to persist based on displaySource. Each
+      // source now writes to its OWN distinct field — no collapse:
+      //   - 'auth':     authDisplayName populated, displayPreference='auth'.
+      //                 Form's legal-name parts + nickname stored if filled
+      //                 (caregivers may still want them on file even when
+      //                 the everyday display reads from auth).
+      //   - 'legal':    legal parts populated, displayPreference='legal'.
+      //                 Form nickname stored if filled. authDisplayName
+      //                 NOT written.
+      //   - 'nickname': legal parts + nickname stored. displayPreference='nickname'.
+      //                 authDisplayName NOT written.
+      // The three sources produce three distinct downstream renders
+      // via getPatientDisplayName, which reads from the corresponding
+      // field based on displayPreference.
       let resolvedFirstName: string | undefined
       let resolvedMiddleName: string | undefined
       let resolvedLastName: string | undefined
       let resolvedNickname: string | undefined
-      let resolvedDisplayPreference: 'legal' | 'nickname'
+      let resolvedAuthDisplayName: string | undefined
+      let resolvedDisplayPreference: 'auth' | 'legal' | 'nickname'
       if (displaySource === 'auth' && authDisplayName) {
         resolvedFirstName = formFirstName
         resolvedMiddleName = formMiddleName
         resolvedLastName = formLastName
-        resolvedNickname = authDisplayName
-        resolvedDisplayPreference = 'nickname'
+        resolvedNickname = formNickname
+        resolvedAuthDisplayName = authDisplayName
+        resolvedDisplayPreference = 'auth'
       } else if (displaySource === 'legal') {
         resolvedFirstName = formFirstName
         resolvedMiddleName = formMiddleName
@@ -502,7 +515,8 @@ function OnboardingContent() {
         resolvedNickname = formNickname
         resolvedDisplayPreference = 'legal'
       } else {
-        // displaySource === 'nickname' (default + fallback)
+        // displaySource === 'nickname' (default + fallback when 'auth'
+        // was picked but no authDisplayName exists)
         resolvedFirstName = formFirstName
         resolvedMiddleName = formMiddleName
         resolvedLastName = formLastName
@@ -514,6 +528,15 @@ function OnboardingContent() {
 
       const rawHouseholdName = (answers.household_identity as string | undefined)?.trim()
       const householdName = rawHouseholdName && rawHouseholdName.length > 0 ? rawHouseholdName : undefined
+      // householdComposition (Phase 2.2, 2026-05-23) — the user-stated
+      // shape of their household. Stored on user.profile for now;
+      // future phases use it to (a) recommend a plan tier, (b) seed
+      // sensible defaults for family-member roles, (c) decide whether
+      // to prompt for spouse/co-parent invite. Empty string falls back
+      // to undefined.
+      const rawHouseholdComposition = (answers.household_composition as string | undefined)?.trim()
+      const householdComposition =
+        rawHouseholdComposition && rawHouseholdComposition.length > 0 ? rawHouseholdComposition : undefined
 
       // Save to Firestore
       await setDoc(
@@ -532,12 +555,14 @@ function OnboardingContent() {
             ...(resolvedLastName ? { lastName: resolvedLastName } : {}),
             ...(resolvedComposedLegalName ? { fullName: resolvedComposedLegalName } : {}),
             ...(resolvedNickname ? { nickname: resolvedNickname } : {}),
-            ...((resolvedComposedLegalName || resolvedNickname) ? { displayPreference: resolvedDisplayPreference } : {}),
+            ...(resolvedAuthDisplayName ? { authDisplayName: resolvedAuthDisplayName } : {}),
+            ...((resolvedComposedLegalName || resolvedNickname || resolvedAuthDisplayName) ? { displayPreference: resolvedDisplayPreference } : {}),
             // displaySource captured for analytics / audit — the
             // user's stated intent. Resolved displayPreference above
             // is what consumer surfaces actually consume.
             identityDisplaySource: displaySource,
             ...(householdName ? { householdName } : {}),
+            ...(householdComposition ? { householdComposition } : {}),
           }
         },
         { merge: true }
@@ -584,7 +609,11 @@ function OnboardingContent() {
             middleName: resolvedMiddleName,
             lastName: resolvedLastName,
             nickname: resolvedNickname,
-            displayPreference: resolvedNickname || resolvedComposedLegalName ? resolvedDisplayPreference : undefined,
+            authDisplayName: resolvedAuthDisplayName,
+            displayPreference:
+              resolvedNickname || resolvedComposedLegalName || resolvedAuthDisplayName
+                ? resolvedDisplayPreference
+                : undefined,
             db,
           })
           logger.info('[Onboarding] Self-Patient created', {
@@ -1225,8 +1254,11 @@ function OnboardingContent() {
               })()
             ) : (
             <>
-            {/* Options */}
-            <div className="space-y-3">
+            {/* Options — single column by default, 2-column grid on
+                sm+ when `compact: true` (set on screens with many
+                short options like household_composition so users on
+                phones see all choices without scrolling). */}
+            <div className={currentScreen.compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'space-y-3'}>
               {currentScreen.options.map((option) => {
                 const isSelected = currentScreen.multiSelect
                   ? (answers[currentScreen.id] as string[] || []).includes(option)

@@ -38,12 +38,19 @@ export interface CreateSelfPatientInput {
   lastName?: string
   /** Optional explicit nickname for everyday-display surfaces. */
   nickname?: string
-  /** Optional which-name-wins selector. When the user picks
-   *  'nickname' (the default) everyday surfaces render the nickname;
-   *  'legal' forces the composed legal name even when a nickname
-   *  exists. Pass undefined to omit the field. See
-   *  memory/project_patient_name_model for the rule. */
-  displayPreference?: 'legal' | 'nickname'
+  /** Optional Firebase Auth displayName captured when the user
+   *  picked "Auth" as their preferred-name source during onboarding.
+   *  Stored separately from `name` and `nickname` so the three
+   *  identity sources each have their own field — no collapse. Only
+   *  meaningful when displayPreference === 'auth'. */
+  authDisplayName?: string
+  /** Optional which-name-wins selector. Three sources, each from its
+   *  own stored field:
+   *    'auth'     → authDisplayName
+   *    'legal'    → name (composed legal)
+   *    'nickname' → nickname
+   *  Pass undefined to omit the field. See memory/project_patient_name_model. */
+  displayPreference?: 'auth' | 'legal' | 'nickname'
   /** Firestore client instance. Caller passes their own — keeps this
    *  module free of an import-time `db` dependency. */
   db: Firestore
@@ -77,6 +84,7 @@ export async function createSelfPatient(
     middleName,
     lastName,
     nickname,
+    authDisplayName,
     displayPreference,
     db,
   } = input
@@ -115,10 +123,12 @@ export async function createSelfPatient(
   const trimmedMiddle = middleName?.trim()
   const trimmedLast = lastName?.trim()
   const trimmedNickname = nickname?.trim()
+  const trimmedAuthDisplayName = authDisplayName?.trim()
   if (trimmedFirst) data.firstName = trimmedFirst
   if (trimmedMiddle) data.middleName = trimmedMiddle
   if (trimmedLast) data.lastName = trimmedLast
   if (trimmedNickname) data.nickname = trimmedNickname
+  if (trimmedAuthDisplayName) data.authDisplayName = trimmedAuthDisplayName
   if (displayPreference) data.displayPreference = displayPreference
   await setDoc(patientRef, data)
 

@@ -2741,6 +2741,7 @@ function PatientDetailContent() {
                   currentPreference={patient.displayPreference || 'nickname'}
                   legalName={patient.name}
                   nickname={patient.nickname || ''}
+                  authDisplayName={patient.authDisplayName}
                   onPreferenceUpdated={(pref) => setPatient({ ...patient, displayPreference: pref })}
                 />
 
@@ -3765,18 +3766,30 @@ function PatientDisplayPreferenceEditor({
   currentPreference,
   legalName,
   nickname,
+  authDisplayName,
   onPreferenceUpdated,
 }: {
   patientId: string
-  currentPreference: 'legal' | 'nickname'
+  /** Accepts all three values per memory/project_patient_name_model.
+   *  Adding 'auth' here because self-Patients can carry an
+   *  authDisplayName (Firebase Auth-derived) chosen during onboarding's
+   *  identity step. Non-self patients never have authDisplayName, so
+   *  the 'auth' radio just won't render for them. */
+  currentPreference: 'auth' | 'legal' | 'nickname'
   legalName: string
   nickname: string
-  onPreferenceUpdated: (pref: 'legal' | 'nickname') => void
+  /** Optional — when present, an "Auth" radio appears as a third
+   *  display option. Typically only set on self-Patients (the account
+   *  holder's own Patient doc), populated at onboarding from the
+   *  user_identity screen's Auth source. */
+  authDisplayName?: string
+  onPreferenceUpdated: (pref: 'auth' | 'legal' | 'nickname') => void
 }) {
   const [saving, setSaving] = useState(false)
   const hasNickname = nickname.trim().length > 0
+  const hasAuthName = !!authDisplayName && authDisplayName.trim().length > 0
 
-  const handleChange = async (pref: 'legal' | 'nickname') => {
+  const handleChange = async (pref: 'auth' | 'legal' | 'nickname') => {
     if (pref === currentPreference) return
     setSaving(true)
     try {
@@ -3847,6 +3860,23 @@ function PatientDisplayPreferenceEditor({
             <div className="text-xs text-muted-foreground mt-0.5">{capitalizeName(legalName)}</div>
           </div>
         </label>
+        {hasAuthName && (
+          <label className="flex items-start gap-3 p-3 rounded-lg border border-border cursor-pointer hover:bg-muted/50 transition-colors">
+            <input
+              type="radio"
+              name={`displayPreference-${patientId}`}
+              value="auth"
+              checked={currentPreference === 'auth'}
+              onChange={() => handleChange('auth')}
+              disabled={saving}
+              className="mt-1"
+            />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-foreground">Sign-in name</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{authDisplayName}</div>
+            </div>
+          </label>
+        )}
       </div>
     </div>
   )

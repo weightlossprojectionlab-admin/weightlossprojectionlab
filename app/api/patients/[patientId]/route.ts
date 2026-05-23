@@ -191,6 +191,7 @@ export async function PUT(
     if ('photo' in body) updateData.photo = body.photo
     if ('nickname' in body) updateData.nickname = body.nickname
     if ('displayPreference' in body) updateData.displayPreference = body.displayPreference
+    if ('authDisplayName' in body) updateData.authDisplayName = body.authDisplayName
 
     // Emergency / medical identifiers
     if ('bloodType' in body) updateData.bloodType = body.bloodType

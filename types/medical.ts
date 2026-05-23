@@ -52,10 +52,27 @@ export interface PatientProfile {
   middleName?: string // Legal middle name (optional)
   lastName?: string   // Legal family name
   nickname?: string   // Optional everyday nickname (e.g. "Penny" for "Penelope")
+  /**
+   * Optional: the user's Firebase Auth displayName, captured when
+   * they picked "Auth" as their preferred-name source during
+   * onboarding (Phase 2.1 user_identity screen). Stored as a
+   * separate field — NOT aliased to nickname or name — so the three
+   * identity sources (auth / legal / nickname) each have their own
+   * storage slot and the user's stated preference round-trips
+   * correctly. Set only on self-Patients; empty/absent for everyone
+   * else. See memory/project_patient_name_model.
+   */
+  authDisplayName?: string
   /** Per-patient display rule for everyday surfaces. Honored by
-   *  getPatientDisplayName. Defaults to 'nickname' when unset
-   *  (matches the original nickname-wins behavior). */
-  displayPreference?: 'legal' | 'nickname'
+   *  getPatientDisplayName. Three sources, each backed by its own
+   *  stored field — no collapse:
+   *    'auth'     → authDisplayName
+   *    'legal'    → name (composed from firstName/middleName/lastName)
+   *    'nickname' → nickname
+   *  Defaults to 'nickname' when unset (preserves the original
+   *  nickname-wins behavior for patients pre-dating Phase 2.1).
+   *  Formal surfaces always use the legal `name` regardless. */
+  displayPreference?: 'auth' | 'legal' | 'nickname'
   photo?: string
   dateOfBirth: string // ISO 8601
   age?: number // Computed age in years

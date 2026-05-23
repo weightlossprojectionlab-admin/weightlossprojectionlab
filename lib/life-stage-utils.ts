@@ -107,11 +107,24 @@ export function getHumanLifeStage(dob: string): LifeStageResult {
 export function getPatientDisplayName(patient: {
   name: string
   nickname?: string | null
-  /** Per-patient override. 'legal' forces the legal full name even
-   *  when a nickname exists. Undefined / 'nickname' keeps the
-   *  default nickname-or-name rule. */
-  displayPreference?: 'legal' | 'nickname' | null
+  authDisplayName?: string | null
+  /** Per-patient override. Three distinct sources, each from its own
+   *  stored field (added Phase 2.1, 2026-05-23):
+   *    'auth'     → authDisplayName (captured at onboarding from
+   *                 Firebase Auth when the user picked "Auth")
+   *    'legal'    → name (composed legal name)
+   *    'nickname' → nickname (falls back to name if nickname empty)
+   *  Undefined keeps the original nickname-or-name rule for patients
+   *  pre-dating Phase 2.1. */
+  displayPreference?: 'auth' | 'legal' | 'nickname' | null
 }): string {
+  if (patient.displayPreference === 'auth') {
+    const authName = patient.authDisplayName?.trim()
+    // Fall back to nickname or legal name if 'auth' was picked but
+    // the field is somehow empty — defensive, shouldn't happen for
+    // accounts that completed onboarding after Phase 2.1.
+    if (authName) return authName
+  }
   if (patient.displayPreference === 'legal') return patient.name
   const trimmed = patient.nickname?.trim()
   return trimmed || patient.name

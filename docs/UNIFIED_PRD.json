@@ -14,14 +14,6 @@
         "sets": "userMode"
       },
       {
-        "id": "user_identity",
-        "question": "What should we call you?",
-        "subtitle": "Your full name shows up on formal surfaces (medical records, audit log). Your nickname is what we use everywhere else (Mom, Dad, Sis, P, whatever feels right). You can change either later.",
-        "options": [],
-        "inputType": "identity",
-        "sets": "userIdentity"
-      },
-      {
         "id": "household_identity",
         "question": "What do you call your household?",
         "subtitle": "Family, group, partnership — whatever feels right. We'll use this name throughout the app. You can change it later.",
@@ -31,6 +23,42 @@
         "maxLength": 60,
         "sets": "householdName",
         "visibleIf": "userMode === 'household'"
+      },
+      {
+        "id": "household_composition",
+        "question": "How would you describe your household?",
+        "subtitle": "Helps us recommend the right plan and set up the people in your household. You can refine this anytime.",
+        "options": [
+          "single_parent_with_kids",
+          "two_parents_with_kids",
+          "couple_no_kids",
+          "sibling_group",
+          "multi_generational",
+          "caring_for_relative",
+          "roommates_or_chosen_family",
+          "other"
+        ],
+        "optionDescriptions": {
+          "single_parent_with_kids": "One parent + kids living together",
+          "two_parents_with_kids": "Two parents (any combination) + kids",
+          "couple_no_kids": "Two adults, no kids in the household",
+          "sibling_group": "Adult siblings coordinating care together",
+          "multi_generational": "Three+ generations under one roof (grandparents, parents, kids)",
+          "caring_for_relative": "Looking after an aging parent or relative",
+          "roommates_or_chosen_family": "Friends, partners, or chosen family sharing health tracking",
+          "other": "Something else — we'll set up flexibly"
+        },
+        "sets": "householdComposition",
+        "visibleIf": "userMode === 'household'",
+        "compact": true
+      },
+      {
+        "id": "user_identity",
+        "question": "What should we call you?",
+        "subtitle": "Your full name shows up on formal surfaces (medical records, audit log). Your nickname is what we use everywhere else (Mom, Dad, Sis, P, whatever feels right). You can change either later.",
+        "options": [],
+        "inputType": "identity",
+        "sets": "userIdentity"
       },
       {
         "id": "goals",
