@@ -51,6 +51,11 @@ interface OnboardingScreen {
   options: string[]
   optionsByRole?: Record<string, string[]>
   optionDescriptions?: Record<string, string>
+  /** Optional short display label per option — used INSTEAD of the
+   *  default `option.replace(/_/g, ' ')` derivation when set. Lets
+   *  compact-grid screens show punchy titles ("Single Parent") while
+   *  the underlying stored value stays explicit ("single_parent_with_kids"). */
+  optionLabels?: Record<string, string>
   multiSelect?: boolean
   sets: string
   visibleIf?: string
@@ -1257,21 +1262,24 @@ function OnboardingContent() {
             {/* Options — single column by default, 2-column grid on
                 sm+ when `compact: true` (set on screens with many
                 short options like household_composition so users on
-                phones see all choices without scrolling). */}
-            <div className={currentScreen.compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-3' : 'space-y-3'}>
+                phones see all choices without scrolling). Cards in
+                compact mode also use tighter padding + smaller text
+                so the 2×N grid stays readable on phones. */}
+            <div className={currentScreen.compact ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : 'space-y-3'}>
               {currentScreen.options.map((option) => {
                 const isSelected = currentScreen.multiSelect
                   ? (answers[currentScreen.id] as string[] || []).includes(option)
                   : answers[currentScreen.id] === option
 
                 const description = currentScreen.optionDescriptions?.[option]
+                const label = currentScreen.optionLabels?.[option] ?? option.replace(/_/g, ' ')
 
                 return (
                   <button
                     key={option}
                     onClick={() => handleAnswer(option)}
                     className={`
-                      w-full p-5 rounded-xl text-left font-medium transition-all duration-200
+                      w-full ${currentScreen.compact ? 'p-3' : 'p-5'} rounded-xl text-left font-medium transition-all duration-200
                       ${
                         isSelected
                           ? 'bg-primary text-primary-foreground border-2 border-primary shadow-lg scale-[1.02]'
@@ -1281,11 +1289,11 @@ function OnboardingContent() {
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <div className="capitalize text-lg font-semibold mb-1">
-                          {option.replace(/_/g, ' ')}
+                        <div className={`${currentScreen.compact ? 'text-sm capitalize-first' : 'capitalize text-lg'} font-semibold ${description ? 'mb-0.5' : ''}`}>
+                          {label}
                         </div>
                         {description && (
-                          <div className="text-sm leading-relaxed text-white/80">
+                          <div className={`${currentScreen.compact ? 'text-xs leading-snug' : 'text-sm leading-relaxed'} text-white/80`}>
                             {description}
                           </div>
                         )}

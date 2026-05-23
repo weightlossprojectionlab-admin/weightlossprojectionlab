@@ -38,15 +38,25 @@
           "roommates_or_chosen_family",
           "other"
         ],
+        "optionLabels": {
+          "single_parent_with_kids": "Single Parent",
+          "two_parents_with_kids": "Two Parents",
+          "couple_no_kids": "Couple",
+          "sibling_group": "Sibling Group",
+          "multi_generational": "Multi-Gen",
+          "caring_for_relative": "Caring For Relative",
+          "roommates_or_chosen_family": "Roommates / Chosen Family",
+          "other": "Other"
+        },
         "optionDescriptions": {
-          "single_parent_with_kids": "One parent + kids living together",
-          "two_parents_with_kids": "Two parents (any combination) + kids",
-          "couple_no_kids": "Two adults, no kids in the household",
-          "sibling_group": "Adult siblings coordinating care together",
-          "multi_generational": "Three+ generations under one roof (grandparents, parents, kids)",
-          "caring_for_relative": "Looking after an aging parent or relative",
-          "roommates_or_chosen_family": "Friends, partners, or chosen family sharing health tracking",
-          "other": "Something else — we'll set up flexibly"
+          "single_parent_with_kids": "One parent + kids",
+          "two_parents_with_kids": "Two parents + kids",
+          "couple_no_kids": "Two adults, no kids",
+          "sibling_group": "Adult siblings sharing care",
+          "multi_generational": "3+ generations under one roof",
+          "caring_for_relative": "Looking after an aging relative",
+          "roommates_or_chosen_family": "Friends or partners sharing tracking",
+          "other": "Something else — flexible setup"
         },
         "sets": "householdComposition",
         "visibleIf": "userMode === 'household'",
