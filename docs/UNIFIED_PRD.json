@@ -9,7 +9,7 @@
         "options": ["myself", "family"],
         "optionDescriptions": {
           "myself": "Just tracking my own health and wellness",
-          "family": "Managing health for family members (spouse, children, parents, etc.)"
+          "family": "Tracking health with others — partner, kids, parents, siblings, roommates, or anyone you share care with"
         },
         "sets": "userMode"
       },
