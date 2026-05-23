@@ -27,10 +27,20 @@ import { doc, setDoc, collection, Timestamp, type Firestore } from 'firebase/fir
 export interface CreateSelfPatientInput {
   /** Firebase Auth UID of the account holder. */
   userId: string
-  /** Display name from Firebase Auth, or fallback derived from email
-   *  (e.g., "alice" for alice@example.com). Used as the Patient's
-   *  initial `name`. User can edit later via the patient detail page. */
+  /** The Patient's initial `name`. Onboarding passes the user's
+   *  preferred-name answer (the "What should we call you?" screen);
+   *  legacy callers fall back to Firebase Auth displayName or an
+   *  email-derived value. User can edit later via the patient detail
+   *  page. */
   displayName: string
+  /** Optional explicit nickname for everyday-display surfaces. When
+   *  the user typed something on the preferred-name screen we use the
+   *  same value for both `name` and `nickname` — so the platform
+   *  immediately calls them what they want to be called. Falls back
+   *  to no nickname (legal `name` only) when undefined. See
+   *  memory/project_patient_name_model for the nickname/legal-name
+   *  display rule. */
+  nickname?: string
   /** Firestore client instance. Caller passes their own — keeps this
    *  module free of an import-time `db` dependency. */
   db: Firestore
@@ -57,7 +67,7 @@ export interface CreateSelfPatientResult {
 export async function createSelfPatient(
   input: CreateSelfPatientInput
 ): Promise<CreateSelfPatientResult> {
-  const { userId, displayName, db } = input
+  const { userId, displayName, nickname, db } = input
 
   // Generate a doc ID under the user's patients subcollection.
   const patientRef = doc(collection(db, 'users', userId, 'patients'))
@@ -71,7 +81,13 @@ export async function createSelfPatient(
   // because Firestore-stored empty strings are worse than absent
   // fields (the UI can't distinguish "user said empty" from "we
   // haven't asked yet"). Absent = haven't asked.
-  await setDoc(patientRef, {
+  //
+  // When the caller passes a nickname (onboarding does, with the
+  // preferred-name answer), we also set displayPreference='nickname'
+  // so everyday surfaces immediately render the chosen name. The
+  // legal name remains in `name` for formal surfaces. See
+  // memory/project_patient_name_model for the dual-name rule.
+  const data: Record<string, unknown> = {
     userId,
     name: displayName,
     type: 'human',
@@ -79,7 +95,12 @@ export async function createSelfPatient(
     requiresProfileCompletion: true,
     createdAt: now,
     lastModified: now,
-  })
+  }
+  if (nickname && nickname.trim().length > 0) {
+    data.nickname = nickname.trim()
+    data.displayPreference = 'nickname'
+  }
+  await setDoc(patientRef, data)
 
   return { patientId: patientRef.id, createdAt: now.toDate() }
 }

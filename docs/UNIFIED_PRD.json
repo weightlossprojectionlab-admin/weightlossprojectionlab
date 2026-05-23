@@ -4,6 +4,16 @@
     "purpose": "Determine user mode (single/household/caregiver), personalize UI, and drive feature discovery.",
     "screens": [
       {
+        "id": "user_identity",
+        "question": "What should we call you?",
+        "subtitle": "We'll use this name throughout the app. Doesn't have to be your legal name — Mom, Dad, Sis, a nickname all work. You can change it later.",
+        "options": [],
+        "inputType": "text",
+        "placeholder": "Your name or nickname",
+        "maxLength": 60,
+        "sets": "preferredName"
+      },
+      {
         "id": "role_selection",
         "question": "Who will you primarily be managing?",
         "options": ["myself", "family"],

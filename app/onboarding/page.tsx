@@ -103,6 +103,17 @@ function OnboardingContent() {
 
   const screens = prdConfig.onboarding.screens as unknown as OnboardingScreen[]
 
+  // Pre-fill the user_identity text input from Firebase Auth's
+  // displayName (set by OAuth signups, sometimes by email/password
+  // signups). User can edit before submitting. Only seeds once when
+  // they land on onboarding; doesn't overwrite later edits.
+  useEffect(() => {
+    if (user?.displayName && !answers.user_identity) {
+      setAnswers((prev) => ({ ...prev, user_identity: user.displayName }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.displayName])
+
   // Track onboarding started on mount
   useEffect(() => {
     if (user && !onboardingStartTime && !fromInvitation) {
@@ -403,12 +414,16 @@ function OnboardingContent() {
         completedAt: new Date()
       }
 
-      // Household identity (Phase 2.1, 2026-05-23) — only set for
-      // household users. Stored on the user profile for now; Phase
-      // 2.2 will graduate this to a proper Household record (whose
-      // members are Patients with householdId references). See
-      // memory/project_family_tree_ml — chosen-identity model. Empty
-      // string falls back to undefined so we don't write a "" value.
+      // Identity fields (Phase 1 + 2.1, 2026-05-23). Both are stored
+      // on the user profile for now; Phase 2.2 will graduate
+      // householdName to a proper Household record. preferredName
+      // doubles as the initial name AND nickname on the self-Patient
+      // (the user can refine via the patient detail page later — see
+      // memory/project_patient_name_model for the legal/nickname
+      // split). Empty strings fall back to undefined so we don't
+      // write "" placeholders.
+      const rawPreferredName = (answers.user_identity as string | undefined)?.trim()
+      const preferredName = rawPreferredName && rawPreferredName.length > 0 ? rawPreferredName : undefined
       const rawHouseholdName = (answers.household_identity as string | undefined)?.trim()
       const householdName = rawHouseholdName && rawHouseholdName.length > 0 ? rawHouseholdName : undefined
 
@@ -424,6 +439,7 @@ function OnboardingContent() {
           profile: {
             onboardingCompleted: true,
             onboardingCompletedAt: Timestamp.now(),
+            ...(preferredName ? { preferredName } : {}),
             ...(householdName ? { householdName } : {}),
           }
         },
@@ -444,11 +460,17 @@ function OnboardingContent() {
       try {
         const existingSelfPatientId = await findSelfPatientId(user.uid, db)
         if (!existingSelfPatientId) {
-          const displayName = deriveDisplayName(user.displayName, user.email)
+          // Prefer the user_identity answer (they explicitly typed it).
+          // Fall back to Firebase Auth displayName, then email-derived.
+          // The self-Patient's `nickname` ALSO gets seeded from this
+          // value so the everyday display matches what the user said
+          // they want to be called.
+          const displayName = preferredName ?? deriveDisplayName(user.displayName, user.email)
           const { patientId } = await createSelfPatient({
             userId: user.uid,
             displayName,
             db,
+            nickname: preferredName, // undefined when not provided
           })
           logger.info('[Onboarding] Self-Patient created', { userId: user.uid, patientId, displayName })
         }
