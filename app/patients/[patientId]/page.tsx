@@ -37,6 +37,7 @@ import ImmunizationForm from '@/components/patients/ImmunizationForm'
 import MedicalEquipmentForm from '@/components/patients/MedicalEquipmentForm'
 import FamilyHistoryForm from '@/components/patients/FamilyHistoryForm'
 import { PatientFieldEditor, type FieldOption } from '@/components/patients/PatientFieldEditor'
+import { FOOD_ALLERGEN_OPTIONS } from '@/lib/food-allergen-options'
 import { PreparationNeedsEditor } from '@/components/patients/PreparationNeedsEditor'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
 import DocumentUpload from '@/components/patients/DocumentUpload'
@@ -144,19 +145,9 @@ const HEALTH_CONDITION_OPTIONS: FieldOption[] = [
   { value: 'Allergies', label: 'Allergies' },
   { value: 'Other', label: 'Other' },
 ]
-// FDA "Big 9" food allergens — recognized food allergens under FALCPA
-// + FASTER Act. Captures ~90% of clinical food allergies.
-const FOOD_ALLERGEN_OPTIONS: FieldOption[] = [
-  { value: 'Milk', label: 'Milk / dairy' },
-  { value: 'Eggs', label: 'Eggs' },
-  { value: 'Fish', label: 'Fish' },
-  { value: 'Shellfish', label: 'Shellfish' },
-  { value: 'Tree nuts', label: 'Tree nuts' },
-  { value: 'Peanuts', label: 'Peanuts' },
-  { value: 'Wheat', label: 'Wheat / gluten' },
-  { value: 'Soy', label: 'Soy' },
-  { value: 'Sesame', label: 'Sesame' },
-]
+// FOOD_ALLERGEN_OPTIONS moved to lib/food-allergen-options.ts as the
+// canonical UI vocabulary — shared by the family-member onboarding
+// wizard and any other surface asking "what are you allergic to?"
 
 export default function PatientDetailPage() {
   return (

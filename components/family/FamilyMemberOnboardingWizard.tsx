@@ -28,6 +28,7 @@ import {
   getDefaultWeightUnit,
 } from '@/lib/life-stage-utils'
 import { NameInput } from '@/components/form/NameInput'
+import { FOOD_ALLERGEN_OPTIONS } from '@/lib/food-allergen-options'
 
 interface WizardStep {
   id: string
@@ -64,6 +65,27 @@ const getWizardSteps = (isPet: boolean, isNewborn: boolean, hasSelectedType: boo
   // Conditions step removed 2026-05-11 (Phase 1 E2.1) — conditions are
   // now edited post-onboarding via the patient detail page Info tab
   // (PatientFieldEditor) rather than gating wizard completion.
+
+  // Food allergies step (added 2026-05-23) — narrowly reverses the
+  // E2.1 wizard-slim policy on safety grounds. The existing meal-time
+  // allergen warnings (RecipeModal "Cook Now" gate + EaterMultiSelect
+  // exposure-confirmation toggle) compare a recipe's allergens against
+  // PatientProfile.foodAllergies via findAllergenOverlap. If
+  // foodAllergies is empty, every warning is silent — caregivers
+  // discover a missed allergen at the dinner table, not in the app.
+  // Capturing this at create time guarantees the safety substrate
+  // exists from day one. Pets skipped (their allergen vocabulary
+  // differs from FDA Big 9) and newborns skipped (food allergies
+  // not applicable yet — milk-protein allergy handled post-create
+  // as an exception). See memory/feedback_one_question_one_answer
+  // (same predicate, single source) and lib/allergen-cross-check.ts.
+  if (!isPet && !isNewborn) {
+    steps.push({
+      id: 'food_allergies',
+      title: 'Any food allergies?',
+      subtitle: "We'll warn you at meal time if a recipe contains something they can't eat. Tap None if there are no known allergies."
+    });
+  }
 
   // Step 3: Review
   steps.push({
@@ -468,6 +490,13 @@ interface FamilyMemberData {
   // Step 3: Conditions
   conditions: string[]
 
+  // Step 3.5 (added 2026-05-23): Food allergies. Empty array = explicit
+  // "no known allergies" (user tapped None); undefined = step skipped.
+  // Distinguishing these matters because meal-time warnings stay silent
+  // when foodAllergies is unset — see lib/allergen-cross-check.ts and
+  // memory/feedback_one_question_one_answer.
+  foodAllergies: string[]
+
   // Newborn-specific fields
   feedingPreference?: 'breastfeeding' | 'formula' | 'combination' | ''
   pediatricianName?: string
@@ -523,6 +552,7 @@ export default function FamilyMemberOnboardingWizard() {
     targetWeight: '',
     primaryMotivation: '',
     conditions: [],
+    foodAllergies: [],
     feedingPreference: '',
     pediatricianName: '',
     pediatricianPhone: '',
@@ -686,6 +716,15 @@ export default function FamilyMemberOnboardingWizard() {
       conditions: prev.conditions.includes(condition)
         ? prev.conditions.filter(c => c !== condition)
         : [...prev.conditions, condition]
+    }))
+  }
+
+  function toggleFoodAllergy(allergen: string) {
+    setData(prev => ({
+      ...prev,
+      foodAllergies: prev.foodAllergies.includes(allergen)
+        ? prev.foodAllergies.filter(a => a !== allergen)
+        : [...prev.foodAllergies, allergen]
     }))
   }
 
@@ -907,6 +946,17 @@ export default function FamilyMemberOnboardingWizard() {
         patientData.healthConditions = data.conditions
       }
 
+      // Always write foodAllergies — empty array carries semantic
+      // meaning ("user confirmed no allergies"), not "skipped." That
+      // distinction matters because meal-time warnings remain silent
+      // when foodAllergies is undefined. The step is only rendered
+      // for non-pet non-newborn patients, so this write only runs
+      // when the user saw the question and answered (None or
+      // selections).
+      if (!isPet && data.memberType !== 'newborn') {
+        patientData.foodAllergies = data.foodAllergies
+      }
+
       // Save patient profile
       await setDoc(patientRef, patientData)
 
@@ -989,6 +1039,8 @@ export default function FamilyMemberOnboardingWizard() {
       // in this file for now (referenced by getPediatricConditions and
       // shared types) but are no longer reachable through the wizard.
       // Cleanup pass can remove them after the slim ships green.
+      case 'food_allergies':
+        return renderFoodAllergiesStep()
       case 'review':
         return renderReviewStep()
       default:
@@ -2067,6 +2119,72 @@ export default function FamilyMemberOnboardingWizard() {
   }
 
 
+  /**
+   * Food allergies step (added 2026-05-23). Mirrors the patient-detail
+   * Info-tab editor visual treatment but in a wizard-friendly multi-
+   * select grid. "None" toggle is explicit (not a sentinel value) — an
+   * empty foodAllergies array IS the "no allergies" answer, and the
+   * step's save path writes it unconditionally so meal-time warnings
+   * have a definite state to compare against.
+   *
+   * Vocabulary comes from `lib/food-allergen-options.ts` (shared with
+   * the Info-tab editor) — same FDA Big 9 list everywhere.
+   */
+  function renderFoodAllergiesStep() {
+    const hasNone = data.foodAllergies.length === 0
+    return (
+      <div className="space-y-4">
+        <div className="bg-error/10 border-2 border-error/30 rounded-xl p-4">
+          <p className="text-sm text-foreground">
+            <strong>⚠️ Important:</strong> Selecting allergies here lets the app warn
+            you at meal time if a recipe contains something they can&apos;t eat. Even if
+            there are no known allergies, tap <strong>None</strong> so the safety check
+            knows you confirmed.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => setData({ ...data, foodAllergies: [] })}
+            className={`
+              min-h-11 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all
+              ${hasNone
+                ? 'border-success bg-success/10 text-foreground'
+                : 'border-border hover:border-success/50 text-foreground'
+              }
+            `}
+          >
+            ✓ None
+          </button>
+          {FOOD_ALLERGEN_OPTIONS.map(({ value, label }) => {
+            const selected = data.foodAllergies.includes(value)
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => toggleFoodAllergy(value)}
+                className={`
+                  min-h-11 px-4 py-3 rounded-xl border-2 text-sm font-medium transition-all
+                  ${selected
+                    ? 'border-error bg-error/10 text-foreground'
+                    : 'border-border hover:border-error/50 text-foreground'
+                  }
+                `}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+
+        <p className="text-xs text-muted-foreground text-center">
+          You can edit this anytime from the patient&apos;s Info tab.
+        </p>
+      </div>
+    )
+  }
+
   function renderReviewStep() {
     const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
 
@@ -2192,6 +2310,25 @@ export default function FamilyMemberOnboardingWizard() {
                 {data.activityLevel && <p><span className="text-white/70">Activity Level:</span> {data.activityLevel}</p>}
                 {data.primaryMotivation && <p><span className="text-white/70">Motivation:</span> {data.primaryMotivation.replace(/-/g, ' ')}</p>}
                 {data.targetWeight && <p><span className="text-white/70">Target Weight:</span> {data.targetWeight} {data.weightUnit}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Food Allergies (humans only, non-newborn) — shows on review
+              so caregivers visually confirm the safety substrate before
+              hitting Create. Empty array renders as "None" so the
+              "confirmed no allergies" state is visible too. */}
+          {!isPet && !isNewborn && (
+            <div className="pt-4 border-t border-white/20">
+              <h3 className="font-semibold mb-2 text-white">Food Allergies</h3>
+              <div className="text-sm text-white/90">
+                {data.foodAllergies.length === 0 ? (
+                  <p className="text-white/70 italic">None — meal-time warnings will not flag any allergens for this person.</p>
+                ) : (
+                  <p>
+                    <span className="text-white/70">Allergic to:</span> {data.foodAllergies.join(', ')}
+                  </p>
+                )}
               </div>
             </div>
           )}

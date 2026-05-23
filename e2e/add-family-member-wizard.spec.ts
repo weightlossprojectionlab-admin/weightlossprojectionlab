@@ -1,8 +1,9 @@
 /**
  * Regression: FamilyMemberOnboardingWizard at /patients/new.
  *
- * Walks the 5-step wizard (type_selection → basic_info → vitals →
- * conditions → review) for several persona archetypes. After each
+ * Walks the wizard (type_selection → basic_info → vitals →
+ * food_allergies → review for adult humans; the food_allergies step is
+ * skipped for newborns/pets) for several persona archetypes. After each
  * Create Family Member fires, asserts Firestore has the new
  * patient profile at users/{ownerUserId}/patients/{id}.
  *
@@ -60,6 +61,10 @@ type AdultPersona = {
   targetWeightLbs?: string
   /** Conditions to multi-select on the conditions step. Empty = skip. */
   conditions?: string[]
+  /** Food allergens to multi-select on the food_allergies step.
+   *  Omitted / empty = explicit "None" (the step's safety semantic).
+   *  Values come from lib/food-allergen-options.ts FOOD_ALLERGEN_OPTIONS. */
+  foodAllergies?: string[]
   /** Free-text comment shown when read by a human. */
   notes: string
 }
@@ -112,7 +117,8 @@ function adultPersonas(stamp: number): AdultPersona[] {
       primaryMotivation: 'body-composition',
       targetWeightLbs: '170',
       conditions: ['Other'],
-      notes: 'Senior grandparent (~86) — special-needs (Alzheimer\'s). Sedentary + body-composition to exercise targetWeight wiring; "Other" condition.',
+      foodAllergies: ['Peanuts', 'Tree nuts'],
+      notes: 'Senior grandparent (~86) — special-needs (Alzheimer\'s). Sedentary + body-composition to exercise targetWeight wiring; "Other" condition; multi-select food allergies to exercise the new wizard step.',
     },
   ]
 }
@@ -162,12 +168,12 @@ async function fillAdultVitals(page: Page, p: AdultPersona) {
     page.getByRole('heading', { name: 'Current weight', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
-  // Step 2 of 3 on the slim wizard.
-  await expect(page.getByText(/^Step 2 of 3$/)).toBeVisible()
+  // Step 2 of 4 on the wizard (added food_allergies step 2026-05-23).
+  await expect(page.getByText(/^Step 2 of 4$/)).toBeVisible()
 
   // Slim vitals step: only currentWeight is collected at the wizard.
-  // Height, activity level, weight goal, target weight all moved to
-  // the patient detail page Info tab (PatientFieldEditor) — edited
+  // Height, activity level, primaryMotivation, target weight all moved
+  // to the patient detail page Info tab (PatientFieldEditor) — edited
   // post-onboarding when the caregiver has time to fill them in.
   await page.getByPlaceholder('150', { exact: true }).fill(p.weightLbs)
 
@@ -180,11 +186,40 @@ async function fillAdultVitals(page: Page, p: AdultPersona) {
 // metadata stays in the fixture (documents semantic intent) but is
 // no longer asserted as wizard-captured.
 
+/**
+ * Food allergies step (added 2026-05-23). Adult humans only — pets
+ * and newborns skip this step in the wizard. Persona's `foodAllergies`
+ * field drives multi-select; empty/missing taps None.
+ */
+async function fillAdultFoodAllergies(page: Page, p: AdultPersona) {
+  await expect(
+    page.getByRole('heading', { name: 'Any food allergies?', level: 2 }),
+  ).toBeVisible({ timeout: 30_000 })
+  await expect(page.getByText(/^Step 3 of 4$/)).toBeVisible()
+
+  const allergens = p.foodAllergies ?? []
+  if (allergens.length === 0) {
+    // Explicit "None" — caregiver confirms no known allergies so the
+    // meal-time safety check has a definite state to compare against.
+    await page.getByRole('button', { name: /^✓ None$/ }).click()
+  } else {
+    for (const allergen of allergens) {
+      // Buttons are labeled with the display label (e.g. "Milk / dairy"
+      // for value "Milk"). The fixture stores values; map to label by
+      // partial-substring match — both "Milk" and "Milk / dairy" find
+      // the same button.
+      await page.getByRole('button', { name: new RegExp(`^${allergen}`) }).click()
+    }
+  }
+
+  await page.getByRole('button', { name: 'Continue', exact: true }).click()
+}
+
 async function reviewAndCreate(page: Page, p: AdultPersona) {
   await expect(
     page.getByRole('heading', { name: 'Review & create', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
-  await expect(page.getByText(/^Step 3 of 3$/)).toBeVisible()
+  await expect(page.getByText(/^Step 4 of 4$/)).toBeVisible()
   await expect(page.getByText(p.name, { exact: false })).toBeVisible()
   await page.getByRole('button', { name: /^Create Family Member$/ }).click()
 }
@@ -211,6 +246,7 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       await pickHumanType(page)
       await fillAdultBasicInfo(page, p)
       await fillAdultVitals(page, p)
+      await fillAdultFoodAllergies(page, p)
       // conditions step removed 2026-05-11 (Phase 1 E2.1) — wizard
       // now advances directly from vitals to review.
       await reviewAndCreate(page, p)
@@ -238,6 +274,17 @@ test.describe('Add Family Member wizard — adult-human persona battery @add-fam
       expect(created.type).toBe('human')
       expect(typeof created.currentWeight).toBe('number')
       expect(created.currentWeight).toBe(parseFloat(p.weightLbs))
+
+      // Food allergies: the wizard's food_allergies step (added
+      // 2026-05-23) writes this field unconditionally for non-pet
+      // non-newborn humans. Empty array == "user confirmed None"
+      // (the safety semantic); non-empty == specific allergens
+      // selected. Either way the field is PRESENT after the wizard
+      // — that's what the meal-time warnings rely on to fire (or
+      // explicitly NOT fire) safely. See lib/allergen-cross-check.ts
+      // and memory/feedback_one_question_one_answer.
+      expect(Array.isArray(created.foodAllergies), 'foodAllergies present as array').toBe(true)
+      expect(created.foodAllergies).toEqual(p.foodAllergies ?? [])
 
       // Fields NOT asserted (intentionally — wizard no longer collects):
       //  - bloodType: moved to patient detail Info tab editor.
