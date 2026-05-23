@@ -1333,11 +1333,14 @@ function OnboardingContent() {
             )}
           </div>
 
-          {/* Back button */}
+          {/* Back button — single DRY navigation control shared across
+              every screen type (options / text / identity). Bordered
+              chip with min-h-11 (44px) for mobile-tap accessibility;
+              previously a muted text link that was easy to miss. */}
           {step > 0 && (
             <button
               onClick={handleBack}
-              className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+              className="w-full flex items-center justify-center gap-2 min-h-11 px-4 rounded-xl border-2 border-border bg-card hover:bg-muted active:bg-muted/80 text-foreground font-medium transition-colors"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
