@@ -30,7 +30,7 @@ import { adminDb } from '../lib/firebase-admin'
 import {
   resolvePlanFromSubscription,
   updateUserSubscription,
-} from '../app/api/stripe/webhook/route'
+} from '../lib/stripe-subscription-sync'
 
 const userId = process.argv[2]
 const apply = process.argv.includes('--apply')
