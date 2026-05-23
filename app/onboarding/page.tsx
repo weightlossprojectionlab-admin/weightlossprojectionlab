@@ -9,6 +9,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useSubscription } from '@/hooks/useSubscription'
 import { doc, setDoc, Timestamp } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
+import { createSelfPatient, findSelfPatientId, deriveDisplayName } from '@/lib/self-patient'
+import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { FacePhotoCapture } from '@/components/family/FacePhotoCapture'
@@ -374,6 +376,36 @@ function OnboardingContent() {
         },
         { merge: true }
       )
+
+      // Onboarding rethink Phase 1 (2026-05-23): the account holder
+      // is themselves a Patient in their own household. Create the
+      // self-Patient stub here so vitals/meals/meds for the account
+      // holder flow through the same patient infrastructure as
+      // family members. DOB/gender/etc. are deferred — the patient
+      // detail page's Info-tab editor handles completion via the
+      // `requiresProfileCompletion: true` flag on the stub. See
+      // memory/project_family_tree_ml (chosen-identity/role-based
+      // household model). Idempotent: if a self-Patient already
+      // exists (e.g., user re-runs onboarding, or migration script
+      // already created one), we skip creation.
+      try {
+        const existingSelfPatientId = await findSelfPatientId(user.uid, db)
+        if (!existingSelfPatientId) {
+          const displayName = deriveDisplayName(user.displayName, user.email)
+          const { patientId } = await createSelfPatient({
+            userId: user.uid,
+            displayName,
+            db,
+          })
+          logger.info('[Onboarding] Self-Patient created', { userId: user.uid, patientId, displayName })
+        }
+      } catch (err) {
+        // Non-fatal: if self-Patient creation fails, log it and let
+        // the user finish onboarding. Migration script can backfill
+        // later. We don't want this to block someone from completing
+        // signup. The risk is small (just a stub doc) and recoverable.
+        logger.error('[Onboarding] Self-Patient creation failed (non-fatal)', err as Error)
+      }
 
       // Track onboarding completion
       if (onboardingStartTime) {

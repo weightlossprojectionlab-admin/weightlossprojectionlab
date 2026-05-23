@@ -107,6 +107,17 @@ export interface PatientProfile {
   addedBy?: string // Account owner who added them
   addedAt?: string
 
+  /**
+   * True when the Patient was auto-created as a stub (e.g., the
+   * account holder's self-Patient at onboarding completion) before
+   * the user filled in their identity fields (DOB, gender, height,
+   * etc.). UI surfaces a "Complete your profile" prompt while this
+   * is true; the flag clears (or is removed) once the required
+   * fields are filled in. See onboarding Phase 1 in
+   * memory/project_family_tree_ml and lib/self-patient.ts.
+   */
+  requiresProfileCompletion?: boolean
+
   // Health vitals (for both humans and pets)
   currentWeight?: number // Latest weight (synced from vitals on approved entries)
   height?: number // in inches (imperial) or cm (metric)
