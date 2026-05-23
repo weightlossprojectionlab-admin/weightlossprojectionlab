@@ -20,7 +20,7 @@ import { getPlanFromPriceId } from '@/lib/stripe-price-mapping'
  * change after the initial checkout. The metadata.plan fallback
  * stays only for legacy subs whose price isn't in our mapping yet.
  */
-function resolvePlanFromSubscription(subscription: Stripe.Subscription): {
+export function resolvePlanFromSubscription(subscription: Stripe.Subscription): {
   plan: SubscriptionPlan | null
   billingInterval: 'monthly' | 'yearly'
 } {
@@ -231,7 +231,14 @@ async function handleSubscriptionCanceledAtPeriodEnd(subscription: Stripe.Subscr
 
   logger.info(`Subscription set to cancel at period end for user ${userId}`)
 
-  const currentPeriodEnd = (subscription as any).current_period_end
+  // Same items-vs-subscription period-date shift as in
+  // updateUserSubscription. Without the items fallback, modern Stripe
+  // returns undefined and we'd nullify currentPeriodEnd here — telling
+  // the app the subscription has no expiration date when it actually
+  // does.
+  const item: any = subscription.items.data[0]
+  const currentPeriodEnd =
+    item?.current_period_end ?? (subscription as any).current_period_end
 
   // Update status to 'canceled' but retain access until period end
   await db.collection('users').doc(userId).update({
@@ -242,7 +249,7 @@ async function handleSubscriptionCanceledAtPeriodEnd(subscription: Stripe.Subscr
     updatedAt: new Date(),
   })
 
-  logger.info(`User ${userId} will retain access until ${new Date(currentPeriodEnd * 1000).toISOString()}`)
+  logger.info(`User ${userId} will retain access until ${currentPeriodEnd ? new Date(currentPeriodEnd * 1000).toISOString() : 'unknown (period end missing)'}`)
 }
 
 /**
@@ -319,7 +326,7 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 /**
  * Update user's subscription in Firestore
  */
-async function updateUserSubscription(
+export async function updateUserSubscription(
   userId: string,
   subscription: Stripe.Subscription,
   plan: SubscriptionPlan,
@@ -358,13 +365,27 @@ async function updateUserSubscription(
     status = 'expired'
   }
 
+  // Stripe API shift: in recent versions, current_period_start /
+  // current_period_end moved from the Subscription object onto the
+  // subscription's items. Read items first, fall back to the legacy
+  // field for older API versions. Without this, modern Stripe returns
+  // undefined for the legacy field and we'd write
+  // currentPeriodEnd=null — which the UserSubscription type treats as
+  // "grandfathered/no expiration" (types/index.ts:276), silently
+  // granting permanent access on every active subscription.
+  const item: any = subscription.items.data[0]
+  const periodStart =
+    item?.current_period_start ?? (subscription as any).current_period_start
+  const periodEnd =
+    item?.current_period_end ?? (subscription as any).current_period_end
+
   // Update Firestore
   await db.collection('users').doc(userId).update({
     'subscription.plan': plan,
     'subscription.billingInterval': billingInterval,
     'subscription.status': status,
-    'subscription.currentPeriodStart': (subscription as any).current_period_start ? new Date(((subscription as any).current_period_start as number) * 1000) : new Date(),
-    'subscription.currentPeriodEnd': (subscription as any).current_period_end ? new Date(((subscription as any).current_period_end as number) * 1000) : null,
+    'subscription.currentPeriodStart': periodStart ? new Date((periodStart as number) * 1000) : new Date(),
+    'subscription.currentPeriodEnd': periodEnd ? new Date((periodEnd as number) * 1000) : null,
     'subscription.stripeCustomerId': subscription.customer as string,
     'subscription.stripeSubscriptionId': subscription.id,
     'subscription.stripePriceId': subscription.items.data[0]?.price?.id || null,
