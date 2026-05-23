@@ -54,6 +54,16 @@ interface OnboardingScreen {
   multiSelect?: boolean
   sets: string
   visibleIf?: string
+  /** When set to 'text', renders a single text input instead of an
+   *  option list. The submitted value flows through `handleTextAnswer`.
+   *  Default (undefined) keeps the existing options behavior so all
+   *  pre-existing screens are unaffected. Added 2026-05-23 for the
+   *  household-identity screen in the onboarding rethink. */
+  inputType?: 'options' | 'text'
+  /** Placeholder for text-input screens. */
+  placeholder?: string
+  /** Max length for text-input answers. Defaults to 100. */
+  maxLength?: number
 }
 
 // Map onboarding goals to gated features for subscription filtering
@@ -118,10 +128,16 @@ function OnboardingContent() {
   function isScreenVisible(screen: OnboardingScreen): boolean {
     if (!screen.visibleIf) return true
 
-    // Parse simple conditionals
+    // Parse simple conditionals. Keep this minimal — string match
+    // against known forms rather than a real expression evaluator.
+    // userMode values map from role_selection via determineUserMode:
+    //   role 'myself' → mode 'single'
+    //   role 'family' → mode 'household'
     if (screen.visibleIf === "userMode != 'myself'") {
-      const currentMode = answers.userMode
-      return currentMode !== 'single'
+      return answers.userMode !== 'single'
+    }
+    if (screen.visibleIf === "userMode === 'household'") {
+      return answers.userMode === 'household'
     }
 
     return true
@@ -227,6 +243,33 @@ function OnboardingContent() {
     setTimeout(() => {
       setStep(step + 1)
     }, 200)
+  }
+
+  // Handle text-input screen submission. Like single-select, but the
+  // value comes from a controlled <input> rather than a button. Empty
+  // strings are blocked at the UI (Continue is disabled) so we trust
+  // the value here.
+  function handleTextAnswer(value: string) {
+    const questionId = currentScreen.id
+    const trimmed = value.trim()
+    const updatedAnswers = { ...answers, [questionId]: trimmed }
+    setAnswers(updatedAnswers)
+
+    if (user) {
+      const timeSpent = Date.now() - stepStartTime
+      trackOnboardingStepCompleted({
+        userId: user.uid,
+        step: questionId as any,
+        stepNumber: step,
+        totalSteps: visibleScreens.length,
+        progressPercentage: Math.round(((step + 1) / visibleScreens.length) * 100),
+        answer: trimmed,
+        timeSpent,
+      })
+      setStepStartTime(Date.now())
+    }
+
+    setStep(step + 1)
   }
 
   // Handle multi-select continue
@@ -360,6 +403,15 @@ function OnboardingContent() {
         completedAt: new Date()
       }
 
+      // Household identity (Phase 2.1, 2026-05-23) — only set for
+      // household users. Stored on the user profile for now; Phase
+      // 2.2 will graduate this to a proper Household record (whose
+      // members are Patients with householdId references). See
+      // memory/project_family_tree_ml — chosen-identity model. Empty
+      // string falls back to undefined so we don't write a "" value.
+      const rawHouseholdName = (answers.household_identity as string | undefined)?.trim()
+      const householdName = rawHouseholdName && rawHouseholdName.length > 0 ? rawHouseholdName : undefined
+
       // Save to Firestore
       await setDoc(
         doc(db, 'users', user.uid),
@@ -371,7 +423,8 @@ function OnboardingContent() {
           },
           profile: {
             onboardingCompleted: true,
-            onboardingCompletedAt: Timestamp.now()
+            onboardingCompletedAt: Timestamp.now(),
+            ...(householdName ? { householdName } : {}),
           }
         },
         { merge: true }
@@ -781,6 +834,38 @@ function OnboardingContent() {
               </div>
             )}
 
+            {/* Text input screen — alternative to options for free-text
+                questions like the household name. Rendered instead of
+                the option list when inputType === 'text'. */}
+            {currentScreen.inputType === 'text' ? (
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={(answers[currentScreen.id] as string) || ''}
+                  onChange={(e) => setAnswers({ ...answers, [currentScreen.id]: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const value = (answers[currentScreen.id] as string) || ''
+                      if (value.trim().length > 0) {
+                        handleTextAnswer(value)
+                      }
+                    }
+                  }}
+                  placeholder={currentScreen.placeholder ?? ''}
+                  maxLength={currentScreen.maxLength ?? 100}
+                  autoFocus
+                  className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium transition-colors"
+                />
+                <button
+                  onClick={() => handleTextAnswer((answers[currentScreen.id] as string) || '')}
+                  disabled={!((answers[currentScreen.id] as string) || '').trim()}
+                  className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            ) : (
+            <>
             {/* Options */}
             <div className="space-y-3">
               {currentScreen.options.map((option) => {
@@ -844,6 +929,8 @@ function OnboardingContent() {
               >
                 Continue
               </button>
+            )}
+            </>
             )}
           </div>
 

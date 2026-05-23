@@ -14,6 +14,17 @@
         "sets": "userMode"
       },
       {
+        "id": "household_identity",
+        "question": "What do you call your household?",
+        "subtitle": "Family, group, partnership — whatever feels right. We'll use this name throughout the app. You can change it later.",
+        "options": [],
+        "inputType": "text",
+        "placeholder": "The Smiths, Apartment 4B, The Sunday Crew…",
+        "maxLength": 60,
+        "sets": "householdName",
+        "visibleIf": "userMode === 'household'"
+      },
+      {
         "id": "goals",
         "question": "What are your wellness goals?",
         "subtitle": "Select all that apply",
