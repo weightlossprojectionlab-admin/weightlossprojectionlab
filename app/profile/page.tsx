@@ -886,27 +886,24 @@ function ProfileContent() {
                 </div>
               )}
 
-              {/* CTA — only renders for trial/trialing status (the
-                  trial-conversion moment). All other states have
-                  their reactivation/management paths surfaced
-                  elsewhere:
-                    - active: Customer Portal opens from the bell /
-                      contextual surfaces; no profile-level button.
+              {/* Trial-conversion CTA lives inside the "Free Trial
+                  Active" banner above ("Upgrade Now") — that's the
+                  contextual placement (banner explains trial-ending
+                  semantics + CTA right next to it). The redundant
+                  full-width "Subscribe Now" button below it was
+                  removed in identity Phase A polish; both linked to
+                  /pricing and both gated on the same trialing status,
+                  so the dupe added clutter without surfacing anything
+                  new.
+
+                  Non-trialing states are still handled elsewhere:
+                    - active: Customer Portal opens via the plan
+                      badge → PlanDetailModal → Manage Subscription.
                     - terminated: limited-access + FOMO mechanics
                       (deferred — see project_pricing_deferred_features
-                      .md and the limited-access architecture sketch).
-                      Reactivation will happen in-context (locked
-                      affordances → /pricing) rather than via a
-                      profile CTA. Until those FOMO surfaces ship,
-                      terminated users can hit /pricing directly. */}
-              {subscription.status === 'trialing' && (
-                <Link
-                  href="/pricing"
-                  className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium text-center block"
-                >
-                  Subscribe Now
-                </Link>
-              )}
+                      .md). Reactivation happens in-context via locked
+                      affordances; terminated users can hit /pricing
+                      directly until those FOMO surfaces ship. */}
             </div>
           </div>
         )}
