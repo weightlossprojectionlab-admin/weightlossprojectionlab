@@ -78,10 +78,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Resolve the Stripe subscription ID. Try Firestore first; fall
+    // Resolve the Stripe subscription. Try Firestore first; fall
     // back to looking up by customer email when our record doesn't
     // have the linkage (auto-granted Firestore-only trials, or older
-    // records whose stripeSubscriptionId never got written).
+    // records whose stripeSubscriptionId never got written). Accept
+    // BOTH trialing and active subs — Firestore can lag behind Stripe
+    // (e.g. our auto-granted-trial write set status='trialing' even
+    // though Stripe still had the customer's prior sub at 'active').
     let stripeSubscriptionId: string | undefined = existingSubscription.stripeSubscriptionId
 
     if (!stripeSubscriptionId && userEmail) {
@@ -89,17 +92,28 @@ export async function POST(request: NextRequest) {
         const customers = await stripe.customers.list({ email: userEmail, limit: 1 })
         if (customers.data.length > 0) {
           const customerId = customers.data[0].id
-          const subs = await stripe.subscriptions.list({
+          // Look for trialing first, then active. Either is a valid
+          // "live" sub we can address; the post-fetch branch below
+          // figures out whether to call trial_end or just reconcile.
+          let subs = await stripe.subscriptions.list({
             customer: customerId,
             status: 'trialing',
             limit: 1,
           })
+          if (subs.data.length === 0) {
+            subs = await stripe.subscriptions.list({
+              customer: customerId,
+              status: 'active',
+              limit: 1,
+            })
+          }
           if (subs.data.length > 0) {
             stripeSubscriptionId = subs.data[0].id
             logger.info('[Convert Trial] Recovered subscriptionId via email lookup', {
               userId,
               stripeSubscriptionId,
               customerId,
+              recoveredStatus: subs.data[0].status,
             })
           }
         }
@@ -127,11 +141,70 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // End the trial immediately. Stripe attempts to bill the default
-    // payment method on the customer. If billing succeeds, the sub
-    // transitions to 'active'. If it fails (no card / declined), the
-    // sub goes to 'past_due' or 'incomplete' and the invoice carries
-    // a hosted payment page we can redirect to.
+    // Fetch the current Stripe-side state of the sub before deciding
+    // what to do. Stripe is the source of truth for billing state;
+    // Firestore can lag (especially after our start-trial writes
+    // status='trialing' to a record whose Stripe sub may have moved
+    // on to 'active' from a previous flow).
+    const current = await stripe.subscriptions.retrieve(stripeSubscriptionId)
+
+    logger.info('[Convert Trial] Current Stripe sub state', {
+      userId,
+      stripeSubscriptionId,
+      firestoreStatus: existingSubscription.status,
+      stripeStatus: current.status,
+    })
+
+    // Case A — Stripe already says 'active'. The sub is paid; nothing
+    // to convert. Firestore is just stale. Reconcile and return.
+    if (current.status === 'active') {
+      try {
+        await adminDb
+          .collection('users')
+          .doc(userId)
+          .update({
+            'subscription.status': 'active',
+            'subscription.stripeSubscriptionId': current.id,
+            'subscription.stripeCustomerId':
+              typeof current.customer === 'string' ? current.customer : current.customer?.id,
+            updatedAt: new Date(),
+          })
+        logger.info('[Convert Trial] Reconciled Firestore status → active', {
+          userId,
+          stripeSubscriptionId,
+        })
+      } catch (reconcileErr: any) {
+        logger.warn('[Convert Trial] Firestore reconcile failed (non-fatal)', {
+          userId,
+          error: reconcileErr?.message,
+        })
+      }
+      return NextResponse.json({
+        success: true,
+        status: 'active',
+        reconciled: true,
+        message: 'Your subscription is already active. Welcome!',
+      })
+    }
+
+    // Case B — Stripe says 'trialing'. End the trial now. Stripe
+    // attempts to bill the default payment method. Success → active.
+    // Failure (no card / declined) → past_due / incomplete, invoice
+    // carries a hosted payment page we redirect to.
+    if (current.status !== 'trialing') {
+      // Past_due, canceled, unpaid, incomplete, etc. — can't convert
+      // from these states. Surface the actual Stripe status.
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Stripe subscription is ${current.status} — cannot convert trial.`,
+          code: 'STRIPE_STATUS_UNSUPPORTED',
+          stripeStatus: current.status,
+        },
+        { status: 400 },
+      )
+    }
+
     const updated = await stripe.subscriptions.update(stripeSubscriptionId, {
       trial_end: 'now',
     })
