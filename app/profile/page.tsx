@@ -876,12 +876,13 @@ function ProfileContent() {
                         Unlock all features and never lose access to your health data
                       </p>
                     </div>
-                    <a
-                      href="/pricing"
+                    <button
+                      type="button"
+                      onClick={() => setShowUpgradeModal(true)}
                       className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-lg font-bold text-sm shadow-lg hover:shadow-xl transition-all whitespace-nowrap"
                     >
                       Upgrade Now
-                    </a>
+                    </button>
                   </div>
                 </div>
               )}
@@ -1742,11 +1743,17 @@ function ProfileContent() {
         onEnableSync={handleEnableHealthSync}
       />
 
-      {/* Upgrade Modal */}
+      {/* Upgrade Modal — opened by the trial banner's "Upgrade Now"
+          button. `suggestedPlan` highlights the user's current trial
+          plan so the recommended option matches what they're already
+          using; they can still pick monthly/yearly or switch tiers
+          inside the modal. Selection routes through createCheckoutSession
+          → Stripe Checkout. */}
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={subscription?.plan}
+        suggestedPlan={subscription?.plan}
       />
 
       {/* Plan-detail modal — opens when user taps the Current Plan
