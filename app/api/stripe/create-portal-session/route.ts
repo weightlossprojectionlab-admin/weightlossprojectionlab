@@ -25,13 +25,54 @@ export async function POST(request: NextRequest) {
     const token = authHeader.substring(7)
     const decodedToken = await adminAuth.verifyIdToken(token)
     const userId = decodedToken.uid
+    const userEmail = decodedToken.email
 
     logger.info('[Stripe Portal] Creating portal session', { userId })
 
     // Get user's Stripe customer ID from Firebase
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    const stripeCustomerId = userData?.subscription?.stripeCustomerId
+    let stripeCustomerId: string | undefined = userData?.subscription?.stripeCustomerId
+
+    // Recovery path: Firestore record might lack stripeCustomerId
+    // (e.g., the auto-granted Firestore-only trial we write at
+    // onboarding doesn't go through Stripe, OR the user's record
+    // lost the linkage from an earlier write that didn't preserve
+    // it). If we have an email, fall back to looking up the customer
+    // by email and writing the linkage back so subsequent calls hit
+    // the fast path.
+    if (!stripeCustomerId && userEmail) {
+      try {
+        const customers = await stripe.customers.list({ email: userEmail, limit: 1 })
+        if (customers.data.length > 0) {
+          stripeCustomerId = customers.data[0].id
+          logger.info('[Stripe Portal] Recovered stripeCustomerId via email lookup', {
+            userId,
+            stripeCustomerId,
+          })
+          // Best-effort writeback so the next call hits the cached
+          // value instead of paying for another Stripe roundtrip.
+          await adminDb
+            .collection('users')
+            .doc(userId)
+            .update({
+              'subscription.stripeCustomerId': stripeCustomerId,
+            })
+            .catch((err: unknown) => {
+              logger.warn('[Stripe Portal] Linkage writeback failed (non-fatal)', {
+                userId,
+                error: (err as Error)?.message,
+              })
+            })
+        }
+      } catch (lookupErr: any) {
+        logger.warn('[Stripe Portal] Customer lookup failed', {
+          userId,
+          email: userEmail,
+          error: lookupErr?.message,
+        })
+      }
+    }
 
     if (!stripeCustomerId) {
       return NextResponse.json(

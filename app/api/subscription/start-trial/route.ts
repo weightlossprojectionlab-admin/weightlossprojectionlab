@@ -112,8 +112,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Create subscription object. When switching plans mid-trial,
-    // preserve currentPeriodStart so the trial timeline is honest.
-    const subscription = {
+    // preserve currentPeriodStart so the trial timeline is honest,
+    // AND preserve the Stripe linkage fields (stripeCustomerId,
+    // stripeSubscriptionId, stripePriceId) — wiping them strands
+    // the Customer Portal because /api/stripe/create-portal-session
+    // looks them up from this record. The plan itself changes here;
+    // the linkage to the underlying Stripe entities must not.
+    const subscription: Record<string, unknown> = {
       plan,
       billingInterval: 'monthly' as const,
       status: 'trialing' as const,
@@ -129,6 +134,24 @@ export async function POST(request: NextRequest) {
       maxHouseholds: HOUSEHOLD_LIMITS[plan],
       currentHouseholds: 1, // Start with 1 household
       maxDutiesPerHousehold: 999, // Unlimited duties for all plans except free (enforced separately)
+    }
+
+    // Preserve Stripe linkage fields when switching plans mid-trial.
+    // Wiping these strands the Customer Portal (no customerId →
+    // /api/stripe/create-portal-session returns 'No active
+    // subscription found') and creates Firestore-vs-Stripe drift
+    // where Stripe still has the real sub but our user record can't
+    // address it. Only copy when present; never invent values.
+    if (isSwitchingTrialPlan) {
+      if (existingSubscription.stripeCustomerId) {
+        subscription.stripeCustomerId = existingSubscription.stripeCustomerId
+      }
+      if (existingSubscription.stripeSubscriptionId) {
+        subscription.stripeSubscriptionId = existingSubscription.stripeSubscriptionId
+      }
+      if (existingSubscription.stripePriceId) {
+        subscription.stripePriceId = existingSubscription.stripePriceId
+      }
     }
 
     // Update user document with trial subscription
