@@ -144,10 +144,12 @@ async function fillAdultBasicInfo(page: Page, p: AdultPersona) {
     page.getByRole('heading', { name: 'Who is this person?', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
-  // Step indicator: "Step 1 of 3" — verifies the wizard slim (E2.1)
-  // didn't regress and re-add the conditions step. If this ever
-  // reads "of 4" or "of 5", a step came back unexpectedly.
-  await expect(page.getByText(/^Step 1 of 3$/)).toBeVisible()
+  // Step indicator: "Step 1 of 4" — verifies the wizard shape.
+  // History: was "of 3" after the E2.1 slim work that dropped the
+  // conditions step; updated to "of 4" when the food_allergies step
+  // was added back for !pet && !newborn (commit 75c0cf5). If this
+  // ever reads "of 5", a step came back unexpectedly.
+  await expect(page.getByText(/^Step 1 of 4$/)).toBeVisible()
 
   // NameInput is blur-commit; fill then blur explicitly.
   await page.getByPlaceholder('Enter name').fill(p.name)
