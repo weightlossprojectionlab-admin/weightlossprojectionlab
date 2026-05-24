@@ -433,32 +433,35 @@ export default function PricingPage() {
                     : 'border-border hover:border-primary/50'
                 } ${isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'}`}
               >
-                {/* Popular Badge */}
-                {planData.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                    <span className="bg-primary text-white px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap">
-                      Most Popular
-                    </span>
-                  </div>
-                )}
-
-                {/* Current Plan Badge (paid subscribers only) */}
-                {isCurrentPlan && (
-                  <div className="absolute top-4 right-4">
-                    <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-medium">
-                      Current Plan
-                    </span>
-                  </div>
-                )}
-
-                {/* Free Trial Badge (trialing users) */}
-                {isTrialPlan && (
-                  <div className="absolute top-4 right-4">
-                    <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-medium">
-                      Free Trial
-                    </span>
-                  </div>
-                )}
+                {/* Card badge — one chip floated on the top edge of
+                    the card (half-inside, half-outside), same visual
+                    treatment for every state. Priority resolves to a
+                    single label per card:
+                      Current Plan (paid) > Free Trial (trialing) >
+                      Most Popular (marketing-only)
+                    so a user trialing the popular plan sees "Free
+                    Trial" instead of "Most Popular", and a user
+                    paying for the popular plan sees "Current Plan".
+                    The user-specific badge always wins. */}
+                {(() => {
+                  const badge = isCurrentPlan
+                    ? { label: 'Current Plan', className: 'bg-green-100 text-green-800' }
+                    : isTrialPlan
+                      ? { label: 'Free Trial', className: 'bg-yellow-100 text-yellow-800' }
+                      : planData.popular
+                        ? { label: 'Most Popular', className: 'bg-primary text-white' }
+                        : null
+                  if (!badge) return null
+                  return (
+                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
+                    </div>
+                  )
+                })()}
 
                 {/* Plan Header — description has min-height so every
                     card's price block starts at the same vertical
