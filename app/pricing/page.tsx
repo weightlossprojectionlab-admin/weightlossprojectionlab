@@ -235,13 +235,6 @@ export default function PricingPage() {
     // Trialing users haven't paid yet — every other plan is a new subscription
     if (isTrialing) return 'Subscribe Now'
 
-    // Note: terminated users (expired/canceled) fall through to the
-    // tier-comparison logic below. Their `currentPlan` is the plan
-    // they USED to have, so "Upgrade to X" / "Downgrade to X" reads
-    // correctly relative to that — and is more accurate than a flat
-    // "Resubscribe", which doesn't tell them whether they're moving
-    // up, down, or sideways from where they were.
-
     // Plan tier hierarchy: free < single < single_plus < family_basic < family_plus < family_premium
     const planTiers: Record<SubscriptionPlan, number> = {
       free: 0,
@@ -257,27 +250,18 @@ export default function PricingPage() {
 
     // Users without a subscription (free state) can start a trial
     if (!currentPlan || currentPlan === 'free') {
-      return 'Start Free Trial'
+      return 'Start Trial'
     }
 
-    // Use the full plan name from the data so buttons disambiguate
-    // between "Single User Plus" and "Family Plus" (both used to read
-    // as "Upgrade to Plus" — friction). PLANS is module-level so the
-    // lookup is cheap.
-    const targetPlanName = PLANS.find((p) => p.id === targetPlan)?.name ?? targetPlan
-
-    if (targetTier > currentTier) {
-      // Upgrading to a higher tier
-      return `Upgrade to ${targetPlanName}`
-    } else if (targetTier < currentTier) {
-      // Picking a lower tier than the current/previous plan. For
-      // active users this is a real downgrade; for terminated users
-      // it's just a different choice. "Switch to" works for both
-      // without falsely framing a fresh signup as a downgrade.
-      return `Switch to ${targetPlanName}`
-    }
-
-    return `Select ${targetPlanName}`
+    // Short, uniform labels — the plan NAME is already in the card's
+    // h3 above, so the button doesn't need to repeat it. Previous
+    // labels ("Upgrade to Family Premium", "Switch to Single User
+    // Plus") were too long for the narrow xl-breakpoint cards and
+    // truncated to ugly ellipses ("Switch to Singl…"). Action-only
+    // labels stay short and fit in every layout.
+    if (targetTier > currentTier) return 'Upgrade'
+    if (targetTier < currentTier) return 'Switch'
+    return 'Select'
   }
 
   // Helper: Get dynamic headline based on user state
@@ -478,11 +462,12 @@ export default function PricingPage() {
                   </p>
                 </div>
 
-                {/* Pricing — min-h reserves the savings line's space
-                    so the features list below starts at the same y-
-                    coordinate whether the user is on monthly (no
-                    savings line) or yearly (savings line shown). */}
-                <div className="mb-6 min-h-[4rem]">
+                {/* Pricing — only the active billing-interval cards
+                    show the savings line, so within a given view all
+                    cards have the same shape. No min-h needed (the
+                    earlier reserve added empty whitespace on monthly
+                    without solving any real misalignment). */}
+                <div className="mb-6">
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-foreground">
                       ${price}
@@ -498,24 +483,23 @@ export default function PricingPage() {
                   )}
                 </div>
 
-                {/* Features */}
+                {/* Features — included-only. The strikethrough excluded
+                    items used to render here for at-a-glance plan
+                    comparison, but they created visual noise (Single
+                    User had 3 line-through rows at the bottom of its
+                    list, hard to scan) without adding decision-value
+                    that isn't already covered by comparing card-to-
+                    card horizontally. The comparison happens BETWEEN
+                    cards, not inside each one. */}
                 <ul className="space-y-3 mb-6 flex-grow">
-                  {planData.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckIcon
-                        className={`h-5 w-5 flex-shrink-0 mt-0.5 ${
-                          feature.included ? 'text-green-600' : 'text-gray-300'
-                        }`}
-                      />
-                      <span
-                        className={`text-sm ${
-                          feature.included ? 'text-foreground' : 'text-muted-foreground line-through'
-                        }`}
-                      >
-                        {feature.name}
-                      </span>
-                    </li>
-                  ))}
+                  {planData.features
+                    .filter((feature) => feature.included)
+                    .map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2">
+                        <CheckIcon className="h-5 w-5 flex-shrink-0 mt-0.5 text-green-600" />
+                        <span className="text-sm text-foreground">{feature.name}</span>
+                      </li>
+                    ))}
                 </ul>
 
                 {/* CTA Button — fixed height (h-12) + whitespace-nowrap
