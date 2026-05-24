@@ -564,17 +564,29 @@ function ProfileContent() {
               ← Back
             </Link>
             <div className="flex-1">
-              <h1 className="text-xl font-semibold text-foreground">
-                {currentlyViewingMember
-                  ? `${getPatientDisplayName(currentlyViewingMember)}'s Profile`
-                  : 'Your Profile & Settings'
-                }
-              </h1>
-              {currentlyViewingMember && (
-                <p className="text-description-sm">
-                  Managing {getPatientBadgeLabel(currentlyViewingMember)}&apos;s health information
-                </p>
-              )}
+              {(() => {
+                // Self-Patient is the account holder — read as "Your
+                // Profile & Settings" rather than the templated possessive
+                // form that would otherwise jam "You" into the slot and
+                // produce "You's health information". `relationship: 'self'`
+                // is the canonical self-Patient flag (lib/self-patient.ts).
+                const isSelfMember = currentlyViewingMember?.relationship === 'self'
+                return (
+                  <>
+                    <h1 className="text-xl font-semibold text-foreground">
+                      {currentlyViewingMember && !isSelfMember
+                        ? `${getPatientDisplayName(currentlyViewingMember)}'s Profile`
+                        : 'Your Profile & Settings'
+                      }
+                    </h1>
+                    {currentlyViewingMember && !isSelfMember && (
+                      <p className="text-description-sm">
+                        Managing {getPatientBadgeLabel(currentlyViewingMember)}&apos;s health information
+                      </p>
+                    )}
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>
@@ -595,17 +607,24 @@ function ProfileContent() {
                   ⭐ Currently Viewing
                 </div>
                 <h2 className="text-2xl font-bold text-foreground">
-                  {currentlyViewingMember ? getPatientDisplayName(currentlyViewingMember) : (user?.displayName || 'You')}
+                  {currentlyViewingMember
+                    ? getPatientDisplayName(currentlyViewingMember)
+                    : (user?.displayName || 'You')}
                 </h2>
                 <p className="text-description mt-1">
-                  {currentlyViewingMember
+                  {currentlyViewingMember && currentlyViewingMember.relationship !== 'self'
                     ? `${getPatientBadgeLabel(currentlyViewingMember)}'s Health Profile`
                     : 'Your Personal Health Profile'
                   }
                 </p>
               </div>
             </div>
-            {currentlyViewingMember && (
+            {/* Badge: only show "Family Member" for actual family members,
+                not the account holder's self-Patient. The self-Patient
+                gets the "Currently Viewing" header above; no extra chip
+                needed (and "Family Member" badge would be semantically
+                wrong — the user isn't a family member of themselves). */}
+            {currentlyViewingMember && currentlyViewingMember.relationship !== 'self' && (
               <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 flex-shrink-0">
                 <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full uppercase whitespace-nowrap">
                   Family Member
@@ -626,18 +645,38 @@ function ProfileContent() {
               <label className="block text-sm font-bold text-foreground mb-3">
                 💫 Switch to Different Profile:
               </label>
-              <select
-                value={selectedMemberId || user?.uid || ''}
-                onChange={(e) => setSelectedMemberId(e.target.value)}
-                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 font-semibold text-base"
-              >
-                <option value={user?.uid || ''}>🙋 {user?.displayName || 'Me'} (My Profile)</option>
-                {familyMembers.map(member => (
-                  <option key={member.id} value={member.id}>
-                    👥 {getPatientDisplayName(member)} ({getPatientBadgeLabel(member)})
-                  </option>
-                ))}
-              </select>
+              {(() => {
+                // Source of truth for the account holder's identity is
+                // the self-Patient (`relationship === 'self'`), which
+                // already appears in familyMembers/patients. Only fall
+                // back to the Auth.displayName entry when no self-Patient
+                // exists yet (legacy accounts before lib/self-patient.ts
+                // auto-creation). Without this guard the dropdown showed
+                // BOTH entries — Auth name + self-Patient name — which
+                // diverged when onboarding captured a different name
+                // than Google provided. The self-Patient is canonical.
+                const hasSelfPatient = familyMembers.some(
+                  (m) => m.relationship === 'self',
+                )
+                return (
+                  <select
+                    value={selectedMemberId || user?.uid || ''}
+                    onChange={(e) => setSelectedMemberId(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg bg-white text-gray-900 focus:border-primary focus:ring-2 focus:ring-primary/20 font-semibold text-base"
+                  >
+                    {!hasSelfPatient && (
+                      <option value={user?.uid || ''}>
+                        🙋 {user?.displayName || 'Me'} (Account Settings)
+                      </option>
+                    )}
+                    {familyMembers.map((member) => (
+                      <option key={member.id} value={member.id}>
+                        👥 {getPatientDisplayName(member)} ({getPatientBadgeLabel(member)})
+                      </option>
+                    ))}
+                  </select>
+                )
+              })()}
               <p className="text-description-sm mt-2">
                 Select a family member to view and manage their health information
               </p>

@@ -8,6 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useSubscription } from '@/hooks/useSubscription'
 import { doc, setDoc, Timestamp } from 'firebase/firestore'
+import { updateProfile } from 'firebase/auth'
 import { db } from '@/lib/firebase'
 import { createSelfPatient, findSelfPatientId, deriveDisplayName } from '@/lib/self-patient'
 import { logger } from '@/lib/logger'
@@ -288,6 +289,32 @@ function OnboardingContent() {
         },
         { merge: true },
       )
+
+      // Auth displayName writeback. Identity consolidation Phase A:
+      // when onboarding captures a name (firstName, optionally + the
+      // familyLastName surname), align Firebase Auth's displayName to
+      // match so it doesn't continue leaking the original Google /
+      // signup name through surfaces that read user.displayName (e.g.
+      // the AccountSwitcher's legacy "My Profile" entry, password-
+      // reset emails, security audit logs). Write-only sync — never
+      // read FROM Auth for display in this codebase going forward;
+      // the self-Patient is the canonical name source. Best-effort:
+      // failure here is non-fatal (the Firestore writes already
+      // landed and are the source of truth).
+      const desiredDisplayName = [firstName, familyLastName]
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+      if (desiredDisplayName && desiredDisplayName !== user.displayName) {
+        try {
+          await updateProfile(user, { displayName: desiredDisplayName })
+        } catch (err) {
+          logger.warn(
+            '[Onboarding] Auth displayName writeback failed (non-fatal)',
+            { error: (err as Error)?.message, desiredDisplayName },
+          )
+        }
+      }
 
       // Grant the recommended Family-tier trial when the user picked
       // Family and the count put them in a Family plan bucket. DRY:
