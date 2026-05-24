@@ -30,47 +30,31 @@ export function useUserProfile() {
       const response = await userProfileOperations.getUserProfile()
       setProfile(response.data)
     } catch (profileError: any) {
-      // If profile doesn't exist (404), auto-create it
+      // If profile doesn't exist (404), redirect to onboarding. Auth
+      // session exists (we got a token to hit the API) but Firestore
+      // has no user record — that's the "deleted user resurrects" or
+      // "post-signup pre-onboarding" state. Previously this branch
+      // silently auto-created a default Single trial via POST, which
+      // bypassed onboarding entirely. The redirect routes the user
+      // through the proper flow.
+      //
+      // window.location guarantees a full nav (the hook can't use
+      // useRouter from this file's import context, and a hard nav
+      // also clears any stale client state from before the delete).
+      // Don't redirect if we're already on /onboarding (defensive —
+      // /onboarding doesn't mount this hook today, but guards against
+      // a future regression).
       if (profileError.message?.includes('404') || profileError.message?.includes('not found')) {
-        logger.warn('User profile not found, auto-creating:', profileError)
+        logger.warn('User profile not found — redirecting to /onboarding')
 
-        const currentUser = auth.currentUser
-        if (currentUser) {
-          try {
-            // Create profile with user's info
-            const profileData = createDefaultProfile(
-              currentUser.email || '',
-              currentUser.displayName || currentUser.email?.split('@')[0] || 'User'
-            )
-
-            // Save to Firestore
-            const createdProfile = await userProfileOperations.createUserProfile(profileData)
-            setProfile(createdProfile.data)
-            logger.debug('✅ Auto-created user profile successfully')
-          } catch (createError: any) {
-            logger.error('Error auto-creating profile:', createError)
-
-            // Use defaults as fallback
-            setProfile({
-              goals: DEFAULT_GOALS,
-              preferences: {
-                units: { weight: 'lbs', height: 'in' },
-                notifications: { dailyReminders: true, weeklyReports: true, achievements: true },
-                privacy: { dataSharing: false, analytics: true }
-              }
-            })
-          }
-        } else {
-          // No current user - use defaults
-          setProfile({
-            goals: DEFAULT_GOALS,
-            preferences: {
-              units: { weight: 'lbs', height: 'in' },
-              notifications: { dailyReminders: true, weeklyReports: true, achievements: true },
-              privacy: { dataSharing: false, analytics: true }
-            }
-          })
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/onboarding')) {
+          window.location.href = '/onboarding'
+          return
         }
+
+        // Fallback if we ARE on /onboarding somehow — leave profile
+        // null and set error so the page can render without a profile.
+        setError(profileError)
       } else {
         // Other error - set error state
         setError(profileError)
