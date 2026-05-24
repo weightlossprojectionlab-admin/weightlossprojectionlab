@@ -1,7 +1,7 @@
 {
   "onboarding": {
-    "version": "1.0",
-    "purpose": "Determine user mode (single/household/caregiver), personalize UI, and drive feature discovery.",
+    "version": "2.0",
+    "purpose": "Set up the user's account and route them into the platform. Capture the minimum to gate subscription + greet by name + route to wizard or dashboard. Preferences, composition, and identity details are observed from usage and refined via in-context prompts — not interrogated at signup.",
     "screens": [
       {
         "id": "role_selection",
@@ -14,138 +14,49 @@
         "sets": "userMode"
       },
       {
-        "id": "household_identity",
-        "question": "What do you call your household?",
-        "subtitle": "Family, group, partnership — whatever feels right. We'll use this name throughout the app. You can change it later.",
-        "options": [],
-        "inputType": "text",
-        "placeholder": "The Smiths, Apartment 4B, The Sunday Crew…",
-        "maxLength": 60,
-        "sets": "householdName",
+        "id": "member_count",
+        "question": "How many family members will you track?",
+        "subtitle": "Including yourself and any pets. We'll recommend the right plan based on your answer.",
+        "options": ["2_to_5", "6_to_10", "11_or_more"],
+        "optionDescriptions": {
+          "2_to_5": "Couples, parents with kids, small households",
+          "6_to_10": "Bigger families, multi-gen, kids + pets",
+          "11_or_more": "Large family, multiple households, caring for many"
+        },
+        "sets": "memberCount",
         "visibleIf": "userMode === 'household'"
       },
       {
-        "id": "household_composition",
-        "question": "How would you describe your household?",
-        "subtitle": "Helps us recommend the right plan and set up the people in your household. You can refine this anytime.",
-        "options": [
-          "single_parent_with_kids",
-          "two_parents_with_kids",
-          "couple_no_kids",
-          "sibling_group",
-          "multi_generational",
-          "caring_for_relative",
-          "roommates_or_chosen_family",
-          "other"
-        ],
-        "optionLabels": {
-          "single_parent_with_kids": "Solo Caregiver",
-          "two_parents_with_kids": "Two Parents",
-          "couple_no_kids": "Couple",
-          "sibling_group": "Sibling Group",
-          "multi_generational": "Multi-Gen",
-          "caring_for_relative": "Caring For Relative",
-          "roommates_or_chosen_family": "Roommates / Chosen Family",
-          "other": "Other"
-        },
-        "optionDescriptions": {
-          "single_parent_with_kids": "One adult + dependent kids",
-          "two_parents_with_kids": "Two parents + kids",
-          "couple_no_kids": "Two adults, no kids",
-          "sibling_group": "Adult siblings sharing care",
-          "multi_generational": "3+ generations under one roof",
-          "caring_for_relative": "Looking after an aging relative",
-          "roommates_or_chosen_family": "Friends or partners sharing tracking",
-          "other": "My household is unique — let me customize it"
-        },
-        "sets": "householdComposition",
-        "visibleIf": "userMode === 'household'",
-        "compact": true
-      },
-      {
-        "id": "user_identity",
-        "question": "What should we call you?",
-        "subtitle": "Your full name shows up on formal surfaces (medical records, audit log). Your nickname is what we use everywhere else (Mom, Dad, Sis, P, whatever feels right). You can change either later.",
+        "id": "family_last_name",
+        "question": "What's your family's last name?",
+        "subtitle": "We'll use it to identify your household and pre-fill it when you add family members. Blended families or chosen families — pick whichever last name fits.",
         "options": [],
-        "inputType": "identity",
-        "sets": "userIdentity"
+        "inputType": "text",
+        "placeholder": "e.g. Smith",
+        "maxLength": 60,
+        "sets": "familyLastName",
+        "visibleIf": "userMode === 'household'"
       },
       {
-        "id": "goals",
-        "question": "What are your wellness goals?",
-        "subtitle": "Select all that apply",
-        "multiSelect": true,
-        "options": ["body_fitness", "nutrition_kitchen", "health_medical"],
-        "optionDescriptions": {
-          "body_fitness": "Track weight, exercise, body composition, and fitness goals (whether gaining, losing, or maintaining)",
-          "nutrition_kitchen": "Plan meals with AI analysis, discover recipes, smart shopping lists, and pantry tracking",
-          "health_medical": "Track appointments, medications, vital signs (blood pressure, glucose, etc.), and health records"
-        },
-        "planRequirements": {
-          "body_fitness": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
-          "nutrition_kitchen": ["free", "single", "single_plus", "family_basic", "family_plus", "family_premium"],
-          "health_medical": ["single_plus", "family_basic", "family_plus", "family_premium"]
-        },
-        "sets": "featurePreferences"
+        "id": "your_name",
+        "question": "What's your first name?",
+        "subtitle": "We'll use this to greet you. You can fill in the rest of your profile later from your account.",
+        "options": [],
+        "inputType": "text",
+        "placeholder": "e.g. Percy",
+        "maxLength": 60,
+        "sets": "firstName"
       },
       {
-        "id": "food_management",
-        "question": "How do you get your food?",
-        "subtitle": "Select all that apply",
-        "multiSelect": true,
-        "options": ["i_cook_at_home", "meal_delivery", "meal_kits", "mostly_restaurants"],
-        "optionsByRole": {
-          "myself": ["i_cook_at_home", "meal_delivery", "meal_kits", "mostly_restaurants"],
-          "family": ["self", "others", "shared", "i_shop", "i_dont_shop", "delivery", "meal_kits"]
-        },
-        "optionDescriptions": {
-          "i_cook_at_home": "I cook at home (need recipes, shopping lists)",
-          "meal_delivery": "Meal delivery services (need quick meal tracking)",
-          "meal_kits": "Meal kit services (need simple ingredient tracking)",
-          "mostly_restaurants": "Mostly restaurants/takeout (need easy photo logging)",
-          "self": "I cook and shop for myself",
-          "others": "Someone else cooks for me (e.g., family member, caregiver)",
-          "shared": "We share cooking and shopping duties",
-          "i_shop": "I do the grocery shopping",
-          "i_dont_shop": "Someone else does the shopping",
-          "delivery": "I use delivery services (Instacart, DoorDash, etc.)"
-        },
-        "sets": "kitchenMode"
-      },
-      {
-        "id": "logging_preference",
-        "question": "How do you want to log meals?",
-        "subtitle": "Select all that apply",
-        "multiSelect": true,
-        "options": ["photo", "manual", "both", "with_reminders"],
-        "optionDescriptions": {
-          "photo": "Take photos of meals for AI-powered analysis",
-          "manual": "Manually enter food items and portions",
-          "both": "Use both photo and manual logging",
-          "with_reminders": "Get reminders to log meals at meal times"
-        },
-        "sets": "mealLoggingMode"
-      },
-      {
-        "id": "automation",
-        "question": "Do you want the app to ask for updates if you forget?",
+        "id": "add_now",
+        "question": "Want to add someone now?",
+        "subtitle": "Family member, pet, or newborn — you'll pick the type next. Skip to set up later from your dashboard.",
         "options": ["yes", "no"],
         "optionDescriptions": {
-          "yes": "Send me notifications if I haven't logged meals, weight, etc.",
-          "no": "I'll log things on my own schedule"
+          "yes": "I'll add someone right now",
+          "no": "I'll do this later from the dashboard"
         },
-        "sets": "automationLevel"
-      },
-      {
-        "id": "family_setup",
-        "question": "Would you like to add anyone now?",
-        "subtitle": "You can always add family members later",
-        "options": ["yes", "no"],
-        "optionDescriptions": {
-          "yes": "I'm ready to add family members now",
-          "no": "I'll add them later"
-        },
-        "visibleIf": "userMode != 'myself'"
+        "visibleIf": "userMode != 'myself' && canAddPatients"
       }
     ],
     "userModes": {
