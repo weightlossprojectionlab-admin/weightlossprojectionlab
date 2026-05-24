@@ -51,8 +51,25 @@ export async function createCheckoutSession(
     const data = await response.json()
 
     if (!data.success) {
-      // Check if user already has an active subscription
-      if (data.code === 'EXISTING_SUBSCRIPTION') {
+      // Two error codes mean the same thing operationally — "you
+      // already have an active or trialing subscription, can't
+      // create a parallel one." Route both to the Customer Portal
+      // so the user can manage / cancel the existing sub:
+      //
+      //   - EXISTING_SUBSCRIPTION: Firestore-level check (line ~56
+      //     of create-checkout-session/route.ts) when the user's
+      //     stored subscription has a stripeSubscriptionId + active
+      //     or trialing status.
+      //   - ACTIVE_SUBSCRIPTION_EXISTS: Stripe-side check (line ~106)
+      //     against Stripe directly via customer email. Catches the
+      //     "user has a Stripe sub we don't know about in Firestore"
+      //     case (left over from prior testing, or out-of-band Stripe
+      //     activity).
+      //
+      // Either way, the right user action is to open the portal.
+      const isExistingSubscription =
+        data.code === 'EXISTING_SUBSCRIPTION' || data.code === 'ACTIVE_SUBSCRIPTION_EXISTS'
+      if (isExistingSubscription) {
         const shouldOpenPortal = confirm(
           `${data.error}\n\nWould you like to open the Customer Portal to manage your subscription?`
         )
