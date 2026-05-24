@@ -38,35 +38,88 @@ export async function POST(request: NextRequest) {
 
     logger.info('[Start Trial] Starting trial for user', { userId, plan })
 
-    // Check if user already has a subscription
+    // Check if user already has a subscription. An ACTIVE (paid)
+    // subscription is a hard block — never silently overwrite a
+    // paying customer. A TRIALING subscription is allowed to switch
+    // plans (e.g. signup grants a default Single trial, onboarding's
+    // memberCount answer then promotes it to Family Basic). The
+    // trialEndsAt timer is preserved across the switch so the user
+    // doesn't lose days they've already started.
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const existingSubscription = userDoc.data()?.subscription
 
-    if (existingSubscription?.status === 'active' || existingSubscription?.status === 'trialing') {
+    if (existingSubscription?.status === 'active') {
       return NextResponse.json(
         {
           success: false,
-          error: 'You already have an active subscription or trial',
+          error: 'You already have an active subscription',
           code: 'EXISTING_SUBSCRIPTION'
         },
         { status: 400 }
       )
     }
 
+    // If the user is already trialing the SAME plan, treat as a no-op
+    // success rather than a state change. Avoids resetting timers.
+    if (
+      existingSubscription?.status === 'trialing' &&
+      existingSubscription?.plan === plan
+    ) {
+      return NextResponse.json({
+        success: true,
+        subscription: existingSubscription,
+        message: 'Already trialing this plan',
+        code: 'TRIAL_UNCHANGED',
+      })
+    }
+
+    const isSwitchingTrialPlan =
+      existingSubscription?.status === 'trialing' &&
+      existingSubscription?.plan !== plan
+
     // Get trial configuration for the selected plan
     const trialConfig = PLAN_TRIAL_CONFIGS[plan]
 
-    // Calculate trial end date
+    // Calculate trial end date — preserve the existing timer when
+    // switching mid-trial, otherwise compute a fresh DURATION_DAYS
+    // window. Avoids giving a "free extension" via repeated calls.
     const now = new Date()
-    const trialEndsAt = new Date(now)
-    trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_POLICY.DURATION_DAYS)
+    let trialEndsAt: Date
+    if (isSwitchingTrialPlan) {
+      const existingEnd = existingSubscription.trialEndsAt
+      const parsed =
+        existingEnd?.toDate?.() instanceof Date
+          ? existingEnd.toDate()
+          : existingEnd instanceof Date
+            ? existingEnd
+            : existingEnd
+              ? new Date(existingEnd)
+              : null
+      // Use the existing end if it's in the future; otherwise fall
+      // back to a fresh window (shouldn't normally happen since
+      // status would be 'expired' by then, but defensive).
+      trialEndsAt =
+        parsed && parsed.getTime() > now.getTime()
+          ? parsed
+          : (() => {
+              const d = new Date(now)
+              d.setDate(d.getDate() + TRIAL_POLICY.DURATION_DAYS)
+              return d
+            })()
+    } else {
+      trialEndsAt = new Date(now)
+      trialEndsAt.setDate(trialEndsAt.getDate() + TRIAL_POLICY.DURATION_DAYS)
+    }
 
-    // Create subscription object
+    // Create subscription object. When switching plans mid-trial,
+    // preserve currentPeriodStart so the trial timeline is honest.
     const subscription = {
       plan,
       billingInterval: 'monthly' as const,
       status: 'trialing' as const,
-      currentPeriodStart: now,
+      currentPeriodStart: isSwitchingTrialPlan
+        ? existingSubscription.currentPeriodStart || now
+        : now,
       currentPeriodEnd: trialEndsAt,
       trialEndsAt,
       maxSeats: SEAT_LIMITS[plan],
