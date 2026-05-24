@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { doc, setDoc, Timestamp, collection } from 'firebase/firestore'
@@ -523,7 +523,17 @@ interface FamilyMemberData {
   trackVitals?: string[]
 }
 
-export default function FamilyMemberOnboardingWizard() {
+interface FamilyMemberOnboardingWizardProps {
+  /** Optional pre-selected member type. When set, the type_selection
+   *  step is auto-skipped (wizard begins at basic_info). Used by
+   *  onboarding to deep-link into the pet path after the user said
+   *  yes to has_pets — see app/onboarding/page.tsx completion routing. */
+  initialMemberType?: 'human' | 'pet' | 'newborn'
+}
+
+export default function FamilyMemberOnboardingWizard({
+  initialMemberType,
+}: FamilyMemberOnboardingWizardProps = {}) {
   const { user } = useAuth()
   const router = useRouter()
   const { subscription } = useSubscription()
@@ -536,10 +546,12 @@ export default function FamilyMemberOnboardingWizard() {
   const [petVitalsMode, setPetVitalsMode] = useState<'basic' | 'advanced' | null>(null)
 
   const [data, setData] = useState<FamilyMemberData>({
-    memberType: '',
+    // Seed memberType (and relationship for pet) from the prop so
+    // onboarding's "?type=pet" deep-link skips the type picker.
+    memberType: initialMemberType ?? '',
     name: '',
     dateOfBirth: '',
-    relationship: '',
+    relationship: initialMemberType === 'pet' ? 'Pet' : '',
     gender: '',
     bloodType: '',
     heightFeet: '',
@@ -566,13 +578,45 @@ export default function FamilyMemberOnboardingWizard() {
   })
 
   const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
-  // Newborn detection keys off `memberType === 'newborn'` (the third
-  // type-selection option). The legacy `data.relationship === 'Newborn'`
-  // is preserved as a fallback for patients in flight from an older
-  // form state, but the slim wizard no longer collects relationship
-  // at all — see E2.2 / project_household_deferred.md.
-  const isNewborn = data.memberType === 'newborn' || data.relationship === 'Newborn'
+  // Newborn detection now derives from DOB age, not a separate type
+  // button. Newborn is a *life stage* of a human, not a parallel
+  // category alongside Pet — semantically wrong to ask "Human or
+  // Newborn?" because a newborn IS a human. Type picker shows only
+  // Human / Pet; once the user enters DOB on basic_info, the wizard
+  // auto-applies the newborn intake (birth weight / gestational
+  // weeks / NICU / pediatrician) for any human under 12 months.
+  //
+  // Legacy fallbacks (`memberType === 'newborn'`, `relationship ===
+  // 'Newborn'`) stay for back-compat with the deep-link prop and any
+  // in-flight form state from the old 3-button UI.
+  const humanLifeStage =
+    !isPet && data.dateOfBirth ? getHumanLifeStage(data.dateOfBirth).stage : null
+  const isInfantAge = humanLifeStage === 'newborn' || humanLifeStage === 'infant'
+  const isNewborn =
+    data.memberType === 'newborn' ||
+    data.relationship === 'Newborn' ||
+    (data.memberType === 'human' && isInfantAge)
   const hasSelectedType = data.memberType !== ''
+
+  // Seed primary caregiver when a human's DOB shifts them into the
+  // newborn/infant range. Previously the Newborn type button set this
+  // on click; now it has to react to the DOB derivation. Idempotent:
+  // only fires when caregivers array is empty.
+  useEffect(() => {
+    if (!isNewborn || !user) return
+    if (data.primaryCaregivers && data.primaryCaregivers.length > 0) return
+    setData((prev) => ({
+      ...prev,
+      primaryCaregivers: [
+        {
+          name: user.displayName || user.email || 'Account Owner',
+          relationship: 'Parent',
+          userId: user.uid,
+        },
+      ],
+    }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNewborn, user?.uid])
   const WIZARD_STEPS = getWizardSteps(isPet, isNewborn, hasSelectedType)
   const currentStepData = WIZARD_STEPS[currentStep]
   const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100
@@ -1055,8 +1099,12 @@ export default function FamilyMemberOnboardingWizard() {
           Who are you adding?
         </p>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Human Option */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Human Option — covers every life stage from newborn to
+              senior. The wizard auto-applies the newborn intake
+              (birth weight / gestational weeks / NICU / pediatrician)
+              when the entered DOB falls under 12 months; see the
+              isNewborn derivation at the top of the component. */}
           <button
             type="button"
             onClick={() => setData({ ...data, memberType: 'human' })}
@@ -1069,52 +1117,9 @@ export default function FamilyMemberOnboardingWizard() {
             `}
           >
             <div className="text-5xl mb-4">👤</div>
-            <h3 className="text-xl font-semibold mb-2">Human</h3>
+            <h3 className="text-xl font-semibold mb-2">Person</h3>
             <p className="text-sm opacity-80">
-              Family member, friend, or person you care for
-            </p>
-          </button>
-
-          {/* Newborn Option — distinct from generic Human because
-              newborns trigger a richer birth-data flow (gestation,
-              NICU, feeding, pediatrician). Setting memberType='newborn'
-              alone is enough — every downstream check reads `isNewborn`
-              (which is defined OR-of memberType + legacy relationship
-              string at the top of the component). The auto-config for
-              lbs weight unit + account-owner primary caregiver MUST
-              fire on click because the wizard auto-advances off
-              type-selection, so handleNext is never invoked for this
-              step. */}
-          <button
-            type="button"
-            onClick={() => {
-              const updates: Partial<FamilyMemberData> = {
-                memberType: 'newborn',
-                weightUnit: 'lbs',
-              }
-              if (!data.primaryCaregivers?.length && user) {
-                updates.primaryCaregivers = [
-                  {
-                    name: user.displayName || user.email || 'Account Owner',
-                    relationship: 'Parent',
-                    userId: user.uid,
-                  },
-                ]
-              }
-              setData({ ...data, ...updates })
-            }}
-            className={`
-              p-8 rounded-2xl border-2 transition-all text-center
-              ${data.memberType === 'newborn'
-                ? 'bg-primary text-primary-foreground border-primary shadow-lg scale-105'
-                : 'bg-accent border-border hover:border-primary/50 hover:scale-105'
-              }
-            `}
-          >
-            <div className="text-5xl mb-4">👶</div>
-            <h3 className="text-xl font-semibold mb-2">Newborn</h3>
-            <p className="text-sm opacity-80">
-              New baby — birth details, feeding, pediatrician
+              Family member, friend, newborn, or anyone you care for
             </p>
           </button>
 
