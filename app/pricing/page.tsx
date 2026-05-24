@@ -473,7 +473,7 @@ export default function PricingPage() {
                   <h3 className="text-xl font-bold text-foreground mb-2">
                     {planData.name}
                   </h3>
-                  <p className="text-sm text-muted-foreground min-h-[6rem] xl:min-h-[10rem]">
+                  <p className="text-sm text-muted-foreground line-clamp-6 min-h-[8rem]">
                     {planData.description}
                   </p>
                 </div>
