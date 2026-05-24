@@ -8,11 +8,13 @@
 'use client'
 
 import { useState } from 'react'
+import { getAuth } from 'firebase/auth'
 import { SubscriptionPlan, BillingInterval, SUBSCRIPTION_PRICING, SEAT_LIMITS, EXTERNAL_CAREGIVER_LIMITS } from '@/types'
 import { createCheckoutSession } from '@/lib/stripe-client'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
 import { getPlanRelationship } from '@/lib/subscription-utils'
+import { getCSRFToken } from '@/lib/csrf'
 import toast from 'react-hot-toast'
 
 interface UpgradeModalProps {
@@ -56,6 +58,68 @@ export function UpgradeModal({
     }
 
     setLoading(planId)
+
+    // Same-plan trial → paid conversion uses a dedicated endpoint.
+    // Stripe Checkout rejects creating a parallel sub on a customer
+    // who already has one (ACTIVE_SUBSCRIPTION_EXISTS), and the
+    // Customer Portal's "Update plan" page can't process "same
+    // plan, end trial early" — it's gated on plan changes. The
+    // /api/subscription/convert-trial endpoint calls
+    // stripe.subscriptions.update(subId, { trial_end: 'now' }) on
+    // the existing trial sub. On success: active. On payment
+    // failure (no card): redirect to the Stripe-hosted invoice
+    // page for the user to add a card and complete the charge.
+    if (relationship === 'currently_trialing') {
+      try {
+        const user = getAuth().currentUser
+        if (!user) {
+          toast.error('Sign in required to convert your trial')
+          setLoading(null)
+          return
+        }
+        const token = await user.getIdToken()
+        const csrfToken = getCSRFToken()
+        const response = await fetch('/api/subscription/convert-trial', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            'X-CSRF-Token': csrfToken,
+          },
+          body: JSON.stringify({}),
+        })
+        const data = await response.json()
+        if (!data.success) {
+          // Specific handling for "no Stripe sub" — the auto-granted
+          // Firestore-only trial case. Fall through to the regular
+          // checkout flow below so the user can pay via the price-
+          // based Stripe Checkout.
+          if (data.code === 'NO_STRIPE_SUBSCRIPTION') {
+            // Don't bail — let the fallthrough hit createCheckoutSession.
+          } else {
+            toast.error(data.error || 'Failed to convert trial')
+            setLoading(null)
+            return
+          }
+        } else {
+          if (data.requiresPaymentCompletion && data.payInvoiceUrl) {
+            // Redirect to Stripe-hosted invoice page to capture
+            // payment method and complete the charge.
+            window.location.href = data.payInvoiceUrl
+            return
+          }
+          toast.success(data.message || 'Subscription activated!')
+          // Reload to pull the fresh subscription state from Firestore
+          // once the Stripe webhook syncs.
+          setTimeout(() => window.location.reload(), 750)
+          return
+        }
+      } catch (error: any) {
+        toast.error(error.message || 'Failed to convert trial')
+        setLoading(null)
+        return
+      }
+    }
 
     try {
       // Map plan ID and billing interval to Stripe price IDs
