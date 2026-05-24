@@ -155,9 +155,64 @@ export async function POST(request: NextRequest) {
       stripeStatus: current.status,
     })
 
-    // Case A — Stripe already says 'active'. The sub is paid; nothing
-    // to convert. Firestore is just stale. Reconcile and return.
+    // Case A — Stripe says 'active'. But active alone doesn't mean
+    // the sub is paid: a sub can be active with an open/draft/
+    // uncollectible invoice (the period is granted, the bill is
+    // outstanding). Before reconciling Firestore as "done", check
+    // the latest_invoice status:
+    //   - 'paid' (or no invoice) → reconcile + return success
+    //   - 'open' / 'draft' / 'uncollectible' → return the hosted
+    //     invoice URL so the user can complete payment. Don't
+    //     reconcile Firestore yet — the Stripe webhook will sync
+    //     status once the invoice is paid.
+    //   - 'void' → surface error
     if (current.status === 'active') {
+      const latestInvoiceRef = current.latest_invoice
+      let invoiceStatus: string | null = null
+      let payInvoiceUrl: string | undefined
+
+      if (latestInvoiceRef) {
+        try {
+          const invoiceId =
+            typeof latestInvoiceRef === 'string' ? latestInvoiceRef : latestInvoiceRef.id
+          if (invoiceId) {
+            const invoice = await stripe.invoices.retrieve(invoiceId)
+            invoiceStatus = invoice.status || null
+            payInvoiceUrl = invoice.hosted_invoice_url || undefined
+          }
+        } catch (invErr: any) {
+          logger.warn('[Convert Trial] Failed to fetch latest invoice', {
+            userId,
+            stripeSubscriptionId,
+            error: invErr?.message,
+          })
+        }
+      }
+
+      logger.info('[Convert Trial] Active sub invoice status', {
+        userId,
+        stripeSubscriptionId,
+        invoiceStatus,
+      })
+
+      // Unpaid invoice — surface the hosted payment URL. Don't
+      // reconcile Firestore yet; the user hasn't actually paid.
+      const isUnpaid =
+        invoiceStatus === 'open' ||
+        invoiceStatus === 'draft' ||
+        invoiceStatus === 'uncollectible'
+      if (isUnpaid && payInvoiceUrl) {
+        return NextResponse.json({
+          success: true,
+          status: current.status,
+          requiresPaymentCompletion: true,
+          payInvoiceUrl,
+          message:
+            'Your subscription has an outstanding invoice. Complete payment to activate.',
+        })
+      }
+
+      // Paid (or no invoice — e.g., $0 sub or pre-billing). Reconcile.
       try {
         await adminDb
           .collection('users')
