@@ -329,29 +329,54 @@ export function UpgradeModal({
                   ))}
                 </ul>
 
-                <button
-                  className={`w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                    plan.highlighted
-                      ? 'bg-primary text-white hover:bg-primary-hover'
-                      : 'bg-muted text-foreground hover:bg-gray-300 dark:hover:bg-gray-700'
-                  }`}
-                  onClick={() => handleUpgrade(plan.id)}
-                  disabled={loading === plan.id || currentPlan === plan.id}
-                >
-                  {loading === plan.id ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Loading...
-                    </span>
-                  ) : currentPlan === plan.id ? (
-                    'Current Plan'
-                  ) : (
-                    'Select Plan'
-                  )}
-                </button>
+                {(() => {
+                  // Disabled + label both derive from the same
+                  // primitive (getPlanRelationship) the handleUpgrade
+                  // gate uses, so the three states stay in lockstep.
+                  // Previously the button compared raw currentPlan ===
+                  // plan.id, which disabled the "Current Plan" button
+                  // for TRIALING users too — blocking the trial→paid
+                  // conversion. Trial users need an enabled CTA on
+                  // the plan they're trialing so they can actually
+                  // convert.
+                  const relationship = getPlanRelationship(subscription, plan.id)
+                  const isLoading = loading === plan.id
+                  const isSubscribed = relationship === 'currently_subscribed'
+                  const isTrialing = relationship === 'currently_trialing'
+                  const isPrevious = relationship === 'previously_subscribed'
+                  const label = isLoading
+                    ? 'Loading...'
+                    : isSubscribed
+                      ? 'Current Plan'
+                      : isTrialing
+                        ? 'Subscribe (end trial)'
+                        : isPrevious
+                          ? 'Reactivate'
+                          : 'Select Plan'
+                  return (
+                    <button
+                      className={`w-full py-3 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                        plan.highlighted
+                          ? 'bg-primary text-white hover:bg-primary-hover'
+                          : 'bg-muted text-foreground hover:bg-gray-300 dark:hover:bg-gray-700'
+                      }`}
+                      onClick={() => handleUpgrade(plan.id)}
+                      disabled={isLoading || isSubscribed}
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          {label}
+                        </span>
+                      ) : (
+                        label
+                      )}
+                    </button>
+                  )
+                })()}
               </div>
             ))}
           </div>
