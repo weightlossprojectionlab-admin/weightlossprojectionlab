@@ -427,11 +427,11 @@ export default function PricingPage() {
             return (
               <div
                 key={planData.id}
-                className={`relative rounded-lg border-2 flex flex-col ${
+                className={`relative rounded-lg border-2 flex flex-col p-4 sm:p-6 ${
                   planData.popular
-                    ? 'border-primary shadow-lg md:scale-105 pt-6 px-4 pb-6 sm:px-6'
-                    : 'border-border hover:border-primary/50 p-4 sm:p-6'
-                } ${isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'} ${planData.popular ? 'mt-4' : ''}`}
+                    ? 'border-primary shadow-lg'
+                    : 'border-border hover:border-primary/50'
+                } ${isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'}`}
               >
                 {/* Popular Badge */}
                 {planData.popular && (
@@ -460,18 +460,26 @@ export default function PricingPage() {
                   </div>
                 )}
 
-                {/* Plan Header */}
+                {/* Plan Header — description has min-height so every
+                    card's price block starts at the same vertical
+                    position regardless of how long the description
+                    text is. Without this, Family Basic's 6-line copy
+                    would push its features further down than Single
+                    User's 3-line copy, breaking row alignment. */}
                 <div className="mb-4">
                   <h3 className="text-xl font-bold text-foreground mb-2">
                     {planData.name}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground min-h-[6rem] xl:min-h-[10rem]">
                     {planData.description}
                   </p>
                 </div>
 
-                {/* Pricing */}
-                <div className="mb-6">
+                {/* Pricing — min-h reserves the savings line's space
+                    so the features list below starts at the same y-
+                    coordinate whether the user is on monthly (no
+                    savings line) or yearly (savings line shown). */}
+                <div className="mb-6 min-h-[4rem]">
                   <div className="flex items-baseline gap-2">
                     <span className="text-4xl font-bold text-foreground">
                       ${price}
@@ -507,11 +515,16 @@ export default function PricingPage() {
                   ))}
                 </ul>
 
-                {/* CTA Button */}
+                {/* CTA Button — fixed height (h-12) + whitespace-nowrap
+                    + overflow-ellipsis so every card's button is
+                    visually identical regardless of label length
+                    ("Current Plan" vs "Switch to Single User Plus").
+                    Long labels truncate with an ellipsis instead of
+                    wrapping to two lines and breaking row alignment. */}
                 <button
                   onClick={() => handleSelectPlan(planData.id)}
                   disabled={loading === planData.id || isCurrentPlan}
-                  className={`w-full py-3 px-4 rounded-lg font-medium transition-colors ${
+                  className={`w-full h-12 px-4 rounded-lg font-medium transition-colors whitespace-nowrap overflow-hidden text-ellipsis ${
                     isCurrentPlan
                       ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                       : planData.popular
