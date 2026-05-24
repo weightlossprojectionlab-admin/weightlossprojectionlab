@@ -111,6 +111,20 @@ function ProfileContent() {
   // Detect if viewing a pet profile
   const isPetProfile = currentlyViewingMember?.type === 'pet' || !!currentlyViewingMember?.species
 
+  // "Own profile view" — the account holder is looking at their own
+  // surface. True when nothing is selected (legacy fallback, no
+  // self-Patient yet) OR when the selected member IS the self-Patient
+  // (relationship === 'self'). Account-level sections (Subscription,
+  // Account Info, App Settings, Privacy, Sign Out, Health Sync,
+  // Biometric Auth) gate on this predicate — they're owner-scoped,
+  // not patient-scoped, so they should appear whenever the user is
+  // viewing themselves regardless of how the self-Patient is selected
+  // (the AccountSwitcher dedupe in Phase A removed the user.uid entry,
+  // which previously was the only way to get currentlyViewingMember
+  // to be null).
+  const isOwnProfileView =
+    !currentlyViewingMember || currentlyViewingMember.relationship === 'self'
+
   // Get the effective patient ID for medications (DRY)
   const effectivePatientId = selectedMemberId || user?.uid || ''
 
@@ -701,7 +715,7 @@ function ProfileContent() {
         )}
 
         {/* Account Information - Only show for own profile */}
-        {!currentlyViewingMember && (
+        {isOwnProfileView && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <h2 className="text-lg font-medium text-foreground mb-4">Account Information</h2>
           <div className="space-y-3">
@@ -723,7 +737,7 @@ function ProfileContent() {
         )}
 
         {/* Subscription Section - Only show for own profile */}
-        {!currentlyViewingMember && subscription && !subscriptionLoading && (
+        {isOwnProfileView && subscription && !subscriptionLoading && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <h2 className="text-lg font-medium text-foreground mb-4">Subscription</h2>
 
@@ -898,7 +912,7 @@ function ProfileContent() {
         )}
 
         {/* Biometric Authentication Settings - Only show for own profile */}
-        {!currentlyViewingMember && mounted && (
+        {isOwnProfileView && mounted && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <h2 className="text-lg font-medium text-foreground mb-4">
               Biometric Authentication
@@ -987,7 +1001,7 @@ function ProfileContent() {
         )}
 
         {/* App Settings - Only show step tracking for own profile */}
-        {!currentlyViewingMember && (
+        {isOwnProfileView && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">App Settings</h2>
           <div className="space-y-4">
@@ -1578,7 +1592,7 @@ function ProfileContent() {
         )}
 
         {/* Upsell: Health & Medical Tracking - Show if user didn't select medical_tracking */}
-        {!isPetProfile && !currentlyViewingMember && userPrefs.getAllFeatures().length > 0 && !userPrefs.hasFeature('health_medical') && (
+        {!isPetProfile && isOwnProfileView && userPrefs.getAllFeatures().length > 0 && !userPrefs.hasFeature('health_medical') && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-lg p-6 shadow-sm">
             <div className="flex items-start gap-4">
               <div className="text-4xl">💊</div>
@@ -1647,14 +1661,14 @@ function ProfileContent() {
         )) && <NotificationSettings userId={user?.uid} />}
 
         {/* Health Sync - Only show for own profile (not pets or family members) */}
-        {!currentlyViewingMember && !isPetProfile && (
+        {isOwnProfileView && !isPetProfile && (
           <div className="bg-card rounded-lg shadow-sm">
             <HealthSyncCard onSetupClick={() => setShowHealthModal(true)} />
           </div>
         )}
 
         {/* Privacy & Data Settings - Only show for own profile */}
-        {!currentlyViewingMember && (
+        {isOwnProfileView && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
           <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
           <div className="space-y-4">
@@ -1701,7 +1715,7 @@ function ProfileContent() {
         )}
 
         {/* Sign Out - Only show for own profile */}
-        {!currentlyViewingMember && (
+        {isOwnProfileView && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
           <button
             onClick={handleSignOut}
