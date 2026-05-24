@@ -135,6 +135,51 @@ export async function createSelfPatient(
   return { patientId: patientRef.id, createdAt: now.toDate() }
 }
 
+export interface UpdateSelfPatientNameInput {
+  userId: string
+  patientId: string
+  /** New composed legal `name` field. Required — always written. */
+  displayName: string
+  firstName?: string
+  middleName?: string
+  lastName?: string
+  nickname?: string
+  db: Firestore
+}
+
+/**
+ * Update an existing self-Patient's name fields. Used when the
+ * account holder re-runs onboarding (or edits their identity at any
+ * point) and the canonical patient record needs to follow.
+ *
+ * Writes are merge-style: only the fields passed get set, never
+ * clears unrelated fields. Empty/undefined values are skipped so a
+ * blank middle name doesn't wipe a previously-stored middle name.
+ *
+ * Pair with `findSelfPatientId` → if returns an id, call this; else
+ * call `createSelfPatient`. Keeps the three name sources (Auth.
+ * displayName, user.profile.firstName, patient.name) consistent.
+ */
+export async function updateSelfPatientName(
+  input: UpdateSelfPatientNameInput,
+): Promise<void> {
+  const { userId, patientId, displayName, firstName, middleName, lastName, nickname, db } = input
+  const ref = doc(db, 'users', userId, 'patients', patientId)
+  const data: Record<string, unknown> = {
+    name: displayName,
+    lastModified: Timestamp.now(),
+  }
+  const trimmedFirst = firstName?.trim()
+  const trimmedMiddle = middleName?.trim()
+  const trimmedLast = lastName?.trim()
+  const trimmedNickname = nickname?.trim()
+  if (trimmedFirst) data.firstName = trimmedFirst
+  if (trimmedMiddle) data.middleName = trimmedMiddle
+  if (trimmedLast) data.lastName = trimmedLast
+  if (trimmedNickname) data.nickname = trimmedNickname
+  await setDoc(ref, data, { merge: true })
+}
+
 /**
  * Look up the account holder's self-Patient ID, if one exists.
  * Returns null if no self-Patient is present (e.g., legacy user

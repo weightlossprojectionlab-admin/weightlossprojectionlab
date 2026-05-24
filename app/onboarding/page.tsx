@@ -10,7 +10,12 @@ import { useSubscription } from '@/hooks/useSubscription'
 import { doc, setDoc, Timestamp } from 'firebase/firestore'
 import { updateProfile } from 'firebase/auth'
 import { db } from '@/lib/firebase'
-import { createSelfPatient, findSelfPatientId, deriveDisplayName } from '@/lib/self-patient'
+import {
+  createSelfPatient,
+  findSelfPatientId,
+  updateSelfPatientName,
+  deriveDisplayName,
+} from '@/lib/self-patient'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
@@ -355,21 +360,42 @@ function OnboardingContent() {
         }
       }
 
-      // Self-Patient stub. The account holder is themselves a patient
-      // in their own household — vitals/meals/meds flow through the
-      // same patient infrastructure as family members. DOB / weight /
-      // conditions stay deferred — the patient detail editor handles
-      // completion via the `requiresProfileCompletion: true` flag.
-      // Idempotent: skip when a self-Patient already exists.
+      // Self-Patient: create or update. The account holder is
+      // themselves a patient in their own household — vitals/meals/
+      // meds flow through the same patient infrastructure as family
+      // members. DOB / weight / conditions stay deferred via the
+      // `requiresProfileCompletion: true` flag; the patient detail
+      // editor handles completion.
+      //
+      // Create-or-update: if a self-Patient already exists, update
+      // its name fields so re-onboarding with different names keeps
+      // the three identity sources (Auth.displayName, user.profile,
+      // self-Patient) consistent. Without this, re-running onboarding
+      // would update Auth + profile but leave the existing patient
+      // record stale.
       try {
+        const composedLegalName = [firstName, familyLastName]
+          .filter(Boolean)
+          .join(' ')
+          .trim()
+        const patientName =
+          composedLegalName || firstName || deriveDisplayName(user.displayName, user.email)
         const existingSelfPatientId = await findSelfPatientId(user.uid, db)
-        if (!existingSelfPatientId) {
-          const composedLegalName = [firstName, familyLastName]
-            .filter(Boolean)
-            .join(' ')
-            .trim()
-          const patientName =
-            composedLegalName || firstName || deriveDisplayName(user.displayName, user.email)
+        if (existingSelfPatientId) {
+          await updateSelfPatientName({
+            userId: user.uid,
+            patientId: existingSelfPatientId,
+            displayName: patientName,
+            ...(firstName ? { firstName } : {}),
+            ...(familyLastName ? { lastName: familyLastName } : {}),
+            db,
+          })
+          logger.info('[Onboarding] Self-Patient name updated', {
+            userId: user.uid,
+            patientId: existingSelfPatientId,
+            patientName,
+          })
+        } else {
           const { patientId } = await createSelfPatient({
             userId: user.uid,
             displayName: patientName,
@@ -384,7 +410,7 @@ function OnboardingContent() {
           })
         }
       } catch (err) {
-        logger.error('[Onboarding] Self-Patient creation failed (non-fatal)', err as Error)
+        logger.error('[Onboarding] Self-Patient create-or-update failed (non-fatal)', err as Error)
       }
 
       // Analytics
