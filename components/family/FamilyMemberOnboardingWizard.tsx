@@ -1095,10 +1095,10 @@ export default function FamilyMemberOnboardingWizard({
   function renderTypeSelectionStep() {
     return (
       <div className="space-y-6">
-        <p className="text-center text-muted-foreground mb-8">
-          Who are you adding?
-        </p>
-
+        {/* No body header — the wizard chrome already renders the
+            step title ("Who are you adding?") + subtitle ("Select the
+            type of family member") above this body. Repeating the
+            same text inside the body was redundant. */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Human Option — covers every life stage from newborn to
               senior. The wizard auto-applies the newborn intake
