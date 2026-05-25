@@ -117,7 +117,11 @@ export default async function RootLayout({
         <meta charSet="utf-8" />
         <meta name="color-scheme" content="light only" />
         <meta name="msvalidate.01" content="4AE02DCF3B27464702CC151D52D82EC7" />
-        <meta name="p-domain_verify" content="b3c9f7e54cc0c3a7f9f0fb503a5859233" />
+        {/* Old Pinterest verification meta removed — it had a typo'd name
+            ("p-domain_verify" with a hyphen instead of the canonical
+            "p:domain_verify" with a colon) and an outdated content hash
+            from a previous verification attempt. The canonical tag now
+            lives in the metadata.verification.other block above. */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
