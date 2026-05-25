@@ -26,6 +26,14 @@ export const metadata: Metadata = {
   },
   verification: {
     google: 'ug3K1EIvHU4OWAtIU-HdOVfhDvAOVhNd3R4xtse6zCc',
+    // Pinterest domain verification — renders <meta name="p:domain_verify"
+    // content="..."> in <head>. Pinterest doesn't have a first-class slot
+    // in Next.js metadata, so it goes through the `other` arbitrary-tag
+    // bucket. Verifying this domain unlocks website analytics + rich pin
+    // attribution back to wellnessprojectionlab.com.
+    other: {
+      'p:domain_verify': 'b3c9f7e54cc0c3a7910fb503a5859233',
+    },
   },
   openGraph: {
     type: 'website',
