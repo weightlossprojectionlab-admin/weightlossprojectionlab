@@ -58,8 +58,8 @@ const getWizardSteps = (isPet: boolean, isNewborn: boolean, hasSelectedType: boo
   // Step 2: Vitals
   steps.push({
     id: 'vitals',
-    title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Current weight',
-    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Just the seed weight — height, goals, and conditions live on the patient profile after creation.'
+    title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Height & weight',
+    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Required so the AI can compute BMI, growth percentiles, and projection trajectories from day one. Goals and conditions are still edited on the patient profile after creation.'
   });
 
   // Conditions step removed 2026-05-11 (Phase 1 E2.1) — conditions are
@@ -717,12 +717,23 @@ export default function FamilyMemberOnboardingWizard({
           return
         }
       } else {
-        // For humans, the slim wizard collects only currentWeight as
-        // the seed for the vitals timeline. Height, goals, activity
-        // level, and target weight are now edited post-create via the
-        // patient detail page Info tab (PatientFieldEditor).
+        // Adult humans (incl. children/teens — anyone non-pet, non-
+        // newborn): BOTH weight AND height required. The platform's
+        // ML/projections need height + weight + DOB together to
+        // compute BMI, growth percentiles, calorie targets, and
+        // trend projections from day one. Weight alone leaves the
+        // dashboard's trends + projections empty. Goals and
+        // conditions still live on the patient detail editor —
+        // those are refinements, not the ML baseline.
         if (!data.currentWeight) {
           toast.error('Please enter current weight')
+          return
+        }
+        const hasImperialHeight =
+          data.heightUnit === 'imperial' && (data.heightFeet || data.heightInches)
+        const hasMetricHeight = data.heightUnit === 'metric' && data.heightCm
+        if (!hasImperialHeight && !hasMetricHeight) {
+          toast.error('Please enter height — required so we can project growth and trends')
           return
         }
       }
@@ -1690,12 +1701,16 @@ export default function FamilyMemberOnboardingWizard({
       );
     }
 
-    // For adult humans, the slim wizard shows ONLY the seed weight.
-    // Height, activity level, weight goal, and target weight all live
-    // on the patient detail page Info tab as PatientFieldEditor cells
-    // post-onboarding. VitalsFormSection's existing flags
-    // (showGoals=false, hideHeight=true) achieve the slim view
-    // without forking the component.
+    // Adult humans: BOTH height AND weight are required at wizard
+    // time (reversed the E2.1 slim policy that hid height). The
+    // platform's projection-lab premise depends on BMI + growth
+    // percentiles + life-stage trajectories, all of which need
+    // height + weight + DOB together. Withholding height at
+    // create-time left the dashboard's trends/projections empty
+    // until the user manually filled it in via the patient editor
+    // — and most never did. Goals (target weight + motivation) and
+    // chronic conditions still live on the patient detail page
+    // editor; those are refinements, not the ML baseline.
     return (
       <VitalsFormSection
         data={{
@@ -1712,7 +1727,6 @@ export default function FamilyMemberOnboardingWizard({
         onChange={(updates) => setData({ ...data, ...updates })}
         required={true}
         showGoals={false}
-        hideHeight={true}
       />
     )
   }
