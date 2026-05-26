@@ -478,18 +478,16 @@ function ProfileContent() {
 
   const handleSaveAdvancedProfile = async (updates: any) => {
     try {
-      // If viewing a family member, update their patient record
+      // If viewing a family member, update their patient record.
+      // CRITICAL: send only the fields that changed, NOT a spread of
+      // profileData. profileData comes from Firestore onSnapshot and
+      // contains Timestamp objects (createdAt, lastModified, dateOfBirth)
+      // which JSON-serialize as `{seconds, nanoseconds}` shapes and fail
+      // `z.string().datetime()` validation at the PUT endpoint. The
+      // server already has the rest of the document; the route uses a
+      // strict `'field' in body` allowlist (route.ts L184-L224) so a
+      // partial payload is the correct contract.
       if (currentlyViewingMember) {
-        // Merge the updates with existing patient data (use profileData for fresh data)
-        const updatedPatientData = {
-          ...profileData,
-          ...updates,
-          // Ensure required fields are present
-          name: profileData?.name || currentlyViewingMember.name,
-          relationship: profileData?.relationship || currentlyViewingMember.relationship,
-          userId: profileData?.userId || currentlyViewingMember.userId,
-        }
-
         // Get Firebase auth token (bypasses CSRF check in middleware)
         const auth = getAuth()
         const currentUser = auth.currentUser
@@ -506,7 +504,7 @@ function ProfileContent() {
             'X-CSRF-Token': csrfToken,
             'Authorization': `Bearer ${authToken}`,
           },
-          body: JSON.stringify(updatedPatientData)
+          body: JSON.stringify(updates)
         })
 
         if (!response.ok) {
@@ -704,8 +702,16 @@ function ProfileContent() {
           )}
         </div>
 
-        {/* Advanced Health Profile Component - Only show if health_medical feature enabled */}
-        {profileData && userPrefs.hasFeature('health_medical') && (
+        {/* Advanced Health Profile — universal surface, not gated.
+            Allergies + lifestyle factors are safety-critical for every
+            user regardless of which onboarding focus (body_fitness /
+            nutrition_kitchen / health_medical) they picked. The earlier
+            health_medical gate hid this from users who picked one of
+            the other two focuses, including those who had allergies the
+            recipe engine needed to know about. Internal sections
+            (medications, condition questionnaires) self-gate based on
+            the user's filled-in health conditions. */}
+        {profileData && (
           <AdvancedHealthProfile
             profileData={profileData}
             onSave={handleSaveAdvancedProfile}

@@ -38,7 +38,6 @@ export function MedicationReviewModal({
   imageFiles,
   imagePreviews
 }: MedicationReviewModalProps) {
-  console.log('🔍 [MedicationReviewModal] patientId =', patientId)
   const { user } = useAuth()
   const [editedData, setEditedData] = useState<ParsedMedicationData>(parsedData)
   const [showRawText, setShowRawText] = useState(false)
@@ -49,18 +48,21 @@ export function MedicationReviewModal({
   const [selectedPatientId, setSelectedPatientId] = useState<string>(patientId || '')
   const [loadingPatients, setLoadingPatients] = useState(true)
 
-  // Log when modal opens to debug patientId issues
-  if (isOpen) {
+  // Log on open transition only, not every render. The previous
+  // body-level `if (isOpen) logger.info(...)` fired on every parent
+  // re-render (e.g. each useMedications polling tick) and produced
+  // dozens of "Modal opened" entries per minute. Gating in a useEffect
+  // keyed on isOpen reduces it to one log per open.
+  useEffect(() => {
+    if (!isOpen) return
     logger.info('[MedicationReviewModal] Modal opened', {
       patientId: patientId,
-      patientIdType: typeof patientId,
-      patientIdValue: JSON.stringify(patientId),
       patientIdLength: patientId?.length,
       hasUser: !!user,
       userId: user?.uid,
-      medicationName: editedData.name
+      medicationName: editedData.name,
     })
-  }
+  }, [isOpen, patientId, user, editedData.name])
 
   // Load family members when modal opens
   useEffect(() => {
@@ -72,16 +74,13 @@ export function MedicationReviewModal({
         const fetchedPatients = await medicalOperations.patients.getPatients()
         setPatients(fetchedPatients)
 
-        console.log('🔍 [MedicationReviewModal] Loaded patients, patientId from props:', patientId)
-        console.log('🔍 [MedicationReviewModal] Fetched patients:', fetchedPatients.map(p => ({ id: p.id, name: p.name })))
-
-        // IMPORTANT: The patientId prop is already set in state initialization
-        // Just validate it exists in the fetched patients
+        // The patientId prop is already set in state initialization;
+        // just validate it exists in the fetched patient list. If not,
+        // default to the first patient so the save dropdown always has
+        // a valid selection.
         if (patientId && fetchedPatients.some(p => p.id === patientId)) {
-          console.log('✅ [MedicationReviewModal] patientId is valid, keeping selection:', patientId)
-          setSelectedPatientId(patientId) // Explicitly set it again to be safe
+          setSelectedPatientId(patientId)
         } else if (fetchedPatients.length > 0) {
-          console.log('⚠️ [MedicationReviewModal] patientId not found or empty, defaulting to first patient')
           setSelectedPatientId(fetchedPatients[0].id)
         }
       } catch (error) {

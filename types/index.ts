@@ -360,18 +360,22 @@ export interface UserProfile {
   }>
   foodAllergies?: string[]
 
-  // Lifestyle Factors (for accurate metabolism calculations)
+  // Lifestyle Factors (for accurate metabolism calculations).
+  // 'unknown' is the canonical "not asked yet" state — distinct from
+  // 'never'/'no' which mean "the user said the negative." The reminder
+  // badge keys off 'unknown' to surface unresolved fields on the
+  // patient card / dashboard (see lib/unresolved-health.ts).
   lifestyle?: {
     // Smoking
-    smoking: 'never' | 'quit-recent' | 'quit-old' | 'current-light' | 'current-heavy'
+    smoking: 'unknown' | 'never' | 'quit-recent' | 'quit-old' | 'current-light' | 'current-heavy'
     smokingQuitDate?: Date // If quit within 6 months
 
     // Alcohol
-    alcoholFrequency: 'never' | 'light' | 'moderate' | 'heavy' // Times per week
+    alcoholFrequency: 'unknown' | 'never' | 'light' | 'moderate' | 'heavy' // Times per week
     weeklyDrinks: number // Average number of drinks
 
     // Recreational Drugs
-    recreationalDrugs: 'no' | 'cannabis-occasional' | 'cannabis-regular' | 'other'
+    recreationalDrugs: 'unknown' | 'no' | 'cannabis-occasional' | 'cannabis-regular' | 'other'
     drugTypes?: string[] // ['marijuana', 'stimulants', etc.]
   }
 

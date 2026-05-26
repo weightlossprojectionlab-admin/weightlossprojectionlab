@@ -45,15 +45,18 @@ export type UserPreferences = z.infer<typeof UserPreferencesSchema>
 // ============================================
 
 export const LifestyleSchema = z.object({
-  smoking: z.enum(['never', 'quit-recent', 'quit-old', 'current-light', 'current-heavy']),
+  // 'unknown' = not asked yet. Distinct from 'never'/'no' (which mean
+  // "the user said the negative"). The reminder badge surfaces fields
+  // still at 'unknown' on the patient card / dashboard.
+  smoking: z.enum(['unknown', 'never', 'quit-recent', 'quit-old', 'current-light', 'current-heavy']),
   smokingQuitDate: z.string().datetime().optional(),
-  alcoholFrequency: z.enum(['never', 'light', 'moderate', 'heavy']),
+  alcoholFrequency: z.enum(['unknown', 'never', 'light', 'moderate', 'heavy']),
   weeklyDrinks: z.number().min(0),
   // Mirrors the AdvancedHealthProfile button values. 'other' is the
   // "consult healthcare provider" escape hatch; cannabis is split out
   // because its metabolic profile differs from other substances and
   // analytics warnings branch on the distinction.
-  recreationalDrugs: z.enum(['no', 'cannabis-occasional', 'cannabis-regular', 'other']),
+  recreationalDrugs: z.enum(['unknown', 'no', 'cannabis-occasional', 'cannabis-regular', 'other']),
   drugTypes: z.array(z.string()).optional(),
 })
 

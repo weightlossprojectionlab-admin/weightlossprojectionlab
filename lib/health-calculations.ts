@@ -359,7 +359,10 @@ export function getHealthRiskProfile(params: {
  */
 export function calculateLifestyleImpact(params: {
   baseTDEE: number
-  smoking: 'never' | 'quit-recent' | 'quit-old' | 'current-light' | 'current-heavy'
+  // 'unknown' = not asked yet. Falls through to no adjustment, same as
+  // 'never'/'quit-old' — TDEE returns unmodified rather than baking in
+  // a guess. Resolution happens via the reminder badge, not here.
+  smoking: 'unknown' | 'never' | 'quit-recent' | 'quit-old' | 'current-light' | 'current-heavy'
   weeklyDrinks: number
 }): {
   adjustedTDEE: number

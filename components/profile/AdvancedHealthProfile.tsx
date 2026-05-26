@@ -17,8 +17,17 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
-import MedicationList from '@/components/health/MedicationList'
+import { ChevronDownIcon, ChevronUpIcon, CameraIcon } from '@heroicons/react/24/outline'
+// Canonical medication editor — same component as the patient detail
+// page. Replaces a smaller orphan list at @/components/health/
+// MedicationList which had no add affordance and a no-op onChange,
+// effectively making the profile-page Medications section read-only
+// and unsavable. Reuse here keeps add/edit/delete behavior identical
+// across both surfaces (DRY). HealthConditionModal +
+// MedicationManagementModal still consume the orphan; their cleanup
+// is a separate sweep (see [[project_medication_list_consolidation]]).
+import { MedicationList } from '@/components/patients/MedicationList'
+import { MedicationLabelCapture } from '@/components/medications/MedicationLabelCapture'
 import HealthConditionModal from '@/components/onboarding/HealthConditionModal'
 import { healthConditionQuestionnaires } from '@/lib/health-condition-questions'
 import type { HealthConditionQuestionnaire } from '@/lib/health-condition-questions'
@@ -117,17 +126,27 @@ export function AdvancedHealthProfile({
   )
 
   // Use real-time medications hook (DRY) - works for both user profile and patient profiles
-  const { medications, loading: loadingMedications } = useMedications({
+  const { medications, loading: loadingMedications, refetch: refetchMedications } = useMedications({
     patientId: patientId, // Will be selectedMemberId || user?.uid from parent
     autoFetch: true
   })
 
+  // Scan-prescription modal state. Lives at the AdvancedHealthProfile
+  // level so it can be opened from inside the Medications collapsible
+  // and dismissed independently of the section's open/closed state.
+  const [showMedCapture, setShowMedCapture] = useState(false)
+
+  // Default to 'unknown' on every categorical field — distinct from
+  // 'never'/'no'. The reminder badge keys off 'unknown' to surface
+  // unresolved fields elsewhere (patient card / dashboard). Once a
+  // user picks any other value, the field is "answered" regardless
+  // of which way they answered. See types/index.ts → UserProfile.lifestyle.
   const [lifestyle, setLifestyle] = useState(
     profileData?.lifestyle || {
-      smoking: 'never',
-      alcoholFrequency: 'never',
+      smoking: 'unknown',
+      alcoholFrequency: 'unknown',
       weeklyDrinks: 0,
-      recreationalDrugs: 'no'
+      recreationalDrugs: 'unknown'
     }
   )
   const [bodyMeasurements, setBodyMeasurements] = useState(profileData?.bodyMeasurements || {})
@@ -150,10 +169,10 @@ export function AdvancedHealthProfile({
     )
     setLifestyle(
       profileData?.lifestyle || {
-        smoking: 'never',
-        alcoholFrequency: 'never',
+        smoking: 'unknown',
+        alcoholFrequency: 'unknown',
         weeklyDrinks: 0,
-        recreationalDrugs: 'no'
+        recreationalDrugs: 'unknown'
       }
     )
     setBodyMeasurements(profileData?.bodyMeasurements || {})
@@ -194,7 +213,13 @@ export function AdvancedHealthProfile({
     allergies: foodAllergies.length,
     conditions: healthConditions.length,
     medications: medications.length,
-    lifestyle: (lifestyle.smoking !== 'never' ? 1 : 0) + (lifestyle.alcoholFrequency !== 'never' ? 1 : 0) + (lifestyle.recreationalDrugs !== 'no' ? 1 : 0),
+    // Count *answered* lifestyle fields (anything other than the
+    // 'unknown' not-asked state). Previously this counted "non-baseline"
+    // values, so a user who answered "never smoker" got a 0 here — same
+    // count as a user who hadn't been asked at all. The summary tile
+    // now reflects resolution state, which is what the badge mechanism
+    // needs to read from.
+    lifestyle: (lifestyle.smoking !== 'unknown' ? 1 : 0) + (lifestyle.alcoholFrequency !== 'unknown' ? 1 : 0) + (lifestyle.recreationalDrugs !== 'unknown' ? 1 : 0),
     measurements: Object.keys(bodyMeasurements).filter(k => bodyMeasurements[k]).length
   }
 
@@ -459,7 +484,12 @@ export function AdvancedHealthProfile({
         </div>
       </CollapsibleSection>
 
-      {/* Medications Section */}
+      {/* Medications Section — canonical add/edit/delete (DRY). Adds
+          via the paired-photo MedicationLabelCapture modal (camera on
+          mobile, file upload / drag-drop on desktop). Edits + deletes
+          via the same MedicationList component the patient detail
+          page uses. The real-time listener in useMedications keeps the
+          list in sync without a manual refetch. */}
       {patientId && (
         <CollapsibleSection
           title="Medications"
@@ -471,27 +501,44 @@ export function AdvancedHealthProfile({
         >
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Track medications to get drug interaction warnings and ensure meal recommendations
-              don&apos;t conflict with your prescriptions.
+              Track medications to get drug interaction warnings and ensure meal
+              recommendations don&apos;t conflict with your prescriptions.
             </p>
-            {loadingMedications ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                <p className="text-sm text-muted-foreground mt-2">Loading medications...</p>
-              </div>
-            ) : (
-              <MedicationList
-                medications={medications}
-                onChange={async () => {
-                  // No need to manually update - real-time listener will handle it
-                  toast.success('Medications updated')
-                }}
-                label="Current Medications"
-                description="Scan prescription bottles or add medications manually"
-              />
-            )}
+
+            <MedicationList
+              patientId={patientId}
+              medications={medications}
+              loading={loadingMedications}
+              onMedicationUpdated={refetchMedications}
+            />
+
+            <button
+              type="button"
+              onClick={() => setShowMedCapture(true)}
+              className="w-full px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium flex items-center justify-center gap-2"
+            >
+              <CameraIcon className="w-5 h-5" />
+              <span>Scan or Upload Prescription</span>
+            </button>
           </div>
         </CollapsibleSection>
+      )}
+
+      {/* Scan-prescription capture modal. Rendered outside the
+          CollapsibleSection so its fixed-position overlay isn't
+          constrained by the section's overflow rules. */}
+      {patientId && (
+        <MedicationLabelCapture
+          isOpen={showMedCapture}
+          onClose={() => setShowMedCapture(false)}
+          onSuccess={() => {
+            // Real-time listener will refresh the list; this is for
+            // any consumers that prefer an explicit refetch signal.
+            refetchMedications()
+            setShowMedCapture(false)
+          }}
+          patientId={patientId}
+        />
       )}
 
       {/* Lifestyle Factors */}
@@ -510,6 +557,7 @@ export function AdvancedHealthProfile({
             </label>
             <div className="grid grid-cols-2 gap-2">
               {[
+                { value: 'unknown', label: 'Not specified' },
                 { value: 'never', label: 'Never Smoked' },
                 { value: 'quit-old', label: 'Quit (6+ months)' },
                 { value: 'quit-recent', label: 'Recently Quit' },
@@ -545,6 +593,7 @@ export function AdvancedHealthProfile({
                   onChange={e => setLifestyle({ ...lifestyle, alcoholFrequency: e.target.value })}
                   className="w-full px-3 py-2 border-2 border-border rounded-lg focus:border-primary focus:outline-none"
                 >
+                  <option value="unknown">Not specified</option>
                   <option value="never">Never</option>
                   <option value="light">Light (1-2 times/week)</option>
                   <option value="moderate">Moderate (3-4 times/week)</option>
@@ -573,6 +622,7 @@ export function AdvancedHealthProfile({
             </label>
             <div className="grid grid-cols-2 gap-2">
               {[
+                { value: 'unknown', label: 'Not specified' },
                 { value: 'no', label: 'No' },
                 { value: 'cannabis-occasional', label: 'Cannabis (Occasional)' },
                 { value: 'cannabis-regular', label: 'Cannabis (Regular)' },

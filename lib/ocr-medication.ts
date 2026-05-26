@@ -513,45 +513,34 @@ export async function extractMedicationFromImage(
   try {
     logger.info('[OCR] Extracting medication from image - ACCURACY MODE: Using Gemini Vision AI first', { side })
 
-    // ACCURACY PRIORITY: Try Gemini Vision AI FIRST for maximum accuracy
-    // Gemini understands context, handles poor quality images, and extracts structured data reliably
-    try {
-      logger.info('[OCR] Attempting Gemini Vision AI (primary method)', { side })
-      const geminiResult = await extractMedicationWithGemini(imageFile, side)
+    // Gemini Vision is the ONLY medication OCR path. The Tesseract
+    // fallback was removed 2026-05-26 after:
+    //   - CSP `connect-src` blocks Tesseract's `data:` WASM blob, so
+    //     the fallback couldn't even load reliably (dev or prod).
+    //   - On the rare occasions it loaded, it produced 20-30%-
+    //     confidence garbage (upside-down / mirrored text). The
+    //     parser still returned that garbage as a "medication name,"
+    //     which the review modal happily prefilled — silently
+    //     contaminating the medications record.
+    //   - All other OCR surfaces (receipts, documents, drivers
+    //     license) migrated off Tesseract to Gemini 2.5 earlier this
+    //     month per session_2026-05-15_receipt_ocr_reconciliation.
+    //     Medication OCR was the last holdout.
+    // Returns null on failure (rather than throwing) to preserve the
+    // graceful-degradation contract that extractMedicationFromTwoImages
+    // relies on: if one of {front, back} fails, the other can still
+    // contribute via mergeExtractedMedications. The caller surfaces a
+    // "Could not read the label" error when both sides return null.
+    logger.info('[OCR] Attempting Gemini Vision AI', { side })
+    const geminiResult = await extractMedicationWithGemini(imageFile, side)
 
-      if (geminiResult && geminiResult.medicationName && geminiResult.medicationName !== 'Unknown') {
-        logger.info('[OCR] ✅ Gemini Vision succeeded - high accuracy extraction')
-        return geminiResult
-      }
-
-      logger.warn('[OCR] Gemini Vision returned incomplete data, falling back to Tesseract OCR')
-    } catch (geminiError) {
-      logger.error('[OCR] Gemini Vision failed, falling back to Tesseract OCR', geminiError as Error)
+    if (geminiResult && geminiResult.medicationName && geminiResult.medicationName !== 'Unknown') {
+      logger.info('[OCR] Gemini Vision succeeded')
+      return geminiResult
     }
 
-    // FALLBACK: Only use Tesseract OCR if Gemini fails (free but less accurate)
-    logger.info('[OCR] Using Tesseract OCR fallback')
-    const { text, confidence } = await extractTextFromImage(imageFile, onProgress)
-
-    if (!text || text.length < 10) {
-      logger.error('[OCR] Both Gemini and Tesseract failed - no text extracted')
-      return null
-    }
-
-    // Parse medication info from OCR text
-    const medication = parseMedicationFromText(text)
-
-    if (!medication) {
-      logger.error('[OCR] Failed to parse medication from OCR text')
-      return null
-    }
-
-    logger.info('[OCR] Tesseract OCR extraction complete', {
-      confidence: Math.round(confidence),
-      medicationName: medication.medicationName
-    })
-
-    return medication
+    logger.error('[OCR] Gemini Vision returned no usable result')
+    return null
 
   } catch (error) {
     logger.error('[OCR] Medication extraction failed', error as Error)

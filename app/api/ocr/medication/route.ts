@@ -130,16 +130,57 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Initialize Gemini
+    // Initialize Gemini.
+    //
+    // generationConfig tuned for Gemini 2.5 Flash quirks documented in
+    // feedback_gemini_2_5_flash_gotchas (receipt OCR was the first
+    // route to hit + fix these; medication OCR was the last holdout):
+    //
+    //   - responseMimeType: 'application/json' forces the model to
+    //     emit a single JSON object instead of mixing in prose or
+    //     markdown code fences. Without it, JSON.parse intermittently
+    //     fails on extracted text wrapped in ```json blocks.
+    //
+    //   - thinkingBudget: 0 disables the model's internal
+    //     chain-of-thought tokens. The 2.5 family otherwise burns up
+    //     to maxOutputTokens *thinking* before emitting any output,
+    //     producing truncated/empty JSON on dense labels (the
+    //     Tacrolimus / CVS-pharmacy / Metoprolol photos in the
+    //     2026-05-26 smoke test all 500'd against the old 1024-token
+    //     cap because thinking ate the entire budget). The TS types
+    //     for the SDK don't expose this field yet, hence the cast.
+    //
+    //   - maxOutputTokens: 16384 gives the extraction enough headroom
+    //     for the full warnings array + multi-line directions on a
+    //     paired-photo back panel. The old 1024 cap was the source
+    //     of the truncated-JSON 500s.
+    //
+    //   - temperature 0.2 retained — factual extraction (medication
+    //     name, strength, NDC, prescriber) wants minimal creativity.
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-flash',
       generationConfig: {
-        temperature: 0.2, // Low temperature for factual extraction
+        // Bumped from 0.2 to 0.4 to avoid the "degenerate digit-loop"
+        // failure mode documented in feedback_gemini_2_5_flash_gotchas
+        // (low temperature + structured output + digit-heavy fields
+        // like NDC/Rx# can latch into a repeating-character runaway
+        // until the model hits maxOutputTokens). responseMimeType
+        // still enforces JSON shape, so the higher temperature only
+        // affects token-level diversity.
+        temperature: 0.4,
         topK: 32,
         topP: 1,
-        maxOutputTokens: 1024,
-      }
+        maxOutputTokens: 16384,
+        responseMimeType: 'application/json',
+        // Note the nesting: `thinkingConfig: { thinkingBudget: 0 }`,
+        // NOT a top-level `thinkingBudget: 0`. The REST API ignores
+        // the latter, so on dense labels (Tacrolimus / CVS pharmacy
+        // sheet / Metoprolol) thinking still eats the entire token
+        // budget and produces truncated JSON → 500. Matches the
+        // pattern proven on app/api/ocr/receipt/route.ts.
+        thinkingConfig: { thinkingBudget: 0 },
+      } as any,
     })
 
     const hasTwoSides = labeledImages.length >= 2
@@ -148,7 +189,15 @@ export async function POST(request: NextRequest) {
 
     const frontFocus = `This is the FRONT of a prescription bottle — the small main sticker. PRIORITIZE these fields if visible: medicationName, strength, dosageForm, rxNumber, prescribingDoctor, patientName, patientAddress, pharmacy. Dosage instructions, refills, NDC, and dates may be truncated or absent on the front — extract whatever IS visible but expect the back panel to be authoritative for those.`
     const backFocus = `This is the BACK / wraparound panel of a prescription bottle. PRIORITIZE these fields and read them in full: frequency (COMPLETE dosage instructions — do NOT truncate), ndc, quantity, refills, fillDate, expirationDate, warnings. The medication name, strength, and Rx number may also appear here — extract them too if present.`
-    const genericFocus = `You are looking at ONE photo of a prescription bottle. It may be the front (drug name, strength, Rx number, prescriber) or the back/wraparound panel (dosage instructions, warnings, refills, NDC). Extract everything visible.`
+    // The image can be one of three formats. Bottle labels are the
+    // common case, but users also photograph the printed pharmacy
+    // info sheet / receipt that comes with the prescription — those
+    // have a different layout (large header banner with patient name
+    // in "Last, First" format, structured "Prescription Information"
+    // and "Receipt & Refill Information" sections). The previous
+    // bottle-only framing biased the model away from the info-sheet
+    // layout, causing patientName to come back null on those scans.
+    const genericFocus = `You are looking at ONE photo of a prescription. It may be: (a) the FRONT of a bottle label (drug name, strength, Rx number, prescriber); (b) the BACK/wraparound panel of a bottle (dosage instructions, warnings, refills, NDC); or (c) a printed pharmacy info sheet or receipt that accompanies the prescription (header banner with patient name, "Prescription Information" section, "Receipt & Refill Information" section). Extract everything visible regardless of layout.`
 
     const labelHeader = hasTwoSides
       ? `You are looking at TWO photos of the SAME prescription bottle: image 1 is the FRONT (small main label with drug name, strength, Rx number, prescriber) and image 2 is the BACK/wraparound panel (dosage instructions, warnings, refills, NDC, fill/expiration dates). Merge both photos into a SINGLE record. If a field appears on both sides, prefer the FRONT for identity fields (medicationName, strength, rxNumber, prescribingDoctor) and the BACK for instruction fields (frequency, warnings, ndc, refills, fillDate, expirationDate).`
@@ -196,10 +245,25 @@ CRITICAL REQUIREMENTS:
     - "Inject 10 units subcutaneously before meals"
   ✗ DO NOT return just "every day" or "twice daily" - MUST include quantity and method!
 
+**patientName field** - VERY IMPORTANT - Look carefully for patient name:
+  - On bottle labels: usually in plain text near the top of the front
+    sticker (e.g. "Barbara Rice", "Jane Doe")
+  - On pharmacy info sheets / receipts: in a colored header banner
+    at the top of the page, often in "LAST, FIRST" format (e.g.
+    "Rice, Barbara") or first-name-stacked-above-last-name
+  - May be alongside the patient address (street/city) — both
+    typically appear in the same section
+  - Format: Extract the name in "First Last" order regardless of
+    how it appears on the label. If the label shows "Rice, Barbara",
+    return "Barbara Rice". If it shows "Barbara Rice" already,
+    return as-is.
+  - DO NOT confuse the patient name with the prescriber/doctor name
+    or the pharmacist (RPH) name — those are separate fields.
+
 **patientAddress field** - Extract complete address:
   - Include street number, street name, apartment/unit number
   - Include city if visible
-  - Example: "40 Cross Rd Apt 71, Malawa"
+  - Example: "478 Clubhouse Dr, Middletown, NJ"
 
 **quantity field** - Format as number + unit:
   - "30 tablets", "60 capsules", "100 ml", "1 tube"
@@ -226,9 +290,19 @@ IMPORTANT: Make your best effort to find the prescribing doctor name - this is c
     const response = await result.response
     const text = response.text()
 
-    // Parse JSON response
-    const cleanedText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    const parsedRaw = JSON.parse(cleanedText)
+    // Parse JSON response. Two layers of cleanup before JSON.parse:
+    //   1. Strip markdown fences (responseMimeType usually prevents
+    //      these, belt-and-suspenders).
+    //   2. Run sanitizeJsonControlChars (defined below) which uses a
+    //      string-state machine to escape control chars that appear
+    //      INSIDE string values without touching JSON structural
+    //      characters. Canonical pattern from the receipt OCR route.
+    const cleanedText = text
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim()
+    const sanitizedJson = sanitizeJsonControlChars(cleanedText)
+    const parsedRaw = JSON.parse(sanitizedJson)
 
     // Runtime schema gate. Output flows into a patient medication
     // record (PHI: patient name, prescriber, NDC, etc.). A malformed
@@ -349,4 +423,75 @@ IMPORTANT: Make your best effort to find the prescribing doctor name - this is c
       { status: 500 }
     )
   }
+}
+
+/**
+ * Sanitize raw Gemini JSON output by escaping control characters that
+ * appear INSIDE string values. Gemini 2.5 Flash occasionally emits
+ * literal newlines / tabs / control chars inside string literals
+ * (e.g. inside a multi-line "warnings" entry), which JSON.parse
+ * rejects with "Bad control character in string literal."
+ *
+ * The naive regex-strip approach would also nuke control chars that
+ * happen to fall outside strings, but a tree-walking parser is
+ * heavier than needed. This state machine tracks whether we're inside
+ * a string literal (and whether the previous char was a backslash, in
+ * which case the current char is already escaped) and re-encodes
+ * in-string control chars to their JSON escape form. Outside strings,
+ * everything passes through untouched. Cheap defense-in-depth — a
+ * well-behaved response is its own fixed point through this function.
+ *
+ * Canonical implementation: app/api/ocr/receipt/route.ts (the
+ * fix-by-fix proof for the Gemini 2.5 hardening pattern documented
+ * in feedback_gemini_2_5_flash_gotchas).
+ */
+function sanitizeJsonControlChars(raw: string): string {
+  let result = ''
+  let inString = false
+  let escapeNext = false
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (escapeNext) {
+      result += ch
+      escapeNext = false
+      continue
+    }
+    if (ch === '\\' && inString) {
+      result += ch
+      escapeNext = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      result += ch
+      continue
+    }
+    if (inString) {
+      const code = ch.charCodeAt(0)
+      if (code < 0x20) {
+        switch (ch) {
+          case '\n':
+            result += '\\n'
+            break
+          case '\r':
+            result += '\\r'
+            break
+          case '\t':
+            result += '\\t'
+            break
+          case '\b':
+            result += '\\b'
+            break
+          case '\f':
+            result += '\\f'
+            break
+          default:
+            result += '\\u' + code.toString(16).padStart(4, '0')
+        }
+        continue
+      }
+    }
+    result += ch
+  }
+  return result
 }

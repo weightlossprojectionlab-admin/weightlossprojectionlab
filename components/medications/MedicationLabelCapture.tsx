@@ -1,12 +1,23 @@
 'use client'
 
-import { useRef, useState } from 'react'
-import { CameraIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
+import { useCallback, useRef, useState } from 'react'
+import { ArrowUpTrayIcon, CameraIcon, XMarkIcon, DocumentTextIcon } from '@heroicons/react/24/outline'
 import { extractMedicationFromTwoImages, type ExtractedMedicationText } from '@/lib/ocr-medication'
 import type { ParsedMedicationData } from '@/lib/medication-parser'
 import { logger } from '@/lib/logger'
+import { useFileDrop } from '@/hooks/useFileDrop'
 import toast from 'react-hot-toast'
 import { MedicationReviewModal } from './MedicationReviewModal'
+
+// Read a File as a base64 data URL. Pure helper — lives at module
+// scope so the useCallback deps below stay stable across renders.
+const readFileAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
 
 interface MedicationLabelCaptureProps {
   isOpen: boolean
@@ -51,8 +62,6 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
   const frontInputRef = useRef<HTMLInputElement>(null)
   const backInputRef = useRef<HTMLInputElement>(null)
 
-  if (!isOpen) return null
-
   const reset = () => {
     setStep('front')
     setFrontFile(null)
@@ -71,23 +80,19 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
     onClose()
   }
 
-  const readFile = (file: File): Promise<string> =>
-    new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => resolve(reader.result as string)
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-
-  const handleFrontSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  // Shared file processors — both the file input change handler AND
+  // the drag-drop handler route through these. useFileDrop already
+  // type-checks `image/*` before invoking, so callers from drag-drop
+  // skip the input-side guard. We keep the guard for the input path
+  // because some browsers will pass through non-image files even when
+  // accept="image/*" is set (the attribute is a hint, not a contract).
+  const processFrontFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file')
       return
     }
     try {
-      const dataUrl = await readFile(file)
+      const dataUrl = await readFileAsDataUrl(file)
       setFrontFile(file)
       setFrontPreview(dataUrl)
       setStep('back')
@@ -95,24 +100,50 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
       logger.error('[MedicationLabelCapture] Failed to read front image', err as Error)
       toast.error('Failed to read image')
     }
-  }
+  }, [])
 
-  const handleBackSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const processBackFile = useCallback(async (file: File) => {
     if (!file.type.startsWith('image/')) {
       toast.error('Please select an image file')
       return
     }
     try {
-      const dataUrl = await readFile(file)
+      const dataUrl = await readFileAsDataUrl(file)
       setBackFile(file)
       setBackPreview(dataUrl)
     } catch (err) {
       logger.error('[MedicationLabelCapture] Failed to read back image', err as Error)
       toast.error('Failed to read image')
     }
+  }, [])
+
+  const handleFrontSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) processFrontFile(file)
   }
+
+  const handleBackSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) processBackFile(file)
+  }
+
+  // Drag-drop targets. Each pane gets its own drop zone — they're
+  // displayed sequentially (front then back) so collision isn't a
+  // concern. `isDragging` toggles a visual outline so the user knows
+  // the zone is ready to accept the drop.
+  const { isDragging: isFrontDragging, dropHandlers: frontDropHandlers } = useFileDrop({
+    onFile: processFrontFile,
+  })
+  const { isDragging: isBackDragging, dropHandlers: backDropHandlers } = useFileDrop({
+    onFile: processBackFile,
+  })
+
+  // Early return AFTER all hooks have been called — Rules of Hooks
+  // requires every hook to fire in the same order on every render. The
+  // closed-modal render still has to call useState, useRef, useCallback,
+  // and useFileDrop or React fails with "Rendered more hooks than during
+  // the previous render."
+  if (!isOpen) return null
 
   const handleRetakeFront = () => {
     setFrontFile(null)
@@ -155,6 +186,11 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
       setParsedData(parsed)
       setExtractedText(extracted.rawText || '')
       setShowReview(true)
+      // Reset step out of 'processing' so when the review modal closes
+      // (whether via Save or Cancel), the outer modal isn't stuck on
+      // the spinner. Drop back to whichever capture step would let the
+      // user retake — matches the catch-block behavior below.
+      setStep(backFile ? 'back' : 'front')
     } catch (error) {
       toast.dismiss(loadingToast)
       logger.error('[MedicationLabelCapture] Extraction error', error as Error)
@@ -195,10 +231,24 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
                   </p>
                 </div>
 
-                <div className="border-2 border-dashed border-border rounded-lg p-12 text-center">
-                  <CameraIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <div
+                  {...frontDropHandlers}
+                  className={`border-2 rounded-lg p-12 text-center transition-colors ${
+                    isFrontDragging
+                      ? 'border-solid border-primary bg-primary/5'
+                      : 'border-dashed border-border'
+                  }`}
+                >
+                  {isFrontDragging ? (
+                    <ArrowUpTrayIcon className="w-16 h-16 mx-auto text-primary mb-4" />
+                  ) : (
+                    <CameraIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  )}
                   <p className="text-muted-foreground mb-4">
-                    Take a clear photo of the <strong>front</strong> of the prescription bottle.
+                    {isFrontDragging
+                      ? 'Release to upload the front of the label.'
+                      : <>Take a clear photo of the <strong>front</strong> of the prescription bottle.</>
+                    }
                   </p>
 
                   <input
@@ -220,6 +270,8 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
 
                   <p className="text-xs text-muted-foreground mt-4">
                     Good lighting, no glare, the whole label in frame.
+                    {' '}
+                    <span className="hidden md:inline">Or drag and drop an image here.</span>
                   </p>
                 </div>
 
@@ -267,10 +319,24 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
                   </p>
                 </div>
 
-                <div className="border-2 border-dashed border-border rounded-lg p-12 text-center">
-                  <CameraIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                <div
+                  {...backDropHandlers}
+                  className={`border-2 rounded-lg p-12 text-center transition-colors ${
+                    isBackDragging
+                      ? 'border-solid border-primary bg-primary/5'
+                      : 'border-dashed border-border'
+                  }`}
+                >
+                  {isBackDragging ? (
+                    <ArrowUpTrayIcon className="w-16 h-16 mx-auto text-primary mb-4" />
+                  ) : (
+                    <CameraIcon className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+                  )}
                   <p className="text-muted-foreground mb-4">
-                    Take a clear photo of the <strong>back/side</strong> of the prescription bottle.
+                    {isBackDragging
+                      ? 'Release to upload the back of the label.'
+                      : <>Take a clear photo of the <strong>back/side</strong> of the prescription bottle.</>
+                    }
                   </p>
 
                   <input
@@ -289,6 +355,9 @@ export function MedicationLabelCapture({ isOpen, onClose, onSuccess, patientId }
                     <CameraIcon className="w-5 h-5" />
                     <span>{backPreview ? 'Change Back Photo' : 'Take Back Photo'}</span>
                   </label>
+                  <p className="hidden md:block text-xs text-muted-foreground mt-4">
+                    Or drag and drop an image here.
+                  </p>
 
                   {backPreview && (
                     <div className="mt-4">
