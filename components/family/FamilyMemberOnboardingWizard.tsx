@@ -60,7 +60,7 @@ const getWizardSteps = (isPet: boolean, isNewborn: boolean, hasSelectedType: boo
   steps.push({
     id: 'vitals',
     title: isPet ? 'Pet vitals' : isNewborn ? 'Newborn health check' : 'Height & weight',
-    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Required so that we can compute BMI, growth percentiles, and projection trajectories from day one. Goals and conditions are still edited on the patient profile after creation.'
+    subtitle: isPet ? 'Weight and activity for health tracking' : isNewborn ? 'Birth weight, feeding & pediatrician' : 'Required to personalize the dashboard from day one — trends, healthy weight ranges, and projections all need both numbers. Goals and conditions are edited on the patient profile after.'
   });
 
   // Conditions step removed 2026-05-11 (Phase 1 E2.1) — conditions are
