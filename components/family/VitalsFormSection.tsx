@@ -83,31 +83,38 @@ export function VitalsFormSection({
     const currentWeight = parseFloat(data.currentWeight)
     const { bmi, minWeight, maxWeight } = bmiData
 
+    // Recommendation copy uses third-person/no-pronoun framing
+    // ("BMI X indicates …") rather than second-person ("Your BMI …").
+    // This component renders inside the family-member creation wizard
+    // — the BMI belongs to the PATIENT being added, not the caregiver
+    // using the wizard, so "Your BMI" was misleading anyone adding a
+    // child / parent / spouse / pet relative. Drop the pronoun and
+    // the copy works for self + every relative without rewording.
     if (bmi < 18.5) {
       // Underweight - suggest gaining to minimum healthy weight
       return {
         target: Math.round(minWeight * 10) / 10,
-        reason: `Your BMI (${bmi.toFixed(1)}) indicates underweight. Aim for ${Math.round(minWeight)}-${Math.round(maxWeight)} ${data.weightUnit} for optimal health.`
+        reason: `BMI ${bmi.toFixed(1)} indicates underweight. Aim for ${Math.round(minWeight)}-${Math.round(maxWeight)} ${data.weightUnit} for optimal health.`
       }
     } else if (bmi >= 25 && bmi < 30) {
       // Overweight - suggest midpoint of healthy range
       const target = (minWeight + maxWeight) / 2
       return {
         target: Math.round(target * 10) / 10,
-        reason: `Your BMI (${bmi.toFixed(1)}) indicates overweight. Aim for ${Math.round(minWeight)}-${Math.round(maxWeight)} ${data.weightUnit} for optimal health.`
+        reason: `BMI ${bmi.toFixed(1)} indicates overweight. Aim for ${Math.round(minWeight)}-${Math.round(maxWeight)} ${data.weightUnit} for optimal health.`
       }
     } else if (bmi >= 30) {
       // Obese - suggest 10% weight loss initially
       const target = currentWeight * 0.9
       return {
         target: Math.round(target * 10) / 10,
-        reason: `Your BMI (${bmi.toFixed(1)}) indicates obesity. Start with a 10% weight loss goal to ${Math.round(target)} ${data.weightUnit}, then reassess.`
+        reason: `BMI ${bmi.toFixed(1)} indicates obesity. Start with a 10% weight loss goal to ${Math.round(target)} ${data.weightUnit}, then reassess.`
       }
     } else {
       // Healthy weight - suggest maintaining
       return {
         target: currentWeight,
-        reason: `Your BMI (${bmi.toFixed(1)}) is in the healthy range! Focus on maintaining your current weight.`
+        reason: `BMI ${bmi.toFixed(1)} is in the healthy range. Focus on maintaining current weight.`
       }
     }
   }
@@ -238,13 +245,17 @@ export function VitalsFormSection({
           </select>
         </div>
 
-        {/* AI Health Analysis */}
+        {/* Health Analysis — renamed from "AI Health Analysis" because
+            the recommendation is BMI-based rule logic against clinical
+            thresholds, not an ML/AI model. Calling it AI was over-
+            claiming. "Health Analysis" reads honestly to both
+            caregivers and patients. */}
         {suggestion && (
           <div className="mt-3 p-4 rounded-lg bg-primary/10 border-2 border-primary/30">
             <div className="flex items-start gap-3">
               <span className="text-2xl">🤖</span>
               <div className="flex-1">
-                <div className="font-semibold text-foreground mb-1">AI Health Analysis</div>
+                <div className="font-semibold text-foreground mb-1">Health Analysis</div>
                 <p className="text-sm text-foreground/80 leading-relaxed">{suggestion.reason}</p>
                 {suggestion.target !== parseFloat(data.currentWeight) && (
                   <button
