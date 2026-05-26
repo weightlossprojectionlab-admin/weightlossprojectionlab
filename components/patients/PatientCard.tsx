@@ -188,7 +188,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
   }
 
   return (
-    <div className={`bg-card rounded-lg border-2 p-6 hover:shadow-md transition-all relative ${
+    <div className={`bg-card rounded-lg border-2 p-6 hover:shadow-md transition-all relative flex flex-col h-full ${
       overdueActions.length > 0
         ? 'border-warning-dark hover:border-warning-dark'
         : 'border-border hover:border-purple-300'
@@ -411,7 +411,7 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
         </div>
       </Link>
       ) : (
-        <div>
+        <div className="flex flex-col flex-grow">
         {/* Overdue Actions Alert */}
         {overdueActions.length > 0 && (
           <div
@@ -546,8 +546,15 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
             keeps its original dimensions; the food-profile signal
             lives as a small alert pin in the header (added below
             via a separate render). Full detail (chips, prep
-            needs) lives on /patients/{id}. */}
-        <div className="space-y-2 text-sm text-muted-foreground mb-4">
+            needs) lives on /patients/{id}.
+
+            flex-grow on this block makes Details absorb the extra
+            vertical space within the flex column, so the Quick
+            Actions buttons below always land at the bottom edge
+            regardless of how many demographic fields are populated.
+            Without it, cards with fewer fields (no DOB, no gender)
+            had their buttons sit visibly higher than full cards. */}
+        <div className="space-y-2 text-sm text-muted-foreground mb-4 flex-grow">
           {/* Age + DOB. Humans render age and birthdate together
               with a smaller-text DOB; pets keep their canonical
               "Born MM/DD/YYYY" wording. */}
