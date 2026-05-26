@@ -12,6 +12,7 @@ import { VitalsFormSection } from '@/components/family/VitalsFormSection'
 import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { useSubscription } from '@/hooks/useSubscription'
+import { useConfirm } from '@/hooks/useConfirm'
 import PetVitalsWizard, { PetVitalsData } from '@/components/pets/PetVitalsWizard'
 import { getSpeciesCategory } from '@/lib/pet-species-utils'
 import { PetWeightStatusIndicator } from '@/components/pets/PetWeightStatusIndicator'
@@ -537,6 +538,9 @@ export default function FamilyMemberOnboardingWizard({
   const { user } = useAuth()
   const router = useRouter()
   const { subscription } = useSubscription()
+  // Confirm-dialog primitive — used to make caregivers acknowledge the
+  // ML/projection cost before skipping the height+weight vitals step.
+  const { confirm, ConfirmDialog } = useConfirm()
   const [currentStep, setCurrentStep] = useState(0)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showScanner, setShowScanner] = useState(false)
@@ -750,7 +754,30 @@ export default function FamilyMemberOnboardingWizard({
     }
   }
 
-  function handleSkip() {
+  async function handleSkip() {
+    // Special warning when caregiver skips the height+weight vitals
+    // step for an adult human. The ML/projection layer needs all
+    // three baseline inputs (DOB + weight + height) to render any
+    // meaningful dashboard signal; skipping leaves Trends + Weight
+    // chart + Calorie target + Growth percentile all empty until
+    // someone manually fills them in via the patient detail editor.
+    // Make the cost explicit before letting them through. Pets and
+    // newborns are skip-friendly without the warning — their vitals
+    // primitives (species standards, birth-data) carry the load
+    // without adult-style height.
+    const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
+    if (currentStepData.id === 'vitals' && !isPet && !isNewborn) {
+      const ok = await confirm({
+        title: 'Skip height and weight?',
+        message:
+          'Without height and weight, the dashboard can\'t show BMI, growth percentiles, weight projections, or calorie targets for this family member. You can fill them in later from their patient profile, but the trends and projections will stay empty until you do.',
+        confirmText: 'Skip anyway',
+        cancelText: 'Go back and enter',
+        variant: 'warning',
+      })
+      if (!ok) return
+    }
+
     if (currentStep < WIZARD_STEPS.length - 1) {
       setCurrentStep(currentStep + 1)
     }
@@ -2525,6 +2552,12 @@ export default function FamilyMemberOnboardingWizard({
         currentBillingInterval={subscription?.billingInterval}
         suggestedPlan="family_basic"
       />
+
+      {/* Confirm dialog — opens when caregiver tries to Skip the
+          height+weight vitals step. Modal is mounted unconditionally;
+          its `isOpen` is driven by the useConfirm hook's internal
+          state and the promise it returns from confirm(). */}
+      <ConfirmDialog />
 
       {/* Pet Vitals Wizard Modal */}
       {isPet && (
