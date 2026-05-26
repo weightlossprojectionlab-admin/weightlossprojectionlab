@@ -2618,13 +2618,15 @@ export default function FamilyMemberOnboardingWizard({
           </div>
         </div>
 
-        {/* Back to List */}
+        {/* Cancel — exits the wizard without saving and routes back
+            to /patients. "and go back" was redundant since canceling
+            always implies a return to where they came from. */}
         <button
           type="button"
           onClick={() => router.push('/patients')}
           className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          ← Cancel and go back
+          ← Cancel
         </button>
       </div>
 
