@@ -13,11 +13,17 @@ import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { useSubscription } from '@/hooks/useSubscription'
 import { useConfirm } from '@/hooks/useConfirm'
+// Shared health calculation primitives — same BMI + risk-profile
+// math used by the patient detail page and the AI Health Report.
+// Surfacing them in the wizard's review step gives caregivers an
+// immediate read on what they're committing to before tapping
+// Create Family Member, with no parallel math.
+import { calculateBMI, getHealthRiskProfile } from '@/lib/health-calculations'
 import PetVitalsWizard, { PetVitalsData } from '@/components/pets/PetVitalsWizard'
 import { getSpeciesCategory } from '@/lib/pet-species-utils'
 import { PetWeightStatusIndicator } from '@/components/pets/PetWeightStatusIndicator'
 import { getPetWeightConditions } from '@/hooks/usePetWeightConditions'
-import { getTodayDateString, isValidBirthDate, getBirthDateErrorMessage } from '@/lib/date-utils'
+import { getTodayDateString, isValidBirthDate, getBirthDateErrorMessage, calculateAge } from '@/lib/date-utils'
 import {
   getHumanLifeStage,
   formatHumanAgeDisplay,
@@ -2258,6 +2264,35 @@ export default function FamilyMemberOnboardingWizard({
     // Calculate weight display
     const weightDisplay = data.currentWeight ? `${data.currentWeight} ${data.weightUnit}` : ''
 
+    // Health risk profile — same BMI + risk math used by the patient
+    // detail page and the AI Health Report (DRY via
+    // lib/health-calculations). Only computed when we have the inputs
+    // it needs (non-pet, non-newborn, height + weight populated).
+    // Returns null otherwise so the section renders absent rather
+    // than half-broken.
+    let riskProfile: ReturnType<typeof getHealthRiskProfile> | null = null
+    if (!isPet && !isNewborn && data.currentWeight) {
+      let heightForBMI = 0
+      if (data.heightUnit === 'imperial' && data.heightFeet) {
+        heightForBMI =
+          (parseInt(data.heightFeet) || 0) * 12 + (parseInt(data.heightInches) || 0)
+      } else if (data.heightUnit === 'metric' && data.heightCm) {
+        heightForBMI = parseFloat(data.heightCm)
+      }
+      if (heightForBMI > 0) {
+        const { bmi } = calculateBMI({
+          weight: parseFloat(data.currentWeight),
+          height: heightForBMI,
+          units: data.heightUnit === 'metric' ? 'metric' : 'imperial',
+        })
+        riskProfile = getHealthRiskProfile({
+          bmi,
+          gender: (data.gender as 'male' | 'female' | 'other' | 'prefer-not-to-say') || 'other',
+          age: calculateAge(data.dateOfBirth),
+        })
+      }
+    }
+
     // Life stage badge color
     const badgeColor = (() => {
       switch (lifeStageResult.stage) {
@@ -2356,6 +2391,51 @@ export default function FamilyMemberOnboardingWizard({
                 {data.activityLevel && <p><span className="text-white/70">Activity Level:</span> {data.activityLevel}</p>}
                 {data.primaryMotivation && <p><span className="text-white/70">Motivation:</span> {data.primaryMotivation.replace(/-/g, ' ')}</p>}
                 {data.targetWeight && <p><span className="text-white/70">Target Weight:</span> {data.targetWeight} {data.weightUnit}</p>}
+              </div>
+            </div>
+          )}
+
+          {/* Health Risks & Concerns — immediate read on what the
+              ML will flag once this patient lands on the dashboard.
+              Uses the same primitives (calculateBMI +
+              getHealthRiskProfile) that the patient detail page and
+              the AI Health Report consume, so any change here cascades
+              consistently. Renders only when we can compute (non-pet,
+              non-newborn, height + weight present). */}
+          {riskProfile && (
+            <div className="pt-4 border-t border-white/20">
+              <h3 className="font-semibold mb-2 text-white">Health Risks &amp; Concerns</h3>
+              <div className="space-y-2 text-sm text-white/90">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-white/70">BMI category:</span>
+                  <span className="font-semibold">{riskProfile.bmiCategory}</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-xs font-bold uppercase tracking-wide ${
+                      riskProfile.riskLevel === 'severe'
+                        ? 'bg-red-500/30 text-red-100 border border-red-500/50'
+                        : riskProfile.riskLevel === 'high'
+                          ? 'bg-orange-500/30 text-orange-100 border border-orange-500/50'
+                          : riskProfile.riskLevel === 'moderate'
+                            ? 'bg-yellow-500/30 text-yellow-100 border border-yellow-500/50'
+                            : 'bg-green-500/30 text-green-100 border border-green-500/50'
+                    }`}
+                  >
+                    {riskProfile.riskLevel} risk
+                  </span>
+                </div>
+                {riskProfile.warnings.length > 0 && (
+                  <ul className="space-y-1 text-xs text-white/80 list-disc list-inside">
+                    {riskProfile.warnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                )}
+                {riskProfile.likelyConditions.length > 0 && (
+                  <p className="text-xs">
+                    <span className="text-white/70">Conditions to monitor: </span>
+                    {riskProfile.likelyConditions.join(', ')}
+                  </p>
+                )}
               </div>
             </div>
           )}
@@ -2496,15 +2576,26 @@ export default function FamilyMemberOnboardingWizard({
               </button>
             )}
 
-            {currentStepData.id !== 'basic_info' && currentStepData.id !== 'review' && (
-              <button
-                type="button"
-                onClick={handleSkip}
-                className="px-6 py-3 rounded-xl font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Skip
-              </button>
-            )}
+            {/* Skip is meaningful only on steps that capture data
+                the rest of the wizard doesn't depend on. type_selection
+                is the branching primitive — the wizard literally
+                can't render basic_info/vitals/etc. without knowing
+                Person vs Pet, so Skip has no semantic meaning there
+                and is hidden. basic_info + review remain hidden by
+                their own gating (basic_info requires identity, review
+                is the commit step). vitals + food_allergies allow
+                Skip with the explicit warning modal (see handleSkip). */}
+            {currentStepData.id !== 'type_selection' &&
+              currentStepData.id !== 'basic_info' &&
+              currentStepData.id !== 'review' && (
+                <button
+                  type="button"
+                  onClick={handleSkip}
+                  className="px-6 py-3 rounded-xl font-medium text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Skip
+                </button>
+              )}
 
             {currentStepData.id === 'review' ? (
               <button
