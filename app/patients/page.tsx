@@ -314,7 +314,9 @@ function PatientsContent() {
             try {
               logger.info('[PatientsPage] Submitting vitals', { patientId: selectedPatientForWizard.id, vitals })
 
-              // Use shared transformation utility (DRY principle)
+              // Use shared transformation utility (DRY principle).
+              // Weight is handled separately below — it goes through
+              // the canonical weight-logs API, not the vitals API.
               const vitalInputs = transformWizardDataToVitals(vitals)
 
               // Validate at least one vital was recorded
@@ -323,14 +325,55 @@ function PatientsContent() {
                 return
               }
 
-              // Save all vitals
+              // Save each measurement independently. Duplicates on
+              // one type don't block the rest of the batch — they
+              // become soft skips surfaced in the toast.
               const savedVitals: VitalSign[] = []
+              const skipped: string[] = []
+              const isDuplicateErr = (err: unknown) => {
+                const m = err instanceof Error ? err.message : String(err)
+                return m.toLowerCase().includes('already exists')
+              }
               for (const vitalInput of vitalInputs) {
-                const saved = await medicalOperations.vitals.logVital(selectedPatientForWizard.id, vitalInput)
-                savedVitals.push(saved)
+                try {
+                  const saved = await medicalOperations.vitals.logVital(selectedPatientForWizard.id, vitalInput)
+                  savedVitals.push(saved)
+                } catch (err) {
+                  if (isDuplicateErr(err)) {
+                    skipped.push(vitalInput.type.replace('_', ' '))
+                    continue
+                  }
+                  throw err
+                }
               }
 
-              logger.info('[PatientsPage] Vitals saved successfully', { count: savedVitals.length })
+              // Weight → canonical writer (users/[owner]/weightLogs +
+              // startWeight + currentWeight all in one place).
+              let weightSaved = false
+              if (vitals.weight) {
+                try {
+                  await medicalOperations.weightLogs.logWeight(selectedPatientForWizard.id, {
+                    weight: vitals.weight,
+                    unit: 'lbs',
+                    loggedAt: vitals.timestamp.toISOString(),
+                    source: 'manual',
+                    tags: [],
+                  })
+                  weightSaved = true
+                } catch (err) {
+                  if (isDuplicateErr(err)) {
+                    skipped.push('weight')
+                  } else {
+                    throw err
+                  }
+                }
+              }
+
+              logger.info('[PatientsPage] Vitals saved', {
+                count: savedVitals.length,
+                weightSaved,
+                skipped,
+              })
 
               // Create schedules if user enabled them
               if (vitals.schedulePreferences?.enabled && user) {
@@ -376,7 +419,17 @@ function PatientsContent() {
                 })
               }
 
-              toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
+              const savedCount = savedVitals.length + (weightSaved ? 1 : 0)
+              if (savedCount === 0 && skipped.length > 0) {
+                toast(`Already logged today: ${skipped.join(', ')}`, { icon: 'ℹ️' })
+              } else if (skipped.length > 0) {
+                toast.success(
+                  `${savedCount} logged · skipped duplicates: ${skipped.join(', ')}`,
+                  { duration: 5000 },
+                )
+              } else {
+                toast.success(`${savedCount} vital sign${savedCount !== 1 ? 's' : ''} logged successfully!`)
+              }
 
               // Store the patient for reopening quick view modal
               const patientToView = selectedPatientForWizard

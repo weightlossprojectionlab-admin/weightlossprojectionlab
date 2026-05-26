@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { auth, db } from '@/lib/firebase'
-import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
+import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useVitals } from '@/hooks/useVitals'
 import { usePatientPermissions } from '@/hooks/usePatientPermissions'
@@ -20,6 +20,8 @@ import { useUserProfile } from '@/hooks/useUserProfile'
 import { PatientProfile, VitalType, VitalSign, VitalUnit, FamilyMember, FamilyMemberPermissions, PatientDocument, PatientMedication, Immunization, MedicalEquipment, FamilyHistoryEntry, FamilyRelationship } from '@/types/medical'
 import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
+import { WeightTrendChart } from '@/components/charts/WeightTrendChart'
+import type { WeightDataPoint } from '@/lib/chart-data-aggregator'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
 import PendingVitalApprovals from '@/components/vitals/PendingVitalApprovals'
 import VitalsHistory from '@/components/vitals/VitalsHistory'
@@ -255,6 +257,11 @@ function PatientDetailContent() {
     patientId,
     autoFetch: true
   })
+  // Weight logs live in the canonical user-scoped weightLogs collection
+  // (same source /progress + WeightTrendChart read). Patient-detail's
+  // "Weight Trend" chart hydrates from here so it stays in sync with
+  // /progress instead of reading the (now empty) vitals subcollection.
+  const [weightLogs, setWeightLogs] = useState<WeightDataPoint[]>([])
   // Only consume the create mutation — autoFetch:false skips the
   // redundant /api/appointments GET. DailyVitalsSummary already
   // fetches the patient-scoped list separately; firing two parallel
@@ -481,6 +488,46 @@ function PatientDetailContent() {
       setSelectedVitalType('weight')
     }
   }, [patient, isNewbornOrInfant])
+
+  // Subscribe to canonical weightLogs for this patient (live updates).
+  // Filter by patientId so caregivers viewing the same owner's other
+  // patients don't see cross-talk. Maps to the WeightDataPoint shape
+  // the shared WeightTrendChart expects.
+  useEffect(() => {
+    if (!patient?.userId) {
+      setWeightLogs([])
+      return
+    }
+    const q = query(
+      collection(db, 'users', patient.userId, 'weightLogs'),
+      where('patientId', '==', patientId),
+      orderBy('loggedAt', 'asc'),
+    )
+    const unsubscribe = onSnapshot(
+      q,
+      (snap) => {
+        const points: WeightDataPoint[] = snap.docs.map((doc) => {
+          const data = doc.data() as { weight: number; loggedAt: any }
+          const ts: Date = data.loggedAt?.toDate
+            ? data.loggedAt.toDate()
+            : new Date(data.loggedAt)
+          return {
+            date: ts.toISOString().split('T')[0],
+            weight: data.weight,
+            timestamp: ts,
+          }
+        })
+        setWeightLogs(points)
+      },
+      (err) => {
+        logger.error('[PatientDetail] weightLogs subscription failed', err as Error, {
+          patientId,
+        })
+        setWeightLogs([])
+      },
+    )
+    return () => unsubscribe()
+  }, [patient?.userId, patientId])
 
   // Open the VitalQuickLogModal when arriving via a notification deep-link
   // (`?logVital={vitalType}`). Wait until the patient is loaded so the modal
@@ -1781,6 +1828,23 @@ function PatientDetailContent() {
                   <div className="flex items-center justify-center h-64">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                   </div>
+                ) : selectedVitalType === 'weight' ? (
+                  // Weight has its own canonical collection (weightLogs).
+                  // Render the shared WeightTrendChart used on /progress
+                  // so both pages stay in sync.
+                  weightLogs.length > 0 ? (
+                    <WeightTrendChart
+                      data={weightLogs}
+                      targetWeight={patient?.targetWeight}
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-64 text-center">
+                      <p className="text-muted-foreground mb-4">No weight readings yet</p>
+                      <p className="text-sm text-muted-foreground">
+                        Use the &quot;Vitals&quot; quick action to add readings
+                      </p>
+                    </div>
+                  )
                 ) : vitals.filter(v => v.type === selectedVitalType).length > 0 ? (
                   <VitalTrendChart vitals={vitals} type={selectedVitalType} />
                 ) : (
@@ -3549,17 +3613,66 @@ function PatientDetailContent() {
                 notes: enhancedNotes
               }))
 
-              // Save all vitals
+              // Save each measurement independently. A duplicate on
+              // one type (e.g. temperature already logged today) must
+              // not block the others — the wizard's submit is a
+              // batch, not an atomic transaction. Duplicates become
+              // soft skips surfaced in the success toast; real errors
+              // (auth, validation) still propagate.
               const savedVitals: VitalSign[] = []
+              const skipped: string[] = []
+              const isDuplicateErr = (err: unknown) => {
+                const m = err instanceof Error ? err.message : String(err)
+                return m.toLowerCase().includes('already exists')
+              }
               for (const vitalInput of vitalInputsWithMood) {
-                const saved = await medicalOperations.vitals.logVital(patient.id, {
-                  ...vitalInput,
-                  unit: vitalInput.unit as VitalUnit
-                })
-                savedVitals.push(saved)
+                try {
+                  const saved = await medicalOperations.vitals.logVital(patient.id, {
+                    ...vitalInput,
+                    unit: vitalInput.unit as VitalUnit
+                  })
+                  savedVitals.push(saved)
+                } catch (err) {
+                  if (isDuplicateErr(err)) {
+                    skipped.push(vitalInput.type.replace('_', ' '))
+                    continue
+                  }
+                  throw err
+                }
               }
 
-              logger.info('[PatientDetail] Vitals saved successfully', { count: savedVitals.length })
+              // Weight has its own canonical writer (writes to
+              // users/[owner]/weightLogs + sets goals.startWeight +
+              // caches currentWeight). Routing it here keeps the
+              // vitals API out of weight's business and stops the
+              // three-collection drift documented in
+              // feedback_one_question_one_answer.
+              let weightSaved = false
+              if (vitals.weight) {
+                try {
+                  await medicalOperations.weightLogs.logWeight(patient.id, {
+                    weight: vitals.weight,
+                    unit: 'lbs',
+                    loggedAt: vitals.timestamp.toISOString(),
+                    source: 'manual',
+                    tags: [],
+                    ...(enhancedNotes ? { notes: enhancedNotes } : {}),
+                  })
+                  weightSaved = true
+                } catch (err) {
+                  if (isDuplicateErr(err)) {
+                    skipped.push('weight')
+                  } else {
+                    throw err
+                  }
+                }
+              }
+
+              logger.info('[PatientDetail] Vitals saved', {
+                count: savedVitals.length,
+                weightSaved,
+                skipped,
+              })
 
               // Create schedules if user enabled them
               if (vitals.schedulePreferences?.enabled && user) {
@@ -3620,7 +3733,17 @@ function PatientDetailContent() {
               // Close wizard
               setShowVitalsWizard(false)
 
-              toast.success(`${savedVitals.length} vital sign${savedVitals.length !== 1 ? 's' : ''} logged successfully!`)
+              const savedCount = savedVitals.length + (weightSaved ? 1 : 0)
+              if (savedCount === 0 && skipped.length > 0) {
+                toast(`Already logged today: ${skipped.join(', ')}`, { icon: 'ℹ️' })
+              } else if (skipped.length > 0) {
+                toast.success(
+                  `${savedCount} logged · skipped duplicates: ${skipped.join(', ')}`,
+                  { duration: 5000 },
+                )
+              } else {
+                toast.success(`${savedCount} vital sign${savedCount !== 1 ? 's' : ''} logged successfully!`)
+              }
             } catch (error) {
               logger.error('[PatientDetail] Failed to save vitals', error instanceof Error ? error : undefined)
               toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)

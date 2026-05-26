@@ -25,15 +25,17 @@ export function WeightLogForm({ patientId, onSuccess }: WeightLogFormProps) {
 
     try {
       setLoading(true)
-      // Save weight as a vital sign so it appears in the vitals chart
-      await medicalOperations.vitals.logVital(patientId, {
-        type: 'weight',
-        value: parseFloat(weight),
+      // Canonical weight-log path: writes to users/[owner]/weightLogs,
+      // sets goals.startWeight on first ever log, caches currentWeight
+      // on the profile. The vitals API rejects weight type now — every
+      // weight surface goes through this one helper.
+      await medicalOperations.weightLogs.logWeight(patientId, {
+        weight: parseFloat(weight),
         unit,
-        recordedAt: new Date().toISOString(),
-        notes: notes || undefined,
-        method: 'manual',
-        tags: []
+        loggedAt: new Date().toISOString(),
+        source: 'manual',
+        tags: [],
+        ...(notes ? { notes } : {}),
       })
 
       toast.success('Weight logged successfully')

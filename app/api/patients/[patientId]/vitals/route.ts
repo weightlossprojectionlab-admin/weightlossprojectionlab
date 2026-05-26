@@ -193,6 +193,25 @@ export async function POST(
     const now = new Date().toISOString()
     const recordedAtDate = vitalData.recordedAt ? new Date(vitalData.recordedAt) : new Date()
 
+    // Weight has its own canonical writer at /api/patients/[id]/weight-logs
+    // (writes to users/[ownerUserId]/weightLogs + maintains startWeight
+    // + currentWeight in one place). Reject early so we don't write a
+    // weight doc to the vitals subcollection — that's what allowed the
+    // three-collection drift to keep growing. See
+    // feedback_one_question_one_answer.
+    if (vitalData.type === 'weight') {
+      logger.warn('[API /patients/[id]/vitals POST] Rejecting weight — use /weight-logs', {
+        patientId,
+      })
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Weight must be logged via /api/patients/[patientId]/weight-logs, not the vitals API.',
+        },
+        { status: 400 },
+      )
+    }
+
     // DEBUG: Log incoming date
     logger.debug('[API /patients/[id]/vitals POST] Date received', {
       recordedAtOriginal: vitalData.recordedAt,
@@ -309,24 +328,6 @@ export async function POST(
 
     const vitalRef = patientRef.collection('vitals').doc(vitalId)
     await vitalRef.set(newVital)
-
-    // Sync approved weight to patient profile (keeps currentWeight fresh)
-    if (newVital.type === 'weight' && approvalStatus === 'approved' && typeof newVital.value === 'number') {
-      const patientDoc = await patientRef.get()
-      const patientData = patientDoc.data()
-      const profileUpdate: Record<string, any> = {
-        currentWeight: newVital.value,
-        weightUnit: newVital.unit || 'lbs',
-      }
-      // Set goals.startWeight only if not already set (preserve original baseline)
-      if (!patientData?.goals?.startWeight || patientData.goals.startWeight <= 0) {
-        profileUpdate['goals.startWeight'] = newVital.value
-      }
-      await patientRef.update(profileUpdate)
-      logger.info('[API /patients/[id]/vitals POST] Patient profile weight synced', {
-        patientId, currentWeight: newVital.value
-      })
-    }
 
     logger.info('[API /patients/[id]/vitals POST] Vital sign logged successfully', {
       userId,

@@ -128,18 +128,13 @@ export function transformWizardDataToVitals(
     })
   }
 
-  // Weight
-  if (wizardData.weight) {
-    vitals.push({
-      type: 'weight',
-      value: wizardData.weight,
-      unit: 'lbs',
-      recordedAt,
-      notes,
-      method: 'manual',
-      ...(takenBy && { takenBy })
-    })
-  }
+  // Weight is intentionally NOT included here. Weight has its own
+  // canonical writer at /api/patients/[id]/weight-logs (writes to
+  // users/[ownerUserId]/weightLogs, sets goals.startWeight, caches
+  // currentWeight). Callers of this helper read `wizardData.weight`
+  // separately and route it through medicalOperations.weightLogs.
+  // See feedback_one_question_one_answer for the divergence this
+  // separation prevents.
 
   // Mood
   if (wizardData.mood) {
