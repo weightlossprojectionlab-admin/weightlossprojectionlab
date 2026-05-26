@@ -257,25 +257,56 @@ export function VitalsFormSection({
               <div className="flex-1">
                 <div className="font-semibold text-foreground mb-1">Health Analysis</div>
                 <p className="text-sm text-foreground/80 leading-relaxed">{suggestion.reason}</p>
-                {suggestion.target !== parseFloat(data.currentWeight) && (
-                  <button
-                    type="button"
-                    // Set target weight only — do NOT infer motivation
-                    // from direction. Whether the user wants to gain
-                    // muscle vs gain weight vs recover from illness is
-                    // a question they answer, not one we guess. Old
-                    // code auto-set weightGoal='gain-muscle' if target
-                    // > current and 'lose-weight' otherwise — both
-                    // assumptions were wrong half the time. Removed
-                    // 2026-05-23 with the primaryMotivation rename.
-                    onClick={() => onChange({
-                      targetWeight: suggestion.target.toString(),
-                    })}
-                    className="mt-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    Set target to {Math.round(suggestion.target)} {data.weightUnit}
-                  </button>
-                )}
+                {suggestion.target !== parseFloat(data.currentWeight) && (() => {
+                  // Click toggles the suggested target on/off — first
+                  // click writes data.targetWeight=suggestion.target,
+                  // second click clears it. Button label + style flip
+                  // between "Set target to X" (idle, primary tone) and
+                  // "✓ Target set to X" (active, success tone) based
+                  // on whether the input field currently matches the
+                  // suggestion. Persists at wizard submit via
+                  // patientData.targetWeight + patientData.goals
+                  // .targetWeight (FamilyMemberOnboardingWizard's
+                  // handleSubmit). Self-recovers if the user types a
+                  // different number directly into the input.
+                  const targetMatchesSuggestion =
+                    data.targetWeight === suggestion.target.toString()
+                  return (
+                    <button
+                      type="button"
+                      // Set target weight only — do NOT infer motivation
+                      // from direction. Whether the user wants to gain
+                      // muscle vs gain weight vs recover from illness is
+                      // a question they answer, not one we guess. Old
+                      // code auto-set weightGoal='gain-muscle' if target
+                      // > current and 'lose-weight' otherwise — both
+                      // assumptions were wrong half the time. Removed
+                      // 2026-05-23 with the primaryMotivation rename.
+                      onClick={() =>
+                        onChange({
+                          targetWeight: targetMatchesSuggestion
+                            ? ''
+                            : suggestion.target.toString(),
+                        })
+                      }
+                      aria-pressed={targetMatchesSuggestion}
+                      className={`mt-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                        targetMatchesSuggestion
+                          ? 'bg-success/20 text-success-dark border-2 border-success/40 hover:bg-success/30'
+                          : 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      }`}
+                    >
+                      {targetMatchesSuggestion ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <span aria-hidden>✓</span>
+                          Target set to {Math.round(suggestion.target)} {data.weightUnit}
+                        </span>
+                      ) : (
+                        <>Set target to {Math.round(suggestion.target)} {data.weightUnit}</>
+                      )}
+                    </button>
+                  )
+                })()}
               </div>
             </div>
           </div>
