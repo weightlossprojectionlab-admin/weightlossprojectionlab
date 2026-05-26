@@ -71,7 +71,7 @@ import VitalsWizardRouter from '@/components/wizards/VitalsWizardRouter'
 import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
-import { transformWizardDataToVitals, hasAnyVitalMeasurement } from '@/lib/vitals-wizard-transform'
+import { submitWizardMeasurements, toastWizardResult } from '@/lib/vitals-wizard-submit'
 import { useAuth } from '@/hooks/useAuth'
 import { useAppointments } from '@/hooks/useAppointments'
 import { useProviders } from '@/hooks/useProviders'
@@ -3574,100 +3574,17 @@ function PatientDetailContent() {
             try {
               logger.info('[PatientDetail] Submitting vitals from wizard', {
                 patientId: patient.id,
-                vitals,
-                loggedBy: vitals.loggedBy,
-                loggedByUserId: vitals.loggedBy?.userId
+                loggedByUserId: vitals.loggedBy?.userId,
               })
 
-              // Use shared transformation utility (DRY principle)
-              const vitalInputs = transformWizardDataToVitals(vitals)
-
-              logger.info('[PatientDetail] Transformed vitals', {
-                vitalInputs,
-                takenByValues: vitalInputs.map(v => ({ type: v.type, takenBy: v.takenBy }))
-              })
-
-              // Validate at least one vital was recorded
-              if (!hasAnyVitalMeasurement(vitals)) {
-                toast.error('Please record at least one vital sign measurement.')
+              // One shared submit pipeline for both wizard entry
+              // points — see lib/vitals-wizard-submit.ts.
+              const result = await submitWizardMeasurements(patient.id, vitals)
+              if (result.savedCount === 0 && result.skipped.length === 0) {
+                // Helper already toasted "Please record at least one…"
                 return
               }
-
-              // Append mood data to notes if mood was recorded
-              let enhancedNotes = vitals.notes || ''
-              if (vitals.mood) {
-                const moodEmoji = vitals.mood === 'happy' ? '😊' :
-                                 vitals.mood === 'calm' ? '😌' :
-                                 vitals.mood === 'okay' ? '😐' :
-                                 vitals.mood === 'worried' ? '😟' :
-                                 vitals.mood === 'sad' ? '😢' :
-                                 vitals.mood === 'pain' ? '😫' : '😐'
-
-                const moodSection = `[MOOD: ${moodEmoji} ${vitals.mood}]${vitals.moodNotes ? `\n${vitals.moodNotes}` : ''}`
-                enhancedNotes = enhancedNotes ? `${moodSection}\n\n${enhancedNotes}` : moodSection
-              }
-
-              // Add enhanced notes to all vitals
-              const vitalInputsWithMood = vitalInputs.map(input => ({
-                ...input,
-                notes: enhancedNotes
-              }))
-
-              // Save each measurement independently. A duplicate on
-              // one type (e.g. temperature already logged today) must
-              // not block the others — the wizard's submit is a
-              // batch, not an atomic transaction. Duplicates become
-              // soft skips surfaced in the success toast; real errors
-              // (auth, validation) still propagate.
-              const savedVitals: VitalSign[] = []
-              const skipped: string[] = []
-              const isDuplicateErr = (err: unknown) => {
-                const m = err instanceof Error ? err.message : String(err)
-                return m.toLowerCase().includes('already exists')
-              }
-              for (const vitalInput of vitalInputsWithMood) {
-                try {
-                  const saved = await medicalOperations.vitals.logVital(patient.id, {
-                    ...vitalInput,
-                    unit: vitalInput.unit as VitalUnit
-                  })
-                  savedVitals.push(saved)
-                } catch (err) {
-                  if (isDuplicateErr(err)) {
-                    skipped.push(vitalInput.type.replace('_', ' '))
-                    continue
-                  }
-                  throw err
-                }
-              }
-
-              // Weight has its own canonical writer (writes to
-              // users/[owner]/weightLogs + sets goals.startWeight +
-              // caches currentWeight). Routing it here keeps the
-              // vitals API out of weight's business and stops the
-              // three-collection drift documented in
-              // feedback_one_question_one_answer.
-              let weightSaved = false
-              if (vitals.weight) {
-                try {
-                  await medicalOperations.weightLogs.logWeight(patient.id, {
-                    weight: vitals.weight,
-                    unit: 'lbs',
-                    loggedAt: vitals.timestamp.toISOString(),
-                    source: 'manual',
-                    tags: [],
-                    ...(enhancedNotes ? { notes: enhancedNotes } : {}),
-                  })
-                  weightSaved = true
-                } catch (err) {
-                  if (isDuplicateErr(err)) {
-                    skipped.push('weight')
-                  } else {
-                    throw err
-                  }
-                }
-              }
-
+              const { savedVitals, weightSaved, skipped } = result
               logger.info('[PatientDetail] Vitals saved', {
                 count: savedVitals.length,
                 weightSaved,
@@ -3733,17 +3650,7 @@ function PatientDetailContent() {
               // Close wizard
               setShowVitalsWizard(false)
 
-              const savedCount = savedVitals.length + (weightSaved ? 1 : 0)
-              if (savedCount === 0 && skipped.length > 0) {
-                toast(`Already logged today: ${skipped.join(', ')}`, { icon: 'ℹ️' })
-              } else if (skipped.length > 0) {
-                toast.success(
-                  `${savedCount} logged · skipped duplicates: ${skipped.join(', ')}`,
-                  { duration: 5000 },
-                )
-              } else {
-                toast.success(`${savedCount} vital sign${savedCount !== 1 ? 's' : ''} logged successfully!`)
-              }
+              toastWizardResult(result)
             } catch (error) {
               logger.error('[PatientDetail] Failed to save vitals', error instanceof Error ? error : undefined)
               toast.error(`Failed to save vitals: ${error instanceof Error ? error.message : 'Unknown error'}`)
