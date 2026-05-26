@@ -41,6 +41,58 @@ import { logGeminiInvocation } from '@/lib/gemini-invocations'
 
 export const DEFAULT_GEMINI_MODEL = 'gemini-2.5-flash'
 
+/**
+ * Default token budget for structured JSON responses. Gemini 2.5
+ * shares this budget with internal "thinking" tokens — set high so a
+ * verbose chain-of-thought doesn't truncate the final JSON mid-string.
+ * Well below the 65536 ceiling. See feedback_gemini_2_5_flash_gotchas.
+ */
+const DEFAULT_MAX_OUTPUT_TOKENS = 16384
+
+/**
+ * State-machine sanitizer for raw control characters Gemini occasionally
+ * emits inside JSON string literals (literal \n / \r / \t / etc. instead
+ * of the escaped forms). Required even with responseMimeType=json.
+ * Copied from the receipt-OCR pattern documented in
+ * feedback_gemini_2_5_flash_gotchas — regex strip is NOT equivalent.
+ */
+function sanitizeJsonControlChars(raw: string): string {
+  let result = ''
+  let inString = false
+  let escapeNext = false
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i]
+    if (escapeNext) {
+      result += ch
+      escapeNext = false
+      continue
+    }
+    if (ch === '\\' && inString) {
+      result += ch
+      escapeNext = true
+      continue
+    }
+    if (ch === '"') {
+      inString = !inString
+      result += ch
+      continue
+    }
+    if (inString && ch.charCodeAt(0) < 0x20) {
+      switch (ch) {
+        case '\n': result += '\\n'; break
+        case '\r': result += '\\r'; break
+        case '\t': result += '\\t'; break
+        case '\b': result += '\\b'; break
+        case '\f': result += '\\f'; break
+        default: result += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0')
+      }
+      continue
+    }
+    result += ch
+  }
+  return result
+}
+
 /** Lazy SDK singleton. Initialized on first use after the key check. */
 let genAIInstance: GoogleGenerativeAI | null = null
 
@@ -70,9 +122,12 @@ export function validateGeminiConfig(): { valid: boolean; error?: string } {
 
 export interface GeminiImagePart {
   /**
-   * Base64 image data. Can be a raw base64 string OR a data URL
-   * (`data:image/jpeg;base64,...`); the data-URL prefix is stripped
-   * automatically.
+   * Base64-encoded inline data. Can be a raw base64 string OR a data
+   * URL (`data:image/jpeg;base64,...`, `data:application/pdf;base64,...`);
+   * the data-URL prefix is stripped automatically for any mime type.
+   *
+   * Despite the historical name, this part works for any inline
+   * binary Gemini supports (images, PDFs) — set `mimeType` accordingly.
    */
   data: string
   /** Defaults to 'image/jpeg' when omitted. */
@@ -138,12 +193,20 @@ export async function generateGeminiJSON<T = unknown>(
     const genAI = getGenAI()
     const model = genAI.getGenerativeModel({
       model: modelId,
+      // Gemini 2.5 gotcha pattern (feedback_gemini_2_5_flash_gotchas):
+      //  - responseMimeType pins JSON-only output
+      //  - thinkingBudget: 0 stops internal CoT from consuming the
+      //    token budget and truncating the final JSON mid-string.
+      //    The legacy @google/generative-ai 0.24.1 types don't know
+      //    about thinkingConfig — REST honors it via `as any`.
+      //  - maxOutputTokens generous default to absorb verbose responses.
       generationConfig: {
         responseMimeType: 'application/json',
         ...(geminiSchema ? { responseSchema: geminiSchema } : {}),
-        ...(maxOutputTokens ? { maxOutputTokens } : {}),
+        maxOutputTokens: maxOutputTokens ?? DEFAULT_MAX_OUTPUT_TOKENS,
         temperature,
-      },
+        thinkingConfig: { thinkingBudget: 0 },
+      } as any,
     })
 
     // Build the request as a parts array when images are provided
@@ -155,15 +218,33 @@ export async function generateGeminiJSON<T = unknown>(
           prompt,
           ...images.map((img) => ({
             inlineData: {
-              data: img.data.replace(/^data:image\/\w+;base64,/, ''),
+              // Strip data-URL prefix for any mime type (image/*,
+              // application/pdf, etc.) so callers can pass either
+              // a data URL or raw base64.
+              data: img.data.replace(/^data:[^;]+;base64,/, ''),
               mimeType: img.mimeType ?? 'image/jpeg',
             },
           })),
         ])
       : await model.generateContent(prompt)
 
-    const text = result.response.text()
-    const parsed: unknown = JSON.parse(text)
+    const rawText = result.response.text()
+    // Sanitize raw control chars Gemini occasionally drops into string
+    // literals (literal \n / \t / \r) — responseMimeType doesn't fully
+    // guard against this. See feedback_gemini_2_5_flash_gotchas.
+    const sanitized = sanitizeJsonControlChars(rawText)
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(sanitized)
+    } catch (parseErr) {
+      // Include a short text preview in the thrown error so callers
+      // can diagnose without server-log access. Keep it small (no PHI
+      // surface — only the failing JSON head).
+      const preview = sanitized.slice(0, 200)
+      throw new Error(
+        `[gemini-client] ${fnName} produced unparseable JSON: ${(parseErr as Error).message}. Preview: ${preview}…`,
+      )
+    }
 
     if (validateSchema) {
       const validation = validateSchema.safeParse(parsed)

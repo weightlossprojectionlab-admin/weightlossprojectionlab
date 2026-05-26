@@ -37,6 +37,8 @@ import ImmunizationForm from '@/components/patients/ImmunizationForm'
 import MedicalEquipmentForm from '@/components/patients/MedicalEquipmentForm'
 import FamilyHistoryForm from '@/components/patients/FamilyHistoryForm'
 import { PatientFieldEditor, type FieldOption } from '@/components/patients/PatientFieldEditor'
+import { PatientHeightEditor } from '@/components/patients/PatientHeightEditor'
+import { PatientHealthRiskCard } from '@/components/patients/PatientHealthRiskCard'
 import { FOOD_ALLERGEN_OPTIONS } from '@/lib/food-allergen-options'
 import { PreparationNeedsEditor } from '@/components/patients/PreparationNeedsEditor'
 import { AIHealthReport } from '@/components/patients/AIHealthReport'
@@ -2142,17 +2144,12 @@ function PatientDetailContent() {
                 <h3 className="text-sm font-semibold text-foreground mb-2">
                   Vitals Profile
                 </h3>
-                <PatientFieldEditor
+                <PatientHeightEditor
                   patientId={patientId}
-                  field="height"
-                  label={`Height${patient.heightUnit === 'metric' ? ' (cm)' : ' (in)'}`}
-                  type="number"
-                  unit={patient.heightUnit === 'metric' ? 'cm' : 'in'}
-                  step={0.1}
-                  min={0}
                   value={patient.height}
+                  unit={patient.heightUnit}
                   canEdit={canEditProfile}
-                  onUpdated={(v) => setPatient({ ...patient, height: v ?? undefined })}
+                  onUpdated={(v) => setPatient({ ...patient, height: v })}
                 />
                 <PatientFieldEditor
                   patientId={patientId}
@@ -2186,6 +2183,7 @@ function PatientDetailContent() {
                   canEdit={canEditProfile}
                   onUpdated={(v) => setPatient({ ...patient, primaryMotivation: v })}
                 />
+                <PatientHealthRiskCard patient={patient} />
               </div>
 
               {/* Health conditions — multi-select over a predefined
@@ -3495,7 +3493,7 @@ function PatientDetailContent() {
             familyMember={{
               id: patient.id,
               name: patient.name,
-              age: calculateAge(patient.dateOfBirth),
+              age: patient.dateOfBirth ? calculateAge(patient.dateOfBirth) : undefined,
               conditions: patient.healthConditions || [],
               createdAt: patient.createdAt,
               type: patient.type,

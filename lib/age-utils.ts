@@ -3,13 +3,15 @@
  */
 
 /**
- * Calculate age from birthdate
- *
- * @param birthDate - User's date of birth
- * @returns Current age in years
+ * Calculate age from birthdate. Returns NaN when the input is missing
+ * or unparseable — callers should `Number.isFinite(age)` before using
+ * it numerically, or fall through to a "—" display.
  */
-export function calculateAge(birthDate: Date | string): number {
+export function calculateAge(birthDate: Date | string | undefined | null): number {
+  if (birthDate === undefined || birthDate === null || birthDate === '') return NaN
   const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate
+  if (!(birth instanceof Date) || Number.isNaN(birth.getTime())) return NaN
+
   const today = new Date()
   let age = today.getFullYear() - birth.getFullYear()
   const monthDiff = today.getMonth() - birth.getMonth()

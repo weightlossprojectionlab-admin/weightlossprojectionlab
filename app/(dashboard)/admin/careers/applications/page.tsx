@@ -12,24 +12,62 @@ import {
   XCircleIcon,
   ClockIcon,
   FunnelIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
+import { CareersAdminTabs } from '@/components/admin/CareersAdminTabs';
+import type { AIResumeAnalysis } from '@/types/jobs';
 
 interface JobApplication {
   applicationId: string;
   jobId: string;
   jobTitle: string;
   applicantName: string;
-  email: string;
+  // Canonical names live on the Firestore doc; legacy `email`/`phone`
+  // kept here as fallbacks for any pre-canonical records still around.
+  applicantEmail?: string;
+  applicantPhone?: string;
+  email?: string;
   phone?: string;
   resumeUrl?: string;
+  resumeFileName?: string;
   coverLetter?: string;
   status: 'pending' | 'reviewed' | 'shortlisted' | 'rejected' | 'hired';
   submittedAt: string;
   reviewedAt?: string;
   reviewedBy?: string;
   notes?: string;
+  // AI analysis slots (filled by /api/admin/applications/[id]/analyze)
+  aiAnalysis?: AIResumeAnalysis;
+  aiAnalysisStatus?: 'pending' | 'processing' | 'completed' | 'failed';
+  aiAnalysisError?: string;
 }
+
+const RECOMMENDATION_TONE: Record<AIResumeAnalysis['recommendation'], string> = {
+  strong_yes: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-300',
+  yes: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300 border-emerald-300',
+  maybe: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-300',
+  no: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300 border-orange-300',
+  strong_no: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-300',
+};
+
+const RECOMMENDATION_LABEL: Record<AIResumeAnalysis['recommendation'], string> = {
+  strong_yes: 'Strong yes',
+  yes: 'Yes',
+  maybe: 'Maybe',
+  no: 'No',
+  strong_no: 'Strong no',
+};
+
+const scoreToneClass = (score: number) =>
+  score >= 80
+    ? 'text-green-700 dark:text-green-300'
+    : score >= 60
+      ? 'text-amber-700 dark:text-amber-300'
+      : 'text-red-700 dark:text-red-300';
+
+const emailOf = (app: JobApplication) => app.applicantEmail || app.email || '';
+const phoneOf = (app: JobApplication) => app.applicantPhone || app.phone;
 
 export default function CareerApplicationsPage() {
   const [applications, setApplications] = useState<JobApplication[]>([]);
@@ -63,6 +101,49 @@ export default function CareerApplicationsPage() {
       toast.error('Failed to load applications');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+
+  const runAnalysis = async (applicationId: string) => {
+    try {
+      setAnalyzingId(applicationId);
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      const token = await user.getIdToken();
+      const response = await fetch(`/api/admin/applications/${applicationId}/analyze`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        // Empty body — the route reads the resume from Storage. A
+        // body with `resumeText` is still accepted as a fallback
+        // for applications that didn't upload a file.
+        body: JSON.stringify({}),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Failed to analyze resume');
+      }
+      const fresh = data.data as AIResumeAnalysis;
+      toast.success(
+        `Score ${fresh.matchScore} · ${RECOMMENDATION_LABEL[fresh.recommendation] ?? fresh.recommendation}`,
+      );
+      await loadApplications();
+      // Refresh the modal's view of the application so the AI section
+      // renders immediately without closing the modal.
+      setSelectedApplication((prev) =>
+        prev && prev.applicationId === applicationId
+          ? { ...prev, aiAnalysis: fresh, aiAnalysisStatus: 'completed' }
+          : prev,
+      );
+    } catch (err) {
+      logger.error('Failed to analyze resume', err as Error);
+      toast.error((err as Error).message || 'Failed to analyze resume');
+    } finally {
+      setAnalyzingId(null);
     }
   };
 
@@ -136,7 +217,8 @@ export default function CareerApplicationsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
+      <CareersAdminTabs />
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Job Applications</h1>
@@ -191,7 +273,7 @@ export default function CareerApplicationsPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 mb-2">
+                    <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-foreground truncate">
                         {application.applicantName}
                       </h3>
@@ -202,6 +284,29 @@ export default function CareerApplicationsPage() {
                       >
                         {application.status}
                       </span>
+                      {application.aiAnalysis && (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-medium ${RECOMMENDATION_TONE[application.aiAnalysis.recommendation]}`}
+                          title={application.aiAnalysis.summary}
+                        >
+                          <SparklesIcon className="h-3 w-3" />
+                          <span className={scoreToneClass(application.aiAnalysis.matchScore)}>
+                            {application.aiAnalysis.matchScore}
+                          </span>
+                          <span>·</span>
+                          <span>{RECOMMENDATION_LABEL[application.aiAnalysis.recommendation]}</span>
+                        </span>
+                      )}
+                      {application.aiAnalysisStatus === 'processing' && (
+                        <span className="text-xs text-muted-foreground italic">
+                          Analyzing…
+                        </span>
+                      )}
+                      {application.aiAnalysisStatus === 'failed' && (
+                        <span className="text-xs text-red-700 dark:text-red-300" title={application.aiAnalysisError}>
+                          Analysis failed
+                        </span>
+                      )}
                     </div>
 
                     <p className="text-sm font-medium text-muted-foreground mb-2">
@@ -211,12 +316,12 @@ export default function CareerApplicationsPage() {
                     <div className="flex items-center gap-4 flex-wrap text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <EnvelopeIcon className="h-4 w-4" />
-                        <span>{application.email}</span>
+                        <span>{emailOf(application)}</span>
                       </div>
-                      {application.phone && (
+                      {phoneOf(application) && (
                         <div className="flex items-center gap-1">
                           <PhoneIcon className="h-4 w-4" />
-                          <span>{application.phone}</span>
+                          <span>{phoneOf(application)}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-1">
@@ -227,6 +332,21 @@ export default function CareerApplicationsPage() {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {application.resumeFileName && !application.aiAnalysis && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          runAnalysis(application.applicationId);
+                        }}
+                        disabled={analyzingId === application.applicationId}
+                        className="inline-flex items-center gap-1 px-3 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-lg text-sm font-medium"
+                        title="Score this applicant against the job posting"
+                      >
+                        <SparklesIcon className="h-4 w-4" />
+                        {analyzingId === application.applicationId ? 'Analyzing…' : 'Run AI Analysis'}
+                      </button>
+                    )}
                     {application.resumeUrl && (
                       <a
                         href={application.resumeUrl}
@@ -278,25 +398,160 @@ export default function CareerApplicationsPage() {
                   <div className="flex items-center gap-2 text-sm">
                     <EnvelopeIcon className="h-4 w-4 text-muted-foreground" />
                     <a
-                      href={`mailto:${selectedApplication.email}`}
+                      href={`mailto:${emailOf(selectedApplication)}`}
                       className="text-primary hover:underline"
                     >
-                      {selectedApplication.email}
+                      {emailOf(selectedApplication)}
                     </a>
                   </div>
-                  {selectedApplication.phone && (
+                  {phoneOf(selectedApplication) && (
                     <div className="flex items-center gap-2 text-sm">
                       <PhoneIcon className="h-4 w-4 text-muted-foreground" />
                       <a
-                        href={`tel:${selectedApplication.phone}`}
+                        href={`tel:${phoneOf(selectedApplication)}`}
                         className="text-primary hover:underline"
                       >
-                        {selectedApplication.phone}
+                        {phoneOf(selectedApplication)}
                       </a>
                     </div>
                   )}
                 </div>
               </div>
+
+              {/* AI Resume Fit — score + summary + per-axis breakdown.
+                  Same primitives as the row badge; the row shows the
+                  headline, this section shows the why. */}
+              {(selectedApplication.aiAnalysis || selectedApplication.resumeFileName) && (
+                <div className="border border-purple-200 dark:border-purple-800 rounded-lg p-4 bg-purple-50/40 dark:bg-purple-900/10">
+                  <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                    <h4 className="text-sm font-semibold text-foreground inline-flex items-center gap-2">
+                      <SparklesIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                      AI Resume Fit
+                    </h4>
+                    {!selectedApplication.aiAnalysis && selectedApplication.resumeFileName && (
+                      <button
+                        type="button"
+                        onClick={() => runAnalysis(selectedApplication.applicationId)}
+                        disabled={analyzingId === selectedApplication.applicationId}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white rounded-md text-xs font-medium"
+                      >
+                        <SparklesIcon className="h-3 w-3" />
+                        {analyzingId === selectedApplication.applicationId ? 'Analyzing…' : 'Run AI Analysis'}
+                      </button>
+                    )}
+                  </div>
+
+                  {selectedApplication.aiAnalysisStatus === 'failed' && (
+                    <p className="text-sm text-red-700 dark:text-red-300 mb-3">
+                      Analysis failed: {selectedApplication.aiAnalysisError || 'unknown error'}
+                    </p>
+                  )}
+
+                  {selectedApplication.aiAnalysis && (
+                    <div className="space-y-4 text-sm">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div>
+                          <span className="text-muted-foreground">Match score: </span>
+                          <span className={`font-bold text-lg ${scoreToneClass(selectedApplication.aiAnalysis.matchScore)}`}>
+                            {selectedApplication.aiAnalysis.matchScore}
+                          </span>
+                          <span className="text-muted-foreground">/100</span>
+                        </div>
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full border text-xs font-medium ${RECOMMENDATION_TONE[selectedApplication.aiAnalysis.recommendation]}`}
+                        >
+                          {RECOMMENDATION_LABEL[selectedApplication.aiAnalysis.recommendation]}
+                        </span>
+                        {selectedApplication.aiAnalysis.yearsOfExperience !== undefined && (
+                          <span className="text-xs text-muted-foreground">
+                            {selectedApplication.aiAnalysis.yearsOfExperience} yrs experience
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-foreground">{selectedApplication.aiAnalysis.summary}</p>
+
+                      {selectedApplication.aiAnalysis.strengths.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Strengths</p>
+                          <ul className="list-disc list-inside space-y-0.5 text-foreground">
+                            {selectedApplication.aiAnalysis.strengths.map((s, i) => (
+                              <li key={i}>{s}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedApplication.aiAnalysis.concerns.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Concerns</p>
+                          <ul className="list-disc list-inside space-y-0.5 text-foreground">
+                            {selectedApplication.aiAnalysis.concerns.map((c, i) => (
+                              <li key={i}>{c}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedApplication.aiAnalysis.gaps.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Gaps vs. required qualifications</p>
+                          <ul className="list-disc list-inside space-y-0.5 text-foreground">
+                            {selectedApplication.aiAnalysis.gaps.map((g, i) => (
+                              <li key={i}>{g}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedApplication.aiAnalysis.matchReasons.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Why they fit</p>
+                          <ul className="list-disc list-inside space-y-0.5 text-foreground">
+                            {selectedApplication.aiAnalysis.matchReasons.map((r, i) => (
+                              <li key={i}>{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {selectedApplication.aiAnalysis.technicalSkills.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Technical skills</p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedApplication.aiAnalysis.technicalSkills.map((skill, i) => (
+                              <span
+                                key={i}
+                                className="text-xs bg-background border border-border px-2 py-0.5 rounded-full"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {selectedApplication.aiAnalysis.nextSteps.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-foreground mb-1">Recommended next steps</p>
+                          <ul className="list-disc list-inside space-y-0.5 text-foreground">
+                            {selectedApplication.aiAnalysis.nextSteps.map((step, i) => (
+                              <li key={i}>{step}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      <p className="text-[10px] text-muted-foreground italic">
+                        Scored by {selectedApplication.aiAnalysis.model}
+                        {selectedApplication.aiAnalysis.confidence != null
+                          ? ` · confidence ${(selectedApplication.aiAnalysis.confidence * 100).toFixed(0)}%`
+                          : ''}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Cover Letter */}
               {selectedApplication.coverLetter && (

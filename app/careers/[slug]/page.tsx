@@ -90,7 +90,7 @@ export default function JobPage() {
             ← Back to Careers
           </Link>
           <a
-            href={`mailto:careers@wellnessprojectionlab.com?subject=Application: ${job.title}&body=Hi, I'm interested in the ${job.title} position.`}
+            href="#apply"
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-2 rounded-lg transition-colors"
           >
             Apply Now
@@ -285,19 +285,6 @@ export default function JobPage() {
             Apply for This Position
           </h2>
           <ApplicationForm job={job} />
-        </div>
-
-        {/* Alternative Contact */}
-        <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-          <p>
-            Having trouble with the form?{' '}
-            <a
-              href={`mailto:careers@wellnessprojectionlab.com?subject=Application: ${job.title}`}
-              className="text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              Email us directly
-            </a>
-          </p>
         </div>
       </div>
     </div>

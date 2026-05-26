@@ -13,6 +13,7 @@ import { toast } from 'react-hot-toast'
 import { MagnifyingGlassIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { JobFormModal } from '@/components/careers/JobFormModal'
 import { AIJobGenerationModal } from '@/components/careers/AIJobGenerationModal'
+import { CareersAdminTabs } from '@/components/admin/CareersAdminTabs'
 import type { JobPosting, JobStatus } from '@/types/jobs'
 
 import { getCSRFToken } from '@/lib/csrf'
@@ -175,6 +176,7 @@ export default function AdminCareersPage() {
 
   return (
     <div className="p-6">
+      <CareersAdminTabs />
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Careers Management</h1>
@@ -183,12 +185,6 @@ export default function AdminCareersPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <Link
-            href="/admin/careers/applications"
-            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            View Applications
-          </Link>
           <Link
             href="/careers"
             target="_blank"
@@ -385,13 +381,22 @@ export default function AdminCareersPage() {
                     </td>
                     <td className="px-6 py-4 text-right text-sm font-medium">
                       <div className="flex justify-end gap-2">
-                        <Link
-                          href={`/careers/${job.slug}`}
-                          target="_blank"
-                          className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                        >
-                          View
-                        </Link>
+                        {job.status === 'published' ? (
+                          <Link
+                            href={`/careers/${job.slug}`}
+                            target="_blank"
+                            className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                          >
+                            View
+                          </Link>
+                        ) : (
+                          <span
+                            className="text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                            title="Drafts are hidden from the public careers page. Publish or use Edit to review."
+                          >
+                            View
+                          </span>
+                        )}
                         <button
                           onClick={() => handleEditJob(job)}
                           className="text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100"

@@ -10,6 +10,7 @@ import {
   type HealthSummaryInput
 } from '@/lib/health-summary-generator'
 import { formatHumanAgeDisplay, getHumanLifeStage } from '@/lib/life-stage-utils'
+import { calculateBMI, getHealthRiskProfile } from '@/lib/health-calculations'
 
 /**
  * POST /api/patients/[patientId]/ai-health-report
@@ -185,16 +186,19 @@ function generateHealthReport(data: any): string {
   report += `| Key Metric | Current | Target | Status |\n`
   report += `|------------|---------|--------|--------|\n`
 
-  // Demographics row — use human-readable age display for young patients
+  // Demographics row — use human-readable age display for young patients.
+  // Falls back to "—" when DOB is missing (or calculateAge returned NaN)
+  // so the report doesn't render "NaNy".
+  const hasFiniteAge = Number.isFinite(age)
   const ageDisplay = !isPet && patient.dateOfBirth
     ? formatHumanAgeDisplay(patient.dateOfBirth)
-    : `${age}y`
+    : (hasFiniteAge ? `${age}y` : '—')
   const lifeStageLabel = !isPet && patient.dateOfBirth
     ? getHumanLifeStage(patient.dateOfBirth).label
     : (isPet ? species || 'Pet' : 'Self')
   const genderSuffix = !isPet && patient.gender ? ` ${patient.gender.charAt(0).toUpperCase()}` : ''
   const demographics = isPet
-    ? `${age}y ${species || 'Pet'}`
+    ? `${hasFiniteAge ? `${age}y ` : ''}${species || 'Pet'}`
     : `${ageDisplay}${genderSuffix}`
   report += `| Patient Profile | ${demographics} | - | ${lifeStageLabel} |\n`
 
@@ -286,6 +290,47 @@ function generateHealthReport(data: any): string {
     if (patient.breed) report += `| Breed | ${patient.breed} |\n`
   }
   report += `\n`
+
+  // BMI & Health Concerns — same primitives the wizard's review step
+  // uses (calculateBMI + getHealthRiskProfile). Renders only when we
+  // can actually compute (non-pet, non-newborn-or-infant, DOB known,
+  // and we have both height and a current weight reading).
+  if (
+    !isPet &&
+    !isNewbornOrInfant &&
+    hasFiniteAge &&
+    patient.height &&
+    weightAnalysis.current
+  ) {
+    const units: 'imperial' | 'metric' = patient.heightUnit === 'metric' ? 'metric' : 'imperial'
+    const { bmi, category } = calculateBMI({
+      weight: weightAnalysis.current,
+      height: patient.height,
+      units,
+    })
+    const risk = getHealthRiskProfile({
+      bmi,
+      gender: (patient.gender as 'male' | 'female' | 'other' | 'prefer-not-to-say') || 'other',
+      age,
+    })
+    report += `## BMI & HEALTH CONCERNS\n\n`
+    report += `| Field | Value |\n`
+    report += `|-------|-------|\n`
+    report += `| BMI | ${bmi} (${category}) |\n`
+    report += `| Risk Level | ${risk.riskLevel.toUpperCase()} |\n`
+    report += `\n`
+    if (risk.warnings.length > 0) {
+      report += `**Warnings:**\n\n`
+      risk.warnings.forEach(w => { report += `- ${w}\n` })
+      report += `\n`
+    }
+    if (risk.likelyConditions.length > 0) {
+      report += `**Conditions to monitor:** ${risk.likelyConditions.join(', ')}\n\n`
+    }
+    if (risk.otherConditions.length > 0) {
+      report += `**Other potential considerations:** ${risk.otherConditions.join(', ')}\n\n`
+    }
+  }
 
   // Clinical Summary
   const healthScore = calculateHealthScore(analyses, patient)

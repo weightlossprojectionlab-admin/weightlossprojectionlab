@@ -12,65 +12,53 @@ import type { JobPosting } from '@/types/jobs'
 export const dynamic = 'force-dynamic'
 export const revalidate = 300 // Revalidate every 5 minutes
 
+const notFound = () =>
+  NextResponse.json({ success: false, error: 'Job not found' }, { status: 404 })
+
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
+  const { slug } = await params
+
+  // Filter on BOTH slug and status. The Firestore `list` rule on
+  // `job_postings` allows non-admin reads only when the query itself
+  // is provably restricted to status=='published' — without that
+  // clause, a duplicate draft doc sharing the slug (the AI generator
+  // creates a fresh doc on every run, so this happens) causes the
+  // entire query to be rejected as permission-denied. Two equality
+  // filters need no composite index.
+  let snapshot
   try {
-    const { slug } = await params
-
-    // Query by slug only (simpler, no index required)
-    const q = query(
-      collection(db, 'job_postings'),
-      where('slug', '==', slug),
-      limit(1)
+    snapshot = await getDocs(
+      query(
+        collection(db, 'job_postings'),
+        where('slug', '==', slug),
+        where('status', '==', 'published'),
+        limit(1),
+      ),
     )
-
-    const snapshot = await getDocs(q)
-
-    if (snapshot.empty) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Job not found',
-        },
-        { status: 404 }
-      )
-    }
-
-    const doc = snapshot.docs[0]
-    const job: JobPosting = {
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
-    } as JobPosting
-
-    // Check if published (client-side check to avoid index)
-    if (job.status !== 'published') {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Job not found',
-        },
-        { status: 404 }
-      )
-    }
-
-    logger.info(`Fetched job: ${job.title} (${job.id})`)
-
-    return NextResponse.json({
-      success: true,
-      data: job,
-    })
   } catch (error: any) {
+    if (error?.code === 'permission-denied') {
+      return notFound()
+    }
     logger.error('Error fetching job:', error as Error)
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to fetch job',
-      },
-      { status: 500 }
+      { success: false, error: 'Failed to fetch job' },
+      { status: 500 },
     )
   }
+
+  if (snapshot.empty) return notFound()
+
+  const doc = snapshot.docs[0]
+  const job: JobPosting = {
+    id: doc.id,
+    ...doc.data(),
+    createdAt: doc.data().createdAt?.toDate?.() || new Date(),
+    updatedAt: doc.data().updatedAt?.toDate?.() || new Date(),
+  } as JobPosting
+
+  logger.info(`Fetched job: ${job.title} (${job.id})`)
+  return NextResponse.json({ success: true, data: job })
 }

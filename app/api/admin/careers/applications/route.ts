@@ -24,18 +24,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Forbidden - Admin access required' }, { status: 403 });
     }
 
-    // Fetch all job applications
+    // Fetch all job applications. The writer at /api/applications
+    // stores the timestamp as `appliedAt` (matches the canonical
+    // JobApplication type in types/jobs.ts) — orderBy on a missing
+    // field silently filters out every doc, so this MUST match the
+    // writer's field name. Emit both `appliedAt` and the legacy
+    // `submittedAt` alias so the admin UI keeps rendering until its
+    // inline type is unified with the canonical one.
     const applicationsSnapshot = await adminDb
       .collection('job_applications')
-      .orderBy('submittedAt', 'desc')
+      .orderBy('appliedAt', 'desc')
       .get();
 
     const applications = applicationsSnapshot.docs.map((doc) => {
       const data = doc.data();
+      const appliedAtIso = data.appliedAt?.toDate?.()?.toISOString()
+        || data.submittedAt?.toDate?.()?.toISOString()
+        || new Date().toISOString();
       return {
         applicationId: doc.id,
         ...data,
-        submittedAt: data.submittedAt?.toDate?.()?.toISOString() || new Date().toISOString(),
+        appliedAt: appliedAtIso,
+        submittedAt: appliedAtIso,
         reviewedAt: data.reviewedAt?.toDate?.()?.toISOString() || null,
       };
     });

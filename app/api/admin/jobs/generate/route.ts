@@ -13,6 +13,7 @@ import { logger } from '@/lib/logger'
 import type { JobPosting } from '@/types/jobs'
 import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { slugExists } from '@/lib/admin/job-slug'
 
 /**
  * Generate jobs from codebase analysis
@@ -104,10 +105,20 @@ export async function POST(request: NextRequest) {
       }))
     }
 
-    // Save to Firestore if requested
+    // Save to Firestore if requested. Slug uniqueness is enforced
+    // at write time so repeat AI runs don't silently create duplicate
+    // docs sharing a slug (which previously broke the public detail
+    // route — see [[bug: duplicate slug shadowing]]).
     const savedJobIds: string[] = []
+    const skippedDuplicates: Array<{ slug: string; title: string }> = []
     if (saveToFirestore) {
       for (const { job } of generatedJobs) {
+        const slug = job.slug ?? ''
+        if (slug && (await slugExists(slug))) {
+          skippedDuplicates.push({ slug, title: job.title ?? slug })
+          continue
+        }
+
         const jobData = {
           ...job,
           createdAt: new Date(),
@@ -122,7 +133,8 @@ export async function POST(request: NextRequest) {
       }
 
       logger.info('[Admin] Jobs saved to Firestore', {
-        count: savedJobIds.length,
+        saved: savedJobIds.length,
+        skipped: skippedDuplicates.length,
         jobIds: savedJobIds,
       })
     }
@@ -137,6 +149,7 @@ export async function POST(request: NextRequest) {
           rationale,
         })),
         savedJobIds: saveToFirestore ? savedJobIds : undefined,
+        skippedDuplicates: saveToFirestore ? skippedDuplicates : undefined,
         existingJobCount: existingJobs.length,
       },
     })

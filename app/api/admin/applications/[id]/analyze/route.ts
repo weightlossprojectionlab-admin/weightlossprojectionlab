@@ -35,6 +35,39 @@ async function verifyAdmin(request: NextRequest) {
   return { uid: decodedToken.uid, email: adminEmail }
 }
 
+/**
+ * Look up the stored resume file (PDF / DOCX) for an application and
+ * return it as base64 plus mime type. Path matches what the submit
+ * route writes: `resumes/<applicationId>/<resumeFileName>`.
+ *
+ * Returns null when no file is on record so the caller can fall back
+ * to body-supplied resumeText.
+ */
+async function loadResumeFile(
+  applicationId: string,
+  resumeFileName: string | undefined,
+): Promise<{ data: string; mimeType: string } | null> {
+  if (!resumeFileName) return null
+  const { getStorage } = await import('firebase-admin/storage')
+  const bucket = getStorage().bucket()
+  const file = bucket.file(`resumes/${applicationId}/${resumeFileName}`)
+  const [exists] = await file.exists()
+  if (!exists) return null
+  const [meta] = await file.getMetadata()
+  const [buffer] = await file.download()
+  const lowerName = resumeFileName.toLowerCase()
+  const inferredMime =
+    meta.contentType
+    || (lowerName.endsWith('.pdf')
+      ? 'application/pdf'
+      : lowerName.endsWith('.docx')
+        ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        : lowerName.endsWith('.doc')
+          ? 'application/msword'
+          : 'application/pdf')
+  return { data: buffer.toString('base64'), mimeType: inferredMime }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -42,14 +75,18 @@ export async function POST(
   try {
     await verifyAdmin(request)
     const { id: applicationId } = await params
-    const body = await request.json()
-    const resumeText = body.resumeText as string
 
-    if (!resumeText || resumeText.trim().length < 50) {
-      return NextResponse.json(
-        { success: false, error: 'Resume text too short or missing' },
-        { status: 400 }
-      )
+    // Accept an optional resumeText override from the body — useful
+    // when the applicant pasted into the form instead of uploading
+    // a file. The primary path reads the uploaded file from Storage.
+    let resumeText: string | undefined
+    try {
+      const body = await request.json()
+      if (typeof body?.resumeText === 'string' && body.resumeText.trim().length >= 50) {
+        resumeText = body.resumeText
+      }
+    } catch {
+      // No JSON body — fine, we'll use the stored file.
     }
 
     // Get application
@@ -77,7 +114,20 @@ export async function POST(
       )
     }
 
-    const jobPosting = jobDoc.data() as JobPosting
+    const jobPosting = { ...jobDoc.data(), id: jobDoc.id } as JobPosting
+
+    // Resolve resume input: prefer uploaded file (multimodal); fall
+    // back to body-supplied text; bail if neither is available.
+    const resumeFile = await loadResumeFile(applicationId, application.resumeFileName)
+    if (!resumeFile && !resumeText) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No resume on file and no resumeText provided',
+        },
+        { status: 400 },
+      )
+    }
 
     // Update status to processing
     await applicationDoc.ref.update({
@@ -85,12 +135,16 @@ export async function POST(
       aiAnalysisError: null,
     })
 
-    logger.info(`Starting AI analysis for application ${applicationId}`)
+    logger.info(`Starting AI analysis for application ${applicationId}`, {
+      inputKind: resumeFile ? 'file' : 'text',
+      mimeType: resumeFile?.mimeType,
+    })
 
     // Run AI analysis
     try {
       const analysis = await analyzeResume({
         resumeText,
+        resumeFile: resumeFile ?? undefined,
         jobPosting,
         model: 'gemini',
       })

@@ -104,8 +104,17 @@ export function AIJobGenerationModal({
       }
 
       const savedCount = data.data.savedJobIds?.length || 0
-      logger.info(`[AIJobGen] Saved ${savedCount} jobs, calling onSuccess callback`)
-      toast.success(`Saved ${savedCount} job(s) as drafts`)
+      const skipped: Array<{ slug: string; title: string }> = data.data.skippedDuplicates || []
+      logger.info(`[AIJobGen] Saved ${savedCount} jobs, skipped ${skipped.length} duplicates, calling onSuccess callback`)
+      if (skipped.length > 0) {
+        const titles = skipped.map(s => s.title).join(', ')
+        toast.success(
+          `Saved ${savedCount} job(s) as drafts. Skipped ${skipped.length} that already exist: ${titles}`,
+          { duration: 6000 },
+        )
+      } else {
+        toast.success(`Saved ${savedCount} job(s) as drafts`)
+      }
       onSuccess() // This should trigger fetchJobs() in the parent
       handleClose()
     } catch (err) {

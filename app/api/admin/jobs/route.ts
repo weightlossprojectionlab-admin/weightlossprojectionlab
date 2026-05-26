@@ -10,6 +10,7 @@ import { FieldValue } from 'firebase-admin/firestore'
 import { logger } from '@/lib/logger'
 import type { JobPosting, JobPostingForm } from '@/types/jobs'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { slugExists } from '@/lib/admin/job-slug'
 
 export const dynamic = 'force-dynamic'
 
@@ -97,8 +98,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Generate slug
+    // Generate slug + reject duplicates so the public detail route
+    // (which fetches by slug) never has to disambiguate.
     const slug = generateSlug(body.title)
+    if (await slugExists(slug)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `A job with the slug "${slug}" already exists. Rename the title or edit the existing posting.`,
+        },
+        { status: 409 },
+      )
+    }
 
     // Create job posting
     const jobData = {

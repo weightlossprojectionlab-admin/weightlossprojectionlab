@@ -485,78 +485,199 @@ function identifyDominantAreas(
 }
 
 /**
- * Determine what jobs are needed based on analysis
+ * Catalog-driven role spec. Each entry encapsulates:
+ *   - signal:        when the codebase warrants suggesting this role.
+ *   - dedupPatterns: word-boundary regexes tested against existing
+ *                    job titles (lowercased). Any match → skip.
+ *                    Word-boundaries matter so "ml" doesn't dedup
+ *                    against "HTML Email Specialist" the way a raw
+ *                    substring check would.
+ *   - technologyFilter / seniority: how to populate the JobNeed.
+ *
+ * Adding a new role = appending an entry here; the loop in
+ * `determineJobNeeds` does the rest.
+ */
+interface RoleSpec {
+  role: string
+  department: JobDepartment
+  reason: string
+  signal: (a: CodebaseAnalysis) => boolean
+  dedupPatterns: RegExp[]
+  technologyFilter: (techStack: string[]) => string[]
+  seniority: (a: CodebaseAnalysis) => JobNeed['seniority']
+}
+
+const hasArea = (a: CodebaseAnalysis, ...areas: string[]) =>
+  areas.some(area => a.dominantAreas.includes(area))
+
+const hasTech = (a: CodebaseAnalysis, ...techs: string[]) =>
+  techs.some(t => a.techStack.includes(t))
+
+const filesTouch = (a: CodebaseAnalysis, regex: RegExp) =>
+  a.recentChanges.some(c => c.filesChanged.some(f => regex.test(f)))
+
+const commitMessagesMatch = (a: CodebaseAnalysis, regex: RegExp) =>
+  a.recentChanges.some(c => regex.test(c.message))
+
+const seniorityFromComplexity = (a: CodebaseAnalysis): JobNeed['seniority'] =>
+  a.projectComplexity === 'very_high' || a.projectComplexity === 'high' ? 'Senior' : 'Mid-Level'
+
+const ROLE_CATALOG: RoleSpec[] = [
+  {
+    role: 'Frontend Engineer',
+    department: 'Engineering',
+    reason: 'Significant frontend development activity detected',
+    signal: a => hasArea(a, 'frontend'),
+    dedupPatterns: [/\bfront[\s-]?end\b/, /\bweb\s+engineer\b/],
+    technologyFilter: ts => ts.filter(t => ['React', 'Next.js', 'TypeScript', 'Tailwind CSS'].includes(t)),
+    seniority: seniorityFromComplexity,
+  },
+  {
+    role: 'Backend Engineer',
+    department: 'Engineering',
+    reason: 'Active API development and backend features',
+    signal: a => hasArea(a, 'api', 'backend'),
+    dedupPatterns: [/\bback[\s-]?end\b/, /\bapi\s+engineer\b/, /\bserver[\s-]?side\s+engineer\b/],
+    technologyFilter: ts => ts.filter(t => ['Firebase', 'Firebase Admin SDK', 'Next.js', 'TypeScript', 'Stripe'].includes(t)),
+    seniority: a => (a.projectComplexity === 'very_high' ? 'Senior' : 'Mid-Level'),
+  },
+  {
+    role: 'Full-Stack Engineer',
+    department: 'Engineering',
+    reason: 'Full-stack development across frontend and backend',
+    signal: a => hasArea(a, 'frontend') && hasArea(a, 'api', 'backend'),
+    dedupPatterns: [/\bfull[\s-]?stack\b/],
+    technologyFilter: ts => ts,
+    seniority: a => (a.projectComplexity === 'very_high' ? 'Senior' : 'Mid-Level'),
+  },
+  {
+    role: 'Machine Learning Engineer',
+    department: 'Engineering',
+    reason: 'AI/ML features being developed',
+    signal: a => hasArea(a, 'ml') || hasTech(a, 'Gemini AI', 'OpenAI', 'Claude AI'),
+    dedupPatterns: [
+      /\bmachine\s+learning\b/,
+      /\bml\s+(engineer|scientist|lead|manager)\b/,
+      /\bai\s+(engineer|scientist|lead|researcher)\b/,
+      /\bapplied\s+(ml|ai)\b/,
+    ],
+    technologyFilter: ts => ts.filter(t => ['Gemini AI', 'OpenAI', 'Claude AI'].includes(t)),
+    seniority: () => 'Senior',
+  },
+  {
+    role: 'Mobile Engineer',
+    department: 'Engineering',
+    reason: 'Mobile codebase or native integrations in use',
+    signal: a =>
+      hasTech(a, 'React Native', 'Expo', 'Swift', 'Kotlin', 'iOS', 'Android') ||
+      filesTouch(a, /(^|\/)(ios|android|mobile)\//i),
+    dedupPatterns: [
+      /\bmobile\s+engineer\b/,
+      /\bios\s+engineer\b/,
+      /\bandroid\s+engineer\b/,
+      /\breact[\s-]?native\b/,
+    ],
+    technologyFilter: ts => ts.filter(t => ['React Native', 'Expo', 'Swift', 'Kotlin'].includes(t)),
+    seniority: seniorityFromComplexity,
+  },
+  {
+    role: 'DevOps / Platform Engineer',
+    department: 'Engineering',
+    reason: 'Active CI/CD, infrastructure, and deployment work',
+    signal: a =>
+      hasArea(a, 'infrastructure') &&
+      (a.filesByCategory.infrastructure?.length ?? 0) >= 5,
+    dedupPatterns: [
+      /\bdev[\s-]?ops\b/,
+      /\bplatform\s+engineer\b/,
+      /\bsre\b/,
+      /\bsite\s+reliability\b/,
+      /\binfra(structure)?\s+engineer\b/,
+    ],
+    technologyFilter: ts => ts.filter(t => ['Firebase', 'Next.js'].includes(t)),
+    seniority: seniorityFromComplexity,
+  },
+  {
+    role: 'Data Engineer',
+    department: 'Data',
+    reason: 'Active database, migration, and pipeline work',
+    signal: a =>
+      hasArea(a, 'database') || filesTouch(a, /\/(migrations|schemas|seeds|etl|pipelines)\//i),
+    dedupPatterns: [
+      /\bdata\s+engineer\b/,
+      /\banalytics\s+engineer\b/,
+      /\bdatabase\s+engineer\b/,
+    ],
+    technologyFilter: ts => ts.filter(t => ['Firebase', 'Firebase Admin SDK'].includes(t)),
+    seniority: seniorityFromComplexity,
+  },
+  {
+    role: 'Security Engineer',
+    department: 'Security',
+    reason: 'Authentication, authorization, and security primitives under active development',
+    signal: a =>
+      filesTouch(a, /\/(security|rbac|auth|csrf|middleware|hipaa|compliance)\b/i) ||
+      commitMessagesMatch(a, /\b(csrf|xss|sql\s*injection|secret|hipaa|rate[\s-]?limit|rbac)\b/i),
+    dedupPatterns: [
+      /\bsecurity\s+(engineer|architect|analyst)\b/,
+      /\bappsec\b/,
+      /\binfo[\s-]?sec\b/,
+    ],
+    technologyFilter: ts => ts.filter(t => ['Firebase', 'Stripe'].includes(t)),
+    seniority: () => 'Senior',
+  },
+  {
+    role: 'QA / Test Engineer',
+    department: 'Engineering',
+    reason: 'Active test surface with Playwright / Jest under regular maintenance',
+    signal: a => hasArea(a, 'testing') && hasTech(a, 'Playwright', 'Jest'),
+    dedupPatterns: [
+      /\b(qa|sdet)\s+engineer\b/,
+      /\btest\s+engineer\b/,
+      /\bquality\s+(assurance|engineer)\b/,
+    ],
+    technologyFilter: ts => ts.filter(t => ['Playwright', 'Jest', 'TypeScript'].includes(t)),
+    seniority: seniorityFromComplexity,
+  },
+  {
+    role: 'Technical Writer',
+    department: 'Product',
+    reason: 'Large body of docs/content under active maintenance',
+    signal: a => hasArea(a, 'documentation') && (a.filesByCategory.documentation?.length ?? 0) >= 20,
+    dedupPatterns: [
+      /\btechnical\s+writer\b/,
+      /\bcontent\s+designer\b/,
+      /\bdocumentation\s+engineer\b/,
+    ],
+    technologyFilter: ts => ts.filter(t => ['TypeScript'].includes(t)),
+    seniority: () => 'Mid-Level',
+  },
+]
+
+/**
+ * Determine what jobs are needed based on analysis.
+ *
+ * Catalog-driven: iterates ROLE_CATALOG, gates on each spec's signal,
+ * then dedups against existing job titles using word-boundary regexes
+ * (so dedup tokens like "ml" or "api" don't false-match unrelated
+ * titles such as "HTML Email Specialist").
  */
 function determineJobNeeds(
   analysis: CodebaseAnalysis,
-  existingJobs: JobPosting[]
+  existingJobs: JobPosting[],
 ): JobNeed[] {
-  const needs: JobNeed[] = []
+  const existingTitles = existingJobs.map(j => (j.title || '').toLowerCase())
 
-  // Check for frontend engineer need
-  if (
-    analysis.dominantAreas.includes('frontend') &&
-    !existingJobs.some(j => j.title.toLowerCase().includes('frontend'))
-  ) {
-    needs.push({
-      role: 'Frontend Engineer',
-      department: 'Engineering',
-      seniority: analysis.projectComplexity === 'very_high' || analysis.projectComplexity === 'high' ? 'Senior' : 'Mid-Level',
-      reason: 'Significant frontend development activity detected',
-      technologies: analysis.techStack.filter(t =>
-        ['React', 'Next.js', 'TypeScript', 'Tailwind CSS'].includes(t)
-      ),
-    })
-  }
-
-  // Check for backend/API engineer need
-  if (
-    analysis.dominantAreas.includes('api') &&
-    !existingJobs.some(j => j.title.toLowerCase().includes('backend') || j.title.toLowerCase().includes('api'))
-  ) {
-    needs.push({
-      role: 'Backend Engineer',
-      department: 'Engineering',
-      seniority: analysis.projectComplexity === 'very_high' ? 'Senior' : 'Mid-Level',
-      reason: 'Active API development and backend features',
-      technologies: analysis.techStack.filter(t =>
-        ['Firebase', 'Next.js', 'TypeScript'].includes(t)
-      ),
-    })
-  }
-
-  // Check for ML engineer need
-  if (
-    (analysis.dominantAreas.includes('ml') || analysis.techStack.some(t => t.includes('AI') || t.includes('Gemini') || t.includes('OpenAI'))) &&
-    !existingJobs.some(j => j.title.toLowerCase().includes('machine learning') || j.title.toLowerCase().includes('ml'))
-  ) {
-    needs.push({
-      role: 'Machine Learning Engineer',
-      department: 'Engineering',
-      seniority: 'Senior',
-      reason: 'AI/ML features being developed',
-      technologies: analysis.techStack.filter(t =>
-        t.includes('AI') || t.includes('Gemini') || t.includes('OpenAI') || t.includes('Claude')
-      ),
-    })
-  }
-
-  // Check for full-stack engineer (if both frontend and backend)
-  if (
-    analysis.dominantAreas.includes('frontend') &&
-    analysis.dominantAreas.includes('api') &&
-    !existingJobs.some(j => j.title.toLowerCase().includes('full-stack') || j.title.toLowerCase().includes('fullstack'))
-  ) {
-    needs.push({
-      role: 'Full-Stack Engineer',
-      department: 'Engineering',
-      seniority: analysis.projectComplexity === 'very_high' ? 'Senior' : 'Mid-Level',
-      reason: 'Full-stack development across frontend and backend',
-      technologies: analysis.techStack,
-    })
-  }
-
-  return needs
+  return ROLE_CATALOG
+    .filter(spec => spec.signal(analysis))
+    .filter(spec => !spec.dedupPatterns.some(pat => existingTitles.some(t => pat.test(t))))
+    .map(spec => ({
+      role: spec.role,
+      department: spec.department,
+      seniority: spec.seniority(analysis),
+      reason: spec.reason,
+      technologies: spec.technologyFilter(analysis.techStack),
+    }))
 }
 
 /**
