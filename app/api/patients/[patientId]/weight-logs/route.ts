@@ -168,7 +168,13 @@ export async function POST(
     }
     await patientRef.update(profileUpdate)
 
+    // The shared apiClient gates on { success: true } even for 200
+    // responses (see lib/api-client.ts:187). Omitting it makes a
+    // successful write look like "Request failed" to the caller and
+    // bubbles a fake error into the wizard. Keep this envelope to
+    // match every other route in the app.
     return NextResponse.json({
+      success: true,
       data: {
         id: docRef.id,
         ...weightLog,

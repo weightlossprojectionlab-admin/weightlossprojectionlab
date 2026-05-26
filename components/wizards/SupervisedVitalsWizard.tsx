@@ -1524,6 +1524,42 @@ function ReviewStep({
     v => v.severity === 'critical'
   )
 
+  // Map each shown reading to its validation result so the user can
+  // see which value tripped the warning (was previously ambiguous —
+  // "Abnormal Readings Detected" with no list of which readings).
+  // Display strings match the format used in the rows below.
+  const reviewLookups: Array<{ key: string; label: string; display: string }> = [
+    vitalData.bloodPressure && {
+      key: 'blood_pressure',
+      label: 'Blood Pressure',
+      display: `${vitalData.bloodPressure.systolic}/${vitalData.bloodPressure.diastolic} mmHg`,
+    },
+    vitalData.temperature !== undefined && {
+      key: 'temperature',
+      label: 'Temperature',
+      display: `${vitalData.temperature}°F`,
+    },
+    vitalData.pulseOximeterReading && {
+      key: 'pulse_oximeter',
+      label: 'Pulse Oximeter',
+      display: `${vitalData.pulseOximeterReading.spo2}% SpO₂ / ${vitalData.pulseOximeterReading.pulseRate} bpm`,
+    },
+    vitalData.bloodSugar !== undefined && {
+      key: 'blood_sugar',
+      label: 'Blood Sugar',
+      display: `${vitalData.bloodSugar} mg/dL`,
+    },
+    vitalData.weight !== undefined && {
+      key: 'weight',
+      label: 'Weight',
+      display: `${vitalData.weight} lbs`,
+    },
+  ].filter(Boolean) as Array<{ key: string; label: string; display: string }>
+
+  const abnormalReadings = reviewLookups
+    .map(r => ({ ...r, validation: validationResults[r.key] }))
+    .filter(r => r.validation && (r.validation.severity === 'warning' || r.validation.severity === 'critical'))
+
   return (
     <div className="space-y-2">
       <div>
@@ -1616,14 +1652,55 @@ function ReviewStep({
             <ExclamationTriangleIcon className={`w-4 h-4 flex-shrink-0 mt-0.5 ${
               hasCriticalReadings ? 'text-error' : 'text-warning'
             }`} />
-            <div>
-              <h4 className={`font-semibold mb-1 text-sm ${
+            <div className="flex-1 min-w-0">
+              <h4 className={`font-semibold mb-2 text-sm ${
                 hasCriticalReadings ? 'text-error-dark' : 'text-warning-dark'
               }`}>
                 {hasCriticalReadings ? 'Critical Readings Detected' : 'Abnormal Readings Detected'}
               </h4>
+
+              {/* Specific list — names + values + the validator's
+                  message so the user knows WHICH reading is the
+                  concern and WHY, not just that "something" is off. */}
+              <ul className="space-y-1.5 mb-2">
+                {abnormalReadings.map((r) => (
+                  <li
+                    key={r.key}
+                    className="text-sm text-foreground"
+                  >
+                    <span className="inline-flex items-center gap-1.5">
+                      <span
+                        className={`inline-block w-2 h-2 rounded-full ${
+                          r.validation?.severity === 'critical' ? 'bg-error' : 'bg-warning'
+                        }`}
+                        aria-hidden
+                      />
+                      <span className="font-semibold">{r.label}</span>
+                      <span className="text-foreground">{r.display}</span>
+                      <span
+                        className={`text-xs font-semibold uppercase tracking-wide ${
+                          r.validation?.severity === 'critical' ? 'text-error-dark' : 'text-warning-dark'
+                        }`}
+                      >
+                        {r.validation?.severity}
+                      </span>
+                    </span>
+                    {r.validation?.message && (
+                      <div className="text-xs text-foreground/80 pl-3.5 mt-0.5">
+                        {r.validation.message}
+                      </div>
+                    )}
+                    {r.validation?.guidance && (
+                      <div className="text-xs text-muted-foreground pl-3.5 mt-0.5">
+                        {r.validation.guidance}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+
               <p className="text-sm text-foreground mb-2">
-                <strong>Recommended:</strong> Please add notes explaining the situation and any actions taken:
+                <strong>Recommended:</strong> Add notes explaining the situation and any actions taken:
               </p>
               <textarea
                 value={vitalData.notes || ''}
