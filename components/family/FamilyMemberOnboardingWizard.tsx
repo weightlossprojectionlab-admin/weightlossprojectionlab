@@ -2618,16 +2618,22 @@ export default function FamilyMemberOnboardingWizard({
           </div>
         </div>
 
-        {/* Cancel — exits the wizard without saving and routes back
-            to /patients. "and go back" was redundant since canceling
-            always implies a return to where they came from. */}
-        <button
-          type="button"
-          onClick={() => router.push('/patients')}
-          className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Cancel
-        </button>
+        {/* Cancel — only on Step 1 (type_selection). At that point
+            no data has been committed yet so leaving costs nothing.
+            From basic_info onward the user has captured real data
+            (name, DOB, gender, vitals, allergies); a silent Cancel
+            would discard their work without warning. The Back button
+            already handles backward navigation step-by-step, so
+            there's no need for an exit shortcut once they're in. */}
+        {currentStepData.id === 'type_selection' && (
+          <button
+            type="button"
+            onClick={() => router.push('/patients')}
+            className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Cancel
+          </button>
+        )}
       </div>
 
       {/* Driver's License Scanner Modal */}
