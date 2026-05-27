@@ -288,9 +288,17 @@ export async function POST(
       )
     }
 
-    // Create vital sign document
+    // Create vital sign document.
+    //
+    // `recordedAt` stores the actual instant the reading was taken
+    // (or the user-picked date, preserving its local-time meaning).
+    // We DO NOT normalize to UTC midnight before storage — that was
+    // the source of a "vital shows yesterday's date" bug for every
+    // user west of UTC: UTC midnight of 5/27 renders in EDT as
+    // "5/26 8:00 PM". The validator's normalized date is kept ONLY
+    // for comparison logic (future / patient-creation / backdate);
+    // the wire value is the raw timestamp.
     const vitalId = uuidv4()
-    const normalizedRecordedAt = dateValidation.normalizedDate!.toISOString()
     const isBackdated = isVitalBackdated(recordedAtDate, new Date())
 
     // Determine approval status for weight entries
@@ -309,7 +317,7 @@ export async function POST(
       id: vitalId,
       patientId,
       ...vitalData,
-      recordedAt: normalizedRecordedAt, // User-selected date (normalized to UTC midnight)
+      recordedAt: recordedAtDate.toISOString(), // Actual reading time (preserves local-day meaning)
       loggedAt: now, // System timestamp when entry was created
       loggedBy: userId, // Who created the entry
       isBackdated, // True if logged > 1 hour after recorded
