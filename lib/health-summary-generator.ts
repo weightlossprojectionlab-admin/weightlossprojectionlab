@@ -197,21 +197,13 @@ export interface VitalReferenceRanges {
 // ==================== AGE CALCULATION ====================
 
 /**
- * Calculate patient age from date of birth
- *
- * @param dateOfBirth - ISO 8601 date string
- * @returns Age in years
+ * Re-export canonical calculateAge from lib/date-utils so this module
+ * doesn't drift its own age math. Previously it parsed via raw
+ * `new Date(dateOfBirth)` and had the UTC-midnight TZ shift bug at
+ * birthday boundaries.
  */
-export function calculateAge(dateOfBirth: string): number {
-  const today = new Date()
-  const birthDate = new Date(dateOfBirth)
-  let age = today.getFullYear() - birthDate.getFullYear()
-  const monthDiff = today.getMonth() - birthDate.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-    age--
-  }
-  return age
-}
+import { calculateAge } from './date-utils'
+export { calculateAge }
 
 // ==================== WEIGHT ANALYSIS ====================
 

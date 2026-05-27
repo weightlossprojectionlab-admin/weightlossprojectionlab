@@ -16,6 +16,14 @@ import type { VitalSign, VitalType } from '@/types/medical'
 
 interface UseVitalsOptions {
   patientId: string
+  /** Firebase Auth UID of the patient's owner. Used to detect a
+   *  self-view (user is the patient's owner) so the feature gate
+   *  doesn't block them. Without this the hook compared patientId
+   *  (a doc id) against user.uid (a Firebase UID) — different
+   *  identifier spaces, so the self-view bypass never matched and
+   *  owners without the `vitals` feature gate silently got an empty
+   *  vitals array. Same shape of bug we fixed in VitalsSummaryModal. */
+  patientOwnerUserId?: string
   type?: VitalType
   limit?: number
   autoFetch?: boolean
@@ -46,6 +54,7 @@ interface UseVitalsReturn {
 
 export function useVitals({
   patientId,
+  patientOwnerUserId,
   type,
   limit,
   autoFetch = true
@@ -58,8 +67,11 @@ export function useVitals({
   const { user } = useAuth()
   const { canAccess: hasVitalsAccess } = useFeatureGate('vitals')
 
-  // Allow access if viewing own data OR has vitals feature
-  const isOwnData = patientId === user?.uid
+  // Allow access if viewing own data OR has vitals feature.
+  // Self-view = the logged-in user is the patient's owner.
+  // Compare against the owner UID (patientOwnerUserId), NOT
+  // patientId — those live in different identifier spaces.
+  const isOwnData = !!patientOwnerUserId && patientOwnerUserId === user?.uid
   const hasAccess = isOwnData || hasVitalsAccess
 
   // Auto-disable fetch if feature not enabled (prevents 403 errors)

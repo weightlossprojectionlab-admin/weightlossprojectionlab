@@ -1,13 +1,24 @@
 /**
  * AI Vision Service
  *
- * Handles meal image analysis using multiple AI providers with fallback logic.
- * Separation of concerns: Keep AI provider logic separate from API routes.
+ * Handles meal image analysis. The Gemini path routes through the
+ * shared generateGeminiJSON client so we inherit:
+ *   - gemini-2.5-flash model default (the key has access to Flash,
+ *     not Pro — the previous direct `gemini-2.5-pro` call returned
+ *     API_KEY_INVALID 502s on prod)
+ *   - thinkingBudget=0 (prevents CoT-truncated JSON)
+ *   - control-char sanitization before JSON.parse
+ *   - invocation logging
+ *   - data-URL prefix stripping for any mime type
+ *
+ * Separation of concerns: keep AI provider logic out of the API
+ * route — but consolidate Gemini-specific config in the shared
+ * client per feedback_dry + feedback_gemini_2_5_flash_gotchas.
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai'
 import OpenAI from 'openai'
 import { logger } from '@/lib/logger'
+import { generateGeminiJSON } from '@/lib/ai/gemini-client'
 
 export interface FoodItem {
   name: string
@@ -55,36 +66,19 @@ export interface AnalysisResult {
 }
 
 /**
- * Analyze meal image using Gemini Vision API
+ * Analyze meal image via the shared Gemini client.
+ *
+ * The client handles: model selection (Flash by default), thinking
+ * budget, JSON parsing, control-char sanitization, data-URL prefix
+ * stripping, and invocation logging. The route's job is just the
+ * prompt + image part.
  */
 async function analyzeWithGemini(
   imageData: string,
   mealType?: string
 ): Promise<MealAnalysis> {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY not configured')
-  }
-
-  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
-  const model = genAI.getGenerativeModel({
-    model: 'gemini-2.5-pro', // Pro for accurate vision + reliable JSON
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 4096,
-      responseMimeType: 'application/json',
-    }
-  })
-
-  // Convert base64 image to Gemini format
-  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
-  const mimeType = imageData.match(/data:(image\/\w+);base64,/)?.[1] || 'image/jpeg'
-
-  const imagePart = {
-    inlineData: {
-      data: base64Data,
-      mimeType: mimeType
-    }
-  }
+  const mimeMatch = imageData.match(/^data:(image\/\w+);base64,/)
+  const mimeType = mimeMatch?.[1] || 'image/jpeg'
 
   const prompt = `Analyze this meal photo and provide a detailed nutritional analysis with per-item breakdown.
 
@@ -125,25 +119,13 @@ Guidelines:
 - User specified this as: ${mealType || 'unspecified'}, but analyze independently
 - For mixed dishes (e.g., stir-fry, casserole), break down into main components when possible`
 
-  const result = await model.generateContent([prompt, imagePart])
-
-  const response = result.response
-  const text = response.text()
-
-  logger.debug('Gemini raw response length', { length: text.length, preview: text.substring(0, 200) })
-
-  // Remove markdown code blocks if present
-  let jsonContent = text
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim()
-
-  // Extract JSON object if surrounded by other text
-  const jsonMatch = jsonContent.match(/\{[\s\S]*\}/)
-  if (jsonMatch) jsonContent = jsonMatch[0]
-
-  return JSON.parse(jsonContent)
+  return await generateGeminiJSON<MealAnalysis>({
+    fnName: 'analyzeMealImage',
+    prompt,
+    images: [{ data: imageData, mimeType }],
+    temperature: 0.4,
+    metadata: { mealTypeHint: mealType ?? 'unspecified' },
+  })
 }
 
 /**

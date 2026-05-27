@@ -4,11 +4,18 @@ import React from 'react'
 import { CheckCircle, Activity, TrendingUp, Calendar, User } from 'lucide-react'
 import type { VitalSign } from '@/types/medical'
 import { formatVitalForDisplay, getVitalTypeLabel } from '@/lib/vitals-wizard-transform'
+import { getVitalColors } from '@/lib/vital-color-schemes'
 
 interface VitalsSummaryModalProps {
   vitals: VitalSign[]
   patientName: string
   patientId: string
+  /** Firebase Auth UID of the patient's owner. Used to detect a
+   *  self-log (vitals[0].takenBy === owner uid). Without this the
+   *  modal can't distinguish self-logs from "Unknown User" because
+   *  patientId (a doc id) and takenBy (a Firebase UID) live in
+   *  different identifier spaces. */
+  patientOwnerUserId?: string
   mood?: string
   moodNotes?: string
   isOpen: boolean
@@ -34,6 +41,7 @@ export default function VitalsSummaryModal({
   vitals,
   patientName,
   patientId,
+  patientOwnerUserId,
   mood,
   moodNotes,
   isOpen,
@@ -45,35 +53,26 @@ export default function VitalsSummaryModal({
 
   const timestamp = vitals[0]?.recordedAt ? new Date(vitals[0].recordedAt) : new Date()
 
-  // Get display name for the person who logged the vitals
+  // Resolve the display name for whoever logged the vitals. Three
+  // cases, in order:
+  //   1. Logger is the patient's owner → "Self" (the previous check
+  //      compared against patientId which is a doc id; that never
+  //      matched and produced a misleading "Unknown User" for every
+  //      self-log).
+  //   2. Logger appears in the caregivers list → caregiver name.
+  //   3. Fall through → "Unknown User".
   const getDisplayName = (userId?: string): string => {
-    console.log('[VitalsSummaryModal] getDisplayName called with userId:', userId)
-    console.log('[VitalsSummaryModal] patientId:', patientId)
-    console.log('[VitalsSummaryModal] caregivers:', caregivers)
-
-    if (!userId) {
-      console.log('[VitalsSummaryModal] No userId provided, returning Unknown')
-      return 'Unknown'
-    }
-
-    // Check if it's the patient themselves
-    if (userId === patientId) {
-      console.log('[VitalsSummaryModal] Matched patient ID, returning Self')
+    if (!userId) return 'Unknown'
+    if (patientOwnerUserId && userId === patientOwnerUserId) {
       return `${patientName} (Self)`
     }
-
-    // Check if it's a caregiver
     const caregiver = caregivers.find(c => c.userId === userId)
-    console.log('[VitalsSummaryModal] Found caregiver:', caregiver)
     if (caregiver) {
       return caregiver.relationship ? `${caregiver.name} (${caregiver.relationship})` : caregiver.name
     }
-
-    console.log('[VitalsSummaryModal] No match found, returning Unknown User')
     return 'Unknown User'
   }
 
-  console.log('[VitalsSummaryModal] vitals[0]?.takenBy:', vitals[0]?.takenBy)
   const takenBy = getDisplayName(vitals[0]?.takenBy)
 
   return (
@@ -190,36 +189,7 @@ export default function VitalsSummaryModal({
 function VitalCard({ vital }: { vital: VitalSign }) {
   const label = getVitalTypeLabel(vital.type)
   const displayValue = formatVitalForDisplay(vital.type, vital.value, vital.unit)
-
-  // Color scheme based on vital type
-  const colorSchemes: Record<string, { bg: string; text: string; icon: string }> = {
-    blood_pressure: {
-      bg: 'bg-red-100 dark:bg-red-900/30',
-      text: 'text-red-900 dark:text-red-100',
-      icon: 'text-red-600 dark:text-red-400'
-    },
-    temperature: {
-      bg: 'bg-orange-100 dark:bg-orange-900/30',
-      text: 'text-orange-900 dark:text-orange-100',
-      icon: 'text-orange-600 dark:text-orange-400'
-    },
-    pulse_oximeter: {
-      bg: 'bg-purple-100 dark:bg-purple-900/30',
-      text: 'text-purple-900 dark:text-purple-100',
-      icon: 'text-purple-600 dark:text-purple-400'
-    },
-    blood_sugar: {
-      bg: 'bg-green-100 dark:bg-green-900/30',
-      text: 'text-green-900 dark:text-green-100',
-      icon: 'text-green-600 dark:text-green-400'
-    }
-  }
-
-  const colors = colorSchemes[vital.type] || {
-    bg: 'bg-blue-100 dark:bg-blue-900/30',
-    text: 'text-blue-900 dark:text-blue-100',
-    icon: 'text-blue-600 dark:text-blue-400'
-  }
+  const colors = getVitalColors(vital.type)
 
   return (
     <div

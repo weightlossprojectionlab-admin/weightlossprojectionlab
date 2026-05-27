@@ -1542,7 +1542,11 @@ function ReviewStep({
     vitalData.pulseOximeterReading && {
       key: 'pulse_oximeter',
       label: 'Pulse Oximeter',
-      display: `${vitalData.pulseOximeterReading.spo2}% SpO₂ / ${vitalData.pulseOximeterReading.pulseRate} bpm`,
+      display: `${vitalData.pulseOximeterReading.spo2}% SpO₂ / ${vitalData.pulseOximeterReading.pulseRate} bpm${
+        vitalData.pulseOximeterReading.perfusionIndex !== undefined
+          ? ` (PI: ${vitalData.pulseOximeterReading.perfusionIndex}%)`
+          : ''
+      }`,
     },
     vitalData.bloodSugar !== undefined && {
       key: 'blood_sugar',
@@ -1556,9 +1560,26 @@ function ReviewStep({
     },
   ].filter(Boolean) as Array<{ key: string; label: string; display: string }>
 
-  const abnormalReadings = reviewLookups
-    .map(r => ({ ...r, validation: validationResults[r.key] }))
-    .filter(r => r.validation && (r.validation.severity === 'warning' || r.validation.severity === 'critical'))
+  // Annotate each row with its validation result once. Same source
+  // of truth drives the row tint AND the abnormal-readings alert
+  // block below — the user-facing answer to "which reading is
+  // abnormal?" is computed in exactly one place.
+  const annotatedRows = reviewLookups.map(r => ({
+    ...r,
+    validation: validationResults[r.key],
+  }))
+
+  const abnormalReadings = annotatedRows.filter(
+    r => r.validation && (r.validation.severity === 'warning' || r.validation.severity === 'critical'),
+  )
+
+  // Map severity to row tint classes. Reused inside the row map +
+  // the alert dots so the visual language stays consistent.
+  const rowToneClass = (severity?: 'normal' | 'warning' | 'critical'): string => {
+    if (severity === 'critical') return 'bg-error-light border-error'
+    if (severity === 'warning') return 'bg-warning-light border-warning'
+    return 'bg-card border-border'
+  }
 
   return (
     <div className="space-y-2">
@@ -1570,53 +1591,34 @@ function ReviewStep({
       </div>
 
       <div className="space-y-2">
-        {vitalData.bloodPressure && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Blood Pressure</span>
-            <span className="text-base font-bold text-foreground">
-              {vitalData.bloodPressure.systolic}/{vitalData.bloodPressure.diastolic} mmHg
-            </span>
-          </div>
-        )}
-
-        {vitalData.temperature && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Temperature</span>
-            <span className="text-base font-bold text-foreground">
-              {vitalData.temperature}°F
-            </span>
-          </div>
-        )}
-
-        {vitalData.pulseOximeterReading && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Pulse Oximeter</span>
-            <span className="text-base font-bold text-foreground">
-              {vitalData.pulseOximeterReading.spo2}% SpO₂ / {vitalData.pulseOximeterReading.pulseRate} bpm
-              {vitalData.pulseOximeterReading.perfusionIndex &&
-                ` (PI: ${vitalData.pulseOximeterReading.perfusionIndex}%)`
-              }
-            </span>
-          </div>
-        )}
-
-        {vitalData.bloodSugar && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Blood Sugar</span>
-            <span className="text-base font-bold text-foreground">
-              {vitalData.bloodSugar} mg/dL
-            </span>
-          </div>
-        )}
-
-        {vitalData.weight && (
-          <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">
-            <span className="font-medium text-foreground text-sm">Weight</span>
-            <span className="text-base font-bold text-foreground">
-              {vitalData.weight} lbs
-            </span>
-          </div>
-        )}
+        {/* One row per measurement. Each row's tint is driven by the
+            validator's severity for that vital, so the user sees AT
+            A GLANCE which reading triggered the abnormal-readings
+            alert below — no scrolling to cross-reference. */}
+        {annotatedRows.map(row => {
+          const severity = row.validation?.severity
+          const tone = rowToneClass(severity)
+          const isAbnormal = severity === 'warning' || severity === 'critical'
+          return (
+            <div
+              key={row.key}
+              className={`flex items-center justify-between p-2 rounded-md border-2 ${tone}`}
+            >
+              <span className="font-medium text-foreground text-sm inline-flex items-center gap-1.5">
+                {isAbnormal && (
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full ${
+                      severity === 'critical' ? 'bg-error' : 'bg-warning'
+                    }`}
+                    aria-label={`${severity} reading`}
+                  />
+                )}
+                {row.label}
+              </span>
+              <span className="text-base font-bold text-foreground">{row.display}</span>
+            </div>
+          )
+        })}
 
         {vitalData.mood && (
           <div className="flex items-center justify-between p-2 bg-card rounded-md border-2 border-border">

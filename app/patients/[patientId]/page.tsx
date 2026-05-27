@@ -22,6 +22,7 @@ import { VitalLogForm } from '@/components/vitals/VitalLogForm'
 import { VitalTrendChart } from '@/components/vitals/VitalTrendChart'
 import { WeightTrendChart } from '@/components/charts/WeightTrendChart'
 import type { WeightDataPoint } from '@/lib/chart-data-aggregator'
+import { getVitalColors } from '@/lib/vital-color-schemes'
 import DailyVitalsSummary from '@/components/vitals/DailyVitalsSummary'
 import PendingVitalApprovals from '@/components/vitals/PendingVitalApprovals'
 import VitalsHistory from '@/components/vitals/VitalsHistory'
@@ -177,7 +178,6 @@ function PatientDetailContent() {
 
   const [patient, setPatient] = useState<PatientProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selectedVitalType, setSelectedVitalType] = useState<VitalType>('blood_pressure')
   const [editingVital, setEditingVital] = useState<VitalSign | null>(null)
   const [deletingVital, setDeletingVital] = useState<{ id: string; type: string } | null>(null)
   const [showFamilyAccess, setShowFamilyAccess] = useState(false)
@@ -255,6 +255,12 @@ function PatientDetailContent() {
   const { user } = useAuth()
   const { vitals, loading: vitalsLoading, logVital, updateVital, deleteVital, refetch, pendingVitals, approveVital } = useVitals({
     patientId,
+    // Pass the patient owner's UID so the self-view bypass in the
+    // feature gate actually matches the logged-in user when they're
+    // the owner. Without this, owners without an explicit "vitals"
+    // entitlement get an empty vitals[] and the dashboard renders
+    // nothing past the weight chart.
+    patientOwnerUserId: patient?.userId,
     autoFetch: true
   })
   // Weight logs live in the canonical user-scoped weightLogs collection
@@ -483,12 +489,6 @@ function PatientDetailContent() {
   }, [patientId])
 
   // Set default vital type for pets and newborns (weight instead of blood_pressure)
-  useEffect(() => {
-    if ((patient?.type === 'pet' || isNewbornOrInfant) && selectedVitalType === 'blood_pressure') {
-      setSelectedVitalType('weight')
-    }
-  }, [patient, isNewbornOrInfant])
-
   // Subscribe to canonical weightLogs for this patient (live updates).
   // Filter by patientId so caregivers viewing the same owner's other
   // patients don't see cross-talk. NO orderBy on Firestore — that
@@ -1808,61 +1808,80 @@ function PatientDetailContent() {
                 />
               )}
 
-              {/* Chart */}
-              <div className="bg-card rounded-lg shadow-sm p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <ChartBarIcon className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-bold text-foreground">
-                      {selectedVitalType.replace('_', ' ')} Trend
-                    </h2>
-                  </div>
-                  <select
-                    value={selectedVitalType}
-                    onChange={(e) => setSelectedVitalType(e.target.value as VitalType)}
-                    className="px-3 py-1.5 text-sm border border-border rounded-lg bg-card text-foreground"
-                  >
-                    {vitalTypes.map(type => (
-                      <option key={type} value={type}>
-                        {type.replace('_', ' ')}
-                      </option>
-                    ))}
-                  </select>
+              {/* Trends — small-multiples grid. One card per vital
+                  type that has data, color-coded to match the wizard's
+                  review step + success modal so the visual language
+                  is consistent across the whole vitals flow. Replaces
+                  the prior dropdown-driven single-chart picker that
+                  hid 4-of-5 trends behind a click. Colors come from
+                  the shared `getVitalColors` helper (DRY). */}
+              {vitalsLoading ? (
+                <div className="bg-card rounded-lg shadow-sm p-6 flex items-center justify-center h-64">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
                 </div>
-                {vitalsLoading ? (
-                  <div className="flex items-center justify-center h-64">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : selectedVitalType === 'weight' ? (
-                  // Weight has its own canonical collection (weightLogs).
-                  // Render the shared WeightTrendChart used on /progress
-                  // so both pages stay in sync.
-                  weightLogs.length > 0 ? (
-                    <WeightTrendChart
-                      data={weightLogs}
-                      targetWeight={patient?.targetWeight}
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-64 text-center">
-                      <p className="text-muted-foreground mb-4">No weight readings yet</p>
-                      <p className="text-sm text-muted-foreground">
-                        Use the &quot;Vitals&quot; quick action to add readings
-                      </p>
+              ) : (() => {
+                // Build the list of trend cards from real data.
+                const trendCards: Array<{
+                  key: string
+                  type: VitalType
+                  label: string
+                  hasData: boolean
+                }> = vitalTypes.map(type => {
+                  const hasData = type === 'weight'
+                    ? weightLogs.length > 0
+                    : vitals.some(v => v.type === type)
+                  return {
+                    key: type,
+                    type,
+                    label: type.replace(/_/g, ' '),
+                    hasData,
+                  }
+                })
+                const populatedCards = trendCards.filter(c => c.hasData)
+
+                if (populatedCards.length === 0) {
+                  return (
+                    <div className="bg-card rounded-lg shadow-sm p-6">
+                      <div className="flex flex-col items-center justify-center h-64 text-center">
+                        <ChartBarIcon className="w-8 h-8 text-muted-foreground mb-3" />
+                        <p className="text-muted-foreground mb-4">No vitals logged yet</p>
+                        <p className="text-sm text-muted-foreground">
+                          Use the &quot;Vitals&quot; quick action to add readings
+                        </p>
+                      </div>
                     </div>
                   )
-                ) : vitals.filter(v => v.type === selectedVitalType).length > 0 ? (
-                  <VitalTrendChart vitals={vitals} type={selectedVitalType} />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-64 text-center">
-                    <p className="text-muted-foreground mb-4">
-                      No {selectedVitalType.replace('_', ' ')} readings yet
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Use the "Vitals" quick action to add readings
-                    </p>
+                }
+
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    {populatedCards.map(card => {
+                      const colors = getVitalColors(card.type)
+                      return (
+                        <div
+                          key={card.key}
+                          className={`${colors.bg} ${colors.border} rounded-lg shadow-sm border p-4`}
+                        >
+                          <div className="flex items-center gap-2 mb-3">
+                            <ChartBarIcon className={`w-5 h-5 ${colors.icon}`} />
+                            <h3 className={`text-sm font-semibold capitalize ${colors.text}`}>
+                              {card.label} Trend
+                            </h3>
+                          </div>
+                          {card.type === 'weight' ? (
+                            <WeightTrendChart
+                              data={weightLogs}
+                              targetWeight={patient?.targetWeight}
+                            />
+                          ) : (
+                            <VitalTrendChart vitals={vitals} type={card.type} height={220} />
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
-                )}
-              </div>
+                )
+              })()}
 
               {/* Vitals History Table with Filters */}
               <VitalsHistory
@@ -3641,19 +3660,24 @@ function PatientDetailContent() {
                 })
               }
 
-              // Store saved vitals and mood data for summary
-              setSummaryVitals(savedVitals)
-              setSummaryMood(vitals.mood)
-              setSummaryMoodNotes(vitals.moodNotes)
-
               // Refresh vitals data in real-time
               await refetch()
 
-              // Show summary modal
-              setShowVitalsSummary(true)
-
               // Close wizard
               setShowVitalsWizard(false)
+
+              // Only open the success modal when something was
+              // actually saved. If every measurement was a same-day
+              // duplicate, the toast already says so — popping up
+              // "Vitals Logged Successfully · 0 vital signs recorded"
+              // contradicts the toast and confuses users.
+              const totalSaved = savedVitals.length + (weightSaved ? 1 : 0)
+              if (totalSaved > 0) {
+                setSummaryVitals(savedVitals)
+                setSummaryMood(vitals.mood)
+                setSummaryMoodNotes(vitals.moodNotes)
+                setShowVitalsSummary(true)
+              }
 
               toastWizardResult(result)
             } catch (error) {
@@ -3672,6 +3696,7 @@ function PatientDetailContent() {
           vitals={summaryVitals}
           patientName={patient.name}
           patientId={patient.id}
+          patientOwnerUserId={patient.userId}
           mood={summaryMood}
           moodNotes={summaryMoodNotes}
           isOpen={showVitalsSummary}

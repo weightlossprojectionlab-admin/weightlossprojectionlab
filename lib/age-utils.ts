@@ -1,28 +1,14 @@
 /**
- * Age calculation and validation utilities for health and safety compliance
+ * Age calculation and validation utilities for health and safety compliance.
+ *
+ * `calculateAge` lives in lib/date-utils.ts (the canonical home for
+ * calendar-day parsing + age math, TZ-safe). Re-exported here so
+ * existing imports from this module keep working — one implementation,
+ * many import paths. See feedback_one_question_one_answer.
  */
 
-/**
- * Calculate age from birthdate. Returns NaN when the input is missing
- * or unparseable — callers should `Number.isFinite(age)` before using
- * it numerically, or fall through to a "—" display.
- */
-export function calculateAge(birthDate: Date | string | undefined | null): number {
-  if (birthDate === undefined || birthDate === null || birthDate === '') return NaN
-  const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate
-  if (!(birth instanceof Date) || Number.isNaN(birth.getTime())) return NaN
-
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const monthDiff = today.getMonth() - birth.getMonth()
-
-  // Adjust if birthday hasn't occurred yet this year
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
-    age--
-  }
-
-  return age
-}
+import { calculateAge } from './date-utils'
+export { calculateAge }
 
 /**
  * Validation result for age-based health compliance

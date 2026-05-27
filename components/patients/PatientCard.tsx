@@ -17,6 +17,7 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { useRouter } from 'next/navigation'
 import { useAccount } from '@/contexts/AccountContext'
 import { formatHumanAgeDisplay, getHumanLifeStage, getPatientBadgeLabel, getPatientDisplayName } from '@/lib/life-stage-utils'
+import { formatBirthDate } from '@/lib/date-utils'
 import { getSpeciesEmoji } from '@/lib/pet-health-config'
 
 interface PatientCardProps {
@@ -350,11 +351,11 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
               <span className="flex flex-wrap items-baseline gap-x-2">
                 <span>{formatHumanAgeDisplay(patient.dateOfBirth) || age + ' years old'}</span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(patient.dateOfBirth).toLocaleDateString()}
+                  {formatBirthDate(patient.dateOfBirth)}
                 </span>
               </span>
             ) : (
-              <span>Born {new Date(patient.dateOfBirth).toLocaleDateString()}</span>
+              <span>Born {formatBirthDate(patient.dateOfBirth)}</span>
             )}
           </div>
 
@@ -567,11 +568,11 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
                     calculateAge(patient.dateOfBirth) + ' years old'}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {new Date(patient.dateOfBirth).toLocaleDateString()}
+                  {formatBirthDate(patient.dateOfBirth)}
                 </span>
               </span>
             ) : (
-              <span>Born {new Date(patient.dateOfBirth).toLocaleDateString()}</span>
+              <span>Born {formatBirthDate(patient.dateOfBirth)}</span>
             )}
           </div>
           {patient.type === 'human' && patient.gender && (
