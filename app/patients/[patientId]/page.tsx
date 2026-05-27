@@ -278,6 +278,9 @@ function PatientDetailContent() {
   // hook, separate instance scoped to this patient.
   const { appointments: patientAppointments } = useAppointments({
     patientId,
+    // Owner UID lets the self-view bypass match for users without
+    // an explicit appointments feature-gate entitlement.
+    patientOwnerUserId: patient?.userId,
     autoFetch: true,
   })
   const { providers, refetch: refetchProviders } = useProviders()

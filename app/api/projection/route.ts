@@ -109,10 +109,14 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     const sevenDaysAgo = new Date()
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
+    // Reads MUST match the canonical writer collection name —
+    // /api/meal-logs writes to `users/{uid}/mealLogs`, not `meals`.
+    // The prior name silently returned an empty array for every
+    // user, making projections show zero meal history.
     const mealLogsSnapshot = await adminDb
       .collection('users')
       .doc(userId)
-      .collection('meals')
+      .collection('mealLogs')
       .where('loggedAt', '>=', sevenDaysAgo.toISOString())
       .orderBy('loggedAt', 'desc')
       .get()
@@ -126,11 +130,12 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       }
     })
 
-    // Fetch step logs (last 7 days)
+    // Reads MUST match the canonical writer name —
+    // /api/step-logs writes to `users/{uid}/stepLogs`, not `steps`.
     const stepLogsSnapshot = await adminDb
       .collection('users')
       .doc(userId)
-      .collection('steps')
+      .collection('stepLogs')
       .where('date', '>=', sevenDaysAgo.toISOString().split('T')[0])
       .get()
 

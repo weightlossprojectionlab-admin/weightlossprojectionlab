@@ -17,7 +17,7 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { useRouter } from 'next/navigation'
 import { useAccount } from '@/contexts/AccountContext'
 import { formatHumanAgeDisplay, getHumanLifeStage, getPatientBadgeLabel, getPatientDisplayName } from '@/lib/life-stage-utils'
-import { formatBirthDate } from '@/lib/date-utils'
+import { formatBirthDate, calculateAge } from '@/lib/date-utils'
 import { getSpeciesEmoji } from '@/lib/pet-health-config'
 
 interface PatientCardProps {
@@ -51,18 +51,10 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
   const [vitalsStatus, setVitalsStatus] = useState<'good' | 'overdue' | 'mandatory'>('good')
   const [vitalsDaysOverdue, setVitalsDaysOverdue] = useState(0)
 
-  // Calculate age from date of birth
-  const calculateAge = (dob: string): number => {
-    const birthDate = new Date(dob)
-    const today = new Date()
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
-    return age
-  }
-
+  // Age is computed by the canonical TZ-safe calculateAge in
+  // lib/date-utils (imported at the top of the file). One source
+  // of truth for "how old is this patient?" — see
+  // feedback_one_question_one_answer.
   const age = calculateAge(patient.dateOfBirth)
 
   // Dynamic life stage label — evolves automatically from DOB

@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { SchemaType } from '@google/generative-ai'
 import { patientOperations, vitalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
+import { calculateAge } from '@/lib/date-utils'
 import type {
   HealthBasedSuggestion,
   HealthSuggestionReason,
@@ -352,15 +353,8 @@ Generate 15-20 personalized food and ingredient suggestions.
 Return structured JSON with suggestions and itemsToAvoid arrays.`
 }
 
-/**
- * Helper functions
- */
-function calculateAge(dateOfBirth: Date | string): number {
-  const dob = typeof dateOfBirth === 'string' ? new Date(dateOfBirth) : dateOfBirth
-  const ageDiff = Date.now() - dob.getTime()
-  const ageDate = new Date(ageDiff)
-  return Math.abs(ageDate.getUTCFullYear() - 1970)
-}
+// calculateAge is imported from lib/date-utils — canonical TZ-safe
+// implementation. See feedback_one_question_one_answer.
 
 function mapToProductCategory(category: string): ProductCategory {
   const normalized = category.toLowerCase().trim()

@@ -124,9 +124,15 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // Fetch recent weight logs
-    const weightLogsSnapshot = await adminDb.collection('weight_logs')
-      .where('userId', '==', userId)
+    // Fetch recent weight logs from the canonical user-scoped
+    // weightLogs subcollection. The prior root-level
+    // adminDb.collection('weight_logs') path wasn't written to by
+    // any canonical writer — the activity feed silently never
+    // surfaced weight events.
+    const weightLogsSnapshot = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('weightLogs')
       .where('loggedAt', '>=', cutoffDate)
       .orderBy('loggedAt', 'desc')
       .limit(10)
@@ -149,11 +155,16 @@ export async function GET(request: NextRequest) {
       })
     })
 
-    // Fetch recent meal logs
-    const mealLogsSnapshot = await adminDb.collection('meal_logs')
-      .where('userId', '==', userId)
-      .where('timestamp', '>=', cutoffDate)
-      .orderBy('timestamp', 'desc')
+    // Fetch recent meal logs from the canonical user-scoped
+    // mealLogs subcollection. Prior path `meal_logs` (root) was
+    // never written to by /api/meal-logs. Canonical writer also
+    // stores the timestamp as `loggedAt`, not `timestamp`.
+    const mealLogsSnapshot = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('mealLogs')
+      .where('loggedAt', '>=', cutoffDate)
+      .orderBy('loggedAt', 'desc')
       .limit(10)
       .get()
 
@@ -165,7 +176,7 @@ export async function GET(request: NextRequest) {
         type: 'meal',
         title: `${data.mealType.charAt(0).toUpperCase() + data.mealType.slice(1)} Logged`,
         description: `${data.foodItems?.slice(0, 2).join(', ') || 'Meal'}${calorieInfo}`,
-        timestamp: data.timestamp,
+        timestamp: data.loggedAt,
         patientId: data.patientId,
         patientName: patientMap.get(data.patientId),
         actionBy: data.loggedBy,

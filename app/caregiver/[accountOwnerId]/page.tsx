@@ -16,6 +16,7 @@ import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firesto
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useHouseholdDuties } from '@/hooks/useHouseholdDuties'
+import { calculateAge } from '@/lib/date-utils'
 import { isFeatureEnabled } from '@/lib/featureFlags'
 import type { CaregiverContext } from '@/types'
 import type { PatientProfile } from '@/types/medical'
@@ -456,17 +457,8 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
     loadCaregiverData()
   }, [user, accountOwnerId, router])
 
-  // Helper function to calculate age
-  const calculateAge = (dateOfBirth: string): number => {
-    const today = new Date()
-    const birthDate = new Date(dateOfBirth)
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
-    return age
-  }
+  // calculateAge is imported from lib/date-utils — canonical TZ-safe
+  // implementation. See feedback_one_question_one_answer.
 
   if (loading) {
     return (

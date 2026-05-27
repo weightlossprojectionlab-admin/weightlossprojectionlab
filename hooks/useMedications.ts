@@ -30,6 +30,11 @@ interface MedicationLog {
 
 interface UseMedicationsOptions {
   patientId?: string // Optional - will use current user's ID if not provided
+  /** Firebase Auth UID of the patient's owner. Lets the self-view
+   *  bypass match correctly — comparing against patientId (a doc
+   *  id) instead would never match user.uid (a Firebase UID).
+   *  Same identifier-space pattern fixed in useVitals + useAppointments. */
+  patientOwnerUserId?: string
   autoFetch?: boolean
 }
 
@@ -55,6 +60,7 @@ interface UseMedicationsReturn {
 
 export function useMedications({
   patientId,
+  patientOwnerUserId,
   autoFetch = true
 }: UseMedicationsOptions): UseMedicationsReturn {
   const [medications, setMedications] = useState<PatientMedication[]>([])
@@ -66,8 +72,10 @@ export function useMedications({
   const { user } = useAuth()
   const { canAccess: hasMedicationAccess } = useFeatureGate('medications')
 
-  // Allow access if viewing own data OR has medication feature
-  const isOwnData = patientId === user?.uid
+  // Allow access if viewing own data OR has medication feature.
+  // Self-view = logged-in user is the patient's owner. Compare
+  // against the owner UID (Firebase UID), NOT patientId (doc id).
+  const isOwnData = !!patientOwnerUserId && patientOwnerUserId === user?.uid
   const hasAccess = isOwnData || hasMedicationAccess
 
   // Auto-disable fetch if feature not enabled (prevents 403 errors)

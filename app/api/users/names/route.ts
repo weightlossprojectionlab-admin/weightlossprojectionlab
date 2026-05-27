@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
       )
     )
     if (uids.length === 0) {
-      return NextResponse.json({ names: {} })
+      // Canonical envelope: { success, data }. Without `success: true`
+      // the shared apiClient throws on 200 — see lib/api-client.ts:187.
+      return NextResponse.json({ success: true, data: { names: {} } })
     }
     if (uids.length > MAX_UIDS) {
       return NextResponse.json(
@@ -109,7 +111,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    return NextResponse.json({ names })
+    return NextResponse.json({ success: true, data: { names } })
   } catch (error) {
     return errorResponse(error, {
       route: '/api/users/names',

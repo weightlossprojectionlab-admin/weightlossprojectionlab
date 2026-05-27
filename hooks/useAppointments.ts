@@ -14,6 +14,11 @@ import { useFeatureGate } from '@/hooks/useFeatureGate'
 
 interface UseAppointmentsOptions {
   patientId?: string
+  /** Firebase Auth UID of the patient's owner. Lets the self-view
+   *  bypass match correctly — comparing against patientId (a doc
+   *  id) instead would never match user.uid (a Firebase UID).
+   *  Same identifier-space pattern fixed in useVitals. */
+  patientOwnerUserId?: string
   providerId?: string
   autoFetch?: boolean
 }
@@ -30,6 +35,7 @@ interface UseAppointmentsReturn {
 
 export function useAppointments({
   patientId,
+  patientOwnerUserId,
   providerId,
   autoFetch = true
 }: UseAppointmentsOptions = {}): UseAppointmentsReturn {
@@ -41,8 +47,10 @@ export function useAppointments({
   // Feature gate check
   const { canAccess: hasAppointmentsAccess } = useFeatureGate('appointments')
 
-  // Allow access if viewing own data OR has appointments feature
-  const isOwnData = patientId === user?.uid
+  // Allow access if viewing own data OR has appointments feature.
+  // Self-view = logged-in user is the patient's owner. Compare
+  // against the owner UID (Firebase UID), NOT patientId (doc id).
+  const isOwnData = !!patientOwnerUserId && patientOwnerUserId === user?.uid
   const hasAccess = isOwnData || hasAppointmentsAccess
 
   // Auto-disable fetch if feature not enabled (prevents 403 errors)

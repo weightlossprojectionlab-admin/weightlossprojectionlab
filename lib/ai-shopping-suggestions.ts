@@ -14,6 +14,7 @@
 'use client'
 
 import { logger } from '@/lib/logger'
+import { calculateAge } from '@/lib/date-utils'
 import type {
   HealthBasedSuggestion,
   HealthSuggestionsGroup,
@@ -1408,19 +1409,8 @@ function generateAvoidanceWarnings(
   return warnings
 }
 
-/**
- * Calculate age from date of birth
- */
-function calculateAge(dateOfBirth: string): number {
-  const dob = new Date(dateOfBirth)
-  const today = new Date()
-  let age = today.getFullYear() - dob.getFullYear()
-  const monthDiff = today.getMonth() - dob.getMonth()
-  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-    age--
-  }
-  return age
-}
+// calculateAge is imported from lib/date-utils — canonical TZ-safe
+// implementation. See feedback_one_question_one_answer.
 
 /**
  * Map Gemini category string to ProductCategory

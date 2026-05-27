@@ -193,8 +193,16 @@ export async function GET(request: NextRequest) {
         const medicationsSnapshot = await patientRef.collection('medications')
           .get()
 
-        // Get latest weight from subcollection
-        const latestWeightSnapshot = await patientRef.collection('weight_logs')
+        // Get latest weight from the canonical user-scoped weightLogs
+        // collection, filtered to this patient. Reads MUST match the
+        // canonical writer location — the prior `patientRef.collection('weight_logs')`
+        // path (snake-case, patient-scoped) wasn't written to by any
+        // canonical writer and silently returned empty.
+        const latestWeightSnapshot = await adminDb
+          .collection('users')
+          .doc(userId)
+          .collection('weightLogs')
+          .where('patientId', '==', patientId)
           .limit(50)
           .get()
 

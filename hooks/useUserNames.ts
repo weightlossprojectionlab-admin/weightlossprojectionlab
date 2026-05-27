@@ -45,7 +45,11 @@ async function fetchNames(uids: string[]): Promise<Record<string, string> | null
   })
   if (!res.ok) return null
   const body = await res.json().catch(() => ({}))
-  return (body?.names as Record<string, string>) ?? {}
+  // Endpoint now returns the canonical { success, data: { names } }
+  // envelope. Keep the legacy { names } fallback so the hook works
+  // against any older deployed instance during a rolling deploy.
+  const names = (body?.data?.names ?? body?.names) as Record<string, string> | undefined
+  return names ?? {}
 }
 
 export function useUserNames(uids: (string | undefined | null)[]) {
