@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import type { FamilyMember, PatientProfile, FamilyMemberPermissions } from '@/types/medical'
 import { getPermissionLevelName } from '@/lib/family-permissions'
+import { getPatientDisplayName } from '@/lib/life-stage-utils'
 
 interface PatientAccessMatrixProps {
   members: FamilyMember[]
@@ -179,7 +180,7 @@ export function PatientAccessMatrix({
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-primary-light dark:bg-purple-900/20 flex items-center justify-center">
                           <span className="text-primary dark:text-purple-400 font-semibold text-xs">
-                            {patient.name.charAt(0).toUpperCase()}
+                            {(getPatientDisplayName(patient).charAt(0) || '?').toUpperCase()}
                           </span>
                         </div>
                       )}

@@ -255,26 +255,39 @@ function ProgressContent() {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - timeRange)
 
+    // When viewing a specific patient (selectedPatientId set), filter
+    // weightLogs by patientId. Without this filter the owner's whole
+    // weightLogs collection — including ALL their patients — gets
+    // pulled in, leaking another patient's data into the selected
+    // patient's chart and flipping hasCompletedOnboarding to true
+    // even when the selected patient has no logs of their own.
+    //
+    // No orderBy on Firestore: a `where(patientId)` + `where(loggedAt
+    // range)` + `orderBy` query needs a composite index that isn't
+    // (and shouldn't be) deployed for this single page's use case.
+    // We do the loggedAt range filter + chronological sort in JS;
+    // single-patient volume is small.
     const weightLogsRef = collection(db, 'users', effectiveUserId, 'weightLogs')
-    const q = query(
-      weightLogsRef,
-      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
-      orderBy('loggedAt', 'asc')
-    )
+    const q = selectedPatientId
+      ? query(weightLogsRef, where('patientId', '==', selectedPatientId))
+      : query(weightLogsRef, where('loggedAt', '>=', Timestamp.fromDate(startDate)), orderBy('loggedAt', 'asc'))
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const dataPoints: WeightDataPoint[] = snapshot.docs.map(doc => {
-          const data = doc.data()
-          const timestamp = data.loggedAt.toDate()
-
-          return {
-            date: timestamp.toISOString().split('T')[0],
-            weight: data.weight,
-            timestamp
-          }
-        })
+        const startMs = startDate.getTime()
+        const dataPoints: WeightDataPoint[] = snapshot.docs
+          .map(doc => {
+            const data = doc.data()
+            const timestamp = data.loggedAt.toDate()
+            return {
+              date: timestamp.toISOString().split('T')[0],
+              weight: data.weight,
+              timestamp,
+            }
+          })
+          .filter(p => p.timestamp.getTime() >= startMs)
+          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
         setWeightData(dataPoints)
       },
       (error) => {
@@ -284,7 +297,7 @@ function ProgressContent() {
     )
 
     return () => unsubscribe()
-  }, [effectiveUserId, timeRange])
+  }, [effectiveUserId, timeRange, selectedPatientId])
 
   // Separate subscription for most recent weight log (for reminder modal)
   const [mostRecentWeightLog, setMostRecentWeightLog] = useState<WeightLog | null>(null)
@@ -292,21 +305,32 @@ function ProgressContent() {
   useEffect(() => {
     if (!effectiveUserId) return
 
+    // Same per-patient scoping as the chart subscription above.
+    // No orderBy on the patientId-filtered branch — composite
+    // (patientId asc, loggedAt desc) isn't indexed. Take the
+    // patient's logs, sort + take-most-recent in JS.
     const weightLogsRef = collection(db, 'users', effectiveUserId, 'weightLogs')
-    const q = query(
-      weightLogsRef,
-      orderBy('loggedAt', 'desc'),
-      limit(1)
-    )
+    const q = selectedPatientId
+      ? query(weightLogsRef, where('patientId', '==', selectedPatientId))
+      : query(weightLogsRef, orderBy('loggedAt', 'desc'), limit(1))
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         if (snapshot.docs.length > 0) {
-          const doc = snapshot.docs[0]
-          const data = doc.data()
+          // When the query is patientId-filtered (no orderBy), we
+          // have to find the most-recent in JS. When the query is
+          // unscoped (with orderBy + limit), snapshot.docs[0] is
+          // already the most recent. Compute most-recent either way
+          // by picking the max loggedAt — uniform handling.
+          const mostRecentDoc = snapshot.docs.reduce((acc, d) => {
+            const dt = d.data().loggedAt?.toDate?.()?.getTime?.() ?? 0
+            const accDt = acc.data().loggedAt?.toDate?.()?.getTime?.() ?? 0
+            return dt > accDt ? d : acc
+          })
+          const data = mostRecentDoc.data()
           const weightLog = {
-            id: doc.id,
+            id: mostRecentDoc.id,
             userId: effectiveUserId,
             patientId: data.patientId || effectiveUserId,
             weight: data.weight,
@@ -317,14 +341,8 @@ function ProgressContent() {
             notes: data.notes,
             dataSource: data.dataSource || 'manual'
           }
-          console.log('Progress page - Most recent weight log:', {
-            date: weightLog.loggedAt,
-            dateString: weightLog.loggedAt.toISOString(),
-            weight: weightLog.weight
-          })
           setMostRecentWeightLog(weightLog)
         } else {
-          console.log('Progress page - No weight logs found')
           setMostRecentWeightLog(null)
         }
         setWeightDataLoaded(true)
@@ -337,7 +355,7 @@ function ProgressContent() {
     )
 
     return () => unsubscribe()
-  }, [effectiveUserId])
+  }, [effectiveUserId, selectedPatientId])
 
   useEffect(() => {
     if (!effectiveUserId) return
@@ -634,7 +652,13 @@ function ProgressContent() {
   //   - 1 patient → auto-select it (URL replace so refresh keeps context)
   //   - 2+ patients → require explicit selection (URL param or selector)
   const hasNoPatients = patients.length === 0
-  const showPatientSelector = patients.length > 1 && !selectedPatientId
+  // Show the member selector whenever there are 2+ members — INCLUDING
+  // while viewing one. It used to be gated on `!selectedPatientId`,
+  // which hid the only way to switch members once you'd picked one:
+  // you were stuck on that member with no path to the others. The
+  // dropdown binds the current selectedPatientId and routes on change,
+  // so keeping it visible turns it into a proper member switcher.
+  const showPatientSelector = patients.length > 1
 
   // When the user has exactly one patient and no URL context, treat
   // that patient as the implicit subject — they have no other choice

@@ -10,6 +10,7 @@
 import { useMemo, useState } from 'react'
 import { PlusIcon, HomeIcon, MapPinIcon, UsersIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { auth } from '@/lib/firebase'
+import { getPatientDisplayName } from '@/lib/life-stage-utils'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import type { Household } from '@/types/household'
@@ -304,12 +305,12 @@ function HouseholdMembersList({ householdId }: { householdId: string }) {
             ) : (
               <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
                 <span className="text-sm font-medium text-primary">
-                  {patient.name.charAt(0)}
+                  {getPatientDisplayName(patient).charAt(0) || '?'}
                 </span>
               </div>
             )}
             <div>
-              <p className="text-sm font-medium text-foreground">{patient.name}</p>
+              <p className="text-sm font-medium text-foreground">{getPatientDisplayName(patient) || 'Unnamed member'}</p>
               <p className="text-xs text-muted-foreground capitalize">
                 {patient.type || 'member'}
               </p>

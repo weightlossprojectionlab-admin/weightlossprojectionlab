@@ -79,6 +79,14 @@ export default defineConfig({
       use: { headless: true, launchOptions: { slowMo: 0 } },
     },
     {
+      // Single-plan auth setup. Pure password sign-in (account is
+      // provisioned by scripts/provision-single-user-e2e.ts), so
+      // headless + zero slowMo like the caregiver setup.
+      name: 'setup-single',
+      testMatch: /auth-single\.setup\.ts/,
+      use: { headless: true, launchOptions: { slowMo: 0 } },
+    },
+    {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
@@ -97,8 +105,10 @@ export default defineConfig({
       testIgnore: [
         /auth\.setup\.ts/,
         /auth-caregiver\.setup\.ts/,
+        /auth-single\.setup\.ts/,
         /\.caregiver\.spec\.ts$/,
         /\.multirole\.spec\.ts$/,
+        /\.single\.spec\.ts$/,
       ],
     },
     {
@@ -112,6 +122,18 @@ export default defineConfig({
       },
       dependencies: ['setup-caregiver'],
       testMatch: /\.caregiver\.spec\.ts$/,
+    },
+    {
+      // Single-plan specs use the single-user fixture. Pattern: name
+      // the spec *.single.spec.ts and it runs under this project.
+      name: 'chromium-single',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/single.json',
+        viewport: { width: 960, height: 940 },
+      },
+      dependencies: ['setup-single'],
+      testMatch: /\.single\.spec\.ts$/,
     },
     {
       // Multi-role specs verify the caregiver → owner real-time contract

@@ -5,8 +5,9 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { usePatients } from '@/hooks/usePatients'
+import { useHousehold } from '@/contexts/HouseholdContext'
 import { PatientCard } from '@/components/patients/PatientCard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PlusIcon } from '@heroicons/react/24/outline'
@@ -61,6 +62,18 @@ function PatientsContent() {
   // is the server-side authority.
   const { canImport } = useCanImport()
   const [filter, setFilter] = useState<'all' | 'human' | 'pet'>('all')
+  // Household scope. The header HouseholdSwitcher sets the active
+  // household in HouseholdContext; this page now respects it (it used
+  // to ignore it, so switching households did nothing here). Default
+  // is scoped-to-active-household; "All households" is the escape
+  // hatch. Switching the active household resets the scope back to
+  // that household so the switcher always does what it looks like it
+  // does.
+  const { activeHousehold, households } = useHousehold()
+  const [viewAllHouseholds, setViewAllHouseholds] = useState(false)
+  useEffect(() => {
+    setViewAllHouseholds(false)
+  }, [activeHousehold?.id])
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [selectedPatientForVitalsView, setSelectedPatientForVitalsView] = useState<any>(null)
   const [selectedPatientForWizard, setSelectedPatientForWizard] = useState<any>(null)
@@ -96,7 +109,20 @@ function PatientsContent() {
   // Account selection mode for card display (informational only, doesn't change UI)
   const isAccountSelectionMode = safePatients.length >= 2
 
-  const filteredPatients = safePatients.filter(p => {
+  // Household scoping. Only relevant with 2+ households. When scoped,
+  // show members whose householdId matches the active household; "All
+  // households" (or <2 households, or still-loading active household)
+  // shows everyone. Members with no householdId only appear under "All".
+  const multiHousehold = households.length >= 2
+  const householdScoped =
+    multiHousehold && activeHousehold && !viewAllHouseholds
+      ? safePatients.filter(p => p.householdId === activeHousehold.id)
+      : safePatients
+
+  // Type filter applies on top of the household scope. Counts shown on
+  // the type chips reflect the current household scope, not the global
+  // roster, so "All (2)" matches what's actually displayed.
+  const filteredPatients = householdScoped.filter(p => {
     if (filter === 'all') return true
     return p.type === filter
   })
@@ -190,7 +216,36 @@ function PatientsContent() {
           </div>
         )}
 
-        {/* Filter Tabs */}
+        {/* Household scope — only when the user manages 2+ households.
+            Mirrors the header switcher: the active household name scopes
+            the list; "All households" shows everyone. */}
+        {multiHousehold && activeHousehold && (
+          <div className="flex items-center gap-2 mb-3 flex-wrap">
+            <span className="text-sm text-muted-foreground mr-1">Showing:</span>
+            <button
+              onClick={() => setViewAllHouseholds(false)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                !viewAllHouseholds
+                  ? 'bg-primary text-white'
+                  : 'bg-card text-foreground hover:bg-muted'
+              }`}
+            >
+              {activeHousehold.name} ({safePatients.filter(p => p.householdId === activeHousehold.id).length})
+            </button>
+            <button
+              onClick={() => setViewAllHouseholds(true)}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                viewAllHouseholds
+                  ? 'bg-primary text-white'
+                  : 'bg-card text-foreground hover:bg-muted'
+              }`}
+            >
+              All households ({safePatients.length})
+            </button>
+          </div>
+        )}
+
+        {/* Filter Tabs — counts reflect the current household scope */}
         <div className="flex items-center gap-2 mb-6">
           <button
             onClick={() => setFilter('all')}
@@ -200,7 +255,7 @@ function PatientsContent() {
                 : 'bg-card text-foreground hover:bg-muted'
             }`}
           >
-            All ({safePatients.length})
+            All ({householdScoped.length})
           </button>
           <button
             onClick={() => setFilter('human')}
@@ -210,7 +265,7 @@ function PatientsContent() {
                 : 'bg-card text-foreground hover:bg-muted'
             }`}
           >
-            Humans ({safePatients.filter(p => p.type === 'human').length})
+            Humans ({householdScoped.filter(p => p.type === 'human').length})
           </button>
           <button
             onClick={() => setFilter('pet')}
@@ -220,7 +275,7 @@ function PatientsContent() {
                 : 'bg-card text-foreground hover:bg-muted'
             }`}
           >
-            Pets ({safePatients.filter(p => p.type === 'pet').length})
+            Pets ({householdScoped.filter(p => p.type === 'pet').length})
           </button>
         </div>
 
