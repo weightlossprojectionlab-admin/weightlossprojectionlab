@@ -152,4 +152,37 @@ test.describe('/progress — render battery', () => {
         .first(),
     ).toBeVisible()
   })
+
+  test('onboarding banner is mutually exclusive with chart content', async ({ page }) => {
+    // Defends against the "two predicates ask the same question and
+    // drift apart" failure mode that gave us a blank /progress (commit
+    // fc10498) — the banner gate and the main-content gate both keyed
+    // off the same prerequisite; one was relaxed while the other was
+    // left strict, so banner hid + main hid = nothing rendered.
+    //
+    // The invariant: when the Weight Trend chart heading is visible
+    // (which beforeEach guarantees we're in the data-present state),
+    // the "Needs to Complete Onboarding" banner MUST be hidden. Both
+    // hidden = blank-page regression; both visible = layout glitch.
+    const chartHeading = page.getByRole('heading', { name: /^Weight Trend & Projection$/i, level: 2 })
+    const banner = page.getByRole('heading', { name: /Needs to Complete Onboarding/i, level: 3 })
+
+    await expect(chartHeading).toBeVisible()
+    await expect(banner).toBeHidden()
+  })
+
+  test('forward projection dashed line renders when weight data is present', async ({ page }) => {
+    // The WeightTrendChart renders the forward projection as a dashed
+    // Recharts <Line> (strokeDasharray="6 4") whose legend reads
+    // "Projected (if trend continues)". The legend is the most stable
+    // selector — it appears iff hasProjection is true inside the chart
+    // component. Asserts the page's `projectedWeightData` actually
+    // makes it through to the rendered chart, catching refactors that
+    // silently drop the projectionData prop or break the linear-fit math.
+    //
+    // We don't assert on slope direction or numeric range here — that's
+    // data-dependent and would false-fail when the test user's weight
+    // history changes. Existence is the load-bearing invariant.
+    await expect(page.getByText(/Projected \(if trend continues\)/i)).toBeVisible()
+  })
 })

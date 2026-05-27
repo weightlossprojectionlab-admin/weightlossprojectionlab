@@ -421,6 +421,31 @@ function ProgressContent() {
   const activeProfile = patientProfile || profile
   const targetWeight = activeProfile?.goals?.targetWeight
 
+  // Quick-weight-log CTA gating (semantic intent):
+  //  - "I'm looking at my trend and realize I should weigh in today"
+  //    is the moment-of-intent this CTA serves. Show it INSIDE the
+  //    Weight Trend card (next to where the gap is visible), NOT in
+  //    the Health Context stats panel where its intent collides with
+  //    "here are your computed numbers."
+  //  - Self-view only: a caregiver reviewing a family member's
+  //    progress shouldn't be the one quick-logging that person's
+  //    weight from this surface.
+  //  - Suppress if today's weigh-in already exists — no
+  //    logging-prompt fatigue. mostRecentWeightLog is already in
+  //    state from the live snapshot subscription.
+  const isSelfProgressView = effectiveUserId === user?.uid
+  const hasLoggedWeightToday = useMemo(() => {
+    if (!mostRecentWeightLog?.loggedAt) return false
+    const logged = new Date(mostRecentWeightLog.loggedAt)
+    const today = new Date()
+    return (
+      logged.getFullYear() === today.getFullYear() &&
+      logged.getMonth() === today.getMonth() &&
+      logged.getDate() === today.getDate()
+    )
+  }, [mostRecentWeightLog])
+  const showQuickWeightLogCta = isSelfProgressView && !hasLoggedWeightToday
+
   // Check if the active profile has completed onboarding
   // "Completed onboarding" = has enough data to render the charts.
   // dailyCalorieGoal is an OUTPUT of the projection (computed from
@@ -1089,19 +1114,15 @@ function ProgressContent() {
               )}
             </div>
 
-            {/* Log New Weight Button */}
-            <div className="mt-6 pt-6 border-t border-border">
-              <button
-                onClick={() => setShowWeightModal(true)}
-                className="w-full py-3 px-4 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
-              >
-                <span className="text-xl">⚖️</span>
-                Log New Weight Entry
-              </button>
-              <p className="text-xs text-center text-muted-foreground dark:text-muted-foreground mt-2">
-                Keep your progress up to date
-              </p>
-            </div>
+            {/* The quick-weight-log CTA that previously lived here
+                has moved into the Weight Trend chart card. The
+                Health Context section's intent is "here are your
+                computed numbers" — mixing an input CTA into a
+                stats panel collided with that intent. The CTA now
+                appears next to the trend chart (the moment of
+                intent: "I see a gap, I should weigh in") with
+                self-view + already-logged-today gating. See
+                feedback_semantic_intent. */}
           </div>
         )}
 
@@ -1452,6 +1473,25 @@ function ProgressContent() {
                       {targetWeightEta.currentWeight.toFixed(1)} lbs.
                     </>
                   )}
+                </div>
+              )}
+
+              {/* Quick weight-log CTA — placed next to the trend
+                  chart on purpose: the act of reading the chart is
+                  the moment-of-intent for "I should weigh in today."
+                  Self-view + not-logged-today gating computed in
+                  showQuickWeightLogCta above. */}
+              {showQuickWeightLogCta && (
+                <div className="mt-4 pt-4 border-t border-border">
+                  <button
+                    data-testid="log-weight-from-progress"
+                    data-write="true"
+                    onClick={() => setShowWeightModal(true)}
+                    className="w-full py-3 px-4 bg-primary hover:bg-primary-hover text-white rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span className="text-xl">⚖️</span>
+                    Log today&apos;s weigh-in
+                  </button>
                 </div>
               )}
             </div>
