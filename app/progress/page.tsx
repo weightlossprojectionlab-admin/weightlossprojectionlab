@@ -422,7 +422,18 @@ function ProgressContent() {
   const targetWeight = activeProfile?.goals?.targetWeight
 
   // Check if the active profile has completed onboarding
-  const hasCompletedOnboarding = activeProfile && activeProfile.goals && activeProfile.goals.dailyCalorieGoal && activeProfile.height
+  // "Completed onboarding" = has enough data to render the charts.
+  // dailyCalorieGoal is an OUTPUT of the projection (computed from
+  // height/weight/activity), not a prerequisite. The minimum: any
+  // logged weight OR a cached currentWeight on the profile, so the
+  // chart can render a baseline. `activeProfile` is either a
+  // PatientProfile (top-level fields) or a user UserProfile
+  // (nested under .profile) — read both shapes.
+  const profileCurrentWeight = activeProfile?.currentWeight ?? activeProfile?.profile?.currentWeight
+  const profileHeight = activeProfile?.height ?? activeProfile?.profile?.height
+  const hasCompletedOnboarding = !!activeProfile && (
+    weightData.length > 0 || !!profileCurrentWeight || !!profileHeight
+  )
 
   // Forward projection — linear-fit extrapolation from the historical
   // weightData, extended `timeRange` days into the future. This is the
@@ -727,17 +738,13 @@ function ProgressContent() {
         {/* Onboarding-required banner — show only when the page
             genuinely can't render anything useful: no weight data
             anywhere AND no currentWeight cached on the profile AND
-            no height (so we can't even render the empty-state with
-            a baseline). The previous gate keyed off
-            `goals.dailyCalorieGoal`, but that's an OUTPUT of the
-            projection (computed from height/weight/activity), not
-            a prerequisite. Patients with logged weight but no
-            dailyCalorieGoal saw a misleading "complete onboarding"
-            banner instead of their actual progress chart. */}
+            no height. patientProfile has fields at the TOP level
+            (PatientProfile shape); the previous .profile?.x reads
+            were the user-profile shape and never matched. */}
         {selectedPatientId && patientProfile &&
           weightData.length === 0 &&
-          !patientProfile.profile?.currentWeight &&
-          !patientProfile.profile?.height && (
+          !patientProfile.currentWeight &&
+          !patientProfile.height && (
           <div className="bg-warning-light border-2 border-warning rounded-lg p-6 mb-6">
             <div className="flex items-start gap-4">
               <span className="text-4xl">⚠️</span>
