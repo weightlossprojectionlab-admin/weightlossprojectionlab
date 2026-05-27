@@ -491,8 +491,11 @@ function PatientDetailContent() {
 
   // Subscribe to canonical weightLogs for this patient (live updates).
   // Filter by patientId so caregivers viewing the same owner's other
-  // patients don't see cross-talk. Maps to the WeightDataPoint shape
-  // the shared WeightTrendChart expects.
+  // patients don't see cross-talk. NO orderBy on Firestore — that
+  // would require a composite (patientId asc, loggedAt asc) index;
+  // filter-by-patientId uses the auto-created single-field index
+  // and we sort by timestamp in JS (small N per patient). Avoids
+  // depending on a deferred index build.
   useEffect(() => {
     if (!patient?.userId) {
       setWeightLogs([])
@@ -501,7 +504,6 @@ function PatientDetailContent() {
     const q = query(
       collection(db, 'users', patient.userId, 'weightLogs'),
       where('patientId', '==', patientId),
-      orderBy('loggedAt', 'asc'),
     )
     const unsubscribe = onSnapshot(
       q,
@@ -517,6 +519,9 @@ function PatientDetailContent() {
             timestamp: ts,
           }
         })
+        // Chronological ascending so the chart line reads
+        // left-to-right oldest-to-newest like /progress.
+        points.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
         setWeightLogs(points)
       },
       (err) => {

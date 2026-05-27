@@ -15,20 +15,6 @@
       ]
     },
     {
-      "collectionGroup": "weightLogs",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "patientId",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "loggedAt",
-          "order": "ASCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "order_receipts",
       "queryScope": "COLLECTION",
       "fields": [
