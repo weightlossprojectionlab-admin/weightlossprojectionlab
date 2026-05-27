@@ -724,8 +724,20 @@ function ProgressContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Onboarding Required Message for Family Members */}
-        {selectedPatientId && patientProfile && (!patientProfile.goals || !patientProfile.goals.dailyCalorieGoal) && (
+        {/* Onboarding-required banner — show only when the page
+            genuinely can't render anything useful: no weight data
+            anywhere AND no currentWeight cached on the profile AND
+            no height (so we can't even render the empty-state with
+            a baseline). The previous gate keyed off
+            `goals.dailyCalorieGoal`, but that's an OUTPUT of the
+            projection (computed from height/weight/activity), not
+            a prerequisite. Patients with logged weight but no
+            dailyCalorieGoal saw a misleading "complete onboarding"
+            banner instead of their actual progress chart. */}
+        {selectedPatientId && patientProfile &&
+          weightData.length === 0 &&
+          !patientProfile.profile?.currentWeight &&
+          !patientProfile.profile?.height && (
           <div className="bg-warning-light border-2 border-warning rounded-lg p-6 mb-6">
             <div className="flex items-start gap-4">
               <span className="text-4xl">⚠️</span>
