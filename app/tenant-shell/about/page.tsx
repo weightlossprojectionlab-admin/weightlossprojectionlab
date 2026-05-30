@@ -17,10 +17,10 @@
  */
 
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { getTenantBySlug } from '@/lib/tenant-server'
+import AboutCta from './AboutCta'
 
 export const dynamic = 'force-dynamic'
 
@@ -179,13 +179,7 @@ export default async function TenantAboutPage() {
         </section>
 
         <div className="flex justify-center gap-3">
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center rounded-lg px-6 py-3 text-base font-semibold text-white shadow-sm transition hover:opacity-90"
-            style={{ backgroundColor: accent }}
-          >
-            Sign in to {companyName}
-          </Link>
+          <AboutCta companyName={companyName} accent={accent} />
         </div>
 
         <footer className="text-center pt-8 border-t border-gray-200 dark:border-gray-700">

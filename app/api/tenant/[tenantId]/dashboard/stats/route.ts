@@ -14,8 +14,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { verifyTenantStaffOrAdminAuth } from '@/lib/tenant-auth'
-import { loadManagedFamilies, loadPendingRequests } from '@/app/tenant-shell/dashboard/_lib/load-families'
+import { loadManagedFamilies, loadPendingRequests, loadTenantAppointments } from '@/app/tenant-shell/dashboard/_lib/load-families'
 import { logger } from '@/lib/logger'
+
+// Always reflect live Firestore — never serve a cached snapshot of the
+// dashboard. Mirrors app/api/dashboard/stats/route.ts (the consumer route).
+export const dynamic = 'force-dynamic'
 
 interface RouteContext {
   params: Promise<{ tenantId: string }>
@@ -36,10 +40,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Forbidden — wrong tenant' }, { status: 403 })
     }
 
-    // Load families and pending requests in parallel (reuse existing loaders)
-    const [families, pendingRequests] = await Promise.all([
+    // Load families, pending requests, and appointments in parallel
+    // (reuse existing loaders). Appointments come back split by careContext:
+    // myVisits = the practitioner's own schedule; familyAppointments =
+    // members' external visits to coordinate around.
+    const [families, pendingRequests, appointments] = await Promise.all([
       loadManagedFamilies(tenantId),
       loadPendingRequests(tenantId),
+      loadTenantAppointments(tenantId),
     ])
 
     // Load staff count from invitations subcollection
@@ -55,6 +63,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
     } catch {
       // soft-fail
     }
+
+    // Count caregiver-visits scheduled for TODAY (the stat-card headline).
+    const endOfToday = new Date()
+    endOfToday.setHours(23, 59, 59, 999)
+    const endOfTodayIso = endOfToday.toISOString()
+    const todaysVisitCount = appointments.myVisits.filter(v => v.dateTime <= endOfTodayIso).length
 
     // Compute aggregate stats
     const now = Date.now()
@@ -106,7 +120,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       familyMembers: staffCount,
       notifications: { unread: 0, urgent: 0 },
       recommendations: { active: 0, urgent: 0 },
-      appointments: { upcoming: 0 },
+      appointments: { upcoming: appointments.myVisits.length, today: todaysVisitCount },
       actionItems: {
         total: pendingRequests.length,
         overdue: 0,
@@ -131,6 +145,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       data: {
         stats,
         patientSnapshots: familySnapshots,
+        scheduledVisits: appointments.myVisits,
+        familyAppointments: appointments.familyAppointments,
         upcomingAppointments: [],
         actionItems: pendingRequests.map(req => ({
           id: req.id,

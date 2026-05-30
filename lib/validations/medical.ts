@@ -473,6 +473,11 @@ export const appointmentStatusSchema = z.enum([
   'no-show'
 ])
 
+// WHO delivers the appointment (orthogonal to the clinical type). See the
+// CareContext doc in types/medical.ts. Defaults to 'member-medical' so
+// every legacy appointment validates unchanged.
+export const careContextSchema = z.enum(['caregiver-visit', 'member-medical'])
+
 export const driverStatusSchema = z.enum(['not-needed', 'pending', 'accepted', 'declined'])
 
 export const recommendationSeveritySchema = z.enum(['low', 'medium', 'high', 'urgent'])
@@ -528,6 +533,14 @@ export const appointmentSchema = z.object({
   location: z.string().max(500).optional(), // Simplified to string
   status: appointmentStatusSchema.default('scheduled'),
   notes: z.string().max(2000).optional(),
+
+  // Delivery context. Optional with a default so legacy rows (which have
+  // no careContext) validate as member-medical. tenantId + practiceStaff*
+  // are stamped only on caregiver-visits.
+  careContext: careContextSchema.default('member-medical'),
+  tenantId: z.string().optional(),
+  practiceStaffId: z.string().optional(),
+  practiceStaffName: z.string().max(100).optional(),
 
   // Source - HOW was this created?
   createdFrom: appointmentSourceSchema,

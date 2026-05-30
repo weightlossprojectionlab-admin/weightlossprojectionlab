@@ -11,6 +11,8 @@
 
 import { getAdminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
+import type { VitalSign } from '@/types/medical'
+import type { WeightDataPoint } from '@/lib/chart-data-aggregator'
 
 // ─── Interfaces ──────────────────────────────────────────
 
@@ -413,6 +415,285 @@ export async function loadClientDetail(
     }
   } catch (err) {
     logger.error('[dashboard] failed to load client detail', err as Error, { tenantId, userId })
+    return null
+  }
+}
+
+// ─── Tenant appointments (split by careContext) ─────────────────────
+
+/** A caregiver-visit the practice delivers — lands on the practitioner's
+ *  OWN schedule. The forward-looking spine of their day. */
+export interface ScheduledVisit {
+  id: string
+  clientId: string        // owning family/user — for the drill-in link
+  clientName: string
+  patientId: string | null
+  patientName: string
+  // Assignment: which staff member covers this visit. null = unassigned
+  // (a coverage gap the owner must fill). staffId matches the staff
+  // member's Firebase uid so a staff viewer can filter to their own.
+  staffId: string | null
+  staffName: string | null
+  reason: string
+  appointmentType: string // clinical type (orthogonal to careContext)
+  dateTime: string
+  location: string | null
+  status: string
+}
+
+/** A member-medical appointment — a family member's OWN external visit.
+ *  The practice watches it to coordinate (transport, follow-up), but does
+ *  not attend. Not the practitioner's personal calendar. */
+export interface CoordinationAppointment {
+  id: string
+  clientId: string
+  clientName: string
+  patientId: string | null
+  patientName: string
+  providerName: string
+  specialty: string | null
+  appointmentType: string
+  dateTime: string
+  requiresDriver: boolean
+  driverStatus: string | null
+  status: string
+}
+
+export interface TenantAppointments {
+  myVisits: ScheduledVisit[]
+  familyAppointments: CoordinationAppointment[]
+}
+
+/**
+ * Load all upcoming appointments across a tenant's managed families and
+ * split them by careContext — the one fact that decides whose calendar an
+ * appointment belongs to (see the CareContext doc in types/medical.ts):
+ *
+ *   - caregiver-visit  → myVisits          (the practitioner attends)
+ *   - member-medical   → familyAppointments (external visit, coordinate only)
+ *
+ * One sweep, one query per family, split in a single pass — so the
+ * "Today's Schedule" and "Family Appointments" views share the same read.
+ *
+ * Uses the sweep pattern (iterate managed families) rather than a
+ * collectionGroup query so it needs NO composite index — the per-family
+ * range+orderBy on `dateTime` auto-indexes. If this gets slow at scale,
+ * denormalize `tenantId` onto caregiver-visits and switch myVisits to a
+ * single collectionGroup query (the field is already on the schema).
+ *
+ * Soft-fails to empty so one broken family can't crash the dashboard.
+ */
+export async function loadTenantAppointments(tenantId: string): Promise<TenantAppointments> {
+  const myVisits: ScheduledVisit[] = []
+  const familyAppointments: CoordinationAppointment[] = []
+  try {
+    const db = getAdminDb()
+    const usersSnap = await db
+      .collection('users')
+      .where('managedBy', 'array-contains', tenantId)
+      .limit(500)
+      .get()
+
+    // From the start of today onward (so this morning's visits still show).
+    const midnight = new Date()
+    midnight.setHours(0, 0, 0, 0)
+    const startOfToday = midnight.toISOString()
+
+    await Promise.all(
+      usersSnap.docs.map(async userDoc => {
+        const u = userDoc.data() as any
+        const clientName = u.name || u.displayName || u.email || 'Unknown'
+        const apptSnap = await userDoc.ref
+          .collection('appointments')
+          .where('dateTime', '>=', startOfToday)
+          .orderBy('dateTime', 'asc')
+          .limit(50)
+          .get()
+          .catch(() => null)
+
+        for (const doc of apptSnap?.docs || []) {
+          const a = doc.data() as any
+          if (a.status === 'cancelled') continue
+          const ctx = (a.careContext || 'member-medical') as string
+          const dateTime = normalizeDate(a.dateTime)
+          if (dateTime === null) continue
+
+          if (ctx === 'caregiver-visit') {
+            myVisits.push({
+              id: doc.id,
+              clientId: userDoc.id,
+              clientName,
+              patientId: a.patientId || null,
+              patientName: a.patientName || clientName,
+              staffId: a.practiceStaffId || null,
+              staffName: a.practiceStaffName || a.providerName || null,
+              reason: a.reason || '',
+              appointmentType: a.type || 'other',
+              dateTime,
+              location: a.location || null,
+              status: a.status || 'scheduled',
+            })
+          } else {
+            familyAppointments.push({
+              id: doc.id,
+              clientId: userDoc.id,
+              clientName,
+              patientId: a.patientId || null,
+              patientName: a.patientName || clientName,
+              providerName: a.providerName || 'Provider',
+              specialty: a.specialty || null,
+              appointmentType: a.type || 'other',
+              dateTime,
+              requiresDriver: a.requiresDriver === true,
+              driverStatus: a.driverStatus || null,
+              status: a.status || 'scheduled',
+            })
+          }
+        }
+      })
+    )
+
+    myVisits.sort((a, b) => a.dateTime.localeCompare(b.dateTime))
+    familyAppointments.sort((a, b) => a.dateTime.localeCompare(b.dateTime))
+    return { myVisits, familyAppointments }
+  } catch (err) {
+    logger.error('[dashboard] failed to load tenant appointments', err as Error, { tenantId })
+    return { myVisits, familyAppointments }
+  }
+}
+
+// ─── Patient Detail (deep per-person view with trend series) ─────────
+
+export interface PatientMedication {
+  id: string
+  name: string
+  dosage: string
+  frequency: string
+}
+
+export interface PatientDetail {
+  id: string
+  name: string
+  type: 'human' | 'pet'
+  relationship: string
+  dateOfBirth: string | null
+  gender: string | null
+  // Trend series for charts. Ordered oldest → newest.
+  weightSeries: WeightDataPoint[]
+  vitals: VitalSign[]
+  medications: PatientMedication[]
+  // Owning client (for the breadcrumb / header link back).
+  clientName: string
+}
+
+/** Series read cap — enough history for a meaningful trend without
+ *  pulling an unbounded log. ~6 months of daily readings. */
+const SERIES_LIMIT = 180
+
+/**
+ * Load a single patient's deep detail — trend series for the charts
+ * (weight, vitals) plus active medications. Used by the per-patient
+ * view at /dashboard/families/[userId]/patients/[patientId].
+ *
+ * Security: verifies the owning user is managed by this tenant AND that
+ * the patient lives under that user before returning anything. Prevents
+ * franchise A from reading franchise B's patients by guessing IDs.
+ *
+ * Soft-fails any individual series to empty so one broken subcollection
+ * doesn't 404 the whole page.
+ */
+export async function loadPatientDetail(
+  tenantId: string,
+  userId: string,
+  patientId: string
+): Promise<PatientDetail | null> {
+  try {
+    const db = getAdminDb()
+
+    // Ownership gate: user must be managed by this tenant.
+    const userSnap = await db.collection('users').doc(userId).get()
+    if (!userSnap.exists) return null
+    const userData = userSnap.data() as any
+    const managedBy: string[] = Array.isArray(userData?.managedBy) ? userData.managedBy : []
+    if (!managedBy.includes(tenantId)) return null
+
+    // Patient must live under that user.
+    const patientRef = db
+      .collection('users')
+      .doc(userId)
+      .collection('patients')
+      .doc(patientId)
+    const patientSnap = await patientRef.get()
+    if (!patientSnap.exists) return null
+    const p = patientSnap.data() as any
+
+    // Trend series + meds, in parallel.
+    const [weightSnap, vitalsSnap, medsSnap] = await Promise.all([
+      patientRef
+        .collection('weight-logs')
+        .orderBy('loggedAt', 'desc')
+        .limit(SERIES_LIMIT)
+        .get()
+        .catch(() => null),
+      patientRef
+        .collection('vitals')
+        .orderBy('recordedAt', 'desc')
+        .limit(SERIES_LIMIT)
+        .get()
+        .catch(() => null),
+      patientRef
+        .collection('medications')
+        .where('status', '==', 'active')
+        .get()
+        .catch(() => null),
+    ])
+
+    // Weight series → WeightDataPoint[] (oldest first for the chart).
+    const weightSeries: WeightDataPoint[] = (weightSnap?.docs || [])
+      .map(doc => {
+        const d = doc.data() as any
+        const iso = normalizeDate(d.loggedAt)
+        if (iso === null || typeof d.weight !== 'number') return null
+        return {
+          date: iso.slice(0, 10), // YYYY-MM-DD
+          weight: d.weight,
+          timestamp: new Date(iso),
+        }
+      })
+      .filter((x): x is WeightDataPoint => x !== null)
+      .reverse()
+
+    // Vitals → VitalSign[] (VitalTrendChart reverses to chronological
+    // itself, so leave newest-first as the query returned them).
+    const vitals: VitalSign[] = (vitalsSnap?.docs || []).map(doc => {
+      const d = doc.data() as any
+      return { id: doc.id, ...d } as VitalSign
+    })
+
+    const medications: PatientMedication[] = (medsSnap?.docs || []).map(doc => {
+      const d = doc.data() as any
+      return {
+        id: doc.id,
+        name: d.name || d.medicationName || 'Unnamed medication',
+        dosage: d.dosage || d.dose || '',
+        frequency: d.frequency || d.schedule || '',
+      }
+    })
+
+    return {
+      id: patientId,
+      name: p.name || 'Unnamed',
+      type: (p.type || 'human') as 'human' | 'pet',
+      relationship: p.relationship || '',
+      dateOfBirth: normalizeDate(p.dateOfBirth),
+      gender: p.gender || null,
+      weightSeries,
+      vitals,
+      medications,
+      clientName: userData.name || userData.displayName || userData.email || 'Unknown',
+    }
+  } catch (err) {
+    logger.error('[dashboard] failed to load patient detail', err as Error, { tenantId, userId, patientId })
     return null
   }
 }
