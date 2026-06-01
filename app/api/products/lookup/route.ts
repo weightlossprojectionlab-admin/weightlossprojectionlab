@@ -128,6 +128,32 @@ export async function GET(request: NextRequest) {
           })
         }
 
+        // Lazy allergen backfill: a cached doc created before allergen tagging
+        // existed carries no allergenTags, so the safety banner can't fire. Re-look
+        // up OFF in the background and stamp canonical tags; the next scan serves
+        // them from cache. Mirrors the image/alias lazy-enrichment pattern.
+        if (!productData?.allergenTags) {
+          after(async () => {
+            try {
+              const fresh = await lookupProductHybrid(resolvedBarcode)
+              const allergenTags = allergensFromProductFields(
+                fresh?.allergens,
+                fresh?.ingredients_text,
+                fresh?.allergens_tags,
+              )
+              if (allergenTags.length > 0) {
+                await productRef.update({ allergenTags, updatedAt: new Date() })
+                logger.info('[Lookup] backfilled allergenTags', { barcode: resolvedBarcode, allergenTags })
+              }
+            } catch (e) {
+              logger.debug('[Lookup] allergen backfill failed', {
+                barcode: resolvedBarcode,
+                error: (e as Error).message,
+              })
+            }
+          })
+        }
+
         // Lazy alias backfill: if this doc still doesn't have an `aliases`
         // array, write one based on its canonical id. Future scans of any
         // variant resolve via the array-contains query in a single read,
@@ -173,6 +199,9 @@ export async function GET(request: NextRequest) {
             },
             categories: productData?.category || '',
             ingredients_text: '',
+            // Forward the catalog's stored canonical allergen tags so a cache hit
+            // still tags the item (the field the safety banner depends on).
+            allergens_tags: productData?.allergenTags || [],
             container_size: productData?.containerSize ?? undefined,
             container_unit: productData?.containerUnit ?? undefined,
           },
