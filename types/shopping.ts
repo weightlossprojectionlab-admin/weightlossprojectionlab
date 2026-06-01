@@ -229,6 +229,14 @@ export interface ShoppingItem {
     servingSize: string
   }
 
+  /**
+   * Canonical allergen tokens parsed at scan-add from the product's
+   * ingredients_text / allergens (lib/allergen-parser.parseAllergens). Drives
+   * the household `unsafeFor` safety check; values are CanonicalAllergen strings
+   * (kept as string[] so this leaf type doesn't depend on lib/).
+   */
+  allergenTags?: string[]
+
   // Manual Entry Support (for recipe ingredients)
   isManual: boolean // True if added from recipe without barcode
   manualIngredientName?: string // Original ingredient text from recipe (e.g., "2 cups milk")

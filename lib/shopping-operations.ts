@@ -10,6 +10,7 @@
  */
 
 import { logger } from '@/lib/logger'
+import { parseAllergens } from '@/lib/allergen-parser'
 import {
   collection,
   doc,
@@ -362,6 +363,16 @@ export async function addOrUpdateShoppingItem(
         ? containerSize * quantity
         : undefined
 
+    // Parse allergens ONCE here at ingestion (SoC: heavy parse on write, pure
+    // eval on read). OFF gives a hyphenated/locale-tagged `allergens` string +
+    // raw `ingredients_text`; canonicalize both and union. Empty → omitted.
+    const allergenTags = [
+      ...new Set([
+        ...parseAllergens(product.allergens ? product.allergens.split(',') : []),
+        ...(product.ingredients_text ? parseAllergens(product.ingredients_text) : []),
+      ]),
+    ].sort()
+
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
       productKey, // NEW: Add product key for deduplication
@@ -370,6 +381,7 @@ export async function addOrUpdateShoppingItem(
       brand: product.brands || '',
       imageUrl: product.image_front_url || product.image_url || '',
       category,
+      ...(allergenTags.length > 0 ? { allergenTags } : {}),
       // Phase 0b — auto-fill assignedStoreId from the user's history
       // for this category. Owner can override via the row chip.
       ...(autoAssignedStoreId ? { assignedStoreId: autoAssignedStoreId } : {}),
