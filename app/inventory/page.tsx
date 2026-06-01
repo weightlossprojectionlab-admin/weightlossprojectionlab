@@ -22,6 +22,7 @@ import { useShopping } from '@/hooks/useShopping'
 import { getCategoryMetadata, formatQuantityDisplay } from '@/lib/product-categories'
 import { formatExpirationDate } from '@/lib/product-categories'
 import { getExpirationColor } from '@/lib/expiration-tracker'
+import { inventoryAttentionScore, compareAttention, type AttentionAction } from '@/lib/inventory-attention'
 import type { StorageLocation } from '@/types/shopping'
 import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
@@ -58,6 +59,16 @@ const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then(mod => ({ default: mod.BarcodeScanner })),
   { ssr: false }
 )
+
+// Attention-action badge styles for inventory list rows (action comes from
+// inventoryAttentionScore). `discard` is intentionally the loudest — solid
+// red — so already-expired waste reads instantly as different from a softer
+// amber "use soon" warning.
+const ATTENTION_BADGE: Record<Exclude<AttentionAction, 'ok'>, { label: string; cls: string }> = {
+  discard: { label: 'Discard', cls: 'bg-red-600 text-white' },
+  'use-soon': { label: 'Use soon', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
+  restock: { label: 'Restock', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+}
 
 // Display options for the Details tab editor. Same lists used by the
 // (now-unused) InventoryItemEditModal — kept inline here so the page
@@ -1970,23 +1981,18 @@ function KitchenInventoryContent() {
           return []
       }
     })()
-    // Newest-added first — sort by createdAt desc so a freshly scanned /
-    // catalog-added item appears at the top of the list. Falls back to
-    // updatedAt for legacy rows missing createdAt. Updating an existing
-    // item (consume / adjust) does NOT bump it under this rule.
-    const sorted = [...byLocation].sort((a, b) => {
-      const aTs = a.createdAt
-        ? new Date(a.createdAt).getTime()
-        : a.updatedAt
-          ? new Date(a.updatedAt).getTime()
-          : 0
-      const bTs = b.createdAt
-        ? new Date(b.createdAt).getTime()
-        : b.updatedAt
-          ? new Date(b.updatedAt).getTime()
-          : 0
-      return bTs - aTs
-    })
+    // Triage order: by the shared Attention score first (compareAttention,
+    // lib/inventory-attention) so items about to run out / spoil / be discarded
+    // float to the top, then newest-added among equally-calm items — which
+    // preserves the old "freshly scanned appears first" behavior for the
+    // non-urgent bulk. Attention is precomputed once per item so the comparator
+    // isn't re-scoring on every comparison.
+    const recency = (i: (typeof byLocation)[number]) =>
+      i.createdAt ? new Date(i.createdAt).getTime() : i.updatedAt ? new Date(i.updatedAt).getTime() : 0
+    const sorted = byLocation
+      .map((item) => ({ item, a: inventoryAttentionScore(item) }))
+      .sort((x, y) => compareAttention(x.a, y.a) || recency(y.item) - recency(x.item))
+      .map((w) => w.item)
     return filterItems(sorted)
   }
 
@@ -3707,17 +3713,19 @@ function KitchenInventoryContent() {
             }
             const rows: ReorderRow[] = allItems
               .map((item): ReorderRow | null => {
-                const avgDays = item.averageDaysBetweenPurchases
-                const last = item.lastPurchased ? new Date(item.lastPurchased).getTime() : null
-                if (avgDays !== undefined && last !== null) {
-                  const daysSince = Math.floor((Date.now() - last) / (1000 * 60 * 60 * 24))
-                  const ahead = Math.round(avgDays - daysSince)
+                // DRY: the depletion clock + cold-start low-stock signal now
+                // come from the shared Attention model (lib/inventory-attention.ts).
+                // This tab is restock-focused, so it reads the RESTOCK facet
+                // only — the spoil clock surfaces in the expiry alerts + list.
+                const { tEmpty, restockUrgency } = inventoryAttentionScore(item)
+                if (tEmpty !== null) {
+                  const ahead = Math.round(tEmpty)
                   if (ahead <= 0) return { item, predictedDaysAhead: ahead, reason: 'due-now' }
                   if (ahead <= 3) return { item, predictedDaysAhead: ahead, reason: 'due-soon' }
                   return null // on-schedule, hide from suggestions
                 }
-                // Cold-start: no avg cadence; fall back to stock-level signal
-                if ((item.quantity ?? 0) <= 1) {
+                // Cold-start: no cadence yet; low-stock floor from the model.
+                if (restockUrgency > 0) {
                   return { item, predictedDaysAhead: null, reason: 'low-stock' }
                 }
                 return null
@@ -4542,6 +4550,7 @@ function KitchenInventoryContent() {
             <div className="space-y-3">
               {items.map(item => {
                 const categoryMeta = getCategoryMetadata(item.category)
+                const attention = inventoryAttentionScore(item)
 
                 // Calculate expiration severity from item's expiresAt date
                 let expirationSeverity: 'expired' | 'critical' | 'warning' | 'normal' = 'normal'
@@ -4599,6 +4608,19 @@ function KitchenInventoryContent() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-foreground truncate flex items-center gap-2">
                           <span className="truncate">{item.productName || 'Unknown Product'}</span>
+                          {/* Discard always flags (expired = waste); restock /
+                              use-soon flag only when genuinely urgent (score ≥
+                              0.5 ≈ within ~5 days) so we don't badge the whole
+                              pantry — the list is already sorted by urgency. */}
+                          {attention.action !== 'ok' &&
+                            (attention.action === 'discard' || attention.score >= 0.5) && (
+                              <span
+                                className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${ATTENTION_BADGE[attention.action].cls}`}
+                                title={`${ATTENTION_BADGE[attention.action].label} — attention score ${attention.score.toFixed(2)}`}
+                              >
+                                {ATTENTION_BADGE[attention.action].label}
+                              </span>
+                            )}
                           {/* Inline rename pencil — only shown for placeholder
                               names. Curated names are admin-only via the
                               /admin/barcodes edit flow. */}
