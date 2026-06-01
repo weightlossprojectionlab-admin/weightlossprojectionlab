@@ -256,6 +256,7 @@ function KitchenInventoryContent() {
     containerSize: number | null
     containerUnit: QuantityUnit | null
     nutrition?: CatalogNutrition | null
+    nutrients?: ShoppingItem['nutrients'] | null
   }
   const [catalogResults, setCatalogResults] = useState<CatalogResult[]>([])
   const [catalogLoading, setCatalogLoading] = useState(false)
@@ -2993,10 +2994,18 @@ function KitchenInventoryContent() {
                       const rowN = selectedItem.nutrition || null
                       const n = catN ?? rowN
                       const source = catN ? 'live · catalog' : rowN ? 'snapshot' : 'no data'
-                      // Sodium / sugars / saturated fat live on the catalog row at
-                      // runtime (route richNutrition) but aren't on the leaf
-                      // nutrition type — surface them read-only here.
-                      const rich = (n ?? {}) as { sodium?: number; sugars?: number; saturatedFat?: number }
+                      // Sodium / sugars / saturated fat: prefer the normalized
+                      // per-serving `nutrients` panel (correct units + complete).
+                      // The catalog display `nutrition` MISSES saturated fat (OFF
+                      // spells it "saturated-fat"), so fall back to it only for
+                      // sodium/sugars, converting catalog sodium grams → mg.
+                      const panel = (e?.nutrients ?? selectedItem.nutrients) as
+                        | { sodium?: number; sugars?: number; saturatedFat?: number }
+                        | undefined
+                      const rich = (n ?? {}) as { sodium?: number; sugars?: number }
+                      const sodiumMg = panel?.sodium ?? (rich.sodium != null ? rich.sodium * 1000 : undefined)
+                      const sugarsG = panel?.sugars ?? rich.sugars
+                      const satFatG = panel?.saturatedFat
                       const hasAny =
                         !!n &&
                         ((n.calories ?? 0) > 0 ||
@@ -3041,11 +3050,11 @@ function KitchenInventoryContent() {
                           {(
                             [
                               ['Total fat', n?.fat, 'g'],
-                              ['Saturated fat', rich.saturatedFat, 'g'],
-                              ['Sodium', rich.sodium != null ? rich.sodium * 1000 : undefined, 'mg'],
+                              ['Saturated fat', satFatG, 'g'],
+                              ['Sodium', sodiumMg, 'mg'],
                               ['Total carbohydrates', n?.carbs, 'g'],
                               ['Dietary fiber', n?.fiber, 'g'],
-                              ['Total sugars', rich.sugars, 'g'],
+                              ['Total sugars', sugarsG, 'g'],
                               ['Protein', n?.protein, 'g'],
                             ] as const
                           ).map(([label, value, unit]) => {

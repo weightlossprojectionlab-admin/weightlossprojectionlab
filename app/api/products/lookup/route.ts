@@ -298,9 +298,11 @@ export async function GET(request: NextRequest) {
         sodium: pickNutrient(nutriments.sodium_serving, nutriments.sodium_100g, nutriments.sodium),
         sugars: pickNutrient(nutriments.sugars_serving, nutriments.sugars_100g, nutriments.sugars),
         saturatedFat: pickNutrient(
-          nutriments.saturated_fat_serving,
-          nutriments.saturated_fat_100g,
-          nutriments.saturated_fat
+          // OFF spells these with a hyphen (saturated-fat); the underscore form
+          // is always undefined, so catalog nutrition.saturatedFat was never set.
+          nutriments['saturated-fat_serving'],
+          nutriments['saturated-fat_100g'],
+          nutriments['saturated-fat']
         ),
         cholesterol: pickNutrient(
           nutriments.cholesterol_serving,
