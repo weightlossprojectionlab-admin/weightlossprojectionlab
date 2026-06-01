@@ -35,6 +35,22 @@ import { CATEGORY_METADATA } from './product-categories'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
+/**
+ * Coerce a date-ish value to epoch millis. Firestore hands back Timestamps for
+ * fields the inventory hook does NOT normalize (lastPurchased,
+ * purchaseHistory[].date — unlike expiresAt/createdAt), so a bare
+ * `new Date(value)` would be Invalid Date. Handles Timestamp ({toDate}/{seconds}),
+ * Date, ISO string, and millis; returns NaN for anything unparseable.
+ */
+export function toEpochMs(value: unknown): number {
+  if (value == null) return NaN
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const v = value as any
+  if (typeof v.toDate === 'function') return v.toDate().getTime()
+  if (typeof v.seconds === 'number') return v.seconds * 1000
+  return new Date(v).getTime()
+}
+
 // Urgency horizons (days): at T = τ the kernel is 1/e ≈ 0.37; at T = 0 it is 1.
 const TAU_RESTOCK = 7
 const TAU_SPOIL = 5
@@ -78,10 +94,12 @@ function urgencyKernel(days: number, tau: number): number {
   return Math.exp(-Math.max(0, days) / tau)
 }
 
-/** Whole days elapsed since `date` (null when absent). */
+/** Whole days elapsed since `date` (null when absent or unparseable). */
 function daysSince(date: Date | undefined, now: number): number | null {
   if (!date) return null
-  return Math.floor((now - new Date(date).getTime()) / DAY_MS)
+  const ms = toEpochMs(date)
+  if (Number.isNaN(ms)) return null
+  return Math.floor((now - ms) / DAY_MS)
 }
 
 /**
@@ -106,7 +124,8 @@ function computeTEmpty(item: ShoppingItem, now: number): number | null {
  */
 function computeTSpoil(item: ShoppingItem, now: number): number | null {
   if (item.expiresAt) {
-    return Math.ceil((new Date(item.expiresAt).getTime() - now) / DAY_MS)
+    const ms = toEpochMs(item.expiresAt)
+    if (!Number.isNaN(ms)) return Math.ceil((ms - now) / DAY_MS)
   }
   const meta = CATEGORY_METADATA[item.category]
   const perishable = item.isPerishable ?? meta?.isPerishable ?? false
