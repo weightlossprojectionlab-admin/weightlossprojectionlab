@@ -7,7 +7,7 @@
 
 import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { blogPostingSchema, faqPageSchema } from '@/lib/json-ld'
+import { blogPostingSchema, faqPageSchema, softwareApplicationSchema, itemListSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -97,6 +97,37 @@ const FAQ = [
   },
 ]
 
+// Single source of truth for the "Projection Engine" sequence — drives BOTH
+// the on-page <ol> and the ItemList schema, so render + structured data can
+// never drift. Titles are descriptive/keyword-rich for NLP parsing, and the
+// ordinal lives IN each heading text ("1. Log Weight").
+const PROJECTION_STEPS = [
+  {
+    step: 1,
+    title: 'Log Weight',
+    description: 'One-tap entry from your dashboard. Takes under 5 seconds.',
+    icon: <ScaleIcon className="w-8 h-8 text-white" />,
+  },
+  {
+    step: 2,
+    title: 'The System Analyzes Patterns',
+    description: 'The engine detects trends, plateaus, and inflection points in your weigh-in data.',
+    icon: <CpuChipIcon className="w-8 h-8 text-white" />,
+  },
+  {
+    step: 3,
+    title: 'Projects Your Weight Trajectory',
+    description: "See where you'll be in 2 weeks, 1 month, or 3 months at your current pace.",
+    icon: <ArrowTrendingUpIcon className="w-8 h-8 text-white" />,
+  },
+  {
+    step: 4,
+    title: 'Adjusts Recommendations',
+    description: 'Get personalized nudges so you stay on track or course-correct early.',
+    icon: <LightBulbIcon className="w-8 h-8 text-white" />,
+  },
+]
+
 export default function WeightTrackingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -112,6 +143,40 @@ export default function WeightTrackingBlogPage() {
         })}
       />
       <JsonLd data={faqPageSchema(FAQ)} />
+      {/* SoftwareApplication — this page describes a product; tell engines its
+          category, platforms, and capabilities (drawn from the page's own
+          existing copy: projections, multi-person tracking, goal ETA, etc.). */}
+      <JsonLd
+        data={softwareApplicationSchema({
+          name: 'Wellness Projection Lab Weight Tracker',
+          description:
+            'A HIPAA-compliant, self-teaching weight tracker that turns weigh-ins into a projected trajectory — forecasting when each household member will reach a goal weight, how a child’s growth curve is trending, and when an aging parent’s weight needs attention.',
+          url: '/blog/weight-tracking',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          featureList: [
+            'Self-teaching weight loss projections',
+            'Estimated goal-completion date that recalculates from your real trend',
+            'Multi-person family tracking with per-member privacy controls',
+            'Child growth-curve and percentile tracking',
+            'Aging-parent weight monitoring with rapid-loss alerts',
+            'Interactive actual-vs-projected weight charts',
+            'Goal setting with on-pace / off-pace indicators',
+            'Smart weigh-in reminders',
+            'One-tap manual entry (no smart scale required)',
+          ],
+        })}
+      />
+      {/* ItemList — the "Projection Engine" ordered sequence, mirroring the
+          on-page <ol> (single source: PROJECTION_STEPS). */}
+      <JsonLd
+        data={itemListSchema({
+          name: 'How the Self-Teaching Weight Projection Engine Works',
+          items: PROJECTION_STEPS.map((s) => ({
+            name: `${s.step}. ${s.title}`,
+            description: s.description,
+          })),
+        })}
+      />
 
       {/* ── Hero Section ── */}
       <div className="relative bg-gradient-to-br from-violet-600 via-purple-600 to-fuchsia-600 text-white overflow-hidden">
@@ -138,6 +203,15 @@ export default function WeightTrackingBlogPage() {
               or when an aging parent&apos;s weight needs attention. One account, every person in your
               family.
             </p>
+            {/* AI-snippet line — one clean, self-contained definition an AI
+                engine can lift verbatim. Kept consistent with the
+                SoftwareApplication schema description and the definition block. */}
+            <p className="text-base text-white/90 mb-10 leading-relaxed max-w-3xl mx-auto">
+              <strong>WPL Weight Tracking</strong> is a HIPAA-compliant, self-teaching weight tracker
+              that turns each person&apos;s weigh-ins into a projected trajectory &mdash; forecasting when
+              they&apos;ll reach a goal weight and flagging concerning changes &mdash; for every member of a
+              household in one account.
+            </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
                 href="/pricing"
@@ -157,6 +231,25 @@ export default function WeightTrackingBlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        {/* ── Definition — direct, snippet-extractable answer. A question-form
+            H2 + a self-contained genus-and-differentia definition is the
+            structure AI quick-answer cards + featured snippets pull from. ── */}
+        <section className="mb-24 max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-4">What Is Self-Teaching Weight Tracking?</h2>
+          <p className="text-lg text-foreground leading-relaxed">
+            <strong>Self-teaching weight tracking</strong> is a weight-monitoring method that records
+            each weigh-in and then projects a forward trajectory &mdash; estimating when a person will
+            reach a goal weight, how a child&apos;s growth curve is trending, or when an older adult&apos;s
+            weight is changing in a concerning way &mdash; and refines those projections as it sees more
+            data over time.
+          </p>
+          <p className="text-base text-muted-foreground leading-relaxed mt-4">
+            Instead of showing only today&apos;s number, a self-teaching weight tracker learns each
+            person&apos;s pattern and turns scattered weigh-ins into a clear picture of where their weight
+            is headed &mdash; for one person or for every member of a household on a single account.
+          </p>
+        </section>
 
         {/* ── The Problem ── */}
         <section className="mb-24">
@@ -188,7 +281,7 @@ export default function WeightTrackingBlogPage() {
         {/* ── The Projection Engine (Centerpiece) ── */}
         <section className="mb-24">
           <h2 className="text-3xl sm:text-4xl font-bold text-foreground mb-4 text-center">
-            The Projection Engine
+            How the Self-Teaching Weight Projection Engine Works
           </h2>
           <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             Four steps between a weigh-in and a clear view of your future.
@@ -198,32 +291,21 @@ export default function WeightTrackingBlogPage() {
             {/* Connecting line (hidden on mobile) */}
             <div className="hidden md:block absolute top-24 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-violet-400 via-purple-400 to-fuchsia-400" />
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
-              <ProjectionStep
-                step={1}
-                icon={<ScaleIcon className="w-8 h-8 text-white" />}
-                title="Log Weight"
-                description="One-tap entry from your dashboard. Takes under 5 seconds."
-              />
-              <ProjectionStep
-                step={2}
-                icon={<CpuChipIcon className="w-8 h-8 text-white" />}
-                title="The System Analyzes Patterns"
-                description="Our engine detects trends, plateaus, and inflection points in your data."
-              />
-              <ProjectionStep
-                step={3}
-                icon={<ArrowTrendingUpIcon className="w-8 h-8 text-white" />}
-                title="Projects Trajectory"
-                description="See where you'll be in 2 weeks, 1 month, or 3 months at your current pace."
-              />
-              <ProjectionStep
-                step={4}
-                icon={<LightBulbIcon className="w-8 h-8 text-white" />}
-                title="Adjusts Recommendations"
-                description="Get personalized nudges so you stay on track or course-correct early."
-              />
-            </div>
+            {/* Ordered list — the semantic primitive for a numbered sequence.
+                NLP models and screen readers parse <ol> as ordered, and each
+                step's number now lives IN the heading text. Single source:
+                PROJECTION_STEPS (also drives the ItemList schema). */}
+            <ol className="grid grid-cols-1 md:grid-cols-4 gap-8 relative list-none p-0 m-0">
+              {PROJECTION_STEPS.map((s) => (
+                <ProjectionStep
+                  key={s.step}
+                  step={s.step}
+                  icon={s.icon}
+                  title={s.title}
+                  description={s.description}
+                />
+              ))}
+            </ol>
           </div>
         </section>
 
@@ -497,15 +579,19 @@ function ProblemCard({ icon, title, description }: { icon: React.ReactNode; titl
 }
 
 function ProjectionStep({ step, icon, title, description }: { step: number; icon: React.ReactNode; title: string; description: string }) {
+  // The ordinal lives IN the heading text ("1. Log Weight") so NLP parses the
+  // sequence chronologically — not as a detached badge above a heading.
   return (
-    <div className="flex flex-col items-center text-center">
+    <li className="flex flex-col items-center text-center">
       <div className="relative z-10 w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 flex items-center justify-center mb-4 shadow-lg">
         {icon}
       </div>
       <span className="text-xs font-bold text-violet-500 uppercase tracking-wider mb-1">Step {step}</span>
-      <h3 className="text-lg font-semibold text-foreground mb-1">{title}</h3>
+      <h3 className="text-lg font-semibold text-foreground mb-1">
+        <span className="text-violet-600 dark:text-violet-400 font-extrabold">{step}.</span> {title}
+      </h3>
       <p className="text-muted-foreground text-sm">{description}</p>
-    </div>
+    </li>
   )
 }
 

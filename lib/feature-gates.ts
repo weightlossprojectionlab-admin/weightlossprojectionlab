@@ -47,11 +47,14 @@ export const PLAN_FEATURES: Record<string, SubscriptionPlan[]> = {
   'health-reports': ['single_plus', 'family_basic', 'family_plus', 'family_premium'],
   'pet-health-reports': ['family_basic', 'family_plus', 'family_premium'],
 
-  // Advanced Analytics (Family Plus & Premium only)
-  'advanced-analytics': ['family_plus', 'family_premium'],
-  'health-insights': ['family_plus', 'family_premium'],
-  'trend-analysis': ['family_plus', 'family_premium'],
-  'predictive-ai': ['family_plus', 'family_premium'],
+  // Advanced Analytics — the power tier on EACH track: Single User Plus on
+  // the single track, Family Plus/Premium on the family track. A solo user
+  // gets advanced analytics on their OWN data via Single User Plus; they
+  // should never be pushed to a Family plan to unlock it.
+  'advanced-analytics': ['single_plus', 'family_plus', 'family_premium'],
+  'health-insights': ['single_plus', 'family_plus', 'family_premium'],
+  'trend-analysis': ['single_plus', 'family_plus', 'family_premium'],
+  'predictive-ai': ['single_plus', 'family_plus', 'family_premium'],
 
   // Premium Features
   'priority-support': ['family_plus', 'family_premium'],

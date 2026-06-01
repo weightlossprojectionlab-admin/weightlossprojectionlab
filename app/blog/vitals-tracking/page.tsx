@@ -8,7 +8,7 @@
 
 import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { blogPostingSchema } from '@/lib/json-ld'
+import { blogPostingSchema, faqPageSchema, softwareApplicationSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   HeartIcon,
@@ -52,6 +52,27 @@ export const metadata: Metadata = {
   }
 }
 
+// Direct, self-contained Q&A — the "dictionary definition" an AI quick-answer
+// card can lift verbatim. Kept in sync with the visible FAQ section below so
+// the structured data matches on-page content (no schema/content mismatch).
+const FAQ_ITEMS = [
+  {
+    question: 'What is vitals tracking?',
+    answer:
+      'Vitals tracking is the practice of regularly recording vital signs — such as blood pressure, blood glucose, heart rate, oxygen saturation (SpO2), temperature, mood, and pain level — over time so that trends, patterns, and abnormal readings can be spotted early instead of being discovered during an emergency.',
+  },
+  {
+    question: 'Who is vitals tracking for?',
+    answer:
+      "It's for anyone monitoring health over time — people managing a chronic condition like diabetes or hypertension, families watching over an aging parent from a distance, and caregivers who need consistent vital-sign records to share with doctors at appointments.",
+  },
+  {
+    question: 'How is intelligent vitals tracking different from a basic vitals log?',
+    answer:
+      'A basic log only stores numbers. Intelligent vitals tracking watches the readings for upward or downward trends, alerts you when a value falls outside a safe range or shifts over consecutive days, and generates exportable reports — so a slow change is caught early rather than missed.',
+  },
+]
+
 export default function VitalsTrackingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -63,6 +84,33 @@ export default function VitalsTrackingBlogPage() {
           image: '/screenshots/vitals-tracking/vital-reminders-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
           keywords: 'vitals tracking, blood pressure monitoring, glucose tracking, heart rate monitor, early detection, health alerts, vital signs, family health monitoring, abnormal vitals alert, remote patient monitoring',
+        })}
+      />
+      {/* FAQ schema — lets AI assistants + Google pull a direct quick-answer
+          for "What is vitals tracking?" Mirrors the visible FAQ below. */}
+      <JsonLd data={faqPageSchema(FAQ_ITEMS)} />
+      {/* SoftwareApplication — this page describes a product; tell engines its
+          category, platforms, and the vital-sign capabilities it actually offers. */}
+      <JsonLd
+        data={softwareApplicationSchema({
+          name: 'Wellness Projection Lab Vitals Tracking',
+          description:
+            'HIPAA-compliant vitals tracking that records blood pressure, blood glucose, heart rate, SpO2, temperature, mood, and pain level for every member of a household, then watches the readings for trends and alerts caregivers when something shifts.',
+          url: '/blog/vitals-tracking',
+          image: '/screenshots/vitals-tracking/vital-reminders-desktop-light.png',
+          featureList: [
+            'Blood pressure tracking',
+            'Blood glucose tracking',
+            'Heart rate tracking',
+            'SpO2 (oxygen) tracking',
+            'Temperature tracking',
+            'Mood and pain-level tracking',
+            'Trend charts with normal, elevated, and critical zones',
+            'Abnormal-reading and trend alerts',
+            'Scheduled vital-check reminders',
+            'Exportable PDF reports for doctor visits',
+            'Self-teaching vitals insights',
+          ],
         })}
       />
       {/* Hero Section */}
@@ -84,9 +132,17 @@ export default function VitalsTrackingBlogPage() {
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               Catch Problems Before They Become Emergencies
             </h1>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-xl text-white/90 mb-4 leading-relaxed max-w-3xl mx-auto">
               Your family&apos;s health tells a story in numbers. WPL tracks the patterns, spots the trends,
               and alerts you before a subtle shift becomes a serious problem.
+            </p>
+            {/* AI-snippet line — one clean, self-contained definition an AI
+                engine can lift verbatim. Kept consistent with the
+                SoftwareApplication schema description. */}
+            <p className="text-base text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+              <strong>WPL Vitals Tracking</strong> is a HIPAA-compliant tool that records blood pressure,
+              blood glucose, heart rate, SpO2, temperature, mood, and pain level for every household member,
+              then watches the readings for trends and alerts caregivers when something shifts.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -107,6 +163,27 @@ export default function VitalsTrackingBlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        {/* ============================================ */}
+        {/* DEFINITION — direct, snippet-extractable answer.   */}
+        {/* Question-form H2 + a self-contained definition is   */}
+        {/* the structure AI quick-answer cards + featured      */}
+        {/* snippets pull from.                                 */}
+        {/* ============================================ */}
+        <section className="mb-20 max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-4">What Is Vitals Tracking?</h2>
+          <p className="text-lg text-foreground leading-relaxed">
+            <strong>Vitals tracking</strong> is the practice of regularly recording vital signs &mdash; such as
+            blood pressure, blood glucose, heart rate, oxygen saturation (SpO2), temperature, mood, and pain
+            level &mdash; over time, so that trends, patterns, and abnormal readings can be spotted early
+            instead of being discovered during an emergency.
+          </p>
+          <p className="text-base text-muted-foreground leading-relaxed mt-4">
+            Instead of treating each reading as an isolated number, vitals tracking builds a continuous record
+            for every family member &mdash; turning scattered measurements into a clear picture of how someone&apos;s
+            health is changing over days, weeks, and months.
+          </p>
+        </section>
 
         {/* Problem Section */}
         <section className="mb-20">
@@ -271,6 +348,22 @@ export default function VitalsTrackingBlogPage() {
             <RelatedLink href="/blog/wpl-health-reports" title="Self-Teaching Health Reports" description="Weekly personalized insights from your tracked data" />
             <RelatedLink href="/blog/weight-tracking" title="Weight Tracking" description="Monitor weight trends alongside your vitals" />
             <RelatedLink href="/blog/appointments" title="Appointments" description="Bring your vitals data to every doctor visit" />
+          </div>
+        </section>
+
+        {/* ============================================ */}
+        {/* FAQ — visible content matching the FAQPage   */}
+        {/* schema (and good for "People Also Ask").     */}
+        {/* ============================================ */}
+        <section className="mb-20 max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {FAQ_ITEMS.map((item) => (
+              <div key={item.question} className="bg-card rounded-xl border-2 border-border p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-2">{item.question}</h3>
+                <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
+              </div>
+            ))}
           </div>
         </section>
 

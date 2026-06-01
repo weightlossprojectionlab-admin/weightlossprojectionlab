@@ -10,7 +10,7 @@
 
 import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { blogPostingSchema } from '@/lib/json-ld'
+import { blogPostingSchema, faqPageSchema, softwareApplicationSchema, itemListSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -53,6 +53,61 @@ export const metadata: Metadata = {
   }
 }
 
+// Direct, self-contained Q&A — the "dictionary definition" an AI quick-answer
+// card can lift verbatim. Kept in sync with the visible FAQ section below so
+// the structured data matches on-page content (no schema/content mismatch).
+const FAQ_ITEMS = [
+  {
+    question: 'What is a family health dashboard?',
+    answer:
+      "A family health dashboard is a single screen that brings together the health information — weight, meals, vital signs, medications, and appointments — for every member of a household, so one caregiver can monitor everyone's status and see who needs attention at a glance.",
+  },
+  {
+    question: 'Who is a family health dashboard for?',
+    answer:
+      "It's for anyone caring for more than one person — parents tracking children, adult children caring for aging parents, and multi-caregiver households that need a shared, up-to-date view of everyone's health in one place.",
+  },
+  {
+    question: 'How is a family health dashboard different from a regular health app?',
+    answer:
+      "Most health apps show one person's data, one login at a time. A family health dashboard shows every member of the household from a single view, surfaces patterns across people, and coordinates care tasks between multiple caregivers.",
+  },
+]
+
+// Single source of truth for the "What Your Dashboard Shows You" sequence —
+// drives BOTH the on-page <ol> and the ItemList schema, so they never drift.
+// Titles are descriptive/keyword-rich for NLP parsing.
+const DASHBOARD_STEPS = [
+  {
+    step: 1,
+    title: 'Centralized Family Overview',
+    description:
+      "See every family member's status at a glance — who's on track, who needs attention, and recent activity across the household.",
+    color: 'text-purple-600',
+  },
+  {
+    step: 2,
+    title: 'Individual Health Profiles',
+    description:
+      "Tap into any family member's profile for detailed weight trends, meal history, vital signs, medications, and upcoming appointments.",
+    color: 'text-blue-600',
+  },
+  {
+    step: 3,
+    title: 'Self-Teaching Health Insights',
+    description:
+      "Platform-generated health analysis surfaces patterns you'd never catch manually — declining intake, weight plateaus, vital sign trends.",
+    color: 'text-indigo-600',
+  },
+  {
+    step: 4,
+    title: 'Prioritized Action Items',
+    description:
+      "A prioritized list of what needs your attention today: overdue check-ins, medication reminders, abnormal readings, and care tasks.",
+    color: 'text-emerald-600',
+  },
+]
+
 export default function DashboardBlogPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -64,6 +119,40 @@ export default function DashboardBlogPage() {
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
           keywords: 'family health dashboard, health command center, family health monitoring, multi-person dashboard, caregiver dashboard, health insights dashboard, family wellness tracking, centralized health view',
+        })}
+      />
+      {/* FAQ schema — lets AI assistants + Google pull a direct quick-answer
+          for "What is a family health dashboard?" Mirrors the visible FAQ. */}
+      <JsonLd data={faqPageSchema(FAQ_ITEMS)} />
+      {/* SoftwareApplication — this page describes a product; tell engines its
+          category, platforms, and capabilities (incl. the AI/ML features). */}
+      <JsonLd
+        data={softwareApplicationSchema({
+          name: 'Wellness Projection Lab Dashboard',
+          description:
+            'A HIPAA-compliant family health dashboard that centralizes vitals, medications, meals, and appointments for every member of a household — up to 20 people — in one intelligent, self-teaching view.',
+          url: '/blog/dashboard',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          featureList: [
+            'Centralized family health overview',
+            'Per-member health profiles',
+            'Proactive smart alerts',
+            'Self-teaching ML health insights',
+            'AI photo meal capture and analysis (Gemini Vision)',
+            'Caregiver coordination and task management',
+            'Role-based privacy controls',
+          ],
+        })}
+      />
+      {/* ItemList — the "What Your Dashboard Shows You" ordered sequence,
+          mirroring the on-page <ol> (single source: DASHBOARD_STEPS). */}
+      <JsonLd
+        data={itemListSchema({
+          name: 'What Your Family Health Dashboard Shows You',
+          items: DASHBOARD_STEPS.map((s) => ({
+            name: `${s.step}. ${s.title}`,
+            description: s.description,
+          })),
         })}
       />
 
@@ -88,8 +177,16 @@ export default function DashboardBlogPage() {
             <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
               See Everyone&apos;s Health in One Glance
             </h1>
-            <p className="text-xl text-blue-100 mb-8 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-xl text-blue-100 mb-4 leading-relaxed max-w-3xl mx-auto">
               Stop wondering if everyone is okay. The WPL Dashboard gives you a single, intelligent view of your entire family&apos;s health — so you always know exactly what needs attention and what&apos;s going well.
+            </p>
+            {/* AI-snippet line — one clean, self-contained definition an AI
+                engine can lift verbatim. Kept consistent with the
+                SoftwareApplication schema description. */}
+            <p className="text-base text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+              The <strong>WPL Dashboard</strong> is a HIPAA-compliant family health platform that centralizes
+              vitals, medications, meals, and appointments for up to 20 household members in a single,
+              self-teaching view.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -113,6 +210,27 @@ export default function DashboardBlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        {/* ============================================ */}
+        {/* DEFINITION — direct, snippet-extractable answer.   */}
+        {/* Question-form H2 + a self-contained definition is   */}
+        {/* the structure AI quick-answer cards + featured      */}
+        {/* snippets pull from.                                 */}
+        {/* ============================================ */}
+        <section className="mb-24 max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-4">What Is a Family Health Dashboard?</h2>
+          <p className="text-lg text-foreground leading-relaxed">
+            A <strong>family health dashboard</strong> is a single screen that brings together the health
+            information &mdash; weight, meals, vital signs, medications, and appointments &mdash; for every
+            member of a household, so one caregiver can monitor everyone&apos;s status and see who needs
+            attention at a glance.
+          </p>
+          <p className="text-base text-muted-foreground leading-relaxed mt-4">
+            Instead of checking a separate app for each person and each metric, a family health dashboard
+            consolidates the whole household into one view &mdash; turning scattered data into a clear picture
+            of how everyone is doing right now.
+          </p>
+        </section>
 
         {/* ============================================ */}
         {/* THE PROBLEM — Why current approaches fail    */}
@@ -153,32 +271,20 @@ export default function DashboardBlogPage() {
               From the moment you log in, the Dashboard organizes everything into a clear, actionable picture.
             </p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <StepCard
-              step="1"
-              title="Family Overview"
-              description="See every family member&apos;s status at a glance — who&apos;s on track, who needs attention, and recent activity across the household."
-              color="bg-purple-500"
-            />
-            <StepCard
-              step="2"
-              title="Individual Profiles"
-              description="Tap into any family member&apos;s profile for detailed weight trends, meal history, vital signs, medications, and upcoming appointments."
-              color="bg-blue-500"
-            />
-            <StepCard
-              step="3"
-              title="Self-Teaching Insights"
-              description="Platform-generated health analysis surfaces patterns you&apos;d never catch manually — declining intake, weight plateaus, vital sign trends."
-              color="bg-indigo-500"
-            />
-            <StepCard
-              step="4"
-              title="Action Items"
-              description="A prioritized list of what needs your attention today: overdue check-ins, medication reminders, abnormal readings, and care tasks."
-              color="bg-emerald-500"
-            />
-          </div>
+          {/* Ordered list — the semantic primitive for a numbered sequence.
+              NLP models (BERT/MUM) and screen readers parse <ol> as ordered,
+              and each step's number now lives IN the heading text. */}
+          <ol className="grid grid-cols-2 md:grid-cols-4 gap-6 list-none p-0 m-0">
+            {DASHBOARD_STEPS.map((s) => (
+              <StepCard
+                key={s.step}
+                step={String(s.step)}
+                title={s.title}
+                description={s.description}
+                color={s.color}
+              />
+            ))}
+          </ol>
           <div className="hidden md:flex items-center justify-center mt-6">
             <div className="flex items-center gap-4 text-muted-foreground">
               <span className="w-12 h-0.5 bg-purple-500" />
@@ -416,6 +522,22 @@ export default function DashboardBlogPage() {
         </section>
 
         {/* ============================================ */}
+        {/* FAQ — visible content matching the FAQPage   */}
+        {/* schema (and good for "People Also Ask").     */}
+        {/* ============================================ */}
+        <section className="mb-24 max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {FAQ_ITEMS.map((item) => (
+              <div key={item.question} className="bg-card rounded-xl border-2 border-border p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-2">{item.question}</h3>
+                <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ============================================ */}
         {/* FINAL CTA — Emotional close                  */}
         {/* ============================================ */}
         <section className="bg-gradient-to-br from-purple-600 via-blue-600 to-indigo-700 rounded-2xl p-12 text-center text-white">
@@ -467,14 +589,16 @@ function ProblemCard({ icon, title, description }: { icon: React.ReactNode; titl
 }
 
 function StepCard({ step, title, description, color }: { step: string; title: string; description: string; color: string }) {
+  // The ordinal lives IN the heading text ("1. Family Overview") so NLP parses
+  // the sequence chronologically — not as a detached number above a heading.
+  // `color` is a text-color class so the number stays visually distinct.
   return (
-    <div className="text-center">
-      <div className={`w-14 h-14 ${color} rounded-2xl flex items-center justify-center text-white text-xl font-bold mx-auto mb-4`}>
-        {step}
-      </div>
-      <h3 className="text-lg font-bold text-foreground mb-2">{title}</h3>
+    <li className="text-center">
+      <h3 className="text-lg font-bold text-foreground mb-2">
+        <span className={`${color} font-extrabold`}>{step}.</span> {title}
+      </h3>
       <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
-    </div>
+    </li>
   )
 }
 

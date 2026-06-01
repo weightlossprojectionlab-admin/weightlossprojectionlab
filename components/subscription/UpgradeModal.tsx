@@ -15,6 +15,7 @@ import { useSubscription } from '@/hooks/useSubscription'
 import { useIsCaregiverOnly } from '@/hooks/useIsCaregiverOnly'
 import { getPlanRelationship } from '@/lib/subscription-utils'
 import { getCSRFToken } from '@/lib/csrf'
+import { PlanCard } from '@/components/subscription/PlanCard'
 import toast from 'react-hot-toast'
 
 interface UpgradeModalProps {
@@ -231,7 +232,10 @@ export function UpgradeModal({
         'Invite nurses, doctors, or family to help'
       ],
       highlighted: suggestedPlan === 'single_plus',
-      badge: 'Popular for Medical Users'
+      //   is a non-breaking space — keeps "Medical Tracking" on one line in
+      // the narrow cards without depending on a CSS nowrap class (which silently
+      // failed to generate in dev). Physically unbreakable, so it can't wrap.
+      badge: 'Medical Tracking'
     },
     {
       id: 'family_basic' as SubscriptionPlan,
@@ -291,7 +295,7 @@ export function UpgradeModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-card rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-card rounded-lg shadow-xl max-w-7xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="sticky top-0 bg-card border-b border-border px-6 py-4">
           <div className="flex items-center justify-between mb-4">
@@ -343,57 +347,48 @@ export function UpgradeModal({
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
             {plans.map((plan) => (
-              <div
+              <PlanCard
                 key={plan.id}
-                className={`rounded-lg border-2 p-6 relative ${
-                  plan.highlighted
-                    ? 'border-primary bg-primary/5'
-                    : 'border-border bg-card'
-                }`}
-              >
-                {plan.badge && (
-                  <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                    <span className="bg-primary text-white px-3 py-1 rounded-full text-xs font-bold">
-                      {plan.badge}
-                    </span>
-                  </div>
-                )}
-
-                <div className="text-center mb-4">
-                  <div className="text-4xl mb-2">{plan.icon}</div>
-                  <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
-                  <div className="mt-2">
-                    <div className="text-3xl font-bold text-foreground">
-                      {billingInterval === 'monthly'
-                        ? formatPrice(plan.monthlyPrice)
-                        : formatPrice(Math.round(plan.yearlyPrice / 12))}
-                    </div>
-                    <div className="text-muted-foreground text-sm">
-                      {billingInterval === 'monthly' ? '/month' : '/month, billed yearly'}
-                    </div>
-                    {billingInterval === 'yearly' && (
-                      <div className="text-xs text-success mt-1">
-                        {formatPrice(plan.yearlyPrice)}/year total
+                highlighted={plan.highlighted}
+                tintClassName={plan.highlighted ? 'bg-primary/5' : 'bg-card'}
+                badge={plan.badge ? { label: plan.badge, className: 'bg-primary text-white' } : null}
+                header={
+                  <div className="text-center mb-4">
+                    <div className="text-4xl mb-2">{plan.icon}</div>
+                    <h3 className="font-bold text-lg text-foreground">{plan.name}</h3>
+                    <div className="mt-2">
+                      <div className="text-3xl font-bold text-foreground">
+                        {billingInterval === 'monthly'
+                          ? formatPrice(plan.monthlyPrice)
+                          : formatPrice(Math.round(plan.yearlyPrice / 12))}
                       </div>
-                    )}
+                      <div className="text-muted-foreground text-sm">
+                        {billingInterval === 'monthly' ? '/month' : '/month, billed yearly'}
+                      </div>
+                      {billingInterval === 'yearly' && (
+                        <div className="text-xs text-success mt-1">
+                          {formatPrice(plan.yearlyPrice)}/year total
+                        </div>
+                      )}
+                    </div>
+                    <div className="mt-3 text-xs text-muted-foreground">
+                      {plan.seats} {plan.seats === 1 ? 'seat' : 'seats'} • {plan.externalCaregivers} caregivers
+                    </div>
                   </div>
-                  <div className="mt-3 text-xs text-muted-foreground">
-                    {plan.seats} {plan.seats === 1 ? 'seat' : 'seats'} • {plan.externalCaregivers} caregivers
-                  </div>
-                </div>
-
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-2 text-sm">
-                      <svg className="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      <span className="text-foreground">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                {(() => {
+                }
+                features={
+                  <ul className="space-y-3 mb-6">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-start gap-2 text-sm">
+                        <svg className="w-5 h-5 text-success flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                        <span className="text-foreground">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                }
+                cta={(() => {
                   // Disabled + label both derive from the same
                   // primitive (getPlanRelationship) the handleUpgrade
                   // gate uses, so the three states stay in lockstep.
@@ -441,7 +436,7 @@ export function UpgradeModal({
                     </button>
                   )
                 })()}
-              </div>
+              />
             ))}
           </div>
 
