@@ -613,6 +613,15 @@ export interface GlobalProduct {
   category: ProductCategory
   categories?: string[] // Multiple categories if applicable (e.g., ['dairy', 'beverages'])
 
+  /**
+   * Canonical Big-9 allergen tags parsed from OFF `allergens` + `ingredients_text`
+   * at scan (lib/allergen-parser.allergensFromProductFields). Product-level truth:
+   * item rows denormalize this; the backfill reads it instead of re-hitting OFF.
+   * [] = parsed, none declared. Absent = legacy doc not yet re-scanned.
+   * Kept as string[] (CanonicalAllergen values) so this leaf type stays lib-free.
+   */
+  allergenTags?: string[]
+
   // Aggregated User Data
   stats: {
     totalScans: number // How many times this product was scanned

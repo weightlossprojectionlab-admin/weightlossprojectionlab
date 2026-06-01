@@ -10,7 +10,7 @@
  */
 
 import { logger } from '@/lib/logger'
-import { parseAllergens } from '@/lib/allergen-parser'
+import { allergensFromProductFields } from '@/lib/allergen-parser'
 import {
   collection,
   doc,
@@ -364,14 +364,9 @@ export async function addOrUpdateShoppingItem(
         : undefined
 
     // Parse allergens ONCE here at ingestion (SoC: heavy parse on write, pure
-    // eval on read). OFF gives a hyphenated/locale-tagged `allergens` string +
-    // raw `ingredients_text`; canonicalize both and union. Empty → omitted.
-    const allergenTags = [
-      ...new Set([
-        ...parseAllergens(product.allergens ? product.allergens.split(',') : []),
-        ...(product.ingredients_text ? parseAllergens(product.ingredients_text) : []),
-      ]),
-    ].sort()
+    // eval on read). Shared helper canonicalizes OFF's `allergens` + raw
+    // `ingredients_text` and unions them. Empty → omitted below.
+    const allergenTags = allergensFromProductFields(product.allergens, product.ingredients_text)
 
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
@@ -1272,6 +1267,12 @@ export async function updateGlobalProductDatabase(
       servingSize: productData.serving_size || productData.quantity || 'unknown'
     }
 
+    // Allergens are a property of the PRODUCT (a barcode's allergens don't vary
+    // by household), so product_database is their canonical home. Parse once
+    // here; item rows stamp the same value at scan, and a backfill can read it
+    // back without re-hitting OpenFoodFacts per item.
+    const allergenTags = allergensFromProductFields(productData.allergens, productData.ingredients_text)
+
     if (productSnap.exists()) {
       // Product exists - update aggregated stats
       const existing = productSnap.data() as any
@@ -1286,6 +1287,13 @@ export async function updateGlobalProductDatabase(
       // Increment purchase count if purchased
       if (metadata.purchased) {
         updates['stats.totalPurchases'] = (existing.stats?.totalPurchases || 0) + 1
+      }
+
+      // Self-healing allergen backfill: populate/refresh the canonical tags when
+      // this scan carries allergen data. Never ERASE a previously-found set from
+      // a sparse later record (do-no-harm) — only write when we found something.
+      if (allergenTags.length > 0) {
+        updates.allergenTags = allergenTags
       }
 
       // Add store to list if not already there
@@ -1326,6 +1334,7 @@ export async function updateGlobalProductDatabase(
         nutrition,
         category: metadata.category,
         categories: productData.categories ? productData.categories.split(',').map(c => c.trim()) : [metadata.category],
+        allergenTags, // authoritative at creation; [] = parsed, none declared
         stats: {
           totalScans: 1,
           uniqueUsers: 1, // Will use array union in future for exact count

@@ -106,6 +106,28 @@ export function parseAllergens(input: string | string[]): CanonicalAllergen[] {
 }
 
 /**
+ * Canonicalize an OpenFoodFacts product's two allergen-bearing fields into one
+ * sorted, de-duplicated tag set. The `allergens` field is comma-separated locale
+ * tokens ("en:milk,en:soy"); `ingredients_text` is free prose. Union both so a
+ * declared allergen OR an ingredient mention is caught (do-no-harm). Empty → [].
+ *
+ * The single home for "OFF product → allergenTags" — both the per-item ingestion
+ * (addOrUpdateShoppingItem) and the shared catalog writer (updateGlobalProduct-
+ * Database) call this so item rows and product_database never drift.
+ */
+export function allergensFromProductFields(
+  allergens?: string,
+  ingredientsText?: string,
+): CanonicalAllergen[] {
+  return [
+    ...new Set([
+      ...parseAllergens(allergens ? allergens.split(',') : []),
+      ...(ingredientsText ? parseAllergens(ingredientsText) : []),
+    ]),
+  ].sort()
+}
+
+/**
  * Normalize a SINGLE allergen term (a member's foodAllergy, a catalog tag) to
  * its canonical token, or null. Reuses the same dictionary so the item side and
  * the member side speak one vocabulary — e.g. 'peanuts'→'peanut', 'dairy'→'milk',

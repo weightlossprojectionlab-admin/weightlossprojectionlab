@@ -4,7 +4,7 @@
  * false-positive guards + false-negative safety + word-boundary discipline.
  */
 
-import { parseAllergens, normalizeAllergen } from '@/lib/allergen-parser'
+import { parseAllergens, normalizeAllergen, allergensFromProductFields } from '@/lib/allergen-parser'
 
 describe('parseAllergens — the four standard cases', () => {
   it('1. parses a "Contains:" warning', () => {
@@ -42,6 +42,28 @@ describe('parseAllergens — word-boundary discipline & safety folding', () => {
 
   it('folds "may contain" in for safety (do-no-harm)', () => {
     expect(parseAllergens('Corn chips. May contain tree nuts.')).toEqual(['tree_nut'])
+  })
+})
+
+describe('allergensFromProductFields — the shared OFF-product → tags helper', () => {
+  it('unions the comma-separated `allergens` field with `ingredients_text`', () => {
+    // allergens declares milk+soy (locale tokens); ingredients adds wheat.
+    expect(
+      allergensFromProductFields('en:milk,en:soy', 'Wheat flour, sugar, salt.'),
+    ).toEqual(['milk', 'soy', 'wheat_gluten'])
+  })
+
+  it('de-duplicates across the two fields', () => {
+    expect(allergensFromProductFields('en:peanuts', 'Roasted peanuts, salt.')).toEqual(['peanut'])
+  })
+
+  it('returns [] when both fields are absent or empty (parsed, none declared)', () => {
+    expect(allergensFromProductFields(undefined, undefined)).toEqual([])
+    expect(allergensFromProductFields('', '')).toEqual([])
+  })
+
+  it('still parses when only ingredients_text is present (no `allergens` field)', () => {
+    expect(allergensFromProductFields(undefined, 'Contains: Sesame.')).toEqual(['sesame'])
   })
 })
 
