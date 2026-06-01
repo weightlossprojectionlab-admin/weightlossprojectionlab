@@ -104,7 +104,7 @@ export function DataCompletenessTracker({ patientId, className = '' }: DataCompl
         ): number => {
           const days = new Set<string>()
           snap.forEach(doc => {
-            const data = doc.data()
+            const data = doc.data() as Record<string, any>
             if (scopeByPatientField && patientId && data.patientId !== patientId) return
             const raw = data[dateField]
             const d = raw?.toDate ? raw.toDate() : new Date(raw)
