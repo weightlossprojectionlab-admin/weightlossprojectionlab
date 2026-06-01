@@ -315,7 +315,11 @@ export function detectCategory(productData: {
  * Get category metadata
  */
 export function getCategoryMetadata(category: ProductCategory): CategoryMetadata {
-  return CATEGORY_METADATA[category]
+  // Legacy / unrecognized categories (Firestore rows predating an enum value,
+  // or a bad import) would otherwise return undefined and crash callers that
+  // read .icon / .defaultShelfLifeDays — taking down the whole inventory list.
+  // Fall back to 'other' so a stray category value can never crash the page.
+  return CATEGORY_METADATA[category] ?? CATEGORY_METADATA.other
 }
 
 /**
@@ -325,7 +329,7 @@ export function calculateDefaultExpiration(
   category: ProductCategory,
   purchaseDate: Date = new Date()
 ): Date {
-  const metadata = CATEGORY_METADATA[category]
+  const metadata = getCategoryMetadata(category)
   const expirationDate = new Date(purchaseDate)
   expirationDate.setDate(expirationDate.getDate() + metadata.defaultShelfLifeDays)
   return expirationDate
