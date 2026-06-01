@@ -280,10 +280,13 @@ export async function addOrUpdateShoppingItem(
     // are unioned in as fallback (do-no-harm). Empty → omitted downstream.
     const allergenTags = allergensFromProductFields(product.allergens, product.ingredients_text, product.allergens_tags)
 
-    // Per-serving nutrient panel for the health-demand weight D (units + basis
-    // normalized; null when OFF carries no panel nutrients → D stays neutral).
-    // Computed once here, shared by both ingestion paths like allergenTags.
-    const nutrients = extractNutrientPanel(product.nutriments as Nutriments | undefined, product.serving_size)
+    // Per-serving nutrient panel for the health-demand weight D. Prefer the panel
+    // /api/products/lookup already extracted server-side (cache-hit AND miss carry
+    // it); fall back to extracting here for any caller that passes raw nutriments.
+    // null when OFF carries no panel nutrients → D stays neutral. Shared by both
+    // ingestion paths like allergenTags.
+    const nutrients =
+      product.nutrients ?? extractNutrientPanel(product.nutriments as Nutriments | undefined, product.serving_size)
 
     // HOUSEHOLD MODE: If householdId is provided, use household deduplication
     if (options.householdId) {

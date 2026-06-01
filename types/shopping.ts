@@ -642,6 +642,23 @@ export interface GlobalProduct {
    */
   allergenTags?: string[]
 
+  /**
+   * Per-serving nutrient panel (lib/nutrition-extract.extractNutrientPanel) stored
+   * at scan so cache-hit lookups forward it to the demand weight D. Same shape as
+   * ShoppingItem.nutrients; kept inline so this leaf type stays lib-free.
+   */
+  nutrients?: {
+    sodium?: number
+    sugars?: number
+    saturatedFat?: number
+    transFat?: number
+    fiber?: number
+    protein?: number
+    potassium?: number
+    calories?: number
+    basis: 'serving' | 'derived-serving' | '100g'
+  }
+
   // Aggregated User Data
   stats: {
     totalScans: number // How many times this product was scanned
