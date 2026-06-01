@@ -39,7 +39,16 @@ export interface OpenFoodFactsProduct {
   }
   categories?: string
   allergens?: string
+  /**
+   * OFF canonical allergen tags ("en:milk","en:nuts") — present regardless of the
+   * product's display language. Authoritative, locale-proof source for allergen
+   * parsing (lib/allergen-parser.allergensFromProductFields); forwarded by
+   * /api/products/lookup so the client scan path can tag items correctly.
+   */
+  allergens_tags?: string[]
   ingredients_text?: string
+  /** English ingredients when OFF has them — preferred over localized `ingredients_text`. */
+  ingredients_text_en?: string
 
   /**
    * Phase 2a/2b: structured total-package size sourced from

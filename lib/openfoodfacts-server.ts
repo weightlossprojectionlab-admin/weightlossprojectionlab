@@ -86,7 +86,15 @@ export interface OpenFoodFactsProduct {
   }
   categories?: string
   allergens?: string
+  /**
+   * OFF's canonical allergen tags ("en:milk","en:nuts","en:soybeans") — present
+   * regardless of the product's display language. The authoritative, locale-proof
+   * source for allergen parsing (lib/allergen-parser.allergensFromProductFields).
+   */
+  allergens_tags?: string[]
   ingredients_text?: string
+  /** English ingredients, when OFF has them — preferred over the localized `ingredients_text`. */
+  ingredients_text_en?: string
 }
 
 export interface OpenFoodFactsResponse {

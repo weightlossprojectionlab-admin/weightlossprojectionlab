@@ -273,6 +273,12 @@ export async function addOrUpdateShoppingItem(
     const category = pickCategory(product)
     const productKey = generateProductKey(product.code, product.product_name || 'Unknown Product', product.brands || '')
 
+    // Parse allergens ONCE here (SoC: heavy parse on write, pure eval on read),
+    // BEFORE the household/individual split so BOTH paths tag the item. Canonical
+    // allergens_tags is the locale-proof primary source; allergens + ingredients
+    // are unioned in as fallback (do-no-harm). Empty → omitted downstream.
+    const allergenTags = allergensFromProductFields(product.allergens, product.ingredients_text, product.allergens_tags)
+
     // HOUSEHOLD MODE: If householdId is provided, use household deduplication
     if (options.householdId) {
       const actualMemberId = options.memberId || userId
@@ -290,7 +296,8 @@ export async function addOrUpdateShoppingItem(
           quantity: options.quantity ?? 1,
           unit: options.unit ?? suggestDefaultUnit(category),
           inStock: options.inStock ?? true,
-          needed: options.needed ?? false
+          needed: options.needed ?? false,
+          allergenTags,
         }
       )
     }
@@ -326,6 +333,10 @@ export async function addOrUpdateShoppingItem(
         ...(incomingContainerSize ? { containerSize: incomingContainerSize } : {}),
         ...(incomingContainerUnit ? { containerUnit: incomingContainerUnit } : {}),
         ...(newRemaining !== undefined ? { remainingAmount: newRemaining } : {}),
+        // Self-heal allergens on re-scan: the fresh parse (canonical allergens_tags
+        // first) supersedes whatever the row had — fixes rows tagged before the
+        // pipeline fix. Only when non-empty, so a sparse lookup never erases a set.
+        ...(allergenTags.length > 0 ? { allergenTags } : {}),
         updatedAt: new Date()
       }
 
@@ -363,10 +374,7 @@ export async function addOrUpdateShoppingItem(
         ? containerSize * quantity
         : undefined
 
-    // Parse allergens ONCE here at ingestion (SoC: heavy parse on write, pure
-    // eval on read). Shared helper canonicalizes OFF's `allergens` + raw
-    // `ingredients_text` and unions them. Empty → omitted below.
-    const allergenTags = allergensFromProductFields(product.allergens, product.ingredients_text)
+    // allergenTags computed once above (shared with the household path).
 
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
@@ -1271,7 +1279,7 @@ export async function updateGlobalProductDatabase(
     // by household), so product_database is their canonical home. Parse once
     // here; item rows stamp the same value at scan, and a backfill can read it
     // back without re-hitting OpenFoodFacts per item.
-    const allergenTags = allergensFromProductFields(productData.allergens, productData.ingredients_text)
+    const allergenTags = allergensFromProductFields(productData.allergens, productData.ingredients_text, productData.allergens_tags)
 
     if (productSnap.exists()) {
       // Product exists - update aggregated stats

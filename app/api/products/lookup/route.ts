@@ -6,6 +6,7 @@ import { rateLimit } from '@/lib/rate-limit'
 import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { fetchOpenFoodFactsImageOnly } from '@/lib/openfoodfacts-server'
 import { barcodeVariants, resolveProductDoc } from '@/lib/barcode-variants'
+import { allergensFromProductFields } from '@/lib/allergen-parser'
 
 /**
  * GET /api/products/lookup?barcode={barcode}
@@ -279,6 +280,17 @@ export async function GET(request: NextRequest) {
           ...cleanedRichNutrition,
         },
         aliases,
+        // Canonical allergen tags from OFF — parsed once here so the catalog is
+        // the product-level source of truth. Omitted when empty so a sparse
+        // lookup never ERASES a previously-found set (do-no-harm).
+        ...(() => {
+          const allergenTags = allergensFromProductFields(
+            product.allergens,
+            product.ingredients_text,
+            product.allergens_tags,
+          )
+          return allergenTags.length > 0 ? { allergenTags } : {}
+        })(),
         updatedAt: now
       }
 
@@ -338,7 +350,11 @@ export async function GET(request: NextRequest) {
         image_front_url: product.image_url || '',
         nutriments: product.nutriments,
         categories: product.categories || '',
-        ingredients_text: product.ingredients_text || ''
+        ingredients_text: product.ingredients_text || '',
+        // Forward the allergen signal so the client's addOrUpdateShoppingItem can
+        // tag the item. allergens_tags is OFF's locale-proof canonical source.
+        allergens: product.allergens || '',
+        allergens_tags: product.allergens_tags || []
       },
       _cached: false,
       _source: product.source

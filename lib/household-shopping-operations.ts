@@ -98,6 +98,7 @@ export async function addOrUpdateHouseholdItem(
     unit?: QuantityUnit
     inStock?: boolean
     needed?: boolean
+    allergenTags?: string[]
   }
 ): Promise<ShoppingItem> {
   try {
@@ -125,6 +126,15 @@ export async function addOrUpdateHouseholdItem(
       // Increase quantity if needed
       const totalQuantity = existingItem.quantity + (itemData.quantity || 0)
 
+      // Self-heal allergens on a re-scan: the fresh parse (canonical allergens_tags
+      // first) supersedes whatever the row had — populates rows created before
+      // tagging AND corrects rows mis-tagged by the old prose-only parse. Only
+      // when non-empty, so a sparse lookup never erases a known set (do-no-harm).
+      const backfillAllergens =
+        itemData.allergenTags?.length
+          ? { allergenTags: itemData.allergenTags }
+          : {}
+
       const itemRef = doc(db, COLLECTIONS.SHOPPING_ITEMS, existingItem.id)
       await setDoc(
         itemRef,
@@ -134,6 +144,7 @@ export async function addOrUpdateHouseholdItem(
           needed,
           quantity: totalQuantity,
           lastModifiedBy: memberId,
+          ...backfillAllergens,
           updatedAt: Timestamp.now()
         },
         { merge: true }
@@ -161,6 +172,7 @@ export async function addOrUpdateHouseholdItem(
       imageUrl: itemData.imageUrl || '',
       category: itemData.category,
       isManual: !itemData.barcode,
+      ...(itemData.allergenTags && itemData.allergenTags.length > 0 ? { allergenTags: itemData.allergenTags } : {}),
       inStock: itemData.inStock || false,
       quantity: itemData.quantity,
       unit: itemData.unit,

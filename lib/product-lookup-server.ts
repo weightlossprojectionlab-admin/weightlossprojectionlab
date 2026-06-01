@@ -47,6 +47,10 @@ export interface ProductData {
     [key: string]: number | undefined
   }
   ingredients_text?: string
+  /** OFF `allergens` string (may be localized). */
+  allergens?: string
+  /** OFF canonical allergen tags ("en:milk","en:nuts") — locale-proof, authoritative. */
+  allergens_tags?: string[]
   categories?: string
   source: 'usda' | 'openfoodfacts' | 'usda+off'
 }
@@ -174,7 +178,13 @@ export async function lookupProductByBarcode(barcode: string): Promise<ProductDa
       serving_size: product.serving_size,
       image_url: product.image_url || product.image_front_url,
       nutriments: product.nutriments || {},
-      ingredients_text: product.ingredients_text,
+      // Prefer English ingredients; OFF's default `ingredients_text` is in the
+      // product's own language (e.g. French Nutella) which the parser can't read.
+      ingredients_text: product.ingredients_text_en || product.ingredients_text,
+      // Canonical, language-independent allergen signal — the field that makes
+      // the allergen parse correct across locales (see allergensFromProductFields).
+      allergens: product.allergens,
+      allergens_tags: product.allergens_tags,
       categories: product.categories,
       source: 'openfoodfacts'
     }

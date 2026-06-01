@@ -125,21 +125,28 @@ export function parseAllergens(input: string | string[]): CanonicalAllergen[] {
 }
 
 /**
- * Canonicalize an OpenFoodFacts product's two allergen-bearing fields into one
- * sorted, de-duplicated tag set. The `allergens` field is comma-separated locale
- * tokens ("en:milk,en:soy"); `ingredients_text` is free prose. Union both so a
- * declared allergen OR an ingredient mention is caught (do-no-harm). Empty → [].
+ * Canonicalize an OpenFoodFacts product's allergen-bearing fields into one
+ * sorted, de-duplicated tag set. Three sources, unioned for do-no-harm recall:
+ *   - `allergensTags` — OFF's `allergens_tags` array ("en:milk","en:nuts"). The
+ *     AUTHORITATIVE, language-INDEPENDENT source. A French jar still tags
+ *     "en:milk", so this is what makes the parse work across locales. Prefer it.
+ *   - `allergens` — the comma-separated `allergens` string (may be localized).
+ *   - `ingredientsText` — free prose fallback (often localized; the negation
+ *     guard in parseAllergens stops "gluten-free" etc. from false-flagging).
+ * Empty across all three → [].
  *
- * The single home for "OFF product → allergenTags" — both the per-item ingestion
- * (addOrUpdateShoppingItem) and the shared catalog writer (updateGlobalProduct-
- * Database) call this so item rows and product_database never drift.
+ * The single home for "OFF product → allergenTags" — every ingestion path
+ * (per-item individual + household, the API-route catalog cache, and the client
+ * updateGlobalProductDatabase) calls this so rows and product_database can't drift.
  */
 export function allergensFromProductFields(
   allergens?: string,
   ingredientsText?: string,
+  allergensTags?: string[],
 ): CanonicalAllergen[] {
   return [
     ...new Set([
+      ...parseAllergens(allergensTags ?? []),
       ...parseAllergens(allergens ? allergens.split(',') : []),
       ...(ingredientsText ? parseAllergens(ingredientsText) : []),
     ]),
