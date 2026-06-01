@@ -9,6 +9,7 @@ import {
   toItemHealthProfile,
 } from '@/lib/health-context'
 import { inventoryAttentionScore } from '@/lib/inventory-attention'
+import { healthDemandWeight, type MemberHealthProfile } from '@/lib/health-demand'
 import type { PatientProfile } from '@/types/medical'
 import type { ShoppingItem } from '@/types/shopping'
 
@@ -55,6 +56,56 @@ describe('toItemHealthProfile', () => {
   })
   it('defaults to empty tags when the item has none', () => {
     expect(toItemHealthProfile({} as ShoppingItem).allergenTags).toEqual([])
+  })
+})
+
+describe('toItemHealthProfile — nutrient panel mapping (Tier-2)', () => {
+  it('maps the full panel: sugars→addedSugar, calories→calorieDensity', () => {
+    const item = {
+      nutrients: { sodium: 600, sugars: 20, saturatedFat: 8, transFat: 1, fiber: 6, protein: 10, potassium: 300, calories: 200, basis: 'serving' },
+    } as ShoppingItem
+    expect(toItemHealthProfile(item).nutrients).toEqual({
+      sodium: 600, addedSugar: 20, saturatedFat: 8, transFat: 1, fiber: 6, protein: 10, potassium: 300, calorieDensity: 200,
+    })
+  })
+
+  it('harm-anchor guard: omits ALL nutrients if a harm anchor (saturatedFat) is missing', () => {
+    // only-beneficial partial panel must not attach — would reward without penalty
+    const item = { nutrients: { sodium: 100, sugars: 2, fiber: 10, protein: 20, basis: 'serving' } } as ShoppingItem
+    expect(toItemHealthProfile(item).nutrients).toBeUndefined()
+  })
+
+  it('no panel → no nutrients (D stays inert)', () => {
+    expect(toItemHealthProfile({} as ShoppingItem).nutrients).toBeUndefined()
+  })
+})
+
+describe('demand weight D activates from the panel', () => {
+  const hypertensive: MemberHealthProfile[] = [
+    { id: 'gran', conditions: ['hypertension'], allergies: [], dietaryRestrictions: [], ageYears: 70 },
+  ]
+  const diabetic: MemberHealthProfile[] = [
+    { id: 'dad', conditions: ['diabetes'], allergies: [], dietaryRestrictions: [], ageYears: 50 },
+  ]
+
+  it('high-sodium item lowers D for a hypertensive member', () => {
+    const salty = toItemHealthProfile({ nutrients: { sodium: 600, sugars: 2, saturatedFat: 4, basis: 'serving' } } as ShoppingItem)
+    expect(healthDemandWeight(salty, hypertensive).D).toBeLessThan(1)
+  })
+
+  it('high-sugar item lowers D for a diabetic member', () => {
+    const sugary = toItemHealthProfile({ nutrients: { sodium: 50, sugars: 20, saturatedFat: 1, fiber: 0, basis: 'serving' } } as ShoppingItem)
+    expect(healthDemandWeight(sugary, diabetic).D).toBeLessThan(1)
+  })
+
+  it('a clean, potassium-rich item does not depress D (beneficial)', () => {
+    const clean = toItemHealthProfile({ nutrients: { sodium: 20, sugars: 1, saturatedFat: 0.2, fiber: 5, potassium: 400, basis: 'serving' } } as ShoppingItem)
+    expect(healthDemandWeight(clean, hypertensive).D).toBeGreaterThanOrEqual(1)
+  })
+
+  it('panel without harm anchors leaves D neutral (=1)', () => {
+    const partial = toItemHealthProfile({ nutrients: { fiber: 10, protein: 20, basis: 'serving' } } as ShoppingItem)
+    expect(healthDemandWeight(partial, diabetic).D).toBe(1)
   })
 })
 

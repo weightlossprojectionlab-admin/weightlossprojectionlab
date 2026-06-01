@@ -11,6 +11,7 @@
 
 import { logger } from '@/lib/logger'
 import { allergensFromProductFields } from '@/lib/allergen-parser'
+import { extractNutrientPanel, type Nutriments } from '@/lib/nutrition-extract'
 import {
   collection,
   doc,
@@ -279,6 +280,11 @@ export async function addOrUpdateShoppingItem(
     // are unioned in as fallback (do-no-harm). Empty → omitted downstream.
     const allergenTags = allergensFromProductFields(product.allergens, product.ingredients_text, product.allergens_tags)
 
+    // Per-serving nutrient panel for the health-demand weight D (units + basis
+    // normalized; null when OFF carries no panel nutrients → D stays neutral).
+    // Computed once here, shared by both ingestion paths like allergenTags.
+    const nutrients = extractNutrientPanel(product.nutriments as Nutriments | undefined, product.serving_size)
+
     // HOUSEHOLD MODE: If householdId is provided, use household deduplication
     if (options.householdId) {
       const actualMemberId = options.memberId || userId
@@ -298,6 +304,7 @@ export async function addOrUpdateShoppingItem(
           inStock: options.inStock ?? true,
           needed: options.needed ?? false,
           allergenTags,
+          nutrients: nutrients ?? undefined,
         }
       )
     }
@@ -337,6 +344,8 @@ export async function addOrUpdateShoppingItem(
         // first) supersedes whatever the row had — fixes rows tagged before the
         // pipeline fix. Only when non-empty, so a sparse lookup never erases a set.
         ...(allergenTags.length > 0 ? { allergenTags } : {}),
+        // Self-heal the nutrient panel too (populates rows scanned before Tier-2).
+        ...(nutrients ? { nutrients } : {}),
         updatedAt: new Date()
       }
 
@@ -385,6 +394,7 @@ export async function addOrUpdateShoppingItem(
       imageUrl: product.image_front_url || product.image_url || '',
       category,
       ...(allergenTags.length > 0 ? { allergenTags } : {}),
+      ...(nutrients ? { nutrients } : {}),
       // Phase 0b — auto-fill assignedStoreId from the user's history
       // for this category. Owner can override via the row chip.
       ...(autoAssignedStoreId ? { assignedStoreId: autoAssignedStoreId } : {}),

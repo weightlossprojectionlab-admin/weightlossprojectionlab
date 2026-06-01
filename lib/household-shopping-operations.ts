@@ -99,6 +99,7 @@ export async function addOrUpdateHouseholdItem(
     inStock?: boolean
     needed?: boolean
     allergenTags?: string[]
+    nutrients?: ShoppingItem['nutrients']
   }
 ): Promise<ShoppingItem> {
   try {
@@ -134,6 +135,8 @@ export async function addOrUpdateHouseholdItem(
         itemData.allergenTags?.length
           ? { allergenTags: itemData.allergenTags }
           : {}
+      // Same self-heal for the nutrient panel (populates pre-Tier-2 rows).
+      const backfillNutrients = itemData.nutrients ? { nutrients: itemData.nutrients } : {}
 
       const itemRef = doc(db, COLLECTIONS.SHOPPING_ITEMS, existingItem.id)
       await setDoc(
@@ -145,6 +148,7 @@ export async function addOrUpdateHouseholdItem(
           quantity: totalQuantity,
           lastModifiedBy: memberId,
           ...backfillAllergens,
+          ...backfillNutrients,
           updatedAt: Timestamp.now()
         },
         { merge: true }
@@ -173,6 +177,7 @@ export async function addOrUpdateHouseholdItem(
       category: itemData.category,
       isManual: !itemData.barcode,
       ...(itemData.allergenTags && itemData.allergenTags.length > 0 ? { allergenTags: itemData.allergenTags } : {}),
+      ...(itemData.nutrients ? { nutrients: itemData.nutrients } : {}),
       inStock: itemData.inStock || false,
       quantity: itemData.quantity,
       unit: itemData.unit,

@@ -230,6 +230,26 @@ export interface ShoppingItem {
   }
 
   /**
+   * Per-serving nutrient panel for the inventory health-demand weight D
+   * (populated at scan via lib/nutrition-extract.extractNutrientPanel). Distinct
+   * from `nutrition` (display, mixed basis): this is engine-facing, unit-normalized
+   * (sodium/potassium mg, others g, calories kcal) and per-serving. `basis` flags
+   * confidence (serving | derived-serving | 100g) for ref_n calibration. Shape
+   * mirrors lib/nutrition-extract.NutrientPanel; kept inline so types stays lib-free.
+   */
+  nutrients?: {
+    sodium?: number
+    sugars?: number
+    saturatedFat?: number
+    transFat?: number
+    fiber?: number
+    protein?: number
+    potassium?: number
+    calories?: number
+    basis: 'serving' | 'derived-serving' | '100g'
+  }
+
+  /**
    * Canonical allergen tokens parsed at scan-add from the product's
    * ingredients_text / allergens (lib/allergen-parser.parseAllergens). Drives
    * the household `unsafeFor` safety check; values are CanonicalAllergen strings

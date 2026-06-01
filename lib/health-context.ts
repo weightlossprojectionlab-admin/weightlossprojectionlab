@@ -9,7 +9,7 @@
 
 import type { PatientProfile } from '@/types/medical'
 import type { ShoppingItem } from '@/types/shopping'
-import type { MemberHealthProfile, ItemHealthProfile } from './health-demand'
+import type { MemberHealthProfile, ItemHealthProfile, Nutrient } from './health-demand'
 
 const YEAR_MS = 365.2425 * 24 * 60 * 60 * 1000
 
@@ -40,15 +40,35 @@ export function toMemberHealthProfiles(patients: PatientProfile[], now: number =
 /**
  * ShoppingItem → its health attributes for scoring.
  *
- * Only `allergenTags` is mapped today. Nutrients are deliberately NOT pulled
- * from `item.nutrition`: it carries the BENEFICIAL ones (fiber/protein) but not
- * the HARMFUL ones (sodium/added sugar/fats), so mapping the partial set would
- * reward an item without ever penalizing it — breaking the harm/benefit balance.
- * Nutrients (and supply/staple flags) fill in once the full enrichment lands;
- * until then the demand weight D stays correctly inert.
+ * `allergenTags` always maps. Nutrients map from the per-serving `item.nutrients`
+ * panel (lib/nutrition-extract), BUT only under the harm-anchor guard below:
+ * the panel must carry the HARMFUL anchors (sodium, total sugar, saturated fat)
+ * before any nutrient is attached. Otherwise a partial panel of only-beneficial
+ * fields (fiber/protein) would reward an item without ever penalizing it —
+ * breaking the harm/benefit balance. Missing panel → D stays correctly inert.
+ *
+ * `sugars` (total) stands in for the engine's `addedSugar` — the best proxy OFF
+ * provides; slightly over-penalizes naturally-sweet whole foods (documented).
  */
 export function toItemHealthProfile(item: ShoppingItem): ItemHealthProfile {
-  return {
+  const profile: ItemHealthProfile = {
     allergenTags: item.allergenTags ?? [],
   }
+
+  const n = item.nutrients
+  if (n && n.sodium != null && n.sugars != null && n.saturatedFat != null) {
+    const nutrients: Partial<Record<Nutrient, number>> = {
+      sodium: n.sodium,
+      addedSugar: n.sugars, // total-sugar proxy
+      saturatedFat: n.saturatedFat,
+    }
+    if (n.transFat != null) nutrients.transFat = n.transFat
+    if (n.fiber != null) nutrients.fiber = n.fiber
+    if (n.protein != null) nutrients.protein = n.protein
+    if (n.potassium != null) nutrients.potassium = n.potassium
+    if (n.calories != null) nutrients.calorieDensity = n.calories
+    profile.nutrients = nutrients
+  }
+
+  return profile
 }
