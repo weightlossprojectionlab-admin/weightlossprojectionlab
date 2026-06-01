@@ -2018,6 +2018,46 @@ function KitchenInventoryContent() {
 
   const items = getItemsForLocation()
 
+  // ── Deep-linkable item details ─────────────────────────────────────────────
+  // The open item is reflected in the URL as ?item=<id> for the item-scoped tabs,
+  // so Details (and UPC/Image/History/Adjust) survive a refresh and are shareable.
+  // Two effects: write the id when an item is open; restore it from the URL on load.
+  const ITEM_SCOPED_TABS: InventoryTab[] = ['details', 'history', 'upc', 'image', 'adjust']
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    const current = params.get('item')
+    // Skip synthetic catalog items — their ids don't resolve to a real row on reload.
+    const id =
+      selectedItem &&
+      !isSyntheticCatalogItem(selectedItem) &&
+      ITEM_SCOPED_TABS.includes(activeTab)
+        ? selectedItem.id
+        : null
+    if (id) {
+      if (current !== id) {
+        params.set('item', id)
+        router.replace(`/inventory?${params.toString()}`)
+      }
+    } else if (current) {
+      params.delete('item')
+      const qs = params.toString()
+      router.replace(qs ? `/inventory?${qs}` : '/inventory')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedItem, searchParams, router])
+
+  useEffect(() => {
+    if (selectedItem) return
+    const id = searchParams.get('item')
+    if (!id) return
+    const found = [...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems].find(
+      (i) => i.id === id,
+    )
+    if (found) setSelectedItem(found)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, selectedItem, fridgeItems, freezerItems, pantryItems, counterItems])
+
   /**
    * Handle scan context selection
    */
