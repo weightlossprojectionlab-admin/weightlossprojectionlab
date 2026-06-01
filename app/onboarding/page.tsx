@@ -17,6 +17,8 @@ import {
   deriveDisplayName,
 } from '@/lib/self-patient'
 import { logger } from '@/lib/logger'
+import { medicalOperations } from '@/lib/medical-operations'
+import { getTargetWeightSuggestion } from '@/lib/health-calculations'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { FacePhotoCapture } from '@/components/family/FacePhotoCapture'
@@ -53,9 +55,13 @@ interface OnboardingScreen {
   optionDescriptions?: Record<string, string>
   sets: string
   visibleIf?: string
-  /** 'text' renders a single text input + Continue; 'options' (default)
-   *  renders the option-button list with auto-advance on tap. */
-  inputType?: 'options' | 'text'
+  /** 'text' renders a single text input + Continue; 'number' is the same
+   *  but with a numeric keypad (weight entry); 'height' renders paired feet +
+   *  inches inputs (stored as total inches); 'goal' renders a healthy-weight
+   *  suggestion (from height + current weight) above a pre-filled target
+   *  input; 'options' (default) renders the option-button list with
+   *  auto-advance on tap. */
+  inputType?: 'options' | 'text' | 'number' | 'height' | 'goal' | 'date'
   placeholder?: string
   maxLength?: number
 }
@@ -152,6 +158,11 @@ function OnboardingContent() {
     if (screen.visibleIf === "userMode === 'household'") {
       return answers.userMode === 'household'
     }
+    // Goal-setup screens (current weight / goal / pace) — single path only.
+    // These capture the activation inputs the day-1 projection needs.
+    if (screen.visibleIf === "userMode === 'myself'") {
+      return answers.userMode === 'single'
+    }
     // Family path AND user's plan unlocks multi-patient. Free-plan
     // users skip this screen and route straight to /dashboard so we
     // don't dead-end them at the wizard's upgrade wall.
@@ -164,6 +175,27 @@ function OnboardingContent() {
   const visibleScreens = screens.filter(isScreenVisible)
   const currentScreen = visibleScreens[step]
   const totalSteps = visibleScreens.length
+
+  // On the goal screen, suggest a healthy target from the height + current
+  // weight already entered. Reuses the canonical getTargetWeightSuggestion
+  // (the "earlier development" healthy-range logic). null off the goal screen
+  // or before both inputs exist.
+  const goalSuggestion =
+    currentScreen?.inputType === 'goal'
+      ? getTargetWeightSuggestion(
+          parseFloat(String(answers.current_weight ?? '')),
+          parseFloat(String(answers.your_height ?? '')),
+        )
+      : null
+
+  // Pre-fill the goal input with the suggested healthy target the first time
+  // the user lands on the goal screen — they can still edit it.
+  useEffect(() => {
+    if (goalSuggestion && !answers.goal_weight) {
+      setAnswers((prev) => ({ ...prev, goal_weight: String(goalSuggestion.target) }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentScreen?.id])
 
   function handleAnswer(value: string) {
     if (!currentScreen) return
@@ -233,6 +265,35 @@ function OnboardingContent() {
       const familyLastName =
         (answers.family_last_name as string | undefined)?.trim() || undefined
       const addFamilyNow = answers.add_now === 'yes'
+
+      // The ACCOUNT HOLDER's own goal-setup answers — captured in BOTH single
+      // AND family modes (the organizer is a self-Patient too, not a stub).
+      // These are the activation inputs the day-1 weight projection needs —
+      // written onto the self-Patient below so /progress fires the projection
+      // immediately instead of dead-ending at "complete your profile".
+      // parseFloat tolerates the "1 lb/week" pace label (extracts the number).
+      const currentWeightNum = parseFloat(String(answers.current_weight ?? ''))
+      const goalWeightNum = parseFloat(String(answers.goal_weight ?? ''))
+      const weeklyPaceNum = parseFloat(String(answers.weekly_pace ?? ''))
+      // Height is stored as total inches by the 'height' input. Pairs with
+      // weight for BMI / early health-risk signals (same as the family wizard).
+      const heightInches = parseFloat(String(answers.your_height ?? ''))
+      const hasHeight = Number.isFinite(heightInches) && heightInches > 0
+      // Date of birth is the canonical field — captured directly (more precise
+      // than age, and never needs updating). Age is derived from it for
+      // BMR/calorie targets, health-risk profiling, and life-stage. The 'date'
+      // input stores a YYYY-MM-DD string; guard against blank/future/absurd.
+      const dobRaw = String(answers.date_of_birth ?? '').trim()
+      let dateOfBirthIso: string | undefined
+      if (dobRaw) {
+        const dob = new Date(dobRaw)
+        const now = new Date()
+        const minBirthYear = now.getFullYear() - 120
+        if (!Number.isNaN(dob.getTime()) && dob <= now && dob.getFullYear() >= minBirthYear) {
+          dateOfBirthIso = dob.toISOString()
+        }
+      }
+      const hasGoalData = Number.isFinite(currentWeightNum) && currentWeightNum > 0
 
       // memberCount drives plan recommendation. Maps to the
       // maxPatients caps in lib/feature-gates.ts (family_basic = 5,
@@ -381,6 +442,7 @@ function OnboardingContent() {
         const patientName =
           composedLegalName || firstName || deriveDisplayName(user.displayName, user.email)
         const existingSelfPatientId = await findSelfPatientId(user.uid, db)
+        let selfPatientId: string
         if (existingSelfPatientId) {
           await updateSelfPatientName({
             userId: user.uid,
@@ -390,6 +452,7 @@ function OnboardingContent() {
             ...(familyLastName ? { lastName: familyLastName } : {}),
             db,
           })
+          selfPatientId = existingSelfPatientId
           logger.info('[Onboarding] Self-Patient name updated', {
             userId: user.uid,
             patientId: existingSelfPatientId,
@@ -403,11 +466,61 @@ function OnboardingContent() {
             ...(familyLastName ? { lastName: familyLastName } : {}),
             db,
           })
+          selfPatientId = patientId
           logger.info('[Onboarding] Self-Patient created', {
             userId: user.uid,
             patientId,
             patientName,
           })
+        }
+
+        // Write the goal/weight data captured on the single path so the
+        // day-1 projection can fire immediately. We do NOT un-defer DOB /
+        // gender / height — only the three activation inputs. Merge-style so
+        // the name fields written above are preserved; nested `goals` merges.
+        if (hasGoalData) {
+          await setDoc(
+            doc(db, 'users', user.uid, 'patients', selfPatientId),
+            {
+              currentWeight: currentWeightNum,
+              weightUnit: 'lbs',
+              // Height (total inches) — same convention as PatientHeightEditor
+              // + the family wizard. Pairs with weight for BMI / health-risk.
+              ...(hasHeight ? { height: heightInches, heightUnit: 'imperial' } : {}),
+              // Date of birth as entered at onboarding (canonical; age derived).
+              ...(dateOfBirthIso ? { dateOfBirth: dateOfBirthIso } : {}),
+              goals: {
+                startWeight: currentWeightNum,
+                ...(Number.isFinite(goalWeightNum) && goalWeightNum > 0
+                  ? { targetWeight: goalWeightNum }
+                  : {}),
+                weeklyWeightLossGoal:
+                  Number.isFinite(weeklyPaceNum) && weeklyPaceNum > 0 ? weeklyPaceNum : 1,
+              },
+              lastModified: Timestamp.now(),
+            },
+            { merge: true },
+          )
+
+          // Seed the STARTING weigh-in so the chart + "Your Journey" show a
+          // real starting point (not an empty "no weight data" state) and the
+          // measured trend has an anchor to build from. Reuses the canonical
+          // weight-log writer — same /patients/{id}/weight-logs path /progress
+          // reads, and it computes BMI now that height is set. Non-fatal: the
+          // projection still fires from the profile currentWeight if this fails.
+          try {
+            await medicalOperations.weightLogs.logWeight(selfPatientId, {
+              weight: currentWeightNum,
+              unit: 'lbs',
+              loggedAt: new Date().toISOString(),
+              source: 'manual',
+              tags: ['starting-weight'],
+            })
+          } catch (weighInErr) {
+            logger.warn('[Onboarding] Starting weigh-in log failed (non-fatal)', {
+              error: (weighInErr as Error)?.message,
+            })
+          }
         }
       } catch (err) {
         logger.error('[Onboarding] Self-Patient create-or-update failed (non-fatal)', err as Error)
@@ -434,6 +547,11 @@ function OnboardingContent() {
       // wizard's type_selection step. Onboarding's job ends here.
       if (addFamilyNow) {
         router.push('/patients/new')
+      } else if (hasGoalData) {
+        // Land single users on /progress — the projection chip fires from the
+        // weight + goal they just entered. This IS the "here's your plan"
+        // first-session payoff that hooks the trial.
+        router.push('/progress')
       } else {
         const tabs = prdConfig.onboarding.userModes[userMode].tabs
         const firstTab = tabs[0]
@@ -646,10 +764,12 @@ function OnboardingContent() {
               )}
             </div>
 
-            {currentScreen.inputType === 'text' ? (
+            {currentScreen.inputType === 'text' || currentScreen.inputType === 'number' ? (
               <div className="space-y-4">
                 <input
-                  type="text"
+                  type={currentScreen.inputType === 'number' ? 'number' : 'text'}
+                  inputMode={currentScreen.inputType === 'number' ? 'decimal' : undefined}
+                  min={currentScreen.inputType === 'number' ? 0 : undefined}
                   value={(answers[currentScreen.id] as string) || ''}
                   onChange={(e) => setAnswers({ ...answers, [currentScreen.id]: e.target.value })}
                   onKeyDown={(e) => {
@@ -662,6 +782,114 @@ function OnboardingContent() {
                   maxLength={currentScreen.maxLength ?? 100}
                   autoFocus
                   className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium transition-colors"
+                />
+                <button
+                  onClick={() => handleTextAnswer((answers[currentScreen.id] as string) || '')}
+                  disabled={!((answers[currentScreen.id] as string) || '').trim()}
+                  className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            ) : currentScreen.inputType === 'goal' ? (
+              <div className="space-y-4">
+                {/* Healthy-weight guidance from height + current weight, then
+                    a target input pre-filled with the suggestion (editable). */}
+                {goalSuggestion && (
+                  <div className="rounded-xl bg-accent/60 border border-border p-4 text-left">
+                    <p className="text-sm font-semibold text-foreground mb-1">
+                      💡 A healthy weight for your height is {goalSuggestion.minHealthyWeight}&ndash;
+                      {goalSuggestion.maxHealthyWeight} lbs.
+                    </p>
+                    <p className="text-xs text-muted-foreground">{goalSuggestion.reason}</p>
+                  </div>
+                )}
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  value={(answers.goal_weight as string) || ''}
+                  onChange={(e) => setAnswers({ ...answers, goal_weight: e.target.value })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      const value = (answers.goal_weight as string) || ''
+                      if (value.trim().length > 0) handleTextAnswer(value)
+                    }
+                  }}
+                  placeholder={currentScreen.placeholder ?? 'Goal weight (lbs)'}
+                  maxLength={currentScreen.maxLength ?? 6}
+                  autoFocus
+                  className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium text-center transition-colors"
+                />
+                <button
+                  onClick={() => handleTextAnswer((answers.goal_weight as string) || '')}
+                  disabled={!((answers.goal_weight as string) || '').trim()}
+                  className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            ) : currentScreen.inputType === 'height' ? (
+              <div className="space-y-4">
+                {/* Paired feet + inches. Stored as total inches via
+                    handleTextAnswer — same ft×12+in convention as
+                    PatientHeightEditor and the family wizard. */}
+                <div className="flex gap-3">
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={9}
+                      value={(answers.height_feet as string) || ''}
+                      onChange={(e) => setAnswers({ ...answers, height_feet: e.target.value })}
+                      placeholder="5"
+                      autoFocus
+                      className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium text-center transition-colors"
+                    />
+                    <p className="text-center text-xs text-muted-foreground mt-1">feet</p>
+                  </div>
+                  <div className="flex-1">
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={11}
+                      value={(answers.height_inches as string) || ''}
+                      onChange={(e) => setAnswers({ ...answers, height_inches: e.target.value })}
+                      placeholder="10"
+                      className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium text-center transition-colors"
+                    />
+                    <p className="text-center text-xs text-muted-foreground mt-1">inches</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const feet = parseInt(String(answers.height_feet ?? ''), 10) || 0
+                    const inches = parseInt(String(answers.height_inches ?? ''), 10) || 0
+                    const total = feet * 12 + inches
+                    if (total > 0) handleTextAnswer(String(total))
+                  }}
+                  disabled={!(parseInt(String(answers.height_feet ?? ''), 10) > 0)}
+                  className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Continue
+                </button>
+              </div>
+            ) : currentScreen.inputType === 'date' ? (
+              <div className="space-y-4">
+                {/* Native date picker. Stores YYYY-MM-DD; completeOnboarding
+                    converts to an ISO dateOfBirth (canonical; age derived).
+                    Bounded to a plausible human range so a future/absurd date
+                    can't be picked. */}
+                <input
+                  type="date"
+                  max={new Date().toISOString().slice(0, 10)}
+                  min={`${new Date().getFullYear() - 120}-01-01`}
+                  value={(answers[currentScreen.id] as string) || ''}
+                  onChange={(e) => setAnswers({ ...answers, [currentScreen.id]: e.target.value })}
+                  autoFocus
+                  className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium text-center transition-colors"
                 />
                 <button
                   onClick={() => handleTextAnswer((answers[currentScreen.id] as string) || '')}
