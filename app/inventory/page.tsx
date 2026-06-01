@@ -23,6 +23,7 @@ import { getCategoryMetadata, formatQuantityDisplay } from '@/lib/product-catego
 import { formatExpirationDate } from '@/lib/product-categories'
 import { getExpirationColor } from '@/lib/expiration-tracker'
 import { inventoryAttentionScore, compareAttention, type AttentionAction } from '@/lib/inventory-attention'
+import { buildRestockingReport } from '@/lib/restocking-report'
 import type { StorageLocation } from '@/types/shopping'
 import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
@@ -3824,6 +3825,10 @@ function KitchenInventoryContent() {
               tab. */}
           {activeTab === 'report' && (() => {
             const allItems = filterItems([...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems])
+            // Waste + cadence diagnostics from the shared Attention model.
+            const report = buildRestockingReport(allItems)
+            const fmtCents = (cents: number) => `$${(cents / 100).toFixed(2)}`
+            const lowConfidenceCadence = report.cadence.filter((c) => c.lowConfidence)
             type Bucket = 'overdue' | 'soon' | 'onSchedule' | 'noPrediction'
             const buckets: Record<Bucket, typeof allItems> = {
               overdue: [],
@@ -3916,6 +3921,43 @@ function KitchenInventoryContent() {
 
             return (
               <div className="space-y-4">
+                {/* Financial waste — expired stock still on hand. "Wasted"
+                    because the food is past date; the cost is money already
+                    lost. Unpriced items are surfaced honestly, never fabricated
+                    into a dollar figure. This is the ROI headline. */}
+                {report.waste.itemCount > 0 && (
+                  <div className="bg-card rounded-lg border border-red-200 dark:border-red-800 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border bg-red-50 dark:bg-red-900/20 flex items-baseline justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+                        <span aria-hidden="true">🗑️</span> Wasted · expired on hand
+                      </h3>
+                      <span className="text-lg font-bold text-red-700 dark:text-red-300">
+                        {fmtCents(report.waste.totalKnownCostCents)}
+                      </span>
+                    </div>
+                    <ul className="divide-y divide-border">
+                      {report.waste.byCategory.map((row) => (
+                        <li key={row.category} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
+                          <span className="text-foreground">
+                            {getCategoryMetadata(row.category).displayName} · {row.count} item{row.count !== 1 ? 's' : ''}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {fmtCents(row.knownCostCents)}
+                            {row.unpricedCount > 0 && (
+                              <span className="text-xs text-muted-foreground"> · {row.unpricedCount} unpriced</span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {report.waste.unpricedCount > 0 && (
+                      <p className="px-4 py-2 text-xs text-muted-foreground border-t border-border">
+                        {report.waste.unpricedCount} expired item{report.waste.unpricedCount !== 1 ? 's' : ''} had no price on record — counted, but not in the dollar total.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Top stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {([
@@ -3945,6 +3987,31 @@ function KitchenInventoryContent() {
                     {renderBucket('Due soon', '⏰', buckets.soon, 'yellow')}
                     {renderBucket('On schedule', '✅', buckets.onSchedule, 'green')}
                     {renderBucket('No prediction yet', '❓', buckets.noPrediction, 'gray')}
+
+                    {/* Cadence calibration — where the naive depletion model is
+                        too erratic to trust (interval spread ≥ mean). This is
+                        the instrumentation step: it points at exactly which
+                        items would benefit from a smarter (learned) model. */}
+                    {lowConfidenceCadence.length > 0 && (
+                      <div className="bg-card rounded-lg border border-yellow-200 dark:border-yellow-800 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
+                          <span aria-hidden="true">📉</span>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Predictions to trust less · {lowConfidenceCadence.length}
+                          </h3>
+                        </div>
+                        <ul className="divide-y divide-border">
+                          {lowConfidenceCadence.slice(0, 8).map((c) => (
+                            <li key={c.id} className="px-4 py-2.5 text-sm">
+                              <div className="font-medium text-foreground truncate">{c.productName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                cadence ~{c.meanIntervalDays}d, but buys swing by {c.intervalSpreadDays}d over {c.sampleSize} purchase{c.sampleSize !== 1 ? 's' : ''} — prediction is rough
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </>
                 )}
               </div>

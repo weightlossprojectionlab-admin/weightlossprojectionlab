@@ -61,4 +61,17 @@ test('inventory list ranks by attention and flags discard distinctly', async ({ 
   expect(yExpired).toBeLessThan(yLow)
   expect(yLow).toBeLessThan(ySpoiling)
   expect(ySpoiling).toBeLessThan(yPlenty)
+
+  // --- Restocking Report: waste $ headline + cadence calibration ---
+  // Robust to the account's real inventory (other priced waste may exist):
+  // assert the sections render + a dollar figure + the seeded erratic item,
+  // not an exact total (the aggregation math is covered by unit tests).
+  await page.goto('/inventory?tab=report', { waitUntil: 'domcontentloaded' })
+  await page.keyboard.press('Escape').catch(() => {})
+  await expect(page.getByText(/Wasted/i).first()).toBeVisible({ timeout: 60_000 })
+  await expect(page.getByText(/\$\d+\.\d{2}/).first()).toBeVisible() // a real dollar figure rendered
+  // Cadence calibration: the erratic-interval Coffee surfaces as low-confidence.
+  await expect(page.getByText(/Predictions to trust less/i)).toBeVisible()
+  // Appears in both an urgency bucket and the cadence section — first() is fine.
+  await expect(page.getByText('E2E Erratic Coffee').first()).toBeVisible()
 })

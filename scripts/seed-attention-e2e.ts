@@ -27,7 +27,7 @@ initializeApp({ credential: cert(require(findServiceAccountPath())) })
 const db = getFirestore()
 const EMAIL = 'weightlossprojectionlab@gmail.com'
 const DAY = 86_400_000
-const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-plenty']
+const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-plenty', 'e2e-attn-erratic']
 
 ;(async () => {
   const clean = process.argv.includes('--clean')
@@ -54,10 +54,18 @@ const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-
   }
   // Four corners — expected rank by compareAttention: expired, low, spoiling, plenty.
   const items = [
-    { id: 'e2e-attn-expired',  productName: 'E2E Expired Yogurt',   category: 'dairy',   isPerishable: true,  quantity: 2,  expiresAt: Timestamp.fromMillis(now - 2 * DAY) },   // discard
+    { id: 'e2e-attn-expired',  productName: 'E2E Expired Yogurt',   category: 'dairy',   isPerishable: true,  quantity: 2,  expiresAt: Timestamp.fromMillis(now - 2 * DAY), expectedPriceCents: 350 }, // discard + priced waste ($3.50)
     { id: 'e2e-attn-low',      productName: 'E2E Low Coffee',       category: 'pantry',  isPerishable: false, quantity: 1,  expiresAt: Timestamp.fromMillis(now + 300 * DAY) }, // restock (cold-start low)
     { id: 'e2e-attn-spoiling', productName: 'E2E Spoiling Bananas', category: 'produce', isPerishable: true,  quantity: 4,  expiresAt: Timestamp.fromMillis(now + 1 * DAY) },   // use-soon
     { id: 'e2e-attn-plenty',   productName: 'E2E Plenty Rice',      category: 'pantry',  isPerishable: false, quantity: 10, expiresAt: Timestamp.fromMillis(now + 300 * DAY) }, // ok (no badge)
+    // Erratic cadence (intervals 3d, 14d) → low-confidence on the Restocking Report.
+    { id: 'e2e-attn-erratic',  productName: 'E2E Erratic Coffee',   category: 'pantry',  isPerishable: false, quantity: 5,  expiresAt: Timestamp.fromMillis(now + 300 * DAY),
+      averageDaysBetweenPurchases: 8, lastPurchased: Timestamp.fromMillis(now),
+      purchaseHistory: [
+        { date: Timestamp.fromMillis(now - 17 * DAY) },
+        { date: Timestamp.fromMillis(now - 14 * DAY) },
+        { date: Timestamp.fromMillis(now) },
+      ] },
   ]
   for (const { id, ...data } of items) {
     await db.collection('shopping_items').doc(id).set({ ...base, ...data })
