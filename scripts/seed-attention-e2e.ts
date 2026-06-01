@@ -27,17 +27,19 @@ initializeApp({ credential: cert(require(findServiceAccountPath())) })
 const db = getFirestore()
 const EMAIL = 'weightlossprojectionlab@gmail.com'
 const DAY = 86_400_000
-const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-plenty', 'e2e-attn-erratic']
+const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-plenty', 'e2e-attn-erratic', 'e2e-attn-peanut']
+const PATIENT_ID = 'e2e-allergy-kid'
 
 ;(async () => {
+  const uid = (await getAuth().getUserByEmail(EMAIL)).uid
   const clean = process.argv.includes('--clean')
   if (clean) {
     for (const id of IDS) await db.collection('shopping_items').doc(id).delete()
-    console.log('Cleaned', IDS.length, 'e2e attention items')
+    await db.collection('users').doc(uid).collection('patients').doc(PATIENT_ID).delete()
+    console.log('Cleaned', IDS.length, 'e2e items + 1 patient')
     process.exit(0)
   }
 
-  const uid = (await getAuth().getUserByEmail(EMAIL)).uid
   const now = Date.now()
   const base = {
     userId: uid,
@@ -66,10 +68,22 @@ const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-
         { date: Timestamp.fromMillis(now - 14 * DAY) },
         { date: Timestamp.fromMillis(now) },
       ] },
+    // Allergen safety: peanut-tagged item; the seeded patient is peanut-allergic.
+    { id: 'e2e-attn-peanut',   productName: 'E2E Peanut Snack',     category: 'pantry',  isPerishable: false, quantity: 5,  expiresAt: Timestamp.fromMillis(now + 300 * DAY), allergenTags: ['peanut'] },
   ]
   for (const { id, ...data } of items) {
     await db.collection('shopping_items').doc(id).set({ ...base, ...data })
   }
-  console.log('Seeded', items.length, 'four-corner items for', EMAIL, '(uid', uid + ')')
+  // A peanut-allergic household member so the safety banner has someone to warn.
+  await db.collection('users').doc(uid).collection('patients').doc(PATIENT_ID).set({
+    name: 'E2E Allergy Kid',
+    dateOfBirth: '2015-01-01',
+    foodAllergies: ['peanuts'],
+    healthConditions: [],
+    dietaryRestrictions: [],
+    createdAt: Timestamp.now(),
+    updatedAt: Timestamp.now(),
+  })
+  console.log('Seeded', items.length, 'items + 1 peanut-allergic patient for', EMAIL, '(uid', uid + ')')
   process.exit(0)
 })()

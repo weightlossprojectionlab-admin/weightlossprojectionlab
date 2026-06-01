@@ -62,6 +62,14 @@ test('inventory list ranks by attention and flags discard distinctly', async ({ 
   expect(yLow).toBeLessThan(ySpoiling)
   expect(ySpoiling).toBeLessThan(yPlenty)
 
+  // --- Allergen safety banner: peanut item + peanut-allergic seeded member ---
+  const peanutCard = card(page, 'E2E Peanut Snack')
+  await expect(peanutCard).toBeVisible({ timeout: 30_000 })
+  // The banner depends on a SECOND async fetch (getPatients → members → rescore),
+  // so give it room beyond the item snapshot's load.
+  await expect(peanutCard.getByText(/Unsafe for/i)).toBeVisible({ timeout: 20_000 })
+  await expect(peanutCard.getByText(/Peanuts/)).toBeVisible({ timeout: 20_000 })
+
   // --- Restocking Report: waste $ headline + cadence calibration ---
   // Robust to the account's real inventory (other priced waste may exist):
   // assert the sections render + a dollar figure + the seeded erratic item,

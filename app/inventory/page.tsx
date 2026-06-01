@@ -24,6 +24,7 @@ import { formatExpirationDate } from '@/lib/product-categories'
 import { getExpirationColor } from '@/lib/expiration-tracker'
 import { inventoryAttentionScore, compareAttention, type AttentionAction } from '@/lib/inventory-attention'
 import { buildRestockingReport } from '@/lib/restocking-report'
+import { toMemberHealthProfiles, toItemHealthProfile } from '@/lib/health-context'
 import type { StorageLocation } from '@/types/shopping'
 import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
@@ -69,6 +70,12 @@ const ATTENTION_BADGE: Record<Exclude<AttentionAction, 'ok'>, { label: string; c
   discard: { label: 'Discard', cls: 'bg-red-600 text-white' },
   'use-soon': { label: 'Use soon', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
   restock: { label: 'Restock', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+}
+
+// Humanize canonical allergen tokens (lib/allergen-parser) for the safety alert.
+const ALLERGEN_LABEL: Record<string, string> = {
+  milk: 'Milk', egg: 'Egg', fish: 'Fish', crustacean_shellfish: 'Shellfish',
+  tree_nut: 'Tree nuts', peanut: 'Peanuts', wheat_gluten: 'Gluten', soy: 'Soy', sesame: 'Sesame',
 }
 
 // Display options for the Details tab editor. Same lists used by the
@@ -1961,6 +1968,17 @@ function KitchenInventoryContent() {
     return auth.currentUser?.uid === userId ? 'You' : 'Member'
   }
 
+  // Health-aware scoring context. REUSES the already-fetched `members` profiles
+  // (no second getPatients) and assembles the per-item context in ONE place so
+  // the list sort + the card render share it (DRY). Inert for allergen-free
+  // items / members with no conditions — the engine degrades gracefully.
+  const healthMembers = toMemberHealthProfiles(Object.values(members))
+  const scoreItem = (item: ShoppingItem) =>
+    inventoryAttentionScore(item, Date.now(), {
+      members: healthMembers,
+      itemHealth: toItemHealthProfile(item),
+    })
+
   /**
    * Get items for selected location, then apply the page-wide search +
    * category filter so every tab sees the same filtered set.
@@ -1991,7 +2009,7 @@ function KitchenInventoryContent() {
     const recency = (i: (typeof byLocation)[number]) =>
       i.createdAt ? new Date(i.createdAt).getTime() : i.updatedAt ? new Date(i.updatedAt).getTime() : 0
     const sorted = byLocation
-      .map((item) => ({ item, a: inventoryAttentionScore(item) }))
+      .map((item) => ({ item, a: scoreItem(item) }))
       .sort((x, y) => compareAttention(x.a, y.a) || recency(y.item) - recency(x.item))
       .map((w) => w.item)
     return filterItems(sorted)
@@ -4617,7 +4635,7 @@ function KitchenInventoryContent() {
             <div className="space-y-3">
               {items.map(item => {
                 const categoryMeta = getCategoryMetadata(item.category)
-                const attention = inventoryAttentionScore(item)
+                const attention = scoreItem(item)
 
                 // Calculate expiration severity from item's expiresAt date
                 let expirationSeverity: 'expired' | 'critical' | 'warning' | 'normal' = 'normal'
@@ -4652,6 +4670,19 @@ function KitchenInventoryContent() {
                       }
                     }}
                   >
+                    {/* Allergen safety banner — categorical hard exclusion from
+                        the engine's unsafeFor (bypasses the numeric score). Names
+                        via the shared getMemberName, allergens humanized. */}
+                    {attention.unsafeFor.length > 0 && (
+                      <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded text-red-700 dark:text-red-300 text-xs font-semibold flex items-start gap-1.5">
+                        <span aria-hidden="true">⚠️</span>
+                        <span>
+                          Unsafe for {attention.unsafeFor.map((id) => getMemberName(id)).filter(Boolean).join(', ')}
+                          {item.allergenTags && item.allergenTags.length > 0 &&
+                            ` — contains ${item.allergenTags.map((t) => ALLERGEN_LABEL[t] ?? t).join(', ')}`}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-4">
                       {/* Product Image — catalog (admin/barcodes) wins over the
                           row's snapshot, since admin migrations / OFF / USDA
