@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Image from 'next/image'
 import { MealType } from '@/lib/meal-suggestions'
-import { generateRecipeAltText } from '@/lib/utils'
+import { generateRecipeAltText, toHttpsImageUrl } from '@/lib/utils'
 
 interface RecipeImageCarouselProps {
   images?: string[]
@@ -32,9 +32,10 @@ export function RecipeImageCarousel({
 }: RecipeImageCarouselProps) {
   const [activeIndex, setActiveIndex] = useState(0)
 
-  // Use uploaded images or show placeholder
+  // Use uploaded images or show placeholder. Normalize to https so imported
+  // images served over http don't trip next/image's https-only remotePatterns.
   const hasImages = images && images.length > 0
-  const displayImages = hasImages ? images : []
+  const displayImages = hasImages ? images.map(toHttpsImageUrl) : []
   const hasMultipleImages = displayImages.length > 1
 
   const mealColors = MEAL_TYPE_COLORS[mealType]

@@ -19,9 +19,17 @@ import { useFirestoreQuery } from './useFirestoreQuery'
  * - Falls back to MEAL_SUGGESTIONS for unauthenticated users
  */
 export function useRecipes() {
-  // Query all recipes (rules allow unauthenticated list with limit <= 50)
+  // Load the full recipe catalog in one shot (the page filters/searches
+  // client-side). There is NO orderBy: ~27 media-overlay docs lack a
+  // `createdAt` and would be silently dropped by an orderBy, breaking images
+  // on the built-in recipes. So the limit must simply exceed the catalog size
+  // — otherwise Firestore truncates by document id, and `recipe-<timestamp>`
+  // ids sort the NEWEST recipes last, making freshly-imported recipes vanish.
+  // Soft cap (mirrored in firestore.rules `recipes` list rule). When the
+  // catalog approaches this, switch to server-side pagination/search rather
+  // than raising it indefinitely.
   const recipesQuery = useMemo(
-    () => query(collection(db, 'recipes'), limit(50)),
+    () => query(collection(db, 'recipes'), limit(200)),
     []
   )
 

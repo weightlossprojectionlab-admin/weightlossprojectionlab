@@ -5,6 +5,7 @@ import { errorResponse } from '@/lib/api-response'
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { DietaryTag } from '@/lib/meal-suggestions'
 import { rateLimit } from '@/lib/rate-limit'
+import { toHttpsImageUrl } from '@/lib/utils'
 
 export const maxDuration = 60 // Recipe imports can take time
 
@@ -64,14 +65,19 @@ function parseDuration(isoDuration: string): number {
 }
 
 function extractImageUrl(image: string | string[] | { url: string }[] | undefined): string | undefined {
-  if (!image) return undefined
-  if (typeof image === 'string') return image
-  if (Array.isArray(image)) {
-    const first = image[0]
-    if (typeof first === 'string') return first
-    if (typeof first === 'object' && 'url' in first) return first.url
-  }
-  return undefined
+  const raw = ((): string | undefined => {
+    if (!image) return undefined
+    if (typeof image === 'string') return image
+    if (Array.isArray(image)) {
+      const first = image[0]
+      if (typeof first === 'string') return first
+      if (typeof first === 'object' && 'url' in first) return first.url
+    }
+    return undefined
+  })()
+  // Upgrade http/protocol-relative → https so next/image (https-only
+  // remotePatterns) can render imported recipe images.
+  return raw ? toHttpsImageUrl(raw) : undefined
 }
 
 function extractInstructions(instructions: string | { text: string }[] | { '@type': 'HowToStep'; text: string }[] | undefined): string[] {
@@ -109,19 +115,49 @@ function parseNutritionValue(value: string | undefined): number | undefined {
   return match ? parseFloat(match[0]) : undefined
 }
 
+/**
+ * Decode HTML entities that leak into JSON-LD on many recipe sites — e.g.
+ * WordPress emits `&#038;` for `&`, `&#8217;` for a curly apostrophe. Numeric
+ * (decimal + hex) handled generically, plus the common named entities.
+ */
+function decodeHtmlEntities(input: string): string {
+  if (typeof input !== 'string') return input
+  return input
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&#(\d+);/g, (_, d) => String.fromCodePoint(parseInt(d, 10)))
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&(?:apos|#39);/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim()
+}
+
+// A doc's @type may be a bare string ("Recipe") or an array (["Recipe", ...]).
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function isRecipeType(t: any): boolean {
+  return t === 'Recipe' || (Array.isArray(t) && t.includes('Recipe'))
+}
+
 function parseSchemaOrgRecipe(html: string): SchemaOrgRecipe | null {
   try {
-    const jsonLdRegex = /<script type="application\/ld\+json">([\s\S]*?)<\/script>/g
+    // Lenient match: real recipe sites (esp. WordPress recipe-card plugins)
+    // emit the Recipe block as <script type='application/ld+json' class='...'>
+    // — single quotes and/or extra attributes. The old strict regex required
+    // exactly `type="application/ld+json"` with no other attributes, so it
+    // skipped those blocks and silently fell through to AI extraction.
+    const jsonLdRegex = /<script\b[^>]*\btype=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi
     const matches = Array.from(html.matchAll(jsonLdRegex))
     for (const match of matches) {
       try {
-        const jsonData = JSON.parse(match[1])
+        const jsonData = JSON.parse(match[1].trim())
         const objects = Array.isArray(jsonData) ? jsonData : [jsonData]
         for (const obj of objects) {
-          if (obj['@type'] === 'Recipe') return obj as SchemaOrgRecipe
+          if (isRecipeType(obj['@type'])) return obj as SchemaOrgRecipe
           if (obj['@graph']) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const recipe = obj['@graph'].find((item: any) => item['@type'] === 'Recipe')
+            const recipe = obj['@graph'].find((item: any) => isRecipeType(item['@type']))
             if (recipe) return recipe as SchemaOrgRecipe
           }
         }
@@ -138,10 +174,10 @@ function parseSchemaOrgRecipe(html: string): SchemaOrgRecipe | null {
 function convertSchemaToImportedRecipe(schema: SchemaOrgRecipe, sourceUrl: string): ImportedRecipe {
   const author = typeof schema.author === 'string' ? schema.author : schema.author?.name
   return {
-    name: schema.name,
-    description: schema.description || '',
-    ingredients: schema.recipeIngredient || [],
-    instructions: extractInstructions(schema.recipeInstructions),
+    name: decodeHtmlEntities(schema.name),
+    description: decodeHtmlEntities(schema.description || ''),
+    ingredients: (schema.recipeIngredient || []).map(decodeHtmlEntities),
+    instructions: extractInstructions(schema.recipeInstructions).map(decodeHtmlEntities),
     imageUrl: extractImageUrl(schema.image),
     prepTime: schema.prepTime ? parseDuration(schema.prepTime) : undefined,
     cookTime: schema.cookTime ? parseDuration(schema.cookTime) : undefined,
@@ -177,7 +213,7 @@ function extractRecipeFromBlogPost(html: string): Omit<ImportedRecipe, 'sourceUr
 
     // Extract image from og:image
     const ogImageMatch = html.match(/<meta[^>]*property="og:image"[^>]*content="([^"]*)"/)
-    const imageUrl = ogImageMatch ? ogImageMatch[1] : undefined
+    const imageUrl = ogImageMatch ? toHttpsImageUrl(ogImageMatch[1]) : undefined
 
     // Look for ingredient patterns: <li> items after "ingredients" heading
     const ingredientSection = html.match(/(?:ingredients|what you(?:'|&#8217;)ll need)[\s\S]*?<(?:ul|ol)[^>]*>([\s\S]*?)<\/(?:ul|ol)>/i)
@@ -286,6 +322,26 @@ ${recipe.instructions.join('\n')}`
 }
 
 /**
+ * Fill in any nutrition fields the source didn't provide, using AI — but
+ * PRESERVE the authoritative numbers the recipe site published. A site that
+ * gives calories/protein/fiber but omits carbs/fat should keep its real
+ * values and only have the two gaps estimated, not have all five overwritten.
+ */
+async function fillMissingNutrition(recipe: ImportedRecipe): Promise<void> {
+  if (recipe.calories && recipe.protein && recipe.carbs && recipe.fat) return
+  try {
+    const n = await calculateNutritionForRecipe(recipe)
+    recipe.calories = recipe.calories || n.calories
+    recipe.protein = recipe.protein || n.protein
+    recipe.carbs = recipe.carbs || n.carbs
+    recipe.fat = recipe.fat || n.fat
+    recipe.fiber = recipe.fiber || n.fiber
+  } catch (nutritionErr) {
+    logger.error('Failed to calculate nutrition for import', nutritionErr as Error)
+  }
+}
+
+/**
  * Fetch HTML using curl (bypasses TLS fingerprinting that blocks Node.js fetch)
  */
 async function fetchHtmlWithCurl(url: string): Promise<string> {
@@ -362,19 +418,8 @@ export async function GET(request: NextRequest) {
     // Import recipe server-side (direct fetch, no CORS proxy needed)
     const recipe = await importRecipeFromUrlServerSide(url)
 
-    // Calculate nutrition if missing
-    if (!recipe.calories || !recipe.protein) {
-      try {
-        const nutrition = await calculateNutritionForRecipe(recipe)
-        recipe.calories = nutrition.calories
-        recipe.protein = nutrition.protein
-        recipe.carbs = nutrition.carbs
-        recipe.fat = nutrition.fat
-        recipe.fiber = nutrition.fiber
-      } catch (nutritionErr) {
-        logger.error('Failed to calculate nutrition for import', nutritionErr as Error)
-      }
-    }
+    // Fill only the nutrition fields the source omitted (keeps real values).
+    await fillMissingNutrition(recipe)
 
     return NextResponse.json({ recipe })
   } catch (error) {
@@ -409,18 +454,8 @@ export async function POST(request: NextRequest) {
 
     const recipe = await importRecipeFromUrlServerSide(url)
 
-    if (!recipe.calories || !recipe.protein || !recipe.carbs || !recipe.fat) {
-      try {
-        const nutrition = await calculateNutritionForRecipe(recipe)
-        recipe.calories = nutrition.calories
-        recipe.protein = nutrition.protein
-        recipe.carbs = nutrition.carbs
-        recipe.fat = nutrition.fat
-        recipe.fiber = nutrition.fiber
-      } catch (nutritionErr) {
-        logger.error('Failed to calculate nutrition for import', nutritionErr as Error)
-      }
-    }
+    // Fill only the nutrition fields the source omitted (keeps real values).
+    await fillMissingNutrition(recipe)
 
     return NextResponse.json(recipe)
   } catch (error) {
