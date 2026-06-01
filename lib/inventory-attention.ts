@@ -32,6 +32,12 @@
 
 import type { ShoppingItem } from '@/types/shopping'
 import { CATEGORY_METADATA } from './product-categories'
+import {
+  calculateHouseholdAlignment,
+  DEFAULT_HEALTH_DEMAND_CONFIG,
+  type MemberHealthProfile,
+  type ItemHealthProfile,
+} from './health-demand'
 
 const DAY_MS = 1000 * 60 * 60 * 24
 
@@ -63,6 +69,13 @@ const COLD_START_LOW_STOCK_URGENCY = 1
 const DEFAULT_LOW_STOCK_THRESHOLD = 1
 // Below this, an item needs no action (sorts to the bottom / hidden).
 export const ATTENTION_EPSILON = 0.05
+// Health-importance floor — a third attention channel so a strongly BENEFICIAL
+// item (high positive household alignment) stays on the radar even when fully
+// stocked / shelf-stable. Harm is NOT floored (that would surface junk); harm is
+// handled by D suppressing the item's clocks + the unsafeFor flag. Inert until
+// items carry health attributes (alignment 0 → floor 0).
+const W_HEALTH_FLOOR = 0.4
+const HEALTH_FLOOR_THRESHOLD = 0.5
 
 export type AttentionAction = 'restock' | 'use-soon' | 'discard' | 'ok'
 
@@ -87,6 +100,24 @@ export interface AttentionResult {
   soonestClock: number
   /** Which clock wins → what to do about it. */
   action: AttentionAction
+  /**
+   * Household health demand weight D (the clamped multiplier on the clocks).
+   * 1 when no health context is supplied or the item isn't enriched yet.
+   */
+  demandWeight: number
+  /** Member ids for whom the item is a hard avoid (allergen/restriction). */
+  unsafeFor: string[]
+}
+
+/**
+ * Optional health context. When supplied AND items carry health attributes, the
+ * score picks up the household demand weight D + the beneficial-importance floor.
+ * Omit it (the default) for byte-identical Phase-0/1 behavior — the routing is
+ * wired now so the system lights up organically the moment enrichment lands.
+ */
+export interface AttentionContext {
+  members?: MemberHealthProfile[]
+  itemHealth?: ItemHealthProfile
 }
 
 /** Urgency kernel u(T;τ) = exp(−max(0,T)/τ). Past-due (T<0) clamps to 1. */
@@ -146,6 +177,7 @@ function computeTSpoil(item: ShoppingItem, now: number): number | null {
 export function inventoryAttentionScore(
   item: ShoppingItem,
   now: number = Date.now(),
+  ctx?: AttentionContext,
 ): AttentionResult {
   const tEmpty = computeTEmpty(item, now)
   const tSpoil = computeTSpoil(item, now)
@@ -163,8 +195,35 @@ export function inventoryAttentionScore(
 
   const spoilUrgency = tSpoil !== null ? W_SPOIL * urgencyKernel(tSpoil, TAU_SPOIL) : 0
 
-  // Phase 0 demand weight D = 1.
-  const score = Math.max(restockUrgency, spoilUrgency)
+  // Base urgency (raw clocks) drives the ACTION + the ok/discard gates — it must
+  // NOT be moved by D or the health floor, only the ranking score is.
+  const baseScore = Math.max(restockUrgency, spoilUrgency)
+
+  // Household health demand weight D + the beneficial-only importance floor.
+  // Inert (D = 1, floor = 0) unless a caller passes members + an enriched item.
+  let demandWeight = 1
+  let healthFloor = 0
+  let unsafeFor: string[] = []
+  if (ctx?.members?.length && ctx.itemHealth) {
+    const a = calculateHouseholdAlignment(ctx.itemHealth, ctx.members)
+    unsafeFor = a.unsafeFor
+    demandWeight = Math.min(
+      DEFAULT_HEALTH_DEMAND_CONFIG.dMax,
+      Math.max(DEFAULT_HEALTH_DEMAND_CONFIG.dMin, 1 + a.align),
+    )
+    // align⁺ only: keep BENEFICIAL important items visible; harm is suppressed
+    // via D + flagged via unsafeFor, never floored up the list.
+    healthFloor = a.align > HEALTH_FLOOR_THRESHOLD ? Math.min(1, a.align) : 0
+  }
+
+  // Ranking score: D scales the two clocks (suppress harmful / boost beneficial),
+  // plus the health floor as the third channel. Equals baseScore when no health
+  // context is present (D = 1, floor = 0).
+  const score = Math.max(
+    demandWeight * restockUrgency,
+    demandWeight * spoilUrgency,
+    W_HEALTH_FLOOR * healthFloor,
+  )
 
   // Effective clocks: cold-start low stock acts as a depletion clock already
   // at 0; a missing clock is +∞. soonestClock (the sooner of the two) is the
@@ -180,7 +239,7 @@ export function inventoryAttentionScore(
   //     "use-soon" candidate, so it leaves the use-soon curve for its own state.
   //   • below ε → ok.
   let action: AttentionAction
-  if (score < ATTENTION_EPSILON) {
+  if (baseScore < ATTENTION_EPSILON) {
     action = 'ok'
   } else if (tSpoil !== null && tSpoil < 0) {
     action = 'discard'
@@ -188,7 +247,17 @@ export function inventoryAttentionScore(
     action = restockClock <= spoilClock ? 'restock' : 'use-soon'
   }
 
-  return { score, restockUrgency, spoilUrgency, tEmpty, tSpoil, soonestClock, action }
+  return {
+    score,
+    restockUrgency,
+    spoilUrgency,
+    tEmpty,
+    tSpoil,
+    soonestClock,
+    action,
+    demandWeight,
+    unsafeFor,
+  }
 }
 
 /**

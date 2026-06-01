@@ -180,3 +180,52 @@ describe('compareAttention — composite sort key (score DESC, soonestClock ASC)
     expect([spoilingSoon, out].sort(compareAttention)[0]).toBe(out)
   })
 })
+
+describe('inventoryAttentionScore — health demand wiring (inert until enriched)', () => {
+  const runningOut = makeItem({ averageDaysBetweenPurchases: 7, lastPurchased: new Date(NOW - 7 * DAY) }) // tEmpty 0 → restock 1
+  const hyper = { id: 'h', conditions: ['hypertension'], allergies: [], dietaryRestrictions: [] }
+  const diabetic = { id: 'd', conditions: ['diabetes'], allergies: [], dietaryRestrictions: [] }
+
+  it('no health context → demandWeight 1, no warnings, score unchanged', () => {
+    const r = inventoryAttentionScore(runningOut, NOW)
+    expect(r.demandWeight).toBe(1)
+    expect(r.unsafeFor).toEqual([])
+    expect(r.score).toBeCloseTo(1) // == base restock urgency, untouched
+  })
+
+  it('context but no item attributes → still neutral (D = 1)', () => {
+    const r = inventoryAttentionScore(runningOut, NOW, { members: [hyper], itemHealth: {} })
+    expect(r.demandWeight).toBe(1)
+    expect(r.score).toBeCloseTo(1)
+  })
+
+  it('harmful item suppresses the score (D < 1) without changing the action', () => {
+    const withHarm = inventoryAttentionScore(runningOut, NOW, {
+      members: [hyper],
+      itemHealth: { nutrients: { sodium: 1200 } }, // high → hypertension penalty
+    })
+    expect(withHarm.demandWeight).toBeLessThan(1)
+    expect(withHarm.score).toBeLessThan(inventoryAttentionScore(runningOut, NOW).score)
+    expect(withHarm.action).toBe('restock') // it IS running out; action unchanged, just deprioritized
+  })
+
+  it('beneficial-but-stocked item is floored onto the radar', () => {
+    const stocked = makeItem({ category: 'pantry', quantity: 10 }) // clocks calm → base score 0
+    const base = inventoryAttentionScore(stocked, NOW)
+    expect(base.score).toBe(0)
+    const withFloor = inventoryAttentionScore(stocked, NOW, {
+      members: [diabetic],
+      itemHealth: { medicalSupplyFor: ['diabetes'] },
+    })
+    expect(withFloor.score).toBeGreaterThan(0) // health floor lifted it
+    expect(withFloor.action).toBe('ok') // floor lifts ranking, not the clock action
+  })
+
+  it('propagates unsafeFor from an allergen match', () => {
+    const r = inventoryAttentionScore(runningOut, NOW, {
+      members: [{ id: 'p', conditions: [], allergies: ['peanuts'], dietaryRestrictions: [] }],
+      itemHealth: { allergenTags: ['peanuts'] },
+    })
+    expect(r.unsafeFor).toContain('p')
+  })
+})
