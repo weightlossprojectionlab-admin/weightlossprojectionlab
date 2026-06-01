@@ -22,7 +22,7 @@ import { useShopping } from '@/hooks/useShopping'
 import { getCategoryMetadata, formatQuantityDisplay } from '@/lib/product-categories'
 import { formatExpirationDate } from '@/lib/product-categories'
 import { getExpirationColor } from '@/lib/expiration-tracker'
-import { inventoryAttentionScore, compareAttention, type AttentionAction } from '@/lib/inventory-attention'
+import { inventoryAttentionScore, compareAttention, toEpochMs, type AttentionAction } from '@/lib/inventory-attention'
 import { buildRestockingReport } from '@/lib/restocking-report'
 import { toMemberHealthProfiles, toItemHealthProfile } from '@/lib/health-context'
 import type { StorageLocation } from '@/types/shopping'
@@ -2993,6 +2993,10 @@ function KitchenInventoryContent() {
                       const rowN = selectedItem.nutrition || null
                       const n = catN ?? rowN
                       const source = catN ? 'live · catalog' : rowN ? 'snapshot' : 'no data'
+                      // Sodium / sugars / saturated fat live on the catalog row at
+                      // runtime (route richNutrition) but aren't on the leaf
+                      // nutrition type — surface them read-only here.
+                      const rich = (n ?? {}) as { sodium?: number; sugars?: number; saturatedFat?: number }
                       const hasAny =
                         !!n &&
                         ((n.calories ?? 0) > 0 ||
@@ -3037,22 +3041,27 @@ function KitchenInventoryContent() {
                           {(
                             [
                               ['Total fat', n?.fat, 'g'],
+                              ['Saturated fat', rich.saturatedFat, 'g'],
+                              ['Sodium', rich.sodium != null ? rich.sodium * 1000 : undefined, 'mg'],
                               ['Total carbohydrates', n?.carbs, 'g'],
                               ['Dietary fiber', n?.fiber, 'g'],
+                              ['Total sugars', rich.sugars, 'g'],
                               ['Protein', n?.protein, 'g'],
                             ] as const
                           ).map(([label, value, unit]) => {
                             // Macros: round to 1 decimal. "<0.1" for nonzero
                             // sub-tenth values so trace amounts don't read as
                             // empty; "0" for true zero so the column doesn't
-                            // turn into "0.0" noise.
+                            // turn into "0.0" noise. Sodium is shown as whole mg.
                             const v = value ?? 0
                             const display =
                               v === 0
                                 ? '0'
-                                : Math.abs(v) < 0.1
-                                  ? '<0.1'
-                                  : (Math.round(v * 10) / 10).toString()
+                                : unit === 'mg'
+                                  ? Math.round(v).toString()
+                                  : Math.abs(v) < 0.1
+                                    ? '<0.1'
+                                    : (Math.round(v * 10) / 10).toString()
                             return (
                               <div
                                 key={label}
@@ -3103,7 +3112,10 @@ function KitchenInventoryContent() {
                       <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                         {selectedItem.lastPurchased && (
                           <div>
-                            Last purchased: {new Date(selectedItem.lastPurchased).toLocaleDateString()}
+                            Last purchased: {(() => {
+                              const ms = toEpochMs(selectedItem.lastPurchased)
+                              return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleDateString()
+                            })()}
                             {selectedItem.purchasedBy && ` by ${getMemberName(selectedItem.purchasedBy)}`}
                           </div>
                         )}
