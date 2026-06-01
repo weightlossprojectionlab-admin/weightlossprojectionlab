@@ -9,7 +9,8 @@
  *      (do-no-harm). So "may contain" is folded in, and ambiguous staples like
  *      "flour" default to wheat unless explicitly qualified otherwise.
  *   2. Guard the well-known FALSE POSITIVES — almond/rice flour ≠ wheat; cocoa/
- *      shea/peanut butter ≠ milk; coconut ≠ tree nut; eggplant ≠ egg.
+ *      shea/peanut butter ≠ milk; coconut ≠ tree nut; eggplant ≠ egg; and
+ *      FREE-FROM claims ("gluten-free", "Sans gluten", "no milk") flag NOTHING.
  *
  * Pure + isomorphic. v2 (deferred): split DEFINITE ("Contains:") from ADVISORY
  * ("may contain" / shared-facility) confidence instead of folding them.
@@ -32,7 +33,7 @@ const PLAIN_SYNONYMS: Record<CanonicalAllergen, string[]> = {
   egg: ['egg', 'albumin', 'albumen', 'ovalbumin', 'meringue', 'mayonnaise'],
   fish: ['fish', 'cod', 'salmon', 'tuna', 'tilapia', 'anchovy', 'anchovies', 'haddock', 'pollock', 'sardine'],
   crustacean_shellfish: ['shellfish', 'shrimp', 'prawn', 'crab', 'lobster', 'crawfish', 'crayfish', 'crustacean'],
-  tree_nut: ['tree nut', 'almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'hazelnut', 'macadamia', 'brazil nut', 'pine nut', 'filbert'],
+  tree_nut: ['tree nut', 'nut', 'almond', 'walnut', 'cashew', 'pecan', 'pistachio', 'hazelnut', 'macadamia', 'brazil nut', 'pine nut', 'filbert'],
   peanut: ['peanut', 'groundnut', 'arachis'],
   wheat_gluten: ['wheat', 'gluten', 'barley', 'rye', 'malt', 'semolina', 'spelt', 'farro', 'durum', 'triticale', 'couscous', 'seitan', 'bulgur'],
   soy: ['soy', 'soya', 'soybean', 'edamame', 'tofu', 'tempeh', 'miso'],
@@ -60,6 +61,24 @@ const GUARDED_SYNONYMS: GuardedSynonym[] = [
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/**
+ * Blank out FREE-FROM / negation claims so a label that says an allergen is
+ * ABSENT doesn't read as present. Without this, "gluten-free" / "Sans gluten"
+ * (FR) / "no milk" / "dairy-free" all trip the allergen they're disclaiming —
+ * the exact false positive the Nutella smoke test exposed.
+ *
+ * Deliberately narrow (only well-known free-from idioms) to avoid the opposite,
+ * dangerous error: stripping a real warning. "May contain…" is NOT a negation
+ * and is left intact (it's folded IN for safety elsewhere).
+ */
+function stripFreeFrom(text: string): string {
+  return text
+    .replace(/\b[a-z]+[\s-]free\b/g, ' ')              // gluten-free, dairy free, nut-free
+    .replace(/\bfree\s+(?:from|of)\s+[a-z]+\b/g, ' ')  // free from milk, free of soy
+    .replace(/\b(?:no|without|sans)\s+[a-z]+\b/g, ' ') // no milk, without nuts, sans gluten (FR)
+    .replace(/\bnon[\s-]?[a-z]+\b/g, ' ')              // non-dairy, non dairy
+}
+
 /** Strip a catalog locale namespace + separators: "en:tree-nuts" → "tree nuts". */
 function normalizeToken(tag: string): string {
   return tag.replace(/^[a-z]{2,3}:/i, '').replace(/[-_]+/g, ' ').trim()
@@ -67,7 +86,7 @@ function normalizeToken(tag: string): string {
 
 /** Boundary-respecting sweep of one text blob → the allergens it declares. */
 function sweep(raw: string): Set<CanonicalAllergen> {
-  const text = ` ${raw.toLowerCase()} `
+  const text = ` ${stripFreeFrom(raw.toLowerCase())} `
   const found = new Set<CanonicalAllergen>()
 
   for (const allergen of Object.keys(PLAIN_SYNONYMS) as CanonicalAllergen[]) {

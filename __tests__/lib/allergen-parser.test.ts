@@ -35,6 +35,40 @@ describe('parseAllergens — guarded ambiguous staples', () => {
   })
 })
 
+describe('parseAllergens — free-from / negation must NOT flag (Nutella smoke-test regression)', () => {
+  it('"gluten-free" and "gluten free" disclaim, not declare', () => {
+    expect(parseAllergens('Rice flour, sugar. Gluten-free.')).toEqual([])
+    expect(parseAllergens('Certified gluten free oats.')).toEqual([])
+  })
+
+  it('French "Sans gluten" (the real Nutella label) does not trip wheat_gluten', () => {
+    expect(
+      parseAllergens('Sucre, huile de palme, cacao maigre, vanilline. Sans gluten.'),
+    ).toEqual([])
+  })
+
+  it('"no milk" / "dairy-free" / "non-dairy" disclaim milk', () => {
+    expect(parseAllergens('Oat drink. Dairy-free, no milk, non-dairy.')).toEqual([])
+  })
+
+  it('but a real allergen alongside a free-from claim still flags', () => {
+    // contains hazelnuts (tree_nut) AND claims gluten-free → tree_nut only
+    expect(parseAllergens('Hazelnuts, sugar. Gluten-free.')).toEqual(['tree_nut'])
+  })
+})
+
+describe('parseAllergens — OFF canonical allergens_tags (language-independent)', () => {
+  it("Nutella's allergens_tags resolve correctly (the fix the live scan needed)", () => {
+    // OFF returns these regardless of the product's display language.
+    expect(parseAllergens(['en:milk', 'en:nuts', 'en:soybeans'])).toEqual(['milk', 'soy', 'tree_nut'])
+  })
+
+  it('the generic "en:nuts" group tag maps to tree_nut', () => {
+    expect(parseAllergens(['en:nuts'])).toEqual(['tree_nut'])
+    expect(parseAllergens('Contains nuts.')).toEqual(['tree_nut'])
+  })
+})
+
 describe('parseAllergens — word-boundary discipline & safety folding', () => {
   it('eggplant / soylent / coconut do NOT trip egg / soy / tree_nut', () => {
     expect(parseAllergens('Eggplant, soylent water, coconut.')).toEqual([])
