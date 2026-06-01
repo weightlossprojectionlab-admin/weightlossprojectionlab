@@ -95,4 +95,26 @@ describe('hard exclusion (separate from D)', () => {
     const celiacish = member({ id: 'g', dietaryRestrictions: ['gluten-free'] })
     expect(healthDemandWeight(item, [celiacish]).unsafeFor).toContain('g')
   })
+
+  // Reconciliation: the parser emits canonical tags; the member side speaks
+  // free-form. Both go through normalizeAllergen so they meet in one vocabulary.
+  it('cross-vocabulary: a canonical "milk" tag catches a "dairy" allergy', () => {
+    const item: ItemHealthProfile = { allergenTags: ['milk'] }
+    expect(healthDemandWeight(item, [member({ id: 'x', allergies: ['dairy'] })]).unsafeFor).toContain('x')
+  })
+
+  it('a canonical "wheat_gluten" tag catches a "gluten-free" restriction', () => {
+    const item: ItemHealthProfile = { allergenTags: ['wheat_gluten'] }
+    expect(
+      healthDemandWeight(item, [member({ id: 'w', dietaryRestrictions: ['gluten-free'] })]).unsafeFor,
+    ).toContain('w')
+  })
+
+  it('"nut-free" spans both tree_nut and peanut', () => {
+    const treeNut: ItemHealthProfile = { allergenTags: ['tree_nut'] }
+    const peanut: ItemHealthProfile = { allergenTags: ['peanut'] }
+    const nutFree = member({ id: 'n', dietaryRestrictions: ['nut-free'] })
+    expect(healthDemandWeight(treeNut, [nutFree]).unsafeFor).toContain('n')
+    expect(healthDemandWeight(peanut, [nutFree]).unsafeFor).toContain('n')
+  })
 })

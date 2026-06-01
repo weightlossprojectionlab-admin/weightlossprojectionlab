@@ -20,6 +20,8 @@
  * (feedback_rule_first_then_ml). Pure + isomorphic — no client/async deps.
  */
 
+import { normalizeAllergen, type CanonicalAllergen } from './allergen-parser'
+
 export type Nutrient =
   | 'sodium'
   | 'addedSugar'
@@ -59,8 +61,6 @@ export interface HealthDemandConfig {
   conditionNutrient: Record<HealthCondition, Partial<Record<Nutrient, number>>>
   /** ref_n: nutrient level treated as "1.0" for [0,1] normalization (per-category override later). */
   nutrientRef: Partial<Record<Nutrient, number>>
-  /** "X-free" restriction → the allergen tag it forbids (gluten-free → gluten). */
-  restrictionAllergen: Record<string, string>
   alphaSupply: number // categorical boost for a matching medical supply
   alphaStaple: number // categorical boost for a matching condition staple
   beta: number // harm asymmetry (>1): harmful impacts weigh more than beneficial
@@ -89,11 +89,6 @@ export const DEFAULT_HEALTH_DEMAND_CONFIG: HealthDemandConfig = {
     protein: 20, // g
     calorieDensity: 400, // kcal/serving
   },
-  restrictionAllergen: {
-    'gluten-free': 'gluten',
-    'dairy-free': 'dairy',
-    'nut-free': 'nuts',
-  },
   alphaSupply: 0.6,
   alphaStaple: 0.3,
   beta: 1.5,
@@ -120,14 +115,41 @@ function memberCriticality(m: MemberHealthProfile, cfg: HealthDemandConfig): num
   return Math.min(k, cfg.kappaCap)
 }
 
-/** Hard avoid: a food allergy match, or a restriction whose forbidden allergen the item has. */
-function isUnsafeFor(item: ItemHealthProfile, m: MemberHealthProfile, cfg: HealthDemandConfig): boolean {
-  const tags = (item.allergenTags ?? []).map(lc)
-  if (m.allergies.some((a) => tags.includes(lc(a)))) return true
-  return m.dietaryRestrictions.some((r) => {
-    const forbidden = cfg.restrictionAllergen[lc(r)]
-    return forbidden != null && tags.includes(forbidden)
-  })
+/**
+ * Derive the canonical allergen(s) a "X-free" restriction forbids — from the
+ * shared allergen vocabulary (normalizeAllergen), NOT a duplicated map. Only
+ * "nut-free" needs an explicit case, since "nut" spans two canonical allergens.
+ */
+function restrictionToCanonical(restriction: string): CanonicalAllergen[] {
+  const r = restriction.toLowerCase().trim()
+  if (r === 'nut-free' || r === 'nut free') return ['tree_nut', 'peanut']
+  const word = r.replace(/[-\s]?free$/, '').trim()
+  const c = normalizeAllergen(word)
+  return c ? [c] : []
+}
+
+/**
+ * Hard avoid: a food allergy, or a "X-free" restriction whose canonical allergen
+ * the item carries. Both sides run through normalizeAllergen, so an item tag
+ * ('milk') and the member's free-form term ('dairy') speak ONE vocabulary —
+ * the parser owns it (DRY).
+ */
+function isUnsafeFor(item: ItemHealthProfile, m: MemberHealthProfile): boolean {
+  const itemTags = new Set(
+    (item.allergenTags ?? [])
+      .map((t) => normalizeAllergen(t))
+      .filter((t): t is CanonicalAllergen => t !== null),
+  )
+  if (itemTags.size === 0) return false
+
+  for (const a of m.allergies) {
+    const c = normalizeAllergen(a)
+    if (c && itemTags.has(c)) return true
+  }
+  for (const r of m.dietaryRestrictions) {
+    if (restrictionToCanonical(r).some((c) => itemTags.has(c))) return true
+  }
+  return false
 }
 
 /** Signed nutrient impact s(i,m) = Σ_{c∈conditions} Σ_n W(c,n)·ν_n(i). */
@@ -168,7 +190,7 @@ export function calculateHouseholdAlignment(
   let align = 0
 
   for (const m of members) {
-    if (isUnsafeFor(item, m, cfg)) unsafeFor.push(m.id)
+    if (isUnsafeFor(item, m)) unsafeFor.push(m.id)
 
     const kappa = memberCriticality(m, cfg)
 
