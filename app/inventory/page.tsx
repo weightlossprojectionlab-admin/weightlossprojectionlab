@@ -25,6 +25,7 @@ import { getExpirationColor } from '@/lib/expiration-tracker'
 import { inventoryAttentionScore, compareAttention, toEpochMs, type AttentionAction } from '@/lib/inventory-attention'
 import { buildRestockingReport } from '@/lib/restocking-report'
 import { toMemberHealthProfiles, toItemHealthProfile } from '@/lib/health-context'
+import { householdHealthNotes } from '@/lib/health-relevance'
 import type { StorageLocation } from '@/types/shopping'
 import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
@@ -1980,6 +1981,32 @@ function KitchenInventoryContent() {
       itemHealth: toItemHealthProfile(item),
     })
 
+  // Caregiver-voice health notes — the VISIBLE surface of the demand weight D
+  // (the soft condition/diet nudge; allergens are the separate red banner).
+  // One helper shared by the list card AND the details card (DRY); the wording
+  // lives in lib/health-relevance, member names resolve via getMemberName.
+  const renderHealthNotes = (item: ShoppingItem) => {
+    const notes = householdHealthNotes(toItemHealthProfile(item), healthMembers, getMemberName)
+    if (notes.length === 0) return null
+    return (
+      <div className="mb-3 space-y-1.5">
+        {notes.map((note) => (
+          <div
+            key={`${note.memberId}-${note.nutrient}`}
+            className={`p-2 rounded text-xs font-medium flex items-start gap-1.5 border-l-4 ${
+              note.tone === 'limit'
+                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-800 dark:text-amber-300'
+                : 'bg-green-50 dark:bg-green-900/20 border-green-500 text-green-800 dark:text-green-300'
+            }`}
+          >
+            <span aria-hidden="true">{note.tone === 'limit' ? '⚠️' : '✓'}</span>
+            <span>{note.text}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   /**
    * Get items for selected location, then apply the page-wide search +
    * category filter so every tab sees the same filtered set.
@@ -2537,6 +2564,13 @@ function KitchenInventoryContent() {
                   </button>
                 </div>
 
+                {/* Condition/diet health notes (demand weight D) — the soft
+                    nudge, shared with the list card via renderHealthNotes. */}
+                {(() => {
+                  const el = renderHealthNotes(selectedItem)
+                  return el ? <div className="px-5 pt-4">{el}</div> : null
+                })()}
+
                 {/* Quick Actions — per-item workflows that used to be on each
                     list row. Replaces the Edit/Used Up/Buy Again buttons,
                     adds Delete which was previously inaccessible. */}
@@ -3040,7 +3074,7 @@ function KitchenInventoryContent() {
                       // spells it "saturated-fat"), so fall back to it only for
                       // sodium/sugars, converting catalog sodium grams → mg.
                       const panel = (e?.nutrients ?? selectedItem.nutrients) as
-                        | { sodium?: number; sugars?: number; saturatedFat?: number }
+                        | { sodium?: number; sugars?: number; saturatedFat?: number; basis?: 'serving' | 'derived-serving' | '100g' }
                         | undefined
                       const rich = (n ?? {}) as { sodium?: number; sugars?: number }
                       const sodiumMg = panel?.sodium ?? (rich.sodium != null ? rich.sodium * 1000 : undefined)
@@ -3057,13 +3091,17 @@ function KitchenInventoryContent() {
                         <div className="rounded-lg border border-border bg-card p-4 sm:col-span-2 lg:col-span-2">
                           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-baseline gap-2">
                             <span>Nutrition facts</span>
-                            {/* Per-unit label: honor `per` flag from the catalog
-                                — '100g' when OFF only had per-100g data and we
-                                couldn't convert (no serving_quantity). 'serving'
-                                otherwise (or when `per` is missing — legacy). */}
-                            {(n as { per?: 'serving' | '100g' })?.per === '100g' ? (
+                            {/* Per-unit label — drive it from the nutrient panel's
+                                `basis` (the authoritative source): '100g' when OFF
+                                had no serving size, else per-serving. Falls back to
+                                the catalog servingSize string for legacy rows. */}
+                            {panel?.basis === '100g' ? (
                               <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
                                 per 100 g
+                              </span>
+                            ) : panel?.basis ? (
+                              <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
+                                per serving
                               </span>
                             ) : n?.servingSize ? (
                               <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
@@ -4744,6 +4782,9 @@ function KitchenInventoryContent() {
                         </span>
                       </div>
                     )}
+                    {/* Condition/diet nudge (demand weight D) — the soft signal,
+                        below the hard allergen banner. */}
+                    {renderHealthNotes(item)}
                     <div className="flex items-center gap-4">
                       {/* Product Image — catalog (admin/barcodes) wins over the
                           row's snapshot, since admin migrations / OFF / USDA

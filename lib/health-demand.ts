@@ -152,19 +152,34 @@ function isUnsafeFor(item: ItemHealthProfile, m: MemberHealthProfile): boolean {
   return false
 }
 
-/** Signed nutrient impact s(i,m) = Σ_{c∈conditions} Σ_n W(c,n)·ν_n(i). */
-function nutrientImpact(item: ItemHealthProfile, m: MemberHealthProfile, cfg: HealthDemandConfig): number {
-  let s = 0
+/**
+ * Signed per-nutrient contribution for a member: Σ_{c∈conditions} W(c,n)·ν_n(i),
+ * keyed by nutrient. Negative aggravates the member's conditions, positive
+ * supports. The single building block for BOTH the scalar impact (summed) and
+ * the human-facing "why" (which nutrient dominated). Nutrients with no data are
+ * absent (graceful). See lib/health-relevance for the caregiver-voice surface.
+ */
+export function memberNutrientContributions(
+  item: ItemHealthProfile,
+  m: MemberHealthProfile,
+  cfg: HealthDemandConfig = DEFAULT_HEALTH_DEMAND_CONFIG,
+): Partial<Record<Nutrient, number>> {
+  const out: Partial<Record<Nutrient, number>> = {}
   for (const c of m.conditions) {
     const row = cfg.conditionNutrient[lc(c)] ?? cfg.conditionNutrient[c]
     if (!row) continue
     for (const key of Object.keys(row) as Nutrient[]) {
       const x = normNutrient(item.nutrients?.[key], cfg.nutrientRef[key])
       if (x === null) continue // missing data → skip (graceful)
-      s += (row[key] as number) * x
+      out[key] = (out[key] ?? 0) + (row[key] as number) * x
     }
   }
-  return s
+  return out
+}
+
+/** Signed nutrient impact s(i,m) = Σ_n contributionₙ — derived from the one source above. */
+function nutrientImpact(item: ItemHealthProfile, m: MemberHealthProfile, cfg: HealthDemandConfig): number {
+  return Object.values(memberNutrientContributions(item, m, cfg)).reduce((s, v) => s + v, 0)
 }
 
 export interface HouseholdAlignment {
