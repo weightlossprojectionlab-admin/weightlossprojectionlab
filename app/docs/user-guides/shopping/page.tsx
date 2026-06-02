@@ -248,33 +248,14 @@ export default function ShoppingPage() {
       </ul>
       <p>WPL flags items that don't match your preferences and suggests alternatives.</p>
 
-      <h3>Kitchen Inventory Health Flags</h3>
-      <p>
-        On your Kitchen Inventory, an item can show a flag based on your family
-        members' profiles — so you can see at a glance who it's right or wrong for.
-        The flags come straight from each member's allergies and health conditions,
-        so keep those up to date and the flags update on their own.
-      </p>
-      <ul>
-        <li>
-          <strong className="text-red-700">Unsafe for [name]</strong> — the item has
-          a food this person is allergic to (it lists which one). Don't give it to them.
-        </li>
-        <li>
-          <strong className="text-amber-700">High in [nutrient] — best to limit for
-          [name]</strong> — the item is high in something that isn't ideal for this
-          person's health condition, like sugar with diabetes or sodium (salt) with
-          high blood pressure. It's fine now and then — just go easy.
-        </li>
-        <li>
-          <strong className="text-green-700">Good for [name]</strong> — the item is a
-          helpful choice for this person's health.
-        </li>
-      </ul>
-      <p>
-        A red “unsafe” flag is a hard stop (an allergy). An amber or green flag is a
-        gentle nudge to help you choose — not a rule. Set each member's allergies and
-        health conditions in their profile to turn the flags on.
+      <p className="text-sm text-gray-600">
+        Once items reach your kitchen, WPL also flags them for each family member's allergies and
+        health conditions (a hard &ldquo;unsafe&rdquo; allergy stop, plus gentle &ldquo;best to
+        limit&rdquo; / &ldquo;good for&rdquo; nudges). See the{' '}
+        <Link href="/docs/user-guides/inventory" className="text-blue-600 underline">
+          Kitchen Inventory Guide
+        </Link>
+        .
       </p>
 
       <h2 id="tips">Shopping List Tips</h2>
