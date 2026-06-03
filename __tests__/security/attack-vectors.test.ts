@@ -11,7 +11,15 @@
 
 // Mock Next.js modules before importing
 jest.mock('next/server', () => ({
-  NextRequest: jest.fn(),
+  // Carry the constructor args so request.headers.get(...) works. A bare
+  // jest.fn() discarded them, leaving request.headers undefined — the cause of
+  // the CORS/CSRF "Cannot read properties of undefined (reading 'get')" failures.
+  NextRequest: jest.fn().mockImplementation((url, init = {}) => ({
+    url,
+    method: init.method || 'GET',
+    headers: init.headers ?? new Headers(),
+    nextUrl: new URL(url),
+  })),
   NextResponse: {
     json: jest.fn((body, init) => ({
       json: async () => body,
@@ -147,7 +155,9 @@ describe('Attack Vector Validation', () => {
         ]
 
         attackUrls.forEach(url => {
-          expect(url).toMatch(/::1|::ffff:127\.0\.0\.1/)
+          // Match compressed (::1), fully-expanded (0:0:0:0:0:0:0:1), and
+          // IPv4-mapped (::ffff:127.0.0.1) IPv6-localhost encodings.
+          expect(url).toMatch(/::1|0:0:0:0:0:0:0:1|::ffff:127\.0\.0\.1/)
         })
       })
     })
@@ -569,7 +579,7 @@ describe('Attack Vector Validation', () => {
 
       attackPaths.forEach(path => {
         const isAbsolute = path.startsWith('/') ||
-                          path.match(/^[A-Z]:\\/) ||
+                          path.match(/^[A-Z]:\\/) !== null ||
                           path.startsWith('\\\\')
         expect(isAbsolute).toBe(true)
       })

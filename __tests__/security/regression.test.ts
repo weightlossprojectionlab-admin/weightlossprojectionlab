@@ -16,7 +16,14 @@
 
 // Mock Next.js modules before importing
 jest.mock('next/server', () => ({
-  NextRequest: jest.fn(),
+  // Carry the constructor args so request.headers.get(...) works (a bare
+  // jest.fn() dropped them, leaving request.headers undefined).
+  NextRequest: jest.fn().mockImplementation((url, init = {}) => ({
+    url,
+    method: init.method || 'GET',
+    headers: init.headers ?? new Headers(),
+    nextUrl: new URL(url),
+  })),
   NextResponse: {
     json: jest.fn((body, init) => ({
       json: async () => body,
@@ -618,7 +625,8 @@ describe('Security Regression Suite - Sprint 1 & 2', () => {
       const route = '/api/patients/[patientId]'
       const expectedCode = 'ERR_API_PATIENTS_PATIENTID'
 
-      const generatedCode = `ERR_${route.replace(/\//g, '_').replace(/\[|\]/g, '').toUpperCase()}`
+      // Strip the leading slash first, else it becomes a stray '_' → ERR__API…
+      const generatedCode = `ERR_${route.replace(/^\//, '').replace(/\//g, '_').replace(/\[|\]/g, '').toUpperCase()}`
 
       expect(generatedCode).toBe(expectedCode)
 
