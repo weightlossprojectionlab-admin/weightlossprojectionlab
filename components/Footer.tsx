@@ -66,6 +66,13 @@ export function Footer() {
       { href: '/blog/vitals-tracking', label: 'Vitals Tracking', public: true },
       { href: '/blog/medical-documents', label: 'Medical Documents', public: true },
     ] as FooterLink[],
+    // Audience landing pages (by who you are / your situation) — a distinct axis
+    // from the feature columns above. Curated, not every page.
+    families: [
+      { href: '/caregivers/aging-parents', label: 'Aging Parents', public: true },
+      { href: '/caregivers/new-parents', label: 'New Parents', public: true },
+      { href: '/caregivers/sandwich-generation', label: 'Sandwich Generation', public: true },
+    ] as FooterLink[],
     resources: [
       { href: '/pricing', label: 'Pricing', public: true },
       { href: '/referrals', label: 'Referrals', public: true },
@@ -119,6 +126,7 @@ export function Footer() {
   const platformLinks = filterLinks(linkSections.platform)
   const featureLinks = filterLinks(linkSections.features)
   const healthcareLinks = filterLinks(linkSections.healthcare)
+  const familiesLinks = filterLinks(linkSections.families)
   const resourceLinks = filterLinks(linkSections.resources)
   const companyLinks = filterLinks(linkSections.company)
   const legalLinks = filterLinks(linkSections.legal)
@@ -147,10 +155,11 @@ export function Footer() {
     <footer className="bg-gray-900 text-gray-300 border-t border-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Main Footer Content */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-8 mb-12">
           {renderSection('Platform', platformLinks)}
           {renderSection('Features', featureLinks)}
           {renderSection('Healthcare', healthcareLinks)}
+          {renderSection('For Families', familiesLinks)}
           {renderSection('Resources', resourceLinks)}
           {renderSection('Company', companyLinks)}
           {renderSection('Legal', legalLinks)}
