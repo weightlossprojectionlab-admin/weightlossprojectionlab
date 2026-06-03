@@ -229,6 +229,34 @@ export interface ShoppingItem {
     servingSize: string
   }
 
+  /**
+   * Per-serving nutrient panel for the inventory health-demand weight D
+   * (populated at scan via lib/nutrition-extract.extractNutrientPanel). Distinct
+   * from `nutrition` (display, mixed basis): this is engine-facing, unit-normalized
+   * (sodium/potassium mg, others g, calories kcal) and per-serving. `basis` flags
+   * confidence (serving | derived-serving | 100g) for ref_n calibration. Shape
+   * mirrors lib/nutrition-extract.NutrientPanel; kept inline so types stays lib-free.
+   */
+  nutrients?: {
+    sodium?: number
+    sugars?: number
+    saturatedFat?: number
+    transFat?: number
+    fiber?: number
+    protein?: number
+    potassium?: number
+    calories?: number
+    basis: 'serving' | 'derived-serving' | '100g'
+  }
+
+  /**
+   * Canonical allergen tokens parsed at scan-add from the product's
+   * ingredients_text / allergens (lib/allergen-parser.parseAllergens). Drives
+   * the household `unsafeFor` safety check; values are CanonicalAllergen strings
+   * (kept as string[] so this leaf type doesn't depend on lib/).
+   */
+  allergenTags?: string[]
+
   // Manual Entry Support (for recipe ingredients)
   isManual: boolean // True if added from recipe without barcode
   manualIngredientName?: string // Original ingredient text from recipe (e.g., "2 cups milk")
@@ -604,6 +632,32 @@ export interface GlobalProduct {
   // Category & Classification
   category: ProductCategory
   categories?: string[] // Multiple categories if applicable (e.g., ['dairy', 'beverages'])
+
+  /**
+   * Canonical Big-9 allergen tags parsed from OFF `allergens` + `ingredients_text`
+   * at scan (lib/allergen-parser.allergensFromProductFields). Product-level truth:
+   * item rows denormalize this; the backfill reads it instead of re-hitting OFF.
+   * [] = parsed, none declared. Absent = legacy doc not yet re-scanned.
+   * Kept as string[] (CanonicalAllergen values) so this leaf type stays lib-free.
+   */
+  allergenTags?: string[]
+
+  /**
+   * Per-serving nutrient panel (lib/nutrition-extract.extractNutrientPanel) stored
+   * at scan so cache-hit lookups forward it to the demand weight D. Same shape as
+   * ShoppingItem.nutrients; kept inline so this leaf type stays lib-free.
+   */
+  nutrients?: {
+    sodium?: number
+    sugars?: number
+    saturatedFat?: number
+    transFat?: number
+    fiber?: number
+    protein?: number
+    potassium?: number
+    calories?: number
+    basis: 'serving' | 'derived-serving' | '100g'
+  }
 
   // Aggregated User Data
   stats: {

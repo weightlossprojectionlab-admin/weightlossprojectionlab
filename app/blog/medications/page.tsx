@@ -8,7 +8,7 @@
 
 import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { blogPostingSchema, faqPageSchema } from '@/lib/json-ld'
+import { blogPostingSchema, faqPageSchema, softwareApplicationSchema, itemListSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   BeakerIcon,
@@ -58,7 +58,27 @@ export const metadata: Metadata = {
   },
 }
 
-const FAQ = [
+// Direct, self-contained Q&A — the "dictionary definition" an AI quick-answer
+// card can lift verbatim. Kept in sync with the visible FAQ section below so
+// the structured data matches on-page content (no schema/content mismatch).
+// The first three are the AEO core (definition / who-it's-for / how-different);
+// the rest are the high-intent questions families actually ask.
+const FAQ_ITEMS = [
+  {
+    question: 'What is medication management?',
+    answer:
+      'Medication management is the practice of tracking every medication a person takes — including doses, schedules, and refills — and recording when each dose is actually taken, so adherence can be verified and missed doses caught. Wellness Projection Lab is a HIPAA-compliant platform that does this for every member of a household: it logs each medication, sends reminders at the scheduled time, builds an adherence history, and alerts caregivers when a dose is skipped.',
+  },
+  {
+    question: 'Who is a family medication tracker for?',
+    answer:
+      "A family medication tracker is for anyone responsible for more than one person's medications — parents managing prescriptions for several children, adult children caring for aging parents from a distance, and multi-caregiver households where siblings, spouses, or home aides share the responsibility and need the same up-to-date medication list and missed-dose alerts.",
+  },
+  {
+    question: 'How is a medication management app different from a basic pill reminder?',
+    answer:
+      'A basic pill reminder just buzzes one person at a dose time. A medication management app tracks unlimited medications across multiple family members, verifies which doses were actually taken, builds an adherence history, sends refill alerts before bottles run out, alerts caregivers when a dose is missed, and exports a formatted medication list for doctors — turning a single alarm into a shared, closed-loop safety system.',
+  },
   {
     question: 'What is the best medication reminder app for elderly parents?',
     answer:
@@ -95,6 +115,42 @@ const FAQ = [
   },
 ]
 
+// Single source of truth for the "Medication Safety Net" sequence — drives BOTH
+// the on-page <ol> and the ItemList schema, so they never drift. Titles are
+// descriptive/keyword-rich for NLP parsing.
+const SAFETY_LOOP_STEPS = [
+  {
+    step: 1,
+    label: 'Track Every Medication and Dose',
+    description: 'Log every medication, dose, and schedule for each family member.',
+  },
+  {
+    step: 2,
+    label: 'Remind at the Scheduled Time',
+    description: 'Push notifications fire at the right time for each medication.',
+  },
+  {
+    step: 3,
+    label: 'Verify Doses and Build Adherence History',
+    description: 'Mark doses taken to build a verified adherence history over time.',
+  },
+  {
+    step: 4,
+    label: 'Alert Caregivers on Missed Doses',
+    description: 'Notify every authorized caregiver when a dose is skipped.',
+  },
+]
+
+// Icons are presentational and kept out of the data const (which feeds the
+// ItemList schema) so the structured data stays plain text. Index-aligned to
+// SAFETY_LOOP_STEPS.
+const SAFETY_LOOP_ICONS = [
+  <ClipboardDocumentCheckIcon key="track" className="w-8 h-8 text-rose-500" />,
+  <BellIcon key="remind" className="w-8 h-8 text-pink-500" />,
+  <CheckCircleIcon key="verify" className="w-8 h-8 text-fuchsia-500" />,
+  <ExclamationTriangleIcon key="alert" className="w-8 h-8 text-amber-500" />,
+]
+
 export default function MedicationsBlogPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -109,7 +165,41 @@ export default function MedicationsBlogPage() {
             'medication reminder app for elderly parents, family medication tracker, pill reminder app for caregivers, medication tracking for multiple family members, medication adherence, refill alerts, caregiver medication app',
         })}
       />
-      <JsonLd data={faqPageSchema(FAQ)} />
+      {/* FAQ schema — lets AI assistants + Google pull a direct quick-answer
+          for "What is medication management?" Mirrors the visible FAQ. */}
+      <JsonLd data={faqPageSchema(FAQ_ITEMS)} />
+      {/* SoftwareApplication — this page describes a product; tell engines its
+          category, platforms, and capabilities (incl. the OCR scan feature). */}
+      <JsonLd
+        data={softwareApplicationSchema({
+          name: 'Wellness Projection Lab Medication Management',
+          description:
+            'A HIPAA-compliant medication management platform that tracks unlimited medications, doses, and schedules for every member of a household, sends smart reminders and refill alerts, verifies adherence, and alerts caregivers when a dose is missed.',
+          url: '/blog/medications',
+          image: '/screenshots/medications/medication-management-grid-desktop-light.png',
+          featureList: [
+            'Unlimited medications per family-member profile',
+            'Smart dose reminders at scheduled times',
+            'Refill alerts before a prescription runs out',
+            'Adherence tracking and history',
+            'Missed-dose alerts to authorized caregivers',
+            'Prescription bottle and label photo capture',
+            'Shared multi-caregiver access with permission controls',
+            'Provider medication-list PDF export',
+          ],
+        })}
+      />
+      {/* ItemList — the "Medication Safety Net" ordered sequence, mirroring the
+          on-page <ol> (single source: SAFETY_LOOP_STEPS). */}
+      <JsonLd
+        data={itemListSchema({
+          name: 'The Medication Safety Net',
+          items: SAFETY_LOOP_STEPS.map((s) => ({
+            name: `${s.step}. ${s.label}`,
+            description: s.description,
+          })),
+        })}
+      />
       {/* Hero Section */}
       <div className="relative bg-gradient-to-br from-rose-600 via-pink-600 to-fuchsia-600 text-white overflow-hidden">
         <div
@@ -129,10 +219,19 @@ export default function MedicationsBlogPage() {
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               The Medication Reminder App for Everyone You Care For
             </h1>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-xl text-white/90 mb-4 leading-relaxed max-w-3xl mx-auto">
               Track medications for your kids, your aging parents, your partner, and yourself — all
               in one place. Smart reminders, refill alerts, and shared access for every caregiver
               who helps.
+            </p>
+            {/* AI-snippet line — one clean, self-contained definition an AI
+                engine can lift verbatim. Kept consistent with the
+                SoftwareApplication schema description. */}
+            <p className="text-base text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+              <strong>WPL Medication Management</strong> is a HIPAA-compliant platform that tracks
+              unlimited medications, doses, and schedules for every member of a household, sends
+              reminders and refill alerts, verifies adherence, and alerts caregivers when a dose is
+              missed.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -153,6 +252,26 @@ export default function MedicationsBlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        {/* ============================================ */}
+        {/* DEFINITION — direct, snippet-extractable answer.   */}
+        {/* Question-form H2 + a self-contained definition is   */}
+        {/* the structure AI quick-answer cards + featured      */}
+        {/* snippets pull from.                                 */}
+        {/* ============================================ */}
+        <section className="mb-20 max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-4">What Is Medication Management?</h2>
+          <p className="text-lg text-foreground leading-relaxed">
+            <strong>Medication management</strong> is the practice of tracking every medication a
+            person takes &mdash; including doses, schedules, and refills &mdash; and recording when
+            each dose is actually taken, so adherence can be verified and missed doses caught.
+          </p>
+          <p className="text-base text-muted-foreground leading-relaxed mt-4">
+            For a whole household, that means one place to track unlimited medications per person,
+            send reminders at the right time, watch for refills, and alert caregivers the moment a
+            dose is skipped &mdash; instead of relying on memory and a 9 p.m. phone call.
+          </p>
+        </section>
 
         {/* Problem Section */}
         <section className="mb-20">
@@ -185,32 +304,20 @@ export default function MedicationsBlogPage() {
           <p className="text-lg text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
             WPL creates a closed-loop system. Every medication is tracked, every dose is reminded, every action is verified.
           </p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-            <SafetyLoopStep
-              step="1"
-              icon={<ClipboardDocumentCheckIcon className="w-8 h-8 text-rose-500" />}
-              label="Track"
-              description="Log every medication, dose, and schedule"
-            />
-            <SafetyLoopStep
-              step="2"
-              icon={<BellIcon className="w-8 h-8 text-pink-500" />}
-              label="Remind"
-              description="Push notifications at the right time"
-            />
-            <SafetyLoopStep
-              step="3"
-              icon={<CheckCircleIcon className="w-8 h-8 text-fuchsia-500" />}
-              label="Verify"
-              description="Mark doses taken, build adherence history"
-            />
-            <SafetyLoopStep
-              step="4"
-              icon={<ExclamationTriangleIcon className="w-8 h-8 text-amber-500" />}
-              label="Alert"
-              description="Notify caregivers if doses are missed"
-            />
-          </div>
+          {/* Ordered list — the semantic primitive for a numbered sequence.
+              NLP models (BERT/MUM) and screen readers parse <ol> as ordered,
+              and each step's number now lives IN the heading text. */}
+          <ol className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto list-none p-0 m-0">
+            {SAFETY_LOOP_STEPS.map((s, i) => (
+              <SafetyLoopStep
+                key={s.step}
+                step={String(s.step)}
+                icon={SAFETY_LOOP_ICONS[i]}
+                label={s.label}
+                description={s.description}
+              />
+            ))}
+          </ol>
           <div className="flex justify-center mt-6">
             <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <ArrowPathIcon className="w-5 h-5" />
@@ -310,7 +417,7 @@ export default function MedicationsBlogPage() {
             Answers to what families ask us most about medication tracking across the household.
           </p>
           <div className="max-w-3xl mx-auto space-y-3">
-            {FAQ.map((item) => (
+            {FAQ_ITEMS.map((item) => (
               <details
                 key={item.question}
                 className="group bg-card rounded-xl border-2 border-border p-5 open:shadow-md transition-shadow"
@@ -385,15 +492,19 @@ function ProblemCard({ icon, title, description }: { icon: React.ReactNode; titl
 }
 
 function SafetyLoopStep({ step, icon, label, description }: { step: string; icon: React.ReactNode; label: string; description: string }) {
+  // The ordinal lives IN the heading text ("1. Track…") so NLP parses the
+  // sequence chronologically — not as a detached number above a heading.
   return (
-    <div className="bg-card rounded-xl border-2 border-border p-5 text-center">
+    <li className="bg-card rounded-xl border-2 border-border p-5 text-center list-none">
       <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-sm font-bold mb-3">
         {step}
       </div>
       <div className="flex justify-center mb-2">{icon}</div>
-      <h3 className="font-semibold text-foreground mb-1">{label}</h3>
+      <h3 className="font-semibold text-foreground mb-1">
+        <span className="text-rose-600 dark:text-rose-400 font-bold">{step}.</span> {label}
+      </h3>
       <p className="text-xs text-muted-foreground">{description}</p>
-    </div>
+    </li>
   )
 }
 

@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
 import { onAuthStateChanged } from 'firebase/auth'
 import { useTenantDashboard, type FranchiseFamilySnapshot } from '@/hooks/useTenantDashboard'
+import type { ScheduledVisit, CoordinationAppointment } from '@/app/tenant-shell/dashboard/_lib/load-families'
 import { getCSRFToken } from '@/lib/csrf'
 import { logger } from '@/lib/logger'
 import {
@@ -47,6 +48,10 @@ export default function FranchiseDashboardOverview() {
   const [tenantId, setTenantId] = useState<string | null>(null)
   const [authChecked, setAuthChecked] = useState(false)
   const [authorized, setAuthorized] = useState(false)
+  // Who's looking — decides whether "Today's Schedule" is the whole
+  // practice's board (admin) or just this person's route (staff).
+  const [viewerUid, setViewerUid] = useState<string | null>(null)
+  const [viewerIsAdmin, setViewerIsAdmin] = useState(false)
   const router = useRouter()
 
   // Read tenantId from the DOM (set by layout.tsx's data-tenant-id)
@@ -65,8 +70,15 @@ export default function FranchiseDashboardOverview() {
       try {
         const tokenResult = await user.getIdTokenResult()
         const claims = tokenResult.claims as any
-        if (claims.role === 'admin' || (claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId) || (claims.tenantRole === 'franchise_staff' && claims.tenantId === tenantId)) {
+        const isSuperAdmin = claims.role === 'admin'
+        const isFranchiseAdmin = claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId
+        const isFranchiseStaff = claims.tenantRole === 'franchise_staff' && claims.tenantId === tenantId
+        if (isSuperAdmin || isFranchiseAdmin || isFranchiseStaff) {
           setAuthorized(true)
+          setViewerUid(user.uid)
+          // Owner/super-admin sees the whole practice board; a staff
+          // member sees only the visits assigned to them.
+          setViewerIsAdmin(isSuperAdmin || isFranchiseAdmin)
         } else {
           router.replace('/login?next=/dashboard')
         }
@@ -80,11 +92,39 @@ export default function FranchiseDashboardOverview() {
     patientSnapshots,
     activity,
     actionItems,
+    scheduledVisits,
+    familyAppointments,
     pendingRequests,
     loading,
     error,
     refetch,
   } = useTenantDashboard(tenantId)
+
+  // Whose visits to show: admin sees the whole practice; staff see only
+  // visits assigned to them (matched on their uid = practiceStaffId).
+  const visibleVisits = viewerIsAdmin
+    ? scheduledVisits
+    : scheduledVisits.filter(v => v.staffId === viewerUid)
+
+  // Caregiver-visits scheduled for today.
+  const todaysVisits = visibleVisits.filter(v => {
+    const d = new Date(v.dateTime)
+    const now = new Date()
+    return d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate()
+  })
+
+  // Unassigned visits today — the owner's coverage gap. Admin-only (a
+  // staff member can't assign, and only ever sees their own anyway).
+  const unassignedToday = viewerIsAdmin
+    ? todaysVisits.filter(v => !v.staffId)
+    : []
+
+  // Distinct staff covering today's visits — for the stat-card subtext.
+  const staffCoveringToday = new Set(
+    todaysVisits.filter(v => v.staffId).map(v => v.staffId)
+  ).size
 
   const [selectedView, setSelectedView] = useState<'overview' | 'activity'>('overview')
 
@@ -159,10 +199,15 @@ export default function FranchiseDashboardOverview() {
             />
             <StatCard
               icon={<CalendarDaysIcon className="w-6 h-6" />}
-              label="Recent Meals"
-              value={(stats?.recentActivity as any)?.meals || 0}
-              subtext="families with meals logged"
-              color="green"
+              label="Today's Visits"
+              value={todaysVisits.length}
+              subtext={
+                viewerIsAdmin
+                  ? `${staffCoveringToday} staff${unassignedToday.length ? ` · ${unassignedToday.length} unassigned` : ''}`
+                  : 'assigned to you'
+              }
+              color={unassignedToday.length ? 'red' : 'green'}
+              highlight={unassignedToday.length > 0}
             />
           </div>
 
@@ -183,6 +228,36 @@ export default function FranchiseDashboardOverview() {
             </div>
           )}
 
+          {/* Unassigned-visit Alert — a caregiver-visit today with no staff
+              covering it. Coverage gap; same prominence as Pending Requests. */}
+          {unassignedToday.length > 0 && (
+            <div className="bg-red-50 dark:bg-red-900/20 border-2 border-red-300 dark:border-red-800 rounded-lg p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <ExclamationTriangleIcon className="w-6 h-6 text-red-600" />
+                <h2 className="text-xl font-bold text-red-900 dark:text-red-100">
+                  {unassignedToday.length} Unassigned Visit{unassignedToday.length !== 1 ? 's' : ''} Today
+                </h2>
+              </div>
+              <div className="space-y-2">
+                {unassignedToday.map(v => (
+                  <Link
+                    key={v.id}
+                    href={`/dashboard/families/${v.clientId}`}
+                    className="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 hover:shadow-sm transition-shadow"
+                  >
+                    <span className="text-sm font-semibold text-red-700 dark:text-red-300 w-20 shrink-0">
+                      {new Date(v.dateTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                    <span className="flex-1 min-w-0 truncate text-gray-900 dark:text-gray-100">
+                      {capitalizeName(v.clientName)} · {v.reason || 'Visit'}
+                    </span>
+                    <span className="text-xs font-medium text-red-600 dark:text-red-400 shrink-0">Assign staff →</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Tab Buttons */}
           <div className="flex items-center gap-2 border-b border-gray-200 dark:border-gray-700">
             <TabButton active={selectedView === 'overview'} onClick={() => setSelectedView('overview')} label="Overview" />
@@ -192,6 +267,15 @@ export default function FranchiseDashboardOverview() {
           {/* Overview Tab */}
           {selectedView === 'overview' && (
             <div className="space-y-6">
+              {/* Today's Schedule — the day's caregiver-visits. For an admin
+                  it's the whole practice's board grouped by staff; for a staff
+                  member it's their own route. Unassigned visits live in the
+                  alert above, so the board shows only assigned ones. */}
+              <TodaysScheduleSection
+                visits={viewerIsAdmin ? todaysVisits.filter(v => v.staffId) : todaysVisits}
+                groupByStaff={viewerIsAdmin}
+              />
+
               {/* Family Snapshots */}
               <section>
                 <div className="flex items-center justify-between mb-4">
@@ -216,6 +300,11 @@ export default function FranchiseDashboardOverview() {
                   </div>
                 )}
               </section>
+
+              {/* Family Appointments — members' OWN external visits. Coordination
+                  awareness (transport, follow-up), NOT the practitioner's calendar.
+                  Distinct intent from Today's Schedule above. */}
+              <FamilyAppointmentsSection appointments={familyAppointments} />
 
               {/* Management Tools */}
               <section>
@@ -273,6 +362,154 @@ interface StatCardProps {
   subtext?: string
   color: 'blue' | 'red' | 'yellow' | 'purple' | 'green' | 'teal'
   highlight?: boolean
+}
+
+function VisitRow({ visit, showStaff }: { visit: ScheduledVisit; showStaff: boolean }) {
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  return (
+    <li>
+      <Link
+        href={`/dashboard/families/${visit.clientId}`}
+        className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+      >
+        <span className="w-20 shrink-0 text-sm font-semibold text-blue-600 dark:text-blue-400">
+          {fmtTime(visit.dateTime)}
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+            {capitalizeName(visit.clientName)}
+            {visit.patientName && visit.patientName !== visit.clientName ? ` · ${capitalizeName(visit.patientName)}` : ''}
+          </p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+            {visit.reason || 'Visit'}
+            {visit.location ? ` · ${visit.location}` : ''}
+          </p>
+        </div>
+        {showStaff && visit.staffName && (
+          <span className="hidden sm:inline whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">
+            {visit.staffName}
+          </span>
+        )}
+      </Link>
+    </li>
+  )
+}
+
+function TodaysScheduleSection({ visits, groupByStaff }: { visits: ScheduledVisit[]; groupByStaff: boolean }) {
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
+
+  // Admin view groups by staff member so coverage/workload is visible at a
+  // glance. Staff view is a flat personal list (grouping is pointless when
+  // every visit is theirs).
+  const groups: { staffName: string; visits: ScheduledVisit[] }[] = []
+  if (groupByStaff) {
+    const byStaff = new Map<string, ScheduledVisit[]>()
+    for (const v of visits) {
+      const key = v.staffName || 'Staff'
+      if (!byStaff.has(key)) byStaff.set(key, [])
+      byStaff.get(key)!.push(v)
+    }
+    for (const [staffName, vs] of byStaff) groups.push({ staffName, visits: vs })
+    groups.sort((a, b) => a.staffName.localeCompare(b.staffName))
+  }
+
+  return (
+    <section className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <CalendarDaysIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Today&rsquo;s Schedule</h2>
+        </div>
+        <span className="text-sm text-gray-500 dark:text-gray-400">{today}</span>
+      </div>
+      {visits.length === 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">
+          No visits scheduled today.
+        </p>
+      ) : groupByStaff ? (
+        <div className="space-y-5">
+          {groups.map(group => (
+            <div key={group.staffName}>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{group.staffName}</h3>
+                <span className="text-xs text-gray-400 dark:text-gray-500">
+                  {group.visits.length} visit{group.visits.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+                {group.visits.map(v => (
+                  <VisitRow key={v.id} visit={v} showStaff={false} />
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+          {visits.map(v => (
+            <VisitRow key={v.id} visit={v} showStaff={false} />
+          ))}
+        </ul>
+      )}
+    </section>
+  )
+}
+
+function FamilyAppointmentsSection({ appointments }: { appointments: CoordinationAppointment[] }) {
+  const fmtDate = (iso: string) =>
+    new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const fmtTime = (iso: string) =>
+    new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+
+  // Coordination is the whole point of this view, so surface the ones that
+  // need a ride first — that's the action the practitioner can take here.
+  const needsRide = (a: CoordinationAppointment) =>
+    a.requiresDriver && a.driverStatus !== 'accepted'
+
+  if (appointments.length === 0) return null
+
+  return (
+    <section>
+      <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">Family Appointments</h2>
+      <div className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
+        {appointments.map(a => (
+          <Link
+            key={a.id}
+            href={`/dashboard/families/${a.clientId}`}
+            className="flex items-center gap-4 p-4 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors first:rounded-t-lg last:rounded-b-lg"
+          >
+            <div className="w-16 shrink-0 text-center">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{fmtDate(a.dateTime)}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{fmtTime(a.dateTime)}</p>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                {capitalizeName(a.patientName)}
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+                {a.specialty || a.providerName}
+                {a.clientName && a.clientName !== a.patientName ? ` · ${capitalizeName(a.clientName)}` : ''}
+              </p>
+            </div>
+            {needsRide(a) ? (
+              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                🚗 needs ride
+              </span>
+            ) : a.requiresDriver ? (
+              <span className="shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                ✓ ride set
+              </span>
+            ) : null}
+          </Link>
+        ))}
+      </div>
+    </section>
+  )
 }
 
 function StatCard({ icon, label, value, subtext, color, highlight }: StatCardProps) {
@@ -333,7 +570,7 @@ function FamilySnapshotCard({ family }: { family: FranchiseFamilySnapshot }) {
   return (
     <div
       onClick={() => router.push(`/dashboard/families/${family.id}`)}
-      className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all cursor-pointer"
+      className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-5 hover:border-blue-300 dark:hover:border-blue-600 hover:shadow-lg transition-all cursor-pointer"
     >
       <div className="flex items-start gap-4 mb-4">
         <div className="w-14 h-14 rounded-full bg-blue-100 dark:bg-blue-900/20 flex items-center justify-center shrink-0">
@@ -377,7 +614,7 @@ function FamilySnapshotCard({ family }: { family: FranchiseFamilySnapshot }) {
           </div>
         )}
       </div>
-      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-right">
+      <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 text-right">
         <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
           View Family →
         </span>

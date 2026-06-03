@@ -10,6 +10,8 @@
  */
 
 import { logger } from '@/lib/logger'
+import { allergensFromProductFields } from '@/lib/allergen-parser'
+import { extractNutrientPanel, type Nutriments } from '@/lib/nutrition-extract'
 import {
   collection,
   doc,
@@ -272,6 +274,20 @@ export async function addOrUpdateShoppingItem(
     const category = pickCategory(product)
     const productKey = generateProductKey(product.code, product.product_name || 'Unknown Product', product.brands || '')
 
+    // Parse allergens ONCE here (SoC: heavy parse on write, pure eval on read),
+    // BEFORE the household/individual split so BOTH paths tag the item. Canonical
+    // allergens_tags is the locale-proof primary source; allergens + ingredients
+    // are unioned in as fallback (do-no-harm). Empty → omitted downstream.
+    const allergenTags = allergensFromProductFields(product.allergens, product.ingredients_text, product.allergens_tags)
+
+    // Per-serving nutrient panel for the health-demand weight D. Prefer the panel
+    // /api/products/lookup already extracted server-side (cache-hit AND miss carry
+    // it); fall back to extracting here for any caller that passes raw nutriments.
+    // null when OFF carries no panel nutrients → D stays neutral. Shared by both
+    // ingestion paths like allergenTags.
+    const nutrients =
+      product.nutrients ?? extractNutrientPanel(product.nutriments as Nutriments | undefined, product.serving_size)
+
     // HOUSEHOLD MODE: If householdId is provided, use household deduplication
     if (options.householdId) {
       const actualMemberId = options.memberId || userId
@@ -289,7 +305,9 @@ export async function addOrUpdateShoppingItem(
           quantity: options.quantity ?? 1,
           unit: options.unit ?? suggestDefaultUnit(category),
           inStock: options.inStock ?? true,
-          needed: options.needed ?? false
+          needed: options.needed ?? false,
+          allergenTags,
+          nutrients: nutrients ?? undefined,
         }
       )
     }
@@ -325,6 +343,12 @@ export async function addOrUpdateShoppingItem(
         ...(incomingContainerSize ? { containerSize: incomingContainerSize } : {}),
         ...(incomingContainerUnit ? { containerUnit: incomingContainerUnit } : {}),
         ...(newRemaining !== undefined ? { remainingAmount: newRemaining } : {}),
+        // Self-heal allergens on re-scan: the fresh parse (canonical allergens_tags
+        // first) supersedes whatever the row had — fixes rows tagged before the
+        // pipeline fix. Only when non-empty, so a sparse lookup never erases a set.
+        ...(allergenTags.length > 0 ? { allergenTags } : {}),
+        // Self-heal the nutrient panel too (populates rows scanned before Tier-2).
+        ...(nutrients ? { nutrients } : {}),
         updatedAt: new Date()
       }
 
@@ -362,6 +386,8 @@ export async function addOrUpdateShoppingItem(
         ? containerSize * quantity
         : undefined
 
+    // allergenTags computed once above (shared with the household path).
+
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
       productKey, // NEW: Add product key for deduplication
@@ -370,6 +396,8 @@ export async function addOrUpdateShoppingItem(
       brand: product.brands || '',
       imageUrl: product.image_front_url || product.image_url || '',
       category,
+      ...(allergenTags.length > 0 ? { allergenTags } : {}),
+      ...(nutrients ? { nutrients } : {}),
       // Phase 0b — auto-fill assignedStoreId from the user's history
       // for this category. Owner can override via the row chip.
       ...(autoAssignedStoreId ? { assignedStoreId: autoAssignedStoreId } : {}),
@@ -1260,6 +1288,12 @@ export async function updateGlobalProductDatabase(
       servingSize: productData.serving_size || productData.quantity || 'unknown'
     }
 
+    // Allergens are a property of the PRODUCT (a barcode's allergens don't vary
+    // by household), so product_database is their canonical home. Parse once
+    // here; item rows stamp the same value at scan, and a backfill can read it
+    // back without re-hitting OpenFoodFacts per item.
+    const allergenTags = allergensFromProductFields(productData.allergens, productData.ingredients_text, productData.allergens_tags)
+
     if (productSnap.exists()) {
       // Product exists - update aggregated stats
       const existing = productSnap.data() as any
@@ -1274,6 +1308,13 @@ export async function updateGlobalProductDatabase(
       // Increment purchase count if purchased
       if (metadata.purchased) {
         updates['stats.totalPurchases'] = (existing.stats?.totalPurchases || 0) + 1
+      }
+
+      // Self-healing allergen backfill: populate/refresh the canonical tags when
+      // this scan carries allergen data. Never ERASE a previously-found set from
+      // a sparse later record (do-no-harm) — only write when we found something.
+      if (allergenTags.length > 0) {
+        updates.allergenTags = allergenTags
       }
 
       // Add store to list if not already there
@@ -1314,6 +1355,7 @@ export async function updateGlobalProductDatabase(
         nutrition,
         category: metadata.category,
         categories: productData.categories ? productData.categories.split(',').map(c => c.trim()) : [metadata.category],
+        allergenTags, // authoritative at creation; [] = parsed, none declared
         stats: {
           totalScans: 1,
           uniqueUsers: 1, // Will use array union in future for exact count

@@ -13,7 +13,11 @@ import {
   getPlanRelationship,
   type PlanRelationship,
 } from '@/lib/subscription-utils'
-import { PLANS } from '@/lib/plan-details'
+import Link from 'next/link'
+import { PLANS, getFlattenedFeatureNames, getPlanById } from '@/lib/plan-details'
+import { PlanCard } from '@/components/subscription/PlanCard'
+import { PLAN_CAPS, PLAN_FEATURES } from '@/lib/feature-gates'
+import { faqPageSchema } from '@/lib/json-ld'
 import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 
@@ -40,7 +44,7 @@ function schemaDescriptionFor(planId: SubscriptionPlan, baseDescription: string)
   const aiMlContext: Record<SubscriptionPlan, string> = {
     free: '',
     single:
-      'Includes AI-powered meal photo recognition built on Gemini Vision, in-store shopping mode with live cart and shared lists, barcode scanning against a 456,000-product national-retailer catalog (offline-cached for dead zones), AI receipt scanning at checkout, curated recipe library with smart scaling and 650+ ingredient substitutions, cooking timers with audio chimes, and machine-learning coaching that personalizes guidance from each user\'s logging history.',
+      'Includes AI-powered meal photo recognition built on Gemini Vision, in-store shopping mode with live cart and shared lists, barcode scanning against a 456,000+ product national-retailer catalog (offline-cached for dead zones), AI receipt scanning at checkout, curated recipe library with smart scaling and 650+ ingredient substitutions, cooking timers with audio chimes, and machine-learning coaching that personalizes guidance from each user\'s logging history.',
     single_plus:
       'Adds clinical-grade health management for individuals managing chronic conditions, medications, or working with caregivers. Includes AI-powered prescription label scanning, AI document OCR for lab reports, insurance cards, and medical records (Gemini Vision), lab-result plausibility checks that catch transcription errors, smart vital reminders with custom schedules, offline medical-data cache for doctor visits, healthcare provider management, shareable health reports, and role-based access for up to three external caregivers.',
     family_basic:
@@ -51,6 +55,87 @@ function schemaDescriptionFor(planId: SubscriptionPlan, baseDescription: string)
       'Up to 20 family members per household across up to 10 households (built for sandwich-generation caregivers managing your home, your parents, your in-laws, and your adult kids) plus up to 50 external caregivers, white-glove onboarding, machine-learning insights at scale, custom health reports, full data export, API access for integrations, early access to new ML and AI features, and a dedicated account manager.',
   }
   return `${baseDescription} ${aiMlContext[planId] ?? ''}`.trim()
+}
+
+// Everything quantitative in the FAQ is DERIVED from the platform's source
+// of truth — prices from PLANS, caps from PLAN_CAPS, the medication gate from
+// PLAN_FEATURES — so the answers (and the AI snippets that cite them) can
+// never drift from what the code actually enforces.
+const PRICE_LOW = Math.min(...PLANS.map((p) => p.monthlyPrice)).toFixed(2)
+const PRICE_HIGH = Math.max(...PLANS.map((p) => p.monthlyPrice)).toFixed(2)
+const SINGLE_PLUS_PRICE = (getPlanById('single_plus')?.monthlyPrice ?? 14.99).toFixed(2)
+
+// Family Premium capacity — straight from the enforced caps.
+const PREMIUM_CAPS = PLAN_CAPS['family_premium']
+
+// Which plans gate medication/appointment tracking (ordered low → high).
+const MED_PLANS = PLAN_FEATURES['medications'] ?? []
+const MED_START_NAME = getPlanById(MED_PLANS[0])?.name ?? 'Single User Plus'
+const MED_ABOVE_NAMES = MED_PLANS.slice(1)
+  .map((id) => getPlanById(id)?.name)
+  .filter((n): n is string => !!n)
+const andList = (items: string[]) =>
+  items.length <= 1
+    ? items[0] ?? ''
+    : `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`
+
+// FAQ as data — drives BOTH the visible accordion and the FAQPage schema
+// (they can't drift). Leads with informational/quantitative intents that AI
+// Overviews answer with direct snippets, then the transactional questions.
+const PRICING_FAQ = [
+  {
+    question: 'How much does Wellness Projection Lab cost?',
+    answer: `Paid plans range from $${PRICE_LOW} to $${PRICE_HIGH} per month (Single User up to Family Premium), billed monthly or annually. A free plan with basic features is also available.`,
+  },
+  {
+    question: 'Is there a free version of Wellness Projection Lab?',
+    answer:
+      'Yes. The free plan is free forever with basic features — no trial period and no credit card required. Paid plans include a 7-day free trial.',
+  },
+  {
+    question: 'How many users are included in the Family Premium plan?',
+    answer: `Up to ${PREMIUM_CAPS.maxMembersPerHousehold} family members per household, across up to ${PREMIUM_CAPS.maxHouseholds} households, plus up to ${PREMIUM_CAPS.maxCaregivers} external caregivers.`,
+  },
+  {
+    question: 'Which plan includes medication tracking?',
+    answer: `Medication and appointment tracking starts on the ${MED_START_NAME} plan ($${SINGLE_PLUS_PRICE}/month) and is included in every plan above it — ${andList(MED_ABOVE_NAMES)}.`,
+  },
+  {
+    question: 'How does the 7-day trial work?',
+    answer:
+      "When you upgrade from the free plan to any paid plan, you get full access to all features for 7 days with no payment required. After your trial ends, you'll be prompted to add payment to continue. The free plan itself has no trial period — it's free forever with basic features.",
+  },
+  {
+    question: 'Can I cancel anytime?',
+    answer:
+      "Yes. You can cancel your subscription at any time from your account settings. You'll retain access until the end of your billing period.",
+  },
+  {
+    question: 'What happens after my trial ends?',
+    answer:
+      "After your 7-day trial of a paid plan ends, you'll need to add payment to continue with that plan's features. If you don't add payment, you'll automatically return to the free plan. We'll send you reminders before your trial ends so you're never surprised.",
+  },
+  {
+    question: 'Can I upgrade or downgrade my plan?',
+    answer:
+      'Yes. You can change your plan at any time. Upgrades take effect immediately, while downgrades take effect at the end of your billing cycle.',
+  },
+]
+
+// High-value feature → dedicated feature page. Establishes an internal
+// semantic link from each pricing bullet back to its authoritative entity
+// page (helps NLP map the feature to a definition). Only maps features that
+// have a real page; everything else renders as plain text.
+const FEATURE_LINKS: Record<string, string> = {
+  'Meal photo recognition': '/blog/meal-tracking',
+  'Weight & step tracking': '/blog/weight-tracking',
+  'Progress dashboard': '/blog/dashboard',
+  'Medical records & history': '/blog/medical-documents',
+  'Medications & appointments': '/blog/medications',
+  'Vitals monitoring with smart reminders': '/blog/vitals-tracking',
+  'Healthcare provider management': '/blog/providers',
+  'Family health dashboard': '/blog/dashboard',
+  'Real-time shared shopping lists': '/blog/smart-shopping',
 }
 
 export default function PricingPage() {
@@ -314,41 +399,45 @@ export default function PricingPage() {
   // visible card descriptions — they include the AI/ML technology
   // keywords (Gemini Vision, machine learning) for search-engine
   // and LLM consumption. Visible UI stays clean for humans.
+  // Toggle-independent so crawlers see BOTH billing cycles regardless of
+  // UI state. Each plan emits a monthly AND a yearly Offer, and the feature
+  // list is FLATTENED (inheritance resolved) so an AI extraction model sees
+  // every concrete feature each tier includes — not "Everything in X".
+  const billingOffer = (price: number, unit: 'MON' | 'ANN') => ({
+    '@type': 'Offer',
+    price: price.toString(),
+    priceCurrency: 'USD',
+    priceSpecification: {
+      '@type': 'UnitPriceSpecification',
+      price: price.toString(),
+      priceCurrency: 'USD',
+      unitCode: unit,
+      referenceQuantity: { '@type': 'QuantitativeValue', value: 1, unitCode: unit },
+    },
+    availability: 'https://schema.org/InStock',
+    url: 'https://www.wellnessprojectionlab.com/pricing',
+  })
+
   const productSchema = {
     '@context': 'https://schema.org',
-    '@graph': PLANS.map((plan) => {
-      const price = billingInterval === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice
-      const includedFeatures = plan.features.filter((f) => f.included).map((f) => f.name)
-      return {
-        '@type': 'Product',
-        name: `Wellness Projection Lab — ${plan.name}`,
-        description: schemaDescriptionFor(plan.id, plan.description),
-        category: 'Health & Wellness Software',
-        brand: { '@type': 'Brand', name: 'Wellness Projection Lab' },
-        offers: {
-          '@type': 'Offer',
-          price: price.toString(),
-          priceCurrency: 'USD',
-          priceSpecification: {
-            '@type': 'UnitPriceSpecification',
-            price: price.toString(),
-            priceCurrency: 'USD',
-            unitCode: billingInterval === 'monthly' ? 'MON' : 'ANN',
-            referenceQuantity: {
-              '@type': 'QuantitativeValue',
-              value: 1,
-              unitCode: billingInterval === 'monthly' ? 'MON' : 'ANN',
-            },
-          },
-          availability: 'https://schema.org/InStock',
-        },
-        additionalProperty: includedFeatures.map((featureName) => ({
-          '@type': 'PropertyValue',
-          name: 'Feature',
-          value: featureName,
-        })),
-      }
-    }),
+    '@graph': PLANS.map((plan) => ({
+      '@type': 'Product',
+      name: `Wellness Projection Lab — ${plan.name}`,
+      description: schemaDescriptionFor(plan.id, plan.description),
+      category: 'Health & Wellness Software',
+      brand: { '@type': 'Brand', name: 'Wellness Projection Lab' },
+      offers: [
+        billingOffer(plan.monthlyPrice, 'MON'),
+        billingOffer(plan.yearlyPrice, 'ANN'),
+      ],
+      // Flattened — resolves "Everything in {parentPlan}" so each tier lists
+      // its full concrete feature set for NLP/AEO extraction.
+      additionalProperty: getFlattenedFeatureNames(plan.id).map((featureName) => ({
+        '@type': 'PropertyValue',
+        name: 'Feature',
+        value: featureName,
+      })),
+    })),
   }
 
   return (
@@ -359,6 +448,12 @@ export default function PricingPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+      {/* FAQPage schema — lets Google + AI Overviews pull trial, pricing,
+          and capacity answers as direct snippets. Mirrors the visible FAQ. */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqPageSchema(PRICING_FAQ)) }}
       />
       <div className="max-w-7xl mx-auto">
         {/* Header */}
@@ -409,119 +504,98 @@ export default function PricingPage() {
             const isTrialPlan = relationship === 'currently_trialing'
 
             return (
-              <div
+              <PlanCard
                 key={planData.id}
-                className={`relative rounded-lg border-2 flex flex-col p-4 sm:p-6 ${
-                  planData.popular
-                    ? 'border-primary shadow-lg'
-                    : 'border-border hover:border-primary/50'
-                } ${isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'}`}
-              >
-                {/* Card badge — one chip floated on the top edge of
-                    the card (half-inside, half-outside), same visual
-                    treatment for every state. Priority resolves to a
-                    single label per card:
-                      Current Plan (paid) > Free Trial (trialing) >
-                      Most Popular (marketing-only)
-                    so a user trialing the popular plan sees "Free
-                    Trial" instead of "Most Popular", and a user
-                    paying for the popular plan sees "Current Plan".
-                    The user-specific badge always wins. */}
-                {(() => {
-                  const badge = isCurrentPlan
+                highlighted={planData.popular}
+                tintClassName={isCurrentPlan ? 'bg-primary/5' : isTrialPlan ? 'bg-yellow-50 dark:bg-yellow-900/10' : 'bg-card'}
+                className={!planData.popular ? 'hover:border-primary/50' : ''}
+                badge={
+                  // Priority per card: Current Plan (paid) > Free Trial
+                  // (trialing) > Most Popular (marketing). The user-specific
+                  // badge always wins over the marketing one.
+                  isCurrentPlan
                     ? { label: 'Current Plan', className: 'bg-green-100 text-green-800' }
                     : isTrialPlan
                       ? { label: 'Free Trial', className: 'bg-yellow-100 text-yellow-800' }
                       : planData.popular
                         ? { label: 'Most Popular', className: 'bg-primary text-white' }
                         : null
-                  if (!badge) return null
-                  return (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap ${badge.className}`}
-                      >
-                        {badge.label}
-                      </span>
+                }
+                header={
+                  <>
+                    {/* Description has min-height so every card's price block
+                        starts at the same vertical position regardless of how
+                        long the copy is — preserves row alignment. */}
+                    <div className="mb-4">
+                      <h3 className="text-xl font-bold text-foreground mb-2">
+                        {planData.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground line-clamp-6 min-h-[8rem]">
+                        {planData.description}
+                      </p>
                     </div>
-                  )
-                })()}
 
-                {/* Plan Header — description has min-height so every
-                    card's price block starts at the same vertical
-                    position regardless of how long the description
-                    text is. Without this, Family Basic's 6-line copy
-                    would push its features further down than Single
-                    User's 3-line copy, breaking row alignment. */}
-                <div className="mb-4">
-                  <h3 className="text-xl font-bold text-foreground mb-2">
-                    {planData.name}
-                  </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-6 min-h-[8rem]">
-                    {planData.description}
-                  </p>
-                </div>
-
-                {/* Pricing — only the active billing-interval cards
-                    show the savings line, so within a given view all
-                    cards have the same shape. No min-h needed (the
-                    earlier reserve added empty whitespace on monthly
-                    without solving any real misalignment). */}
-                <div className="mb-6">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-foreground">
-                      ${price}
-                    </span>
-                    <span className="text-muted-foreground">
-                      /{billingInterval === 'monthly' ? 'mo' : 'yr'}
-                    </span>
-                  </div>
-                  {billingInterval === 'yearly' && (
-                    <p className="text-sm text-green-600 mt-1">
-                      Save ${savings.amount}/year ({savings.percentage}% off)
-                    </p>
-                  )}
-                </div>
-
-                {/* Features — included-only. The strikethrough excluded
-                    items used to render here for at-a-glance plan
-                    comparison, but they created visual noise (Single
-                    User had 3 line-through rows at the bottom of its
-                    list, hard to scan) without adding decision-value
-                    that isn't already covered by comparing card-to-
-                    card horizontally. The comparison happens BETWEEN
-                    cards, not inside each one. */}
-                <ul className="space-y-3 mb-6 flex-grow">
-                  {planData.features
-                    .filter((feature) => feature.included)
-                    .map((feature, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <CheckIcon className="h-5 w-5 flex-shrink-0 mt-0.5 text-green-600" />
-                        <span className="text-sm text-foreground">{feature.name}</span>
-                      </li>
-                    ))}
-                </ul>
-
-                {/* CTA Button — fixed height (h-12) + whitespace-nowrap
-                    + overflow-ellipsis so every card's button is
-                    visually identical regardless of label length
-                    ("Current Plan" vs "Switch to Single User Plus").
-                    Long labels truncate with an ellipsis instead of
-                    wrapping to two lines and breaking row alignment. */}
-                <button
-                  onClick={() => handleSelectPlan(planData.id)}
-                  disabled={loading === planData.id || isCurrentPlan}
-                  className={`w-full h-12 px-4 rounded-lg font-medium transition-colors whitespace-nowrap overflow-hidden text-ellipsis ${
-                    isCurrentPlan
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : planData.popular
-                      ? 'bg-primary text-white hover:bg-primary/90'
-                      : 'bg-primary/10 text-primary hover:bg-primary/20'
-                  } disabled:opacity-50`}
-                >
-                  {getButtonText(planData.id, relationship, loading === planData.id)}
-                </button>
-              </div>
+                    <div className="mb-6">
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-4xl font-bold text-foreground">
+                          ${price}
+                        </span>
+                        <span className="text-muted-foreground">
+                          /{billingInterval === 'monthly' ? 'mo' : 'yr'}
+                        </span>
+                      </div>
+                      {billingInterval === 'yearly' && (
+                        <p className="text-sm text-green-600 mt-1">
+                          Save ${savings.amount}/year ({savings.percentage}% off)
+                        </p>
+                      )}
+                    </div>
+                  </>
+                }
+                features={
+                  <ul className="space-y-3 mb-6">
+                    {planData.features
+                      .filter((feature) => feature.included)
+                      .map((feature, index) => {
+                        const href = FEATURE_LINKS[feature.name]
+                        return (
+                          <li key={index} className="flex items-start gap-2">
+                            <CheckIcon className="h-5 w-5 flex-shrink-0 mt-0.5 text-green-600" />
+                            <span className="text-sm text-foreground">
+                              {href ? (
+                                <Link
+                                  href={href}
+                                  className="underline decoration-dotted underline-offset-2 hover:text-primary"
+                                >
+                                  {feature.name}
+                                </Link>
+                              ) : (
+                                feature.name
+                              )}
+                            </span>
+                          </li>
+                        )
+                      })}
+                  </ul>
+                }
+                cta={
+                  // Fixed height + nowrap + ellipsis so every card's button is
+                  // visually identical regardless of label length.
+                  <button
+                    onClick={() => handleSelectPlan(planData.id)}
+                    disabled={loading === planData.id || isCurrentPlan}
+                    className={`w-full h-12 px-4 rounded-lg font-medium transition-colors whitespace-nowrap overflow-hidden text-ellipsis ${
+                      isCurrentPlan
+                        ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                        : planData.popular
+                        ? 'bg-primary text-white hover:bg-primary/90'
+                        : 'bg-primary/10 text-primary hover:bg-primary/20'
+                    } disabled:opacity-50`}
+                  >
+                    {getButtonText(planData.id, relationship, loading === planData.id)}
+                  </button>
+                }
+              />
             )
           })}
         </div>
@@ -532,38 +606,14 @@ export default function PricingPage() {
             Frequently Asked Questions
           </h2>
           <div className="space-y-4">
-            <details className="bg-card rounded-lg p-4 border border-border">
-              <summary className="font-medium text-foreground cursor-pointer">
-                How does the 7-day trial work?
-              </summary>
-              <p className="mt-2 text-muted-foreground text-sm">
-                When you upgrade from the free plan to any paid plan, you get full access to all features for 7 days with no payment required. After your trial ends, you'll be prompted to add payment to continue. The free plan itself has no trial period - it's free forever with basic features.
-              </p>
-            </details>
-            <details className="bg-card rounded-lg p-4 border border-border">
-              <summary className="font-medium text-foreground cursor-pointer">
-                Can I cancel anytime?
-              </summary>
-              <p className="mt-2 text-muted-foreground text-sm">
-                Yes! You can cancel your subscription at any time from your account settings. You'll retain access until the end of your billing period.
-              </p>
-            </details>
-            <details className="bg-card rounded-lg p-4 border border-border">
-              <summary className="font-medium text-foreground cursor-pointer">
-                What happens after my trial ends?
-              </summary>
-              <p className="mt-2 text-muted-foreground text-sm">
-                After your 7-day trial of a paid plan ends, you'll need to add payment to continue with that plan's features. If you don't add payment, you'll automatically return to the free plan. We'll send you reminders before your trial ends so you're never surprised.
-              </p>
-            </details>
-            <details className="bg-card rounded-lg p-4 border border-border">
-              <summary className="font-medium text-foreground cursor-pointer">
-                Can I upgrade or downgrade my plan?
-              </summary>
-              <p className="mt-2 text-muted-foreground text-sm">
-                Yes! You can change your plan at any time. Upgrades take effect immediately, while downgrades take effect at the end of your billing cycle.
-              </p>
-            </details>
+            {PRICING_FAQ.map((item) => (
+              <details key={item.question} className="bg-card rounded-lg p-4 border border-border">
+                <summary className="font-medium text-foreground cursor-pointer">
+                  {item.question}
+                </summary>
+                <p className="mt-2 text-muted-foreground text-sm">{item.answer}</p>
+              </details>
+            ))}
           </div>
         </div>
       </div>

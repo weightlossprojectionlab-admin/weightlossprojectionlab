@@ -41,22 +41,38 @@ export function HouseholdProvider({ children }: HouseholdProviderProps) {
   const { households, loading, error } = useHouseholds()
   const [activeHousehold, setActiveHousehold] = useState<Household | null>(null)
 
-  // Auto-select first household when households load
+  // Restore the saved household, or auto-select the first.
+  //
+  // This used to only run while `!activeHousehold`, which created a
+  // restore RACE: the persistent Firestore cache can serve a stale
+  // households snapshot first. If the saved household isn't in that
+  // first snapshot, the effect fell through to `households[0]` and
+  // LOCKED IT IN — once `activeHousehold` was set it never re-checked
+  // localStorage, so the user's last-selected household was silently
+  // ignored on load. Now: whenever the saved household is present in
+  // the current set, honor it (correcting an earlier auto-pick); only
+  // fall back to households[0] when there's no saved id at all. A
+  // manual switch writes localStorage (effect below), so saved === the
+  // active one and this never fights the user's choice.
   useEffect(() => {
-    if (households.length > 0 && !activeHousehold) {
-      const savedHouseholdId = localStorage.getItem('activeHouseholdId')
+    if (households.length === 0) return
+    const savedHouseholdId = localStorage.getItem('activeHouseholdId')
 
-      if (savedHouseholdId) {
-        // Restore previously selected household
-        const saved = households.find(h => h.id === savedHouseholdId)
-        if (saved) {
+    if (savedHouseholdId) {
+      const saved = households.find(h => h.id === savedHouseholdId)
+      if (saved) {
+        if (saved.id !== activeHousehold?.id) {
           setActiveHousehold(saved)
           logger.info('[HouseholdContext] Restored active household', { householdId: saved.id })
-          return
         }
+        return
       }
+      // Saved id not (yet) in this snapshot — don't clobber it with a
+      // default; wait for a snapshot that includes it, unless nothing
+      // is active at all.
+    }
 
-      // Default to first household
+    if (!activeHousehold) {
       setActiveHousehold(households[0])
       logger.info('[HouseholdContext] Auto-selected first household', { householdId: households[0].id })
     }

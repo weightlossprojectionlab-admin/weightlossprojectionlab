@@ -1,9 +1,18 @@
 import { SITE_URL, SITE_NAME, DEFAULT_OG_IMAGE } from './seo'
+import { PLANS } from './plan-details'
 
 function absoluteUrl(path: string): string {
   if (path.startsWith('http')) return path
   return `${SITE_URL}${path.startsWith('/') ? '' : '/'}${path}`
 }
+
+// Platform subscription price range, derived from the single source of truth
+// (lib/plan-details.ts). Used by SoftwareApplication schema so the price
+// auto-updates when plans change — no hardcoded duplication. Excludes the
+// $0 free tier so the rich result shows the real subscription range.
+const PAID_PLANS = PLANS.filter((p) => p.monthlyPrice > 0)
+const PLATFORM_LOW_PRICE = Math.min(...PAID_PLANS.map((p) => p.monthlyPrice)).toFixed(2)
+const PLATFORM_HIGH_PRICE = Math.max(...PAID_PLANS.map((p) => p.monthlyPrice)).toFixed(2)
 
 export function organizationSchema() {
   return {
@@ -106,6 +115,72 @@ export function faqPageSchema(items: FAQItem[]) {
         '@type': 'Answer',
         text: item.answer,
       },
+    })),
+  }
+}
+
+export interface SoftwareApplicationInput {
+  name: string
+  description: string
+  /** schema.org applicationCategory — defaults to 'HealthApplication'. */
+  applicationCategory?: string
+  operatingSystem?: string
+  url?: string
+  image?: string
+  /** Human-readable capability list. Surfaced to AI engines as the
+   *  product's features — keep these honest and specific. */
+  featureList?: string[]
+  /** Pricing page link. The price RANGE is derived from lib/plan-details.ts
+   *  (real plan prices), not passed per-page. We still emit NO
+   *  `aggregateRating` — that requires real review counts we don't have, and
+   *  Google/AI engines penalize invented ratings. */
+  offersUrl?: string
+}
+
+export function softwareApplicationSchema(input: SoftwareApplicationInput) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: input.name,
+    description: input.description,
+    applicationCategory: input.applicationCategory ?? 'HealthApplication',
+    operatingSystem: input.operatingSystem ?? 'Web, iOS, Android',
+    url: input.url ? absoluteUrl(input.url) : SITE_URL,
+    ...(input.image ? { image: absoluteUrl(input.image) } : {}),
+    ...(input.featureList?.length ? { featureList: input.featureList } : {}),
+    offers: {
+      '@type': 'AggregateOffer',
+      priceCurrency: 'USD',
+      lowPrice: PLATFORM_LOW_PRICE,
+      highPrice: PLATFORM_HIGH_PRICE,
+      offerCount: PAID_PLANS.length,
+      category: 'subscription',
+      url: absoluteUrl(input.offersUrl ?? '/pricing'),
+    },
+    publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL },
+  }
+}
+
+export interface ItemListInput {
+  name?: string
+  items: { name: string; description?: string; url?: string }[]
+}
+
+/** Ordered ItemList — wraps a numbered step sequence so search/AI engines
+ *  read it as an ordered set (pairs with an on-page <ol>). */
+export function itemListSchema(input: ItemListInput) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'ItemList',
+    ...(input.name ? { name: input.name } : {}),
+    itemListOrder: 'https://schema.org/ItemListOrderAscending',
+    numberOfItems: input.items.length,
+    itemListElement: input.items.map((it, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: it.name,
+      ...(it.description ? { description: it.description } : {}),
+      ...(it.url ? { url: absoluteUrl(it.url) } : {}),
     })),
   }
 }

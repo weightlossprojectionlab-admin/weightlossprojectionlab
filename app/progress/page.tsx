@@ -8,7 +8,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useSubscription } from '@/hooks/useSubscription'
 import { canAccessFeature } from '@/lib/feature-gates'
+import { getPlanById } from '@/lib/plan-details'
 import { medicalOperations } from '@/lib/medical-operations'
+import { calculateWeightProjection } from '@/lib/weight-projection-agent'
+import type { UserProfile, UserGoals } from '@/types'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { ProgressPageSkeleton } from '@/components/ui/skeleton'
@@ -93,7 +96,15 @@ function ProgressContent() {
   const searchParams = useSearchParams()
   const { user } = useAuth()
   const { profile, refetch: refetchProfile } = useUserProfile()
-  const { subscription } = useSubscription()
+  const { subscription, plan: currentPlan } = useSubscription()
+
+  // Track-aware upgrade target: a single user upgrades WITHIN the single
+  // track (→ Single User Plus), a family user within the family track
+  // (→ Family Plus). Never cross a solo user to a family plan. Name comes
+  // from plan-details (DRY single source). Computed once, used by every
+  // upgrade CTA on this page.
+  const upgradePlanId = (currentPlan ?? '').startsWith('family') ? 'family_plus' : 'single_plus'
+  const upgradePlanName = getPlanById(upgradePlanId)?.name ?? 'Single User Plus'
 
   // Get patientId from URL query parameter (for family member view)
   const patientIdParam = searchParams.get('patientId')
@@ -255,26 +266,39 @@ function ProgressContent() {
     const startDate = new Date()
     startDate.setDate(startDate.getDate() - timeRange)
 
+    // When viewing a specific patient (selectedPatientId set), filter
+    // weightLogs by patientId. Without this filter the owner's whole
+    // weightLogs collection — including ALL their patients — gets
+    // pulled in, leaking another patient's data into the selected
+    // patient's chart and flipping hasCompletedOnboarding to true
+    // even when the selected patient has no logs of their own.
+    //
+    // No orderBy on Firestore: a `where(patientId)` + `where(loggedAt
+    // range)` + `orderBy` query needs a composite index that isn't
+    // (and shouldn't be) deployed for this single page's use case.
+    // We do the loggedAt range filter + chronological sort in JS;
+    // single-patient volume is small.
     const weightLogsRef = collection(db, 'users', effectiveUserId, 'weightLogs')
-    const q = query(
-      weightLogsRef,
-      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
-      orderBy('loggedAt', 'asc')
-    )
+    const q = selectedPatientId
+      ? query(weightLogsRef, where('patientId', '==', selectedPatientId))
+      : query(weightLogsRef, where('loggedAt', '>=', Timestamp.fromDate(startDate)), orderBy('loggedAt', 'asc'))
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const dataPoints: WeightDataPoint[] = snapshot.docs.map(doc => {
-          const data = doc.data()
-          const timestamp = data.loggedAt.toDate()
-
-          return {
-            date: timestamp.toISOString().split('T')[0],
-            weight: data.weight,
-            timestamp
-          }
-        })
+        const startMs = startDate.getTime()
+        const dataPoints: WeightDataPoint[] = snapshot.docs
+          .map(doc => {
+            const data = doc.data()
+            const timestamp = data.loggedAt.toDate()
+            return {
+              date: timestamp.toISOString().split('T')[0],
+              weight: data.weight,
+              timestamp,
+            }
+          })
+          .filter(p => p.timestamp.getTime() >= startMs)
+          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
         setWeightData(dataPoints)
       },
       (error) => {
@@ -284,7 +308,7 @@ function ProgressContent() {
     )
 
     return () => unsubscribe()
-  }, [effectiveUserId, timeRange])
+  }, [effectiveUserId, timeRange, selectedPatientId])
 
   // Separate subscription for most recent weight log (for reminder modal)
   const [mostRecentWeightLog, setMostRecentWeightLog] = useState<WeightLog | null>(null)
@@ -292,21 +316,32 @@ function ProgressContent() {
   useEffect(() => {
     if (!effectiveUserId) return
 
+    // Same per-patient scoping as the chart subscription above.
+    // No orderBy on the patientId-filtered branch — composite
+    // (patientId asc, loggedAt desc) isn't indexed. Take the
+    // patient's logs, sort + take-most-recent in JS.
     const weightLogsRef = collection(db, 'users', effectiveUserId, 'weightLogs')
-    const q = query(
-      weightLogsRef,
-      orderBy('loggedAt', 'desc'),
-      limit(1)
-    )
+    const q = selectedPatientId
+      ? query(weightLogsRef, where('patientId', '==', selectedPatientId))
+      : query(weightLogsRef, orderBy('loggedAt', 'desc'), limit(1))
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
         if (snapshot.docs.length > 0) {
-          const doc = snapshot.docs[0]
-          const data = doc.data()
+          // When the query is patientId-filtered (no orderBy), we
+          // have to find the most-recent in JS. When the query is
+          // unscoped (with orderBy + limit), snapshot.docs[0] is
+          // already the most recent. Compute most-recent either way
+          // by picking the max loggedAt — uniform handling.
+          const mostRecentDoc = snapshot.docs.reduce((acc, d) => {
+            const dt = d.data().loggedAt?.toDate?.()?.getTime?.() ?? 0
+            const accDt = acc.data().loggedAt?.toDate?.()?.getTime?.() ?? 0
+            return dt > accDt ? d : acc
+          })
+          const data = mostRecentDoc.data()
           const weightLog = {
-            id: doc.id,
+            id: mostRecentDoc.id,
             userId: effectiveUserId,
             patientId: data.patientId || effectiveUserId,
             weight: data.weight,
@@ -317,14 +352,8 @@ function ProgressContent() {
             notes: data.notes,
             dataSource: data.dataSource || 'manual'
           }
-          console.log('Progress page - Most recent weight log:', {
-            date: weightLog.loggedAt,
-            dateString: weightLog.loggedAt.toISOString(),
-            weight: weightLog.weight
-          })
           setMostRecentWeightLog(weightLog)
         } else {
-          console.log('Progress page - No weight logs found')
           setMostRecentWeightLog(null)
         }
         setWeightDataLoaded(true)
@@ -337,7 +366,7 @@ function ProgressContent() {
     )
 
     return () => unsubscribe()
-  }, [effectiveUserId])
+  }, [effectiveUserId, selectedPatientId])
 
   useEffect(() => {
     if (!effectiveUserId) return
@@ -567,6 +596,103 @@ function ProgressContent() {
     }
   }, [activeProfile, weightData])
 
+  // Day-1 / goal-based ETA — the FALLBACK shown before a measured trend
+  // exists. The trend chip above needs ≥2 weigh-ins; a brand-new user has
+  // none, so we project the goal date from the GOAL itself: current weight,
+  // target weight, and the weekly pace (defaults to 1 lb/week until the user
+  // sets it — same default the projection API uses). Reuses the canonical
+  // calculateWeightProjection helper (no new math), and is clearly labeled an
+  // estimate. The instant a real trend is available, targetWeightEta takes
+  // over (this returns null when that exists), so the measured number always
+  // wins — goal-based is the day-1 promise, trend-based is the proof.
+  const goalEstimateEta = useMemo(() => {
+    if (targetWeightEta) return null
+    const target = activeProfile?.goals?.targetWeight
+    const current = typeof profileCurrentWeight === 'number' ? profileCurrentWeight : undefined
+    if (typeof target !== 'number' || typeof current !== 'number') return null
+    if (Math.abs(current - target) < 0.5) return null // already at goal
+
+    const rate =
+      (activeProfile?.goals as { weeklyWeightLossGoal?: number } | undefined)?.weeklyWeightLossGoal ?? 1
+    const projection = calculateWeightProjection(
+      { currentWeight: current } as UserProfile,
+      {
+        targetWeight: target,
+        startWeight: activeProfile?.goals?.startWeight ?? current,
+        weeklyWeightLossGoal: rate,
+      } as UserGoals,
+      [], // no logs → goal-based projection only
+    )
+    if (!isFinite(projection.weeksRemaining) || projection.weeksRemaining <= 0) return null
+    return {
+      target,
+      rate,
+      etaDate: projection.projectedCompletionDate,
+      weeks: projection.weeksRemaining,
+      lbsToGo: Math.abs(projection.weightToLose),
+    }
+  }, [targetWeightEta, activeProfile, profileCurrentWeight])
+
+  // Projection summary pill — the headline answer the page exists to give.
+  // Rendered at the TOP of the page (semantic intent: lead with the
+  // projection, not bury it below the chart). Trend-based once a measured
+  // trend exists; the day-1 goal-based estimate before that.
+  const projectionPill = targetWeightEta ? (
+    <div
+      data-testid="weight-goal-eta"
+      data-status={targetWeightEta.status}
+      className={`px-4 py-3 rounded-lg text-sm font-medium ${
+        targetWeightEta.status === 'achieved' || targetWeightEta.status === 'on-pace'
+          ? 'bg-success-light text-success-dark border border-success/30'
+          : targetWeightEta.status === 'slipping'
+            ? 'bg-warning-light text-warning-dark border border-warning/30'
+            : 'bg-error-light text-error-dark border border-error/30'
+      }`}
+    >
+      {targetWeightEta.status === 'achieved' && (
+        <>🎉 Goal reached — you&apos;re at your target weight of {targetWeightEta.target} lbs.</>
+      )}
+      {targetWeightEta.status === 'on-pace' && (
+        <>
+          🟢 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
+          <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+          (~{targetWeightEta.daysToGoal} day{targetWeightEta.daysToGoal === 1 ? '' : 's'} from today).
+        </>
+      )}
+      {targetWeightEta.status === 'slipping' && (
+        <>
+          🟡 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
+          <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+          (~{targetWeightEta.daysToGoal} days).{' '}
+          {targetWeightEta.targetDate && (
+            <>Goal date was {targetWeightEta.targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
+          )}
+        </>
+      )}
+      {targetWeightEta.status === 'off-track' && (
+        <>
+          🔴 Current trend is{' '}
+          {Math.abs(targetWeightEta.slopePerDay) < 0.01 ? 'flat' : 'moving away from your goal'}.
+          Your target is {targetWeightEta.target} lbs and you&apos;re at{' '}
+          {targetWeightEta.currentWeight.toFixed(1)} lbs.
+        </>
+      )}
+    </div>
+  ) : goalEstimateEta ? (
+    <div
+      data-testid="weight-goal-estimate"
+      className="px-4 py-3 rounded-lg text-sm font-medium bg-secondary/10 text-foreground border border-secondary/30"
+    >
+      📊 At {goalEstimateEta.rate} lb/week, you&apos;re on pace to reach{' '}
+      <strong>
+        {goalEstimateEta.target} lbs around{' '}
+        {goalEstimateEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+      </strong>{' '}
+      — about {goalEstimateEta.weeks} week{goalEstimateEta.weeks === 1 ? '' : 's'} (
+      {goalEstimateEta.lbsToGo.toFixed(1)} lb to go). Log your weight to sharpen this estimate.
+    </div>
+  ) : null
+
   // Forward projection for daily calorie intake — same linear-fit
   // approach as weightData, but starting at i=1 (tomorrow) to avoid
   // rendering a duplicate bar at today's date. Bars don't benefit
@@ -634,7 +760,13 @@ function ProgressContent() {
   //   - 1 patient → auto-select it (URL replace so refresh keeps context)
   //   - 2+ patients → require explicit selection (URL param or selector)
   const hasNoPatients = patients.length === 0
-  const showPatientSelector = patients.length > 1 && !selectedPatientId
+  // Show the member selector whenever there are 2+ members — INCLUDING
+  // while viewing one. It used to be gated on `!selectedPatientId`,
+  // which hid the only way to switch members once you'd picked one:
+  // you were stuck on that member with no path to the others. The
+  // dropdown binds the current selectedPatientId and routes on change,
+  // so keeping it visible turns it into a proper member switcher.
+  const showPatientSelector = patients.length > 1
 
   // When the user has exactly one patient and no URL context, treat
   // that patient as the implicit subject — they have no other choice
@@ -832,13 +964,13 @@ function ProgressContent() {
                     <div className="text-5xl mb-4">✅</div>
                     <h3 className="text-xl font-bold text-foreground mb-2">Data Completeness Tracker</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Monitor your health data quality with Family Plus or Premium
+                      Monitor your health data quality with {upgradePlanName}
                     </p>
                     <Link
-                      href="/profile?tab=subscription"
+                      href="/pricing"
                       className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                     >
-                      Upgrade to Family Plus
+                      Upgrade to {upgradePlanName}
                     </Link>
                   </div>
                 </div>
@@ -1044,22 +1176,29 @@ function ProgressContent() {
           <div className="bg-card rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-lg font-bold text-foreground mb-4">Your Journey</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {/* Current Weight */}
-              {weightData.length > 0 && (
+              {/* Current Weight — from logs if any, else the profile value
+                  captured at onboarding (so it shows on day 1, pre-logging). */}
+              {(weightData.length > 0 || typeof profileCurrentWeight === 'number') && (
                 <div>
                   <p className="text-xs text-muted-foreground">Current Weight</p>
-                  <p className="text-xl font-bold text-primary">{weightData[weightData.length - 1].weight} lbs</p>
+                  <p className="text-xl font-bold text-primary">
+                    {weightData.length > 0 ? weightData[weightData.length - 1].weight : profileCurrentWeight} lbs
+                  </p>
                 </div>
               )}
 
-              {/* Starting Weight */}
-              {weightData.length > 0 && (
+              {/* Starting Weight — from goals.startWeight (set at onboarding),
+                  so it shows before any weigh-in is logged. */}
+              {((typeof activeProfile.goals?.startWeight === 'number' && activeProfile.goals.startWeight >= 50) ||
+                weightData.length > 0) && (
                 <div>
                   <p className="text-xs text-muted-foreground">Starting Weight</p>
                   <p className="text-xl font-bold text-foreground">
                     {activeProfile.goals?.startWeight && activeProfile.goals.startWeight >= 50
                       ? activeProfile.goals.startWeight
-                      : weightData[0].weight} lbs
+                      : weightData.length > 0
+                        ? weightData[0].weight
+                        : profileCurrentWeight} lbs
                   </p>
                   {/* Only show fix button for current user, not family members */}
                   {activeProfile.goals?.startWeight && activeProfile.goals.startWeight < 50 && !selectedPatientId && (
@@ -1082,14 +1221,15 @@ function ProgressContent() {
                 </div>
               )}
 
-              {/* BMI (calculated) */}
-              {activeProfile.height && weightData.length > 0 && (
+              {/* BMI — uses logged weight if any, else the onboarding weight. */}
+              {activeProfile.height && (weightData.length > 0 || typeof profileCurrentWeight === 'number') && (
                 <div>
                   <p className="text-xs text-muted-foreground">Current BMI</p>
                   <p className="text-xl font-bold text-foreground">
                     {(() => {
-                      const heightInInches = activeProfile.height
-                      const currentWeight = weightData[weightData.length - 1].weight
+                      const heightInInches = activeProfile.height!
+                      const currentWeight =
+                        weightData.length > 0 ? weightData[weightData.length - 1].weight : (profileCurrentWeight ?? 0)
                       const bmi = (currentWeight / (heightInInches * heightInInches)) * 703
                       return bmi.toFixed(1)
                     })()}
@@ -1125,6 +1265,11 @@ function ProgressContent() {
                 feedback_semantic_intent. */}
           </div>
         )}
+
+        {/* Projection pill — placed right after "Your Journey" (start →
+            current → goal → AND when you'll get there). This is where users
+            expect the "where am I headed" answer, semantically. */}
+        {projectionPill && <div className="mb-6">{projectionPill}</div>}
 
         {/* Goal Progress Tracker */}
         {goalProgress && profile?.goals && !loading && (
@@ -1429,52 +1574,9 @@ function ProgressContent() {
                 targetWeight={targetWeight}
                 loading={loading}
               />
-              {targetWeightEta && (
-                <div
-                  data-testid="weight-goal-eta"
-                  data-status={targetWeightEta.status}
-                  className={`mt-4 px-4 py-3 rounded-lg text-sm font-medium ${
-                    targetWeightEta.status === 'achieved' || targetWeightEta.status === 'on-pace'
-                      ? 'bg-success-light text-success-dark border border-success/30'
-                      : targetWeightEta.status === 'slipping'
-                        ? 'bg-warning-light text-warning-dark border border-warning/30'
-                        : 'bg-error-light text-error-dark border border-error/30'
-                  }`}
-                >
-                  {targetWeightEta.status === 'achieved' && (
-                    <>🎉 Goal reached — you're at your target weight of {targetWeightEta.target} lbs.</>
-                  )}
-                  {targetWeightEta.status === 'on-pace' && (
-                    <>
-                      🟢 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
-                      <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
-                      (~{targetWeightEta.daysToGoal} day{targetWeightEta.daysToGoal === 1 ? '' : 's'} from today).
-                    </>
-                  )}
-                  {targetWeightEta.status === 'slipping' && (
-                    <>
-                      🟡 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
-                      <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
-                      (~{targetWeightEta.daysToGoal} days).{' '}
-                      {targetWeightEta.targetDate && (
-                        <>Goal date was {targetWeightEta.targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
-                      )}
-                    </>
-                  )}
-                  {targetWeightEta.status === 'off-track' && (
-                    <>
-                      🔴 Current trend is{' '}
-                      {Math.abs(targetWeightEta.slopePerDay) < 0.01
-                        ? 'flat'
-                        : targetWeightEta.slopePerDay > 0
-                          ? 'moving away from your goal'
-                          : 'moving away from your goal'}
-                      . Your target is {targetWeightEta.target} lbs and you&apos;re at{' '}
-                      {targetWeightEta.currentWeight.toFixed(1)} lbs.
-                    </>
-                  )}
-                </div>
-              )}
+              {/* Projection pill moved to the TOP of the page (see
+                  projectionPill near the page header) — semantic intent: the
+                  projection is the headline answer, not a footnote to the chart. */}
 
               {/* Quick weight-log CTA — placed next to the trend
                   chart on purpose: the act of reading the chart is
@@ -1525,13 +1627,13 @@ function ProgressContent() {
                     <div className="text-5xl mb-4">📊</div>
                     <h3 className="text-xl font-bold text-foreground mb-2">Advanced Analytics</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Unlock macro distribution tracking with Family Plus or Premium
+                      Unlock macro distribution tracking with {upgradePlanName}
                     </p>
                     <Link
-                      href="/profile?tab=subscription"
+                      href="/pricing"
                       className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                     >
-                      Upgrade to Family Plus
+                      Upgrade to {upgradePlanName}
                     </Link>
                   </div>
                 </div>
@@ -1562,13 +1664,13 @@ function ProgressContent() {
                     <div className="text-5xl mb-4">👟</div>
                     <h3 className="text-xl font-bold text-foreground mb-2">Trend Analysis</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Track step count trends with Family Plus or Premium
+                      Track step count trends with {upgradePlanName}
                     </p>
                     <Link
-                      href="/profile?tab=subscription"
+                      href="/pricing"
                       className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                     >
-                      Upgrade to Family Plus
+                      Upgrade to {upgradePlanName}
                     </Link>
                   </div>
                 </div>
@@ -1596,13 +1698,13 @@ function ProgressContent() {
                   <div className="text-5xl mb-4">🤖</div>
                   <h3 className="text-xl font-bold text-foreground mb-2">AI Health Insights</h3>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Get personalized AI recommendations with Family Plus or Premium
+                    Get personalized AI recommendations with {upgradePlanName}
                   </p>
                   <Link
-                    href="/profile?tab=subscription"
+                    href="/pricing"
                     className="inline-block px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
                   >
-                    Upgrade to Family Plus
+                    Upgrade to {upgradePlanName}
                   </Link>
                 </div>
               </div>

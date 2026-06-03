@@ -7,6 +7,8 @@ import RecipeActions from '@/components/recipes/RecipeActions'
 import { mergeRecipeWithMedia } from '@/lib/recipe-merge'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { recipeSchema } from '@/lib/json-ld'
+import { StartFreeBanner } from '@/components/recipes/StartFreeBanner'
+import { NonSubscriberOnly } from '@/components/subscription/NonSubscriberOnly'
 
 async function getRecipe(id: string): Promise<MealSuggestion | null> {
   // Fetch both sources in parallel — Firestore overlays let admin
@@ -150,15 +152,9 @@ export default async function RecipeDetailPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100">
       <JsonLd data={schema} />
-      {/* Marketing Banner */}
-      <div className="bg-gradient-to-r from-primary to-accent text-white py-3 px-4 text-center">
-        <p className="text-sm font-medium">
-          ✨ Get 200+ recipes like this with WPL-powered meal tracking.{' '}
-          <Link href="/auth" className="underline font-bold hover:text-primary-light">
-            Start Free →
-          </Link>
-        </p>
-      </div>
+      {/* Marketing Banner — hidden for subscribers (client component reads
+          live subscription state even though this page is server-rendered). */}
+      <StartFreeBanner text="Get 200+ recipes like this with WPL-powered meal tracking." />
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Back Link */}
@@ -349,30 +345,32 @@ export default async function RecipeDetailPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Marketing CTA Section */}
-        <div className="mt-12 bg-gradient-to-r from-primary to-accent text-white rounded-lg p-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Love This Recipe?</h2>
-          <p className="text-lg mb-6 opacity-90">
-            Track this meal and 200+ more recipes with WPL-powered nutrition analysis
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link
-              href="/auth"
-              className="btn bg-card text-primary hover:bg-muted px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
-            >
-              Start Tracking Free
-            </Link>
-            <Link
-              href="/recipes"
-              className="btn bg-transparent border-2 border-white text-white hover:bg-card/10 px-8 py-4 text-lg font-medium rounded-lg"
-            >
-              Browse More Recipes
-            </Link>
+        {/* Marketing CTA Section — conversion hook, hidden for subscribers. */}
+        <NonSubscriberOnly>
+          <div className="mt-12 bg-gradient-to-r from-primary to-accent text-white rounded-lg p-8 text-center">
+            <h2 className="text-3xl font-bold mb-4">Love This Recipe?</h2>
+            <p className="text-lg mb-6 opacity-90">
+              Track this meal and 200+ more recipes with WPL-powered nutrition analysis
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <Link
+                href="/auth"
+                className="btn bg-card text-primary hover:bg-muted px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
+              >
+                Start Tracking Free
+              </Link>
+              <Link
+                href="/recipes"
+                className="btn bg-transparent border-2 border-white text-white hover:bg-card/10 px-8 py-4 text-lg font-medium rounded-lg"
+              >
+                Browse More Recipes
+              </Link>
+            </div>
+            <p className="text-sm mt-6 opacity-75">
+              ✨ Snap. Analyze. Track. All in 30 seconds.
+            </p>
           </div>
-          <p className="text-sm mt-6 opacity-75">
-            ✨ Snap. Analyze. Track. All in 30 seconds.
-          </p>
-        </div>
+        </NonSubscriberOnly>
 
         {/* Social Proof */}
         <div className="mt-12 text-center">

@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { MealType, DietaryTag, MealSuggestion } from '@/lib/meal-suggestions'
+import { recipeMatchesQuery } from '@/lib/recipe-search'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
 import { useRecipes } from '@/hooks/useRecipes'
+import { StartFreeBanner } from '@/components/recipes/StartFreeBanner'
+import { NonSubscriberOnly } from '@/components/subscription/NonSubscriberOnly'
 import { AdminModeToggle } from '@/components/admin/AdminModeToggle'
 import { RecipeMediaUpload } from '@/components/admin/RecipeMediaUpload'
 import { RecipeImageCarousel } from '@/components/RecipeImageCarousel'
@@ -157,14 +160,10 @@ export default function RecipeIndexPage() {
       if (!hasAllTags) return false
     }
 
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase()
-      return (
-        recipe.name.toLowerCase().includes(query) ||
-        recipe.description.toLowerCase().includes(query) ||
-        recipe.ingredients.some(ing => ing.toLowerCase().includes(query))
-      )
+    // Filter by search query — token-AND match (shared with /admin/recipes)
+    // so "creamy mushroom pasta" finds "Creamy Mushroom Noodle Pasta".
+    if (searchQuery && !recipeMatchesQuery(recipe, searchQuery)) {
+      return false
     }
 
     return true
@@ -185,16 +184,10 @@ export default function RecipeIndexPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-gray-50 to-purple-100 dark:from-gray-900 dark:to-purple-900/20">
-      {/* Marketing Banner */}
+      {/* Marketing Banner — conversion hook, hidden for subscribers + member
+          views. Subscription check lives in the shared component (DRY). */}
       {!memberId && (
-        <div className="bg-gradient-to-r from-primary to-accent text-white py-3 px-4 text-center">
-          <p className="text-sm font-medium">
-            ✨ Track these recipes with WPL-powered meal analysis.{' '}
-            <Link href="/auth" className="text-white underline font-bold hover:opacity-80">
-              Start Free →
-            </Link>
-          </p>
-        </div>
+        <StartFreeBanner text="Track these recipes with WPL-powered meal analysis." />
       )}
 
       {/* Member Context Banner (DRY - same pattern as shopping page) */}
@@ -525,22 +518,24 @@ export default function RecipeIndexPage() {
           </div>
         ) : null}
 
-        {/* CTA Section */}
-        <div className="mt-16 bg-gradient-to-r from-primary to-accent text-white rounded-lg p-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">Ready to Start Tracking?</h2>
-          <p className="text-lg mb-6 opacity-90">
-            Snap a photo of any meal and get instant nutrition analysis
-          </p>
-          <Link
-            href="/auth"
-            className="inline-block btn bg-background text-primary dark:text-white hover:bg-muted px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
-          >
-            Start Your Journey
-          </Link>
-          <p className="text-sm mt-6 opacity-75">
-            ✨ Free forever • No credit card required
-          </p>
-        </div>
+        {/* CTA Section — conversion hook, hidden for subscribers. */}
+        <NonSubscriberOnly>
+          <div className="mt-16 bg-gradient-to-r from-primary to-accent text-white rounded-lg p-8 text-center">
+            <h2 className="text-3xl font-bold mb-4">Ready to Start Tracking?</h2>
+            <p className="text-lg mb-6 opacity-90">
+              Snap a photo of any meal and get instant nutrition analysis
+            </p>
+            <Link
+              href="/auth"
+              className="inline-block btn bg-background text-primary dark:text-white hover:bg-muted px-8 py-4 text-lg font-bold rounded-lg shadow-lg"
+            >
+              Start Your Journey
+            </Link>
+            <p className="text-sm mt-6 opacity-75">
+              ✨ Free forever • No credit card required
+            </p>
+          </div>
+        </NonSubscriberOnly>
       </div>
 
       {/* Media Upload Modal */}

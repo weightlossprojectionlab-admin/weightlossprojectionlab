@@ -21,6 +21,10 @@ import type {
   ActionItem,
   UpcomingAppointment,
 } from '@/hooks/useDashboard'
+import type {
+  ScheduledVisit,
+  CoordinationAppointment,
+} from '@/app/tenant-shell/dashboard/_lib/load-families'
 
 // Extended snapshot with franchise-specific fields
 export interface FranchiseFamilySnapshot extends PatientSnapshot {
@@ -45,6 +49,10 @@ interface UseTenantDashboardReturn {
   activity: ActivityItem[]
   actionItems: ActionItem[]
   upcomingAppointments: UpcomingAppointment[]
+  /** Caregiver-visits the practice delivers — the practitioner's own schedule. */
+  scheduledVisits: ScheduledVisit[]
+  /** Members' external medical appointments — coordination awareness only. */
+  familyAppointments: CoordinationAppointment[]
   pendingRequests: PendingRequest[]
   loading: boolean
   error: string | null
@@ -57,6 +65,8 @@ export function useTenantDashboard(tenantId: string | null): UseTenantDashboardR
   const [activity, setActivity] = useState<ActivityItem[]>([])
   const [actionItems, setActionItems] = useState<ActionItem[]>([])
   const [upcomingAppointments] = useState<UpcomingAppointment[]>([])
+  const [scheduledVisits, setScheduledVisits] = useState<ScheduledVisit[]>([])
+  const [familyAppointments, setFamilyAppointments] = useState<CoordinationAppointment[]>([])
   const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
@@ -73,6 +83,8 @@ export function useTenantDashboard(tenantId: string | null): UseTenantDashboardR
           stats: DashboardStats
           patientSnapshots: FranchiseFamilySnapshot[]
           upcomingAppointments: UpcomingAppointment[]
+          scheduledVisits: ScheduledVisit[]
+          familyAppointments: CoordinationAppointment[]
           actionItems: ActionItem[]
           pendingRequests: PendingRequest[]
         }>(`/tenant/${tenantId}/dashboard/stats`),
@@ -85,6 +97,8 @@ export function useTenantDashboard(tenantId: string | null): UseTenantDashboardR
         logger.debug('[useTenantDashboard] Stats:', toLogContext(statsData.stats))
         setStats(statsData.stats)
         setPatientSnapshots(statsData.patientSnapshots || [])
+        setScheduledVisits(statsData.scheduledVisits || [])
+        setFamilyAppointments(statsData.familyAppointments || [])
         setActionItems(statsData.actionItems || [])
         setPendingRequests(statsData.pendingRequests || [])
       }
@@ -116,6 +130,8 @@ export function useTenantDashboard(tenantId: string | null): UseTenantDashboardR
     activity,
     actionItems,
     upcomingAppointments,
+    scheduledVisits,
+    familyAppointments,
     pendingRequests,
     loading,
     error,

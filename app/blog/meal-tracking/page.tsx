@@ -8,7 +8,7 @@
 
 import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
-import { blogPostingSchema } from '@/lib/json-ld'
+import { blogPostingSchema, faqPageSchema, softwareApplicationSchema, itemListSchema } from '@/lib/json-ld'
 import { Metadata } from 'next'
 import {
   CameraIcon,
@@ -53,6 +53,54 @@ export const metadata: Metadata = {
   }
 }
 
+// Direct, self-contained Q&A — the "dictionary definition" an AI quick-answer
+// card can lift verbatim. Kept in sync with the visible FAQ section below so
+// the structured data matches on-page content (no schema/content mismatch).
+const FAQ_ITEMS = [
+  {
+    question: 'What is AI meal tracking?',
+    answer:
+      'AI meal tracking is a way of logging food in which you photograph a meal and computer vision identifies the foods, estimates portions, and calculates calories, macros, and micronutrients automatically — replacing manual calorie counting and database searches with a single photo.',
+  },
+  {
+    question: 'Who is AI meal tracking for?',
+    answer:
+      "It's for families and caregivers tracking nutrition for more than one person — parents logging a toddler's meals for the pediatrician, partners following fitness macros, and adult children making sure an aging parent is eating enough, each with their own profile, calorie targets, and allergen list.",
+  },
+  {
+    question: 'How is AI meal tracking different from a regular calorie counter?',
+    answer:
+      'A regular calorie counter assumes one person and one diet, and requires manual entry for every ingredient. AI meal tracking analyzes a photo for full nutrition in seconds, logs it to the right family member, checks each person against their own allergen profile, and learns your household\'s actual portions and foods over time so it gets more accurate the more you use it.',
+  },
+]
+
+// Single source of truth for the "How AI Meal Tracking Works" sequence — drives
+// BOTH the on-page <ol> and the ItemList schema, so they never drift. Titles are
+// descriptive/keyword-rich for NLP parsing.
+const MEAL_TRACKING_STEPS = [
+  {
+    step: 1,
+    icon: <CameraIcon className="w-10 h-10 text-amber-600" />,
+    title: 'Snap a Photo of Any Meal',
+    description:
+      'Take a photo of the plate, the packaging, or even a restaurant menu item. Our AI handles the rest.',
+  },
+  {
+    step: 2,
+    icon: <SparklesIcon className="w-10 h-10 text-amber-600" />,
+    title: 'AI Identifies Food & Calculates Nutrition',
+    description:
+      'The AI recognizes individual foods, estimates portions, and calculates calories, protein, carbs, fat, fiber, and micronutrients.',
+  },
+  {
+    step: 3,
+    icon: <ShieldCheckIcon className="w-10 h-10 text-amber-600" />,
+    title: 'Per-Person Allergen Safety Check',
+    description:
+      "Each family member's allergen profile is checked automatically. You get an instant warning if anything flagged is detected.",
+  },
+]
+
 export default function MealtrackingBlogPage() {
   return (
     <div className="min-h-screen bg-background">
@@ -64,6 +112,40 @@ export default function MealtrackingBlogPage() {
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
           keywords: 'meal tracking, food tracking app, photo food logger, AI calorie counter, nutrition tracker, family meal tracking, allergen detection, macro tracker, food diary, meal logging app, AI nutrition analysis, family food tracker',
+        })}
+      />
+      {/* FAQ schema — lets AI assistants + Google pull a direct quick-answer
+          for "What is AI meal tracking?" Mirrors the visible FAQ. */}
+      <JsonLd data={faqPageSchema(FAQ_ITEMS)} />
+      {/* SoftwareApplication — this page describes a product; tell engines its
+          category, platforms, and capabilities (incl. the AI photo features). */}
+      <JsonLd
+        data={softwareApplicationSchema({
+          name: 'Wellness Projection Lab Meal Tracking',
+          description:
+            'AI meal tracking that turns a single photo of any meal into instant nutritional analysis — calories, macros, micronutrients, and per-person allergen safety checks — logged to the right member of a household.',
+          url: '/blog/meal-tracking',
+          image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
+          featureList: [
+            'AI photo food analysis (calories, macros, micronutrients)',
+            'Per-person meal tracking with individual calorie targets',
+            'Automatic per-member allergen safety checks',
+            'Per-person dietary preference evaluation (keto, vegan, low-sodium, diabetic-friendly)',
+            'Visual meal history gallery',
+            'Family meal coordination across multiple profiles',
+            'Self-teaching accuracy that improves with corrections',
+          ],
+        })}
+      />
+      {/* ItemList — the "How AI Meal Tracking Works" ordered sequence,
+          mirroring the on-page <ol> (single source: MEAL_TRACKING_STEPS). */}
+      <JsonLd
+        data={itemListSchema({
+          name: 'How AI Meal Tracking Works',
+          items: MEAL_TRACKING_STEPS.map((s) => ({
+            name: `${s.step}. ${s.title}`,
+            description: s.description,
+          })),
         })}
       />
       {/* ============ HERO ============ */}
@@ -85,9 +167,17 @@ export default function MealtrackingBlogPage() {
             <h1 className="text-5xl md:text-6xl font-bold mb-6">
               Know What Everyone&apos;s Eating &mdash; AI Does the Math
             </h1>
-            <p className="text-xl text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+            <p className="text-xl text-white/90 mb-4 leading-relaxed max-w-3xl mx-auto">
               Photograph any meal and get instant nutritional analysis. Calories, macros, allergens &mdash; tracked per person,
               for every member of your household. No manual data entry required.
+            </p>
+            {/* AI-snippet line — one clean, self-contained definition an AI
+                engine can lift verbatim. Kept consistent with the
+                SoftwareApplication schema description. */}
+            <p className="text-base text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
+              <strong>WPL Meal Tracking</strong> is AI-powered food logging that turns a single photo of any meal into
+              instant nutritional analysis &mdash; calories, macros, micronutrients, and per-person allergen safety
+              checks &mdash; logged to the right member of a household.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -108,6 +198,26 @@ export default function MealtrackingBlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        {/* ============================================ */}
+        {/* DEFINITION — direct, snippet-extractable answer.   */}
+        {/* Question-form H2 + a self-contained definition is   */}
+        {/* the structure AI quick-answer cards + featured      */}
+        {/* snippets pull from.                                 */}
+        {/* ============================================ */}
+        <section className="mb-24 max-w-3xl mx-auto text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-4">What Is AI Meal Tracking?</h2>
+          <p className="text-lg text-foreground leading-relaxed">
+            <strong>AI meal tracking</strong> is a way of logging food in which you photograph a meal and computer
+            vision identifies the foods, estimates portions, and calculates calories, macros, and micronutrients
+            automatically &mdash; replacing manual calorie counting and database searches with a single photo.
+          </p>
+          <p className="text-base text-muted-foreground leading-relaxed mt-4">
+            Instead of weighing portions and typing in every ingredient, AI meal tracking reads the plate from a
+            photo, logs the nutrition to the right person, and checks each family member against their own allergen
+            list &mdash; turning a 30-second snapshot into a complete, per-person nutrition record.
+          </p>
+        </section>
 
         {/* ============ THE PROBLEM ============ */}
         <section className="mb-24">
@@ -139,31 +249,25 @@ export default function MealtrackingBlogPage() {
         {/* ============ HOW IT WORKS ============ */}
         <section className="mb-24">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-foreground mb-4">Three Steps. Zero Typing.</h2>
+            <h2 className="text-4xl font-bold text-foreground mb-4">How AI Meal Tracking Works: Three Steps, Zero Typing</h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               From photo to full nutritional breakdown in seconds &mdash; for every person at the table.
             </p>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            <StepCard
-              step={1}
-              icon={<CameraIcon className="w-10 h-10 text-amber-600" />}
-              title="Snap a Photo"
-              description="Take a photo of the plate, the packaging, or even a restaurant menu item. Our AI handles the rest."
-            />
-            <StepCard
-              step={2}
-              icon={<SparklesIcon className="w-10 h-10 text-amber-600" />}
-              title="AI Identifies Food &amp; Nutrients"
-              description="The AI recognizes individual foods, estimates portions, and calculates calories, protein, carbs, fat, fiber, and micronutrients."
-            />
-            <StepCard
-              step={3}
-              icon={<ShieldCheckIcon className="w-10 h-10 text-amber-600" />}
-              title="Per-Person Allergen Safety Check"
-              description="Each family member&apos;s allergen profile is checked automatically. You get an instant warning if anything flagged is detected."
-            />
-          </div>
+          {/* Ordered list — the semantic primitive for a numbered sequence.
+              NLP models (BERT/MUM) and screen readers parse <ol> as ordered,
+              and each step's number now lives IN the heading text. */}
+          <ol className="grid md:grid-cols-3 gap-8 list-none p-0 m-0">
+            {MEAL_TRACKING_STEPS.map((s) => (
+              <StepCard
+                key={s.step}
+                step={s.step}
+                icon={s.icon}
+                title={s.title}
+                description={s.description}
+              />
+            ))}
+          </ol>
           <div className="flex justify-center mt-8">
             <div className="hidden md:flex items-center gap-4 text-muted-foreground text-sm">
               <span className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full font-medium">Photo taken</span>
@@ -367,6 +471,22 @@ export default function MealtrackingBlogPage() {
           </div>
         </section>
 
+        {/* ============================================ */}
+        {/* FAQ — visible content matching the FAQPage   */}
+        {/* schema (and good for "People Also Ask").     */}
+        {/* ============================================ */}
+        <section className="mb-24 max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {FAQ_ITEMS.map((item) => (
+              <div key={item.question} className="bg-card rounded-xl border-2 border-border p-6">
+                <h3 className="text-lg font-semibold text-foreground mb-2">{item.question}</h3>
+                <p className="text-muted-foreground leading-relaxed">{item.answer}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* ============ CTA ============ */}
         <section className="bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 rounded-2xl p-12 text-center text-white">
           <h2 className="text-4xl font-bold mb-4">Stop Counting Calories. Start Photographing Meals.</h2>
@@ -411,15 +531,19 @@ function ProblemCard({ icon, title, description }: { icon: React.ReactNode; titl
 }
 
 function StepCard({ step, icon, title, description }: { step: number; icon: React.ReactNode; title: string; description: string }) {
+  // The ordinal lives IN the heading text ("1. Snap a Photo...") so NLP parses
+  // the sequence chronologically — not as a detached number above a heading.
   return (
-    <div className="bg-card rounded-xl border-2 border-border p-6 text-center relative">
+    <li className="bg-card rounded-xl border-2 border-border p-6 text-center relative list-none">
       <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-8 h-8 bg-amber-600 text-white rounded-full flex items-center justify-center text-sm font-bold">
         {step}
       </div>
       <div className="flex justify-center mb-4 mt-2">{icon}</div>
-      <h3 className="text-xl font-semibold text-foreground mb-2">{title}</h3>
+      <h3 className="text-xl font-semibold text-foreground mb-2">
+        <span className="text-amber-600 font-extrabold">{step}.</span> {title}
+      </h3>
       <p className="text-muted-foreground text-sm">{description}</p>
-    </div>
+    </li>
   )
 }
 

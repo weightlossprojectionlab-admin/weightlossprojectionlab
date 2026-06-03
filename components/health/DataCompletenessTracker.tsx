@@ -79,72 +79,66 @@ export function DataCompletenessTracker({ patientId, className = '' }: DataCompl
       setLoading(true)
 
       try {
-        // Calculate start of current week (7 days ago)
+        // Window = exactly 7 calendar days INCLUDING today. Subtracting
+        // 7 (not 6) from midnight spanned 8 date-keys, which is how
+        // "Meals logged: 8 of 7 days" happened. -6 → today + 6 prior = 7.
         const now = new Date()
         const weekStart = new Date(now)
-        weekStart.setDate(weekStart.getDate() - 7)
+        weekStart.setDate(weekStart.getDate() - 6)
         weekStart.setHours(0, 0, 0, 0)
 
-        // Fetch weight logs
+        // Count DISTINCT DAYS with >=1 log in the window — "X of 7 days"
+        // means days-you-logged, not raw entries. Two prior bugs lived
+        // here: (a) weight/steps used snapshot.size (entries), so logging
+        // 3x in a day — or aggregating a whole household — read as "33 of
+        // 7"; (b) the user-level weightLogs/mealLogs/stepLogs collections
+        // hold EVERY member's logs keyed by `patientId`, but nothing
+        // filtered by it, so one person's card summed the whole family.
+        // `scopeByPatientField` filters those by patientId; vitals live
+        // in a per-patient subcollection (already scoped by path), so
+        // they skip the field filter.
+        const countDistinctDays = (
+          snap: Awaited<ReturnType<typeof getDocs>>,
+          dateField: 'loggedAt' | 'recordedAt',
+          scopeByPatientField: boolean,
+        ): number => {
+          const days = new Set<string>()
+          snap.forEach(doc => {
+            const data = doc.data() as Record<string, any>
+            if (scopeByPatientField && patientId && data.patientId !== patientId) return
+            const raw = data[dateField]
+            const d = raw?.toDate ? raw.toDate() : new Date(raw)
+            if (isNaN(d.getTime()) || d < weekStart) return
+            days.add(d.toISOString().split('T')[0])
+          })
+          return days.size
+        }
+
+        // Fetch weight logs (user-level; keyed by patientId)
         const weightLogsRef = collection(db, 'users', effectiveUserId, 'weightLogs')
-        const weightQuery = query(
-          weightLogsRef,
-          where('loggedAt', '>=', Timestamp.fromDate(weekStart))
-        )
-        const weightSnapshot = await getDocs(weightQuery)
-        const weightCount = weightSnapshot.size
+        const weightSnapshot = await getDocs(query(weightLogsRef, where('loggedAt', '>=', Timestamp.fromDate(weekStart))))
+        const weightCount = countDistinctDays(weightSnapshot, 'loggedAt', true)
 
-        // Fetch meal logs
+        // Fetch meal logs (user-level; keyed by patientId)
         const mealLogsRef = collection(db, 'users', effectiveUserId, 'mealLogs')
-        const mealQuery = query(
-          mealLogsRef,
-          where('loggedAt', '>=', Timestamp.fromDate(weekStart))
-        )
-        const mealSnapshot = await getDocs(mealQuery)
+        const mealSnapshot = await getDocs(query(mealLogsRef, where('loggedAt', '>=', Timestamp.fromDate(weekStart))))
+        const mealCount = countDistinctDays(mealSnapshot, 'loggedAt', true)
 
-        // Count unique days with meal logs
-        const mealDays = new Set<string>()
-        mealSnapshot.forEach(doc => {
-          const data = doc.data()
-          const logDate = data.loggedAt.toDate()
-          const dateKey = logDate.toISOString().split('T')[0]
-          mealDays.add(dateKey)
-        })
-        const mealCount = mealDays.size
-
-        // Fetch step logs
+        // Fetch step logs (user-level; keyed by patientId)
         const stepLogsRef = collection(db, 'users', effectiveUserId, 'stepLogs')
-        const stepQuery = query(
-          stepLogsRef,
-          where('loggedAt', '>=', Timestamp.fromDate(weekStart))
-        )
-        const stepSnapshot = await getDocs(stepQuery)
-        const stepCount = stepSnapshot.size
+        const stepSnapshot = await getDocs(query(stepLogsRef, where('loggedAt', '>=', Timestamp.fromDate(weekStart))))
+        const stepCount = countDistinctDays(stepSnapshot, 'loggedAt', true)
 
-        // Fetch blood pressure readings (vitals collection)
+        // Fetch blood pressure + glucose readings (per-patient vitals subcollection)
         let bpCount = 0
         let bgCount = 0
-
-        // Check if patient has vitals enabled
         if (patientId) {
           try {
             const vitalsRef = collection(db, 'users', effectiveUserId, 'patients', patientId, 'vitals')
-            const bpQuery = query(
-              vitalsRef,
-              where('type', '==', 'blood_pressure'),
-              where('recordedAt', '>=', weekStart.toISOString())
-            )
-            const bpSnapshot = await getDocs(bpQuery)
-            bpCount = bpSnapshot.size
-
-            // Fetch blood glucose readings
-            const bgQuery = query(
-              vitalsRef,
-              where('type', '==', 'blood_sugar'),
-              where('recordedAt', '>=', weekStart.toISOString())
-            )
-            const bgSnapshot = await getDocs(bgQuery)
-            bgCount = bgSnapshot.size
+            const bpSnapshot = await getDocs(query(vitalsRef, where('type', '==', 'blood_pressure'), where('recordedAt', '>=', weekStart.toISOString())))
+            bpCount = countDistinctDays(bpSnapshot, 'recordedAt', false)
+            const bgSnapshot = await getDocs(query(vitalsRef, where('type', '==', 'blood_sugar'), where('recordedAt', '>=', weekStart.toISOString())))
+            bgCount = countDistinctDays(bgSnapshot, 'recordedAt', false)
           } catch (error) {
             logger.debug('[DataCompleteness] Vitals not available for this user', { error: error instanceof Error ? error.message : String(error) })
           }

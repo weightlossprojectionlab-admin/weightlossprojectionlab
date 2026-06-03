@@ -31,6 +31,7 @@ import toast from 'react-hot-toast'
 import type { Household, HouseholdFormData } from '@/types/household'
 import type { PatientProfile } from '@/types/medical'
 import { useHouseholds } from '@/hooks/useHouseholds'
+import { getPatientDisplayName } from '@/lib/life-stage-utils'
 
 interface HouseholdFormModalProps {
   isOpen: boolean
@@ -281,19 +282,19 @@ export function HouseholdFormModal({ isOpen, onClose, household, onSuccess }: Ho
                         {patient.photo ? (
                           <img
                             src={patient.photo}
-                            alt={patient.name}
+                            alt={getPatientDisplayName(patient) || 'Unnamed'}
                             className="w-8 h-8 rounded-full object-cover flex-shrink-0"
                           />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                             <span className="text-sm font-medium text-primary">
-                              {patient.name.charAt(0)}
+                              {getPatientDisplayName(patient).charAt(0) || '?'}
                             </span>
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
                           <div className="text-sm font-medium text-foreground truncate">
-                            {patient.name}
+                            {getPatientDisplayName(patient) || 'Unnamed member'}
                           </div>
                           {willMove && (
                             <div className="text-xs text-amber-700 dark:text-amber-400 font-medium">

@@ -53,7 +53,23 @@ export function useFirestoreQuery<T>(
         setError(null)
       },
       (err) => {
-        logger.error('[useFirestoreQuery] Snapshot error', err)
+        // Firestore errors keep `code`/`message` as non-enumerable props, and
+        // the logger only extracts message/name — so `code` (the useful field:
+        // permission-denied, or failed-precondition = missing index whose
+        // message has a create-index URL) was dropped, leaving "{}". Pass err
+        // for message/stack, plus `code` and a best-effort collection path so
+        // the failing subscription is obvious.
+        let path: string | undefined
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          path = (queryOrNull as any)?._query?.path?.segments?.join('/')
+        } catch {
+          /* internal query shape unavailable — ignore */
+        }
+        logger.error('[useFirestoreQuery] Snapshot error', err, {
+          code: (err as { code?: string })?.code,
+          path,
+        })
         setError(err)
         setLoading(false)
       }

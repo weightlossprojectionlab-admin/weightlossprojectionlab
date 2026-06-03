@@ -248,6 +248,16 @@ export default function ShoppingPage() {
       </ul>
       <p>WPL flags items that don't match your preferences and suggests alternatives.</p>
 
+      <p className="text-sm text-gray-600">
+        Once items reach your kitchen, WPL also flags them for each family member's allergies and
+        health conditions (a hard &ldquo;unsafe&rdquo; allergy stop, plus gentle &ldquo;best to
+        limit&rdquo; / &ldquo;good for&rdquo; nudges). See the{' '}
+        <Link href="/docs/user-guides/inventory" className="text-blue-600 underline">
+          Kitchen Inventory Guide
+        </Link>
+        .
+      </p>
+
       <h2 id="tips">Shopping List Tips</h2>
 
       <div className="space-y-3">

@@ -876,8 +876,11 @@ service cloud.firestore {
       // TODO: Enable Firebase App Check in Firebase Console for additional protection
       // NOTE: Firebase App Check should be enabled to protect against automated abuse
       //       Setup: Firebase Console > Build > App Check > Register your app
+      // Soft cap mirrored in hooks/useRecipes.ts. The public /recipes page
+      // loads the whole catalog and filters client-side, so the cap must
+      // exceed the catalog size or the newest recipes get truncated away.
       allow list: if isAdmin() ||
-                  (request.query.limit <= 50);
+                  (request.query.limit <= 200);
 
       // Create: Admin-only, with required recipe fields
       allow create: if isAdmin() &&

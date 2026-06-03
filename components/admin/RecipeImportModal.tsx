@@ -75,7 +75,7 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
       const perServingFat = Math.round(((importedRecipe.fat || 0) / (importedRecipe.servings || 1)) * 10) / 10
       const perServingFiber = Math.round(((importedRecipe.fiber || 0) / (importedRecipe.servings || 1)) * 10) / 10
 
-      const recipe: Partial<MealSuggestion> & { mealTypes?: string[] } = {
+      const recipe: Partial<MealSuggestion> & { mealTypes?: string[]; status?: string } = {
         name: importedRecipe.name,
         description: importedRecipe.description || importedRecipe.name,
         ingredients: importedRecipe.ingredients,
@@ -104,7 +104,11 @@ export function RecipeImportModal({ isOpen, onClose, onSuccess }: RecipeImportMo
         dietaryTags: importedRecipe.dietaryTags || [],
         imageUrls: importedRecipe.imageUrl ? [importedRecipe.imageUrl] : [],
         videoUrl: '',
-        allergens: []
+        allergens: [],
+        // Imported recipes are admin-curated catalog additions — publish on
+        // save so they appear on /recipes. The API otherwise defaults status
+        // to 'draft', which the published-only list filter hides (invisible).
+        status: 'published',
       }
 
       // Save via admin API (handles auth + Firestore server-side)

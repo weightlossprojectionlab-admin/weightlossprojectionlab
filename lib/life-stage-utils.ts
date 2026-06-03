@@ -105,7 +105,10 @@ export function getHumanLifeStage(dob: string): LifeStageResult {
  * record remains visible where it matters.
  */
 export function getPatientDisplayName(patient: {
-  name: string
+  // `name` is logically required, but legacy/partial patient docs in
+  // the wild are missing it — type it honestly so the '' fallbacks
+  // below aren't treated as dead code.
+  name?: string | null
   nickname?: string | null
   authDisplayName?: string | null
   /** Per-patient override. Three distinct sources, each from its own
@@ -125,9 +128,15 @@ export function getPatientDisplayName(patient: {
     // accounts that completed onboarding after Phase 2.1.
     if (authName) return authName
   }
-  if (patient.displayPreference === 'legal') return patient.name
+  if (patient.displayPreference === 'legal') return patient.name ?? ''
   const trimmed = patient.nickname?.trim()
-  return trimmed || patient.name
+  // Final fallback coalesces to '' rather than the raw `name`, which —
+  // despite the `string` type — is absent on some legacy/partial
+  // patient docs. Returning undefined here crashed every caller that
+  // does `.trim()`/`.charAt()` on the result (e.g. the family-admin
+  // dashboard's PatientSnapshotCard). Degrade to '' so a nameless
+  // patient renders a "?" placeholder instead of taking down the page.
+  return trimmed || patient.name || ''
 }
 
 export function getPatientBadgeLabel(patient: {

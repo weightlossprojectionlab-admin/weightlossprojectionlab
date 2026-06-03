@@ -6,6 +6,8 @@ import { rateLimit } from '@/lib/rate-limit'
 import { lookupProductHybrid } from '@/lib/product-lookup-server'
 import { fetchOpenFoodFactsImageOnly } from '@/lib/openfoodfacts-server'
 import { barcodeVariants, resolveProductDoc } from '@/lib/barcode-variants'
+import { allergensFromProductFields } from '@/lib/allergen-parser'
+import { extractNutrientPanel, type Nutriments } from '@/lib/nutrition-extract'
 
 /**
  * GET /api/products/lookup?barcode={barcode}
@@ -127,6 +129,53 @@ export async function GET(request: NextRequest) {
           })
         }
 
+        // Lazy allergen backfill: a cached doc created before allergen tagging
+        // existed carries no allergenTags, so the safety banner can't fire. Re-look
+        // up OFF in the background and stamp canonical tags; the next scan serves
+        // them from cache. Mirrors the image/alias lazy-enrichment pattern.
+        if (!productData?.allergenTags) {
+          after(async () => {
+            try {
+              const fresh = await lookupProductHybrid(resolvedBarcode)
+              const allergenTags = allergensFromProductFields(
+                fresh?.allergens,
+                fresh?.ingredients_text,
+                fresh?.allergens_tags,
+              )
+              if (allergenTags.length > 0) {
+                await productRef.update({ allergenTags, updatedAt: new Date() })
+                logger.info('[Lookup] backfilled allergenTags', { barcode: resolvedBarcode, allergenTags })
+              }
+            } catch (e) {
+              logger.debug('[Lookup] allergen backfill failed', {
+                barcode: resolvedBarcode,
+                error: (e as Error).message,
+              })
+            }
+          })
+        }
+
+        // Lazy nutrient-panel backfill: a doc cached before Tier-2 has no
+        // `nutrients` panel, so cache-hit items get D=1. Re-look up OFF and
+        // stamp the normalized panel; the next scan serves it. Same pattern.
+        if (!productData?.nutrients) {
+          after(async () => {
+            try {
+              const fresh = await lookupProductHybrid(resolvedBarcode)
+              const panel = extractNutrientPanel(fresh?.nutriments as Nutriments | undefined, fresh?.serving_size)
+              if (panel) {
+                await productRef.update({ nutrients: panel, updatedAt: new Date() })
+                logger.info('[Lookup] backfilled nutrient panel', { barcode: resolvedBarcode, basis: panel.basis })
+              }
+            } catch (e) {
+              logger.debug('[Lookup] nutrient backfill failed', {
+                barcode: resolvedBarcode,
+                error: (e as Error).message,
+              })
+            }
+          })
+        }
+
         // Lazy alias backfill: if this doc still doesn't have an `aliases`
         // array, write one based on its canonical id. Future scans of any
         // variant resolve via the array-contains query in a single read,
@@ -172,6 +221,11 @@ export async function GET(request: NextRequest) {
             },
             categories: productData?.category || '',
             ingredients_text: '',
+            // Forward the catalog's stored canonical allergen tags so a cache hit
+            // still tags the item (the field the safety banner depends on).
+            allergens_tags: productData?.allergenTags || [],
+            // Forward the stored per-serving panel so a cache hit still feeds D.
+            nutrients: productData?.nutrients ?? undefined,
             container_size: productData?.containerSize ?? undefined,
             container_unit: productData?.containerUnit ?? undefined,
           },
@@ -204,6 +258,12 @@ export async function GET(request: NextRequest) {
         _cached: false
       })
     }
+
+    // Normalized per-serving nutrient panel for the health-demand weight D.
+    // Extracted once here (outside the cache-write try) so it's in scope for both
+    // the catalog write and the response. Stored on the catalog so cache hits can
+    // forward it (the client no longer re-extracts). null when OFF has no panel.
+    const nutrientPanel = extractNutrientPanel(product.nutriments as Nutriments | undefined, product.serving_size)
 
     // Step 3: update cache.
     //
@@ -238,9 +298,11 @@ export async function GET(request: NextRequest) {
         sodium: pickNutrient(nutriments.sodium_serving, nutriments.sodium_100g, nutriments.sodium),
         sugars: pickNutrient(nutriments.sugars_serving, nutriments.sugars_100g, nutriments.sugars),
         saturatedFat: pickNutrient(
-          nutriments.saturated_fat_serving,
-          nutriments.saturated_fat_100g,
-          nutriments.saturated_fat
+          // OFF spells these with a hyphen (saturated-fat); the underscore form
+          // is always undefined, so catalog nutrition.saturatedFat was never set.
+          nutriments['saturated-fat_serving'],
+          nutriments['saturated-fat_100g'],
+          nutriments['saturated-fat']
         ),
         cholesterol: pickNutrient(
           nutriments.cholesterol_serving,
@@ -279,6 +341,18 @@ export async function GET(request: NextRequest) {
           ...cleanedRichNutrition,
         },
         aliases,
+        // Canonical allergen tags from OFF — parsed once here so the catalog is
+        // the product-level source of truth. Omitted when empty so a sparse
+        // lookup never ERASES a previously-found set (do-no-harm).
+        ...(() => {
+          const allergenTags = allergensFromProductFields(
+            product.allergens,
+            product.ingredients_text,
+            product.allergens_tags,
+          )
+          return allergenTags.length > 0 ? { allergenTags } : {}
+        })(),
+        ...(nutrientPanel ? { nutrients: nutrientPanel } : {}),
         updatedAt: now
       }
 
@@ -338,7 +412,13 @@ export async function GET(request: NextRequest) {
         image_front_url: product.image_url || '',
         nutriments: product.nutriments,
         categories: product.categories || '',
-        ingredients_text: product.ingredients_text || ''
+        ingredients_text: product.ingredients_text || '',
+        // Forward the allergen signal so the client's addOrUpdateShoppingItem can
+        // tag the item. allergens_tags is OFF's locale-proof canonical source.
+        allergens: product.allergens || '',
+        allergens_tags: product.allergens_tags || [],
+        // Pre-extracted per-serving panel for the health-demand weight D.
+        nutrients: nutrientPanel ?? undefined
       },
       _cached: false,
       _source: product.source

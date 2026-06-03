@@ -3,6 +3,25 @@
  */
 
 /**
+ * Normalize a remote image URL to HTTPS.
+ *
+ * Imported recipe images can arrive as plain `http://` (e.g. an og:image or
+ * JSON-LD image served over HTTP). `next/image` is configured with
+ * `remotePatterns` that only allow `protocol: 'https'`, so an http src throws
+ * "hostname not configured". Every CDN that matters serves the same asset over
+ * HTTPS, so upgrading the scheme is safe and fixes the render. Protocol-
+ * relative `//host/...` URLs are also promoted to https. Non-http(s) values
+ * (data:, blob:, relative paths) are returned unchanged.
+ */
+export function toHttpsImageUrl(url: string | undefined | null): string {
+  if (!url) return ''
+  const trimmed = url.trim()
+  if (trimmed.startsWith('//')) return `https:${trimmed}`
+  if (trimmed.startsWith('http://')) return `https://${trimmed.slice('http://'.length)}`
+  return trimmed
+}
+
+/**
  * Capitalize the first letter of each word in a name (Title Case)
  * Handles special cases like "O'Brien", "McDonald", etc.
  *

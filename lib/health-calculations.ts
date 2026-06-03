@@ -180,6 +180,59 @@ export function calculateBMI(params: {
   return { bmi, category }
 }
 
+export interface TargetWeightSuggestion {
+  bmi: number
+  category: 'underweight' | 'normal' | 'overweight' | 'obese'
+  minHealthyWeight: number // lbs, at BMI 18.5
+  maxHealthyWeight: number // lbs, at BMI 24.9
+  target: number // suggested target weight, lbs
+  reason: string // pronoun-neutral so it reads for self + any relative
+}
+
+/**
+ * Healthy-weight range + a suggested target weight, from height + current
+ * weight via BMI. The "tell the user what a healthy weight is, then let them
+ * set a target" logic — surfaced in the onboarding goal step. Imperial:
+ * weight in lbs, height in inches. Reuses calculateBMI (single BMI source).
+ *
+ * Suggested target by category: underweight → bottom of the healthy range;
+ * normal → maintain; overweight → midpoint of the range; obese → a first-step
+ * 10% loss (reassess after). Healthy range is BMI 18.5–24.9.
+ */
+export function getTargetWeightSuggestion(
+  currentWeightLbs: number,
+  heightInInches: number,
+): TargetWeightSuggestion | null {
+  if (!(currentWeightLbs > 0) || !(heightInInches > 0)) return null
+
+  const { bmi, category } = calculateBMI({
+    weight: currentWeightLbs,
+    height: heightInInches,
+    units: 'imperial',
+  })
+  const minHealthyWeight = Math.round((18.5 * heightInInches * heightInInches) / 703)
+  const maxHealthyWeight = Math.round((24.9 * heightInInches * heightInInches) / 703)
+  const range = `${minHealthyWeight}–${maxHealthyWeight} lbs`
+
+  let target: number
+  let reason: string
+  if (category === 'underweight') {
+    target = minHealthyWeight
+    reason = `A BMI of ${bmi} is in the underweight range. A healthy weight is about ${range}.`
+  } else if (category === 'overweight') {
+    target = Math.round((minHealthyWeight + maxHealthyWeight) / 2)
+    reason = `A BMI of ${bmi} is in the overweight range. A healthy weight is about ${range}.`
+  } else if (category === 'obese') {
+    target = Math.round(currentWeightLbs * 0.9)
+    reason = `A BMI of ${bmi} is in the obese range. A healthy weight is about ${range} — a solid first step is ~${target} lbs, then reassess.`
+  } else {
+    target = Math.round(currentWeightLbs)
+    reason = `A BMI of ${bmi} is in the healthy range (${range}) — maintaining is a great goal.`
+  }
+
+  return { bmi, category, minHealthyWeight, maxHealthyWeight, target, reason }
+}
+
 /**
  * Calculate recommended daily water intake (in oz or ml)
  */

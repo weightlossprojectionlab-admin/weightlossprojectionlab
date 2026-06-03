@@ -181,9 +181,10 @@ export default async function ClientDetailPage({ params }: PageProps) {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {client.patients.map(patient => (
-                <div
+                <Link
                   key={patient.id}
-                  className="rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all"
+                  href={`/dashboard/families/${userId}/patients/${patient.id}`}
+                  className="block rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 hover:shadow-lg hover:border-blue-300 dark:hover:border-blue-600 transition-all"
                 >
                   <div className="flex items-start gap-3 mb-4">
                     <div className={`h-12 w-12 rounded-full flex items-center justify-center text-lg font-bold shrink-0 ${
@@ -238,7 +239,7 @@ export default async function ClientDetailPage({ params }: PageProps) {
                       </div>
                     )}
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           )}

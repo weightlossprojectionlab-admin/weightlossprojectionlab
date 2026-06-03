@@ -201,3 +201,38 @@ export const PLANS: Plan[] = [
 export function getPlanById(id: SubscriptionPlan): Plan | null {
   return PLANS.find((p) => p.id === id) ?? null
 }
+
+/**
+ * Resolve a plan's COMPLETE included-feature set, flattening the
+ * "Everything in {parentPlan}" inheritance chain.
+ *
+ * The visible pricing cards stay clean by saying "Everything in Family
+ * Plus" — but an AI extraction model reading that can't know what the
+ * tier actually includes without retroactively crawling up the columns.
+ * This expands the chain so structured data (Product schema feature list)
+ * lists every concrete feature individually for each distinct plan.
+ *
+ * Recursion is safe: inheritance only ever points to a lower tier, so the
+ * chain is acyclic. Results are de-duplicated, parent features first.
+ */
+export function getFlattenedFeatureNames(id: SubscriptionPlan): string[] {
+  const plan = getPlanById(id)
+  if (!plan) return []
+  const result: string[] = []
+  const add = (name: string) => {
+    if (!result.includes(name)) result.push(name)
+  }
+  for (const f of plan.features) {
+    if (!f.included) continue
+    const inherit = f.name.match(/^Everything in (.+)$/)
+    if (inherit) {
+      const parent = PLANS.find((p) => p.name === inherit[1])
+      if (parent) getFlattenedFeatureNames(parent.id).forEach(add)
+      // drop the "Everything in X" meta-bullet itself — the concrete
+      // parent features it stands for are now expanded above.
+    } else {
+      add(f.name)
+    }
+  }
+  return result
+}

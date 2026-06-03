@@ -22,6 +22,10 @@ import { useShopping } from '@/hooks/useShopping'
 import { getCategoryMetadata, formatQuantityDisplay } from '@/lib/product-categories'
 import { formatExpirationDate } from '@/lib/product-categories'
 import { getExpirationColor } from '@/lib/expiration-tracker'
+import { inventoryAttentionScore, compareAttention, toEpochMs, type AttentionAction } from '@/lib/inventory-attention'
+import { buildRestockingReport } from '@/lib/restocking-report'
+import { toMemberHealthProfiles, toItemHealthProfile } from '@/lib/health-context'
+import { householdHealthNotes } from '@/lib/health-relevance'
 import type { StorageLocation } from '@/types/shopping'
 import { Spinner } from '@/components/ui/Spinner'
 import { ScanContextModal } from '@/components/shopping/ScanContextModal'
@@ -58,6 +62,22 @@ const BarcodeScanner = dynamic(
   () => import('@/components/BarcodeScanner').then(mod => ({ default: mod.BarcodeScanner })),
   { ssr: false }
 )
+
+// Attention-action badge styles for inventory list rows (action comes from
+// inventoryAttentionScore). `discard` is intentionally the loudest — solid
+// red — so already-expired waste reads instantly as different from a softer
+// amber "use soon" warning.
+const ATTENTION_BADGE: Record<Exclude<AttentionAction, 'ok'>, { label: string; cls: string }> = {
+  discard: { label: 'Discard', cls: 'bg-red-600 text-white' },
+  'use-soon': { label: 'Use soon', cls: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' },
+  restock: { label: 'Restock', cls: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' },
+}
+
+// Humanize canonical allergen tokens (lib/allergen-parser) for the safety alert.
+const ALLERGEN_LABEL: Record<string, string> = {
+  milk: 'Milk', egg: 'Egg', fish: 'Fish', crustacean_shellfish: 'Shellfish',
+  tree_nut: 'Tree nuts', peanut: 'Peanuts', wheat_gluten: 'Gluten', soy: 'Soy', sesame: 'Sesame',
+}
 
 // Display options for the Details tab editor. Same lists used by the
 // (now-unused) InventoryItemEditModal — kept inline here so the page
@@ -237,6 +257,7 @@ function KitchenInventoryContent() {
     containerSize: number | null
     containerUnit: QuantityUnit | null
     nutrition?: CatalogNutrition | null
+    nutrients?: ShoppingItem['nutrients'] | null
   }
   const [catalogResults, setCatalogResults] = useState<CatalogResult[]>([])
   const [catalogLoading, setCatalogLoading] = useState(false)
@@ -1949,6 +1970,43 @@ function KitchenInventoryContent() {
     return auth.currentUser?.uid === userId ? 'You' : 'Member'
   }
 
+  // Health-aware scoring context. REUSES the already-fetched `members` profiles
+  // (no second getPatients) and assembles the per-item context in ONE place so
+  // the list sort + the card render share it (DRY). Inert for allergen-free
+  // items / members with no conditions — the engine degrades gracefully.
+  const healthMembers = toMemberHealthProfiles(Object.values(members))
+  const scoreItem = (item: ShoppingItem) =>
+    inventoryAttentionScore(item, Date.now(), {
+      members: healthMembers,
+      itemHealth: toItemHealthProfile(item),
+    })
+
+  // Caregiver-voice health notes — the VISIBLE surface of the demand weight D
+  // (the soft condition/diet nudge; allergens are the separate red banner).
+  // One helper shared by the list card AND the details card (DRY); the wording
+  // lives in lib/health-relevance, member names resolve via getMemberName.
+  const renderHealthNotes = (item: ShoppingItem) => {
+    const notes = householdHealthNotes(toItemHealthProfile(item), healthMembers, getMemberName)
+    if (notes.length === 0) return null
+    return (
+      <div className="mb-3 space-y-1.5">
+        {notes.map((note) => (
+          <div
+            key={`${note.memberId}-${note.nutrient}`}
+            className={`p-2 rounded text-xs font-medium flex items-start gap-1.5 border-l-4 ${
+              note.tone === 'limit'
+                ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-800 dark:text-amber-300'
+                : 'bg-green-50 dark:bg-green-900/20 border-green-500 text-green-800 dark:text-green-300'
+            }`}
+          >
+            <span aria-hidden="true">{note.tone === 'limit' ? '⚠️' : '✓'}</span>
+            <span>{note.text}</span>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   /**
    * Get items for selected location, then apply the page-wide search +
    * category filter so every tab sees the same filtered set.
@@ -1970,27 +2028,62 @@ function KitchenInventoryContent() {
           return []
       }
     })()
-    // Newest-added first — sort by createdAt desc so a freshly scanned /
-    // catalog-added item appears at the top of the list. Falls back to
-    // updatedAt for legacy rows missing createdAt. Updating an existing
-    // item (consume / adjust) does NOT bump it under this rule.
-    const sorted = [...byLocation].sort((a, b) => {
-      const aTs = a.createdAt
-        ? new Date(a.createdAt).getTime()
-        : a.updatedAt
-          ? new Date(a.updatedAt).getTime()
-          : 0
-      const bTs = b.createdAt
-        ? new Date(b.createdAt).getTime()
-        : b.updatedAt
-          ? new Date(b.updatedAt).getTime()
-          : 0
-      return bTs - aTs
-    })
+    // Triage order: by the shared Attention score first (compareAttention,
+    // lib/inventory-attention) so items about to run out / spoil / be discarded
+    // float to the top, then newest-added among equally-calm items — which
+    // preserves the old "freshly scanned appears first" behavior for the
+    // non-urgent bulk. Attention is precomputed once per item so the comparator
+    // isn't re-scoring on every comparison.
+    const recency = (i: (typeof byLocation)[number]) =>
+      i.createdAt ? new Date(i.createdAt).getTime() : i.updatedAt ? new Date(i.updatedAt).getTime() : 0
+    const sorted = byLocation
+      .map((item) => ({ item, a: scoreItem(item) }))
+      .sort((x, y) => compareAttention(x.a, y.a) || recency(y.item) - recency(x.item))
+      .map((w) => w.item)
     return filterItems(sorted)
   }
 
   const items = getItemsForLocation()
+
+  // ── Deep-linkable item details ─────────────────────────────────────────────
+  // The open item is reflected in the URL as ?item=<id> for the item-scoped tabs,
+  // so Details (and UPC/Image/History/Adjust) survive a refresh and are shareable.
+  // Two effects: write the id when an item is open; restore it from the URL on load.
+  const ITEM_SCOPED_TABS: InventoryTab[] = ['details', 'history', 'upc', 'image', 'adjust']
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString())
+    const current = params.get('item')
+    // Skip synthetic catalog items — their ids don't resolve to a real row on reload.
+    const id =
+      selectedItem &&
+      !isSyntheticCatalogItem(selectedItem) &&
+      ITEM_SCOPED_TABS.includes(activeTab)
+        ? selectedItem.id
+        : null
+    if (id) {
+      if (current !== id) {
+        params.set('item', id)
+        router.replace(`/inventory?${params.toString()}`)
+      }
+    } else if (current) {
+      params.delete('item')
+      const qs = params.toString()
+      router.replace(qs ? `/inventory?${qs}` : '/inventory')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, selectedItem, searchParams, router])
+
+  useEffect(() => {
+    if (selectedItem) return
+    const id = searchParams.get('item')
+    if (!id) return
+    const found = [...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems].find(
+      (i) => i.id === id,
+    )
+    if (found) setSelectedItem(found)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, selectedItem, fridgeItems, freezerItems, pantryItems, counterItems])
 
   /**
    * Handle scan context selection
@@ -2470,6 +2563,13 @@ function KitchenInventoryContent() {
                     ← Back to list
                   </button>
                 </div>
+
+                {/* Condition/diet health notes (demand weight D) — the soft
+                    nudge, shared with the list card via renderHealthNotes. */}
+                {(() => {
+                  const el = renderHealthNotes(selectedItem)
+                  return el ? <div className="px-5 pt-4">{el}</div> : null
+                })()}
 
                 {/* Quick Actions — per-item workflows that used to be on each
                     list row. Replaces the Edit/Used Up/Buy Again buttons,
@@ -2968,6 +3068,18 @@ function KitchenInventoryContent() {
                       const rowN = selectedItem.nutrition || null
                       const n = catN ?? rowN
                       const source = catN ? 'live · catalog' : rowN ? 'snapshot' : 'no data'
+                      // Sodium / sugars / saturated fat: prefer the normalized
+                      // per-serving `nutrients` panel (correct units + complete).
+                      // The catalog display `nutrition` MISSES saturated fat (OFF
+                      // spells it "saturated-fat"), so fall back to it only for
+                      // sodium/sugars, converting catalog sodium grams → mg.
+                      const panel = (e?.nutrients ?? selectedItem.nutrients) as
+                        | { sodium?: number; sugars?: number; saturatedFat?: number; basis?: 'serving' | 'derived-serving' | '100g' }
+                        | undefined
+                      const rich = (n ?? {}) as { sodium?: number; sugars?: number }
+                      const sodiumMg = panel?.sodium ?? (rich.sodium != null ? rich.sodium * 1000 : undefined)
+                      const sugarsG = panel?.sugars ?? rich.sugars
+                      const satFatG = panel?.saturatedFat
                       const hasAny =
                         !!n &&
                         ((n.calories ?? 0) > 0 ||
@@ -2979,13 +3091,17 @@ function KitchenInventoryContent() {
                         <div className="rounded-lg border border-border bg-card p-4 sm:col-span-2 lg:col-span-2">
                           <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3 flex items-baseline gap-2">
                             <span>Nutrition facts</span>
-                            {/* Per-unit label: honor `per` flag from the catalog
-                                — '100g' when OFF only had per-100g data and we
-                                couldn't convert (no serving_quantity). 'serving'
-                                otherwise (or when `per` is missing — legacy). */}
-                            {(n as { per?: 'serving' | '100g' })?.per === '100g' ? (
+                            {/* Per-unit label — drive it from the nutrient panel's
+                                `basis` (the authoritative source): '100g' when OFF
+                                had no serving size, else per-serving. Falls back to
+                                the catalog servingSize string for legacy rows. */}
+                            {panel?.basis === '100g' ? (
                               <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
                                 per 100 g
+                              </span>
+                            ) : panel?.basis ? (
+                              <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
+                                per serving
                               </span>
                             ) : n?.servingSize ? (
                               <span className="font-normal normal-case tracking-normal text-muted-foreground/80">
@@ -3012,22 +3128,27 @@ function KitchenInventoryContent() {
                           {(
                             [
                               ['Total fat', n?.fat, 'g'],
+                              ['Saturated fat', satFatG, 'g'],
+                              ['Sodium', sodiumMg, 'mg'],
                               ['Total carbohydrates', n?.carbs, 'g'],
                               ['Dietary fiber', n?.fiber, 'g'],
+                              ['Total sugars', sugarsG, 'g'],
                               ['Protein', n?.protein, 'g'],
                             ] as const
                           ).map(([label, value, unit]) => {
                             // Macros: round to 1 decimal. "<0.1" for nonzero
                             // sub-tenth values so trace amounts don't read as
                             // empty; "0" for true zero so the column doesn't
-                            // turn into "0.0" noise.
+                            // turn into "0.0" noise. Sodium is shown as whole mg.
                             const v = value ?? 0
                             const display =
                               v === 0
                                 ? '0'
-                                : Math.abs(v) < 0.1
-                                  ? '<0.1'
-                                  : (Math.round(v * 10) / 10).toString()
+                                : unit === 'mg'
+                                  ? Math.round(v).toString()
+                                  : Math.abs(v) < 0.1
+                                    ? '<0.1'
+                                    : (Math.round(v * 10) / 10).toString()
                             return (
                               <div
                                 key={label}
@@ -3078,7 +3199,10 @@ function KitchenInventoryContent() {
                       <div className="mt-3 space-y-2 text-sm text-muted-foreground">
                         {selectedItem.lastPurchased && (
                           <div>
-                            Last purchased: {new Date(selectedItem.lastPurchased).toLocaleDateString()}
+                            Last purchased: {(() => {
+                              const ms = toEpochMs(selectedItem.lastPurchased)
+                              return Number.isNaN(ms) ? '—' : new Date(ms).toLocaleDateString()
+                            })()}
                             {selectedItem.purchasedBy && ` by ${getMemberName(selectedItem.purchasedBy)}`}
                           </div>
                         )}
@@ -3707,17 +3831,19 @@ function KitchenInventoryContent() {
             }
             const rows: ReorderRow[] = allItems
               .map((item): ReorderRow | null => {
-                const avgDays = item.averageDaysBetweenPurchases
-                const last = item.lastPurchased ? new Date(item.lastPurchased).getTime() : null
-                if (avgDays !== undefined && last !== null) {
-                  const daysSince = Math.floor((Date.now() - last) / (1000 * 60 * 60 * 24))
-                  const ahead = Math.round(avgDays - daysSince)
+                // DRY: the depletion clock + cold-start low-stock signal now
+                // come from the shared Attention model (lib/inventory-attention.ts).
+                // This tab is restock-focused, so it reads the RESTOCK facet
+                // only — the spoil clock surfaces in the expiry alerts + list.
+                const { tEmpty, restockUrgency } = inventoryAttentionScore(item)
+                if (tEmpty !== null) {
+                  const ahead = Math.round(tEmpty)
                   if (ahead <= 0) return { item, predictedDaysAhead: ahead, reason: 'due-now' }
                   if (ahead <= 3) return { item, predictedDaysAhead: ahead, reason: 'due-soon' }
                   return null // on-schedule, hide from suggestions
                 }
-                // Cold-start: no avg cadence; fall back to stock-level signal
-                if ((item.quantity ?? 0) <= 1) {
+                // Cold-start: no cadence yet; low-stock floor from the model.
+                if (restockUrgency > 0) {
                   return { item, predictedDaysAhead: null, reason: 'low-stock' }
                 }
                 return null
@@ -3816,6 +3942,10 @@ function KitchenInventoryContent() {
               tab. */}
           {activeTab === 'report' && (() => {
             const allItems = filterItems([...fridgeItems, ...freezerItems, ...pantryItems, ...counterItems])
+            // Waste + cadence diagnostics from the shared Attention model.
+            const report = buildRestockingReport(allItems)
+            const fmtCents = (cents: number) => `$${(cents / 100).toFixed(2)}`
+            const lowConfidenceCadence = report.cadence.filter((c) => c.lowConfidence)
             type Bucket = 'overdue' | 'soon' | 'onSchedule' | 'noPrediction'
             const buckets: Record<Bucket, typeof allItems> = {
               overdue: [],
@@ -3908,6 +4038,43 @@ function KitchenInventoryContent() {
 
             return (
               <div className="space-y-4">
+                {/* Financial waste — expired stock still on hand. "Wasted"
+                    because the food is past date; the cost is money already
+                    lost. Unpriced items are surfaced honestly, never fabricated
+                    into a dollar figure. This is the ROI headline. */}
+                {report.waste.itemCount > 0 && (
+                  <div className="bg-card rounded-lg border border-red-200 dark:border-red-800 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-border bg-red-50 dark:bg-red-900/20 flex items-baseline justify-between gap-3">
+                      <h3 className="text-sm font-semibold text-red-700 dark:text-red-300 flex items-center gap-2">
+                        <span aria-hidden="true">🗑️</span> Wasted · expired on hand
+                      </h3>
+                      <span className="text-lg font-bold text-red-700 dark:text-red-300">
+                        {fmtCents(report.waste.totalKnownCostCents)}
+                      </span>
+                    </div>
+                    <ul className="divide-y divide-border">
+                      {report.waste.byCategory.map((row) => (
+                        <li key={row.category} className="px-4 py-2.5 flex items-center justify-between gap-3 text-sm">
+                          <span className="text-foreground">
+                            {getCategoryMetadata(row.category).displayName} · {row.count} item{row.count !== 1 ? 's' : ''}
+                          </span>
+                          <span className="font-medium text-foreground">
+                            {fmtCents(row.knownCostCents)}
+                            {row.unpricedCount > 0 && (
+                              <span className="text-xs text-muted-foreground"> · {row.unpricedCount} unpriced</span>
+                            )}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                    {report.waste.unpricedCount > 0 && (
+                      <p className="px-4 py-2 text-xs text-muted-foreground border-t border-border">
+                        {report.waste.unpricedCount} expired item{report.waste.unpricedCount !== 1 ? 's' : ''} had no price on record — counted, but not in the dollar total.
+                      </p>
+                    )}
+                  </div>
+                )}
+
                 {/* Top stats */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {([
@@ -3937,6 +4104,31 @@ function KitchenInventoryContent() {
                     {renderBucket('Due soon', '⏰', buckets.soon, 'yellow')}
                     {renderBucket('On schedule', '✅', buckets.onSchedule, 'green')}
                     {renderBucket('No prediction yet', '❓', buckets.noPrediction, 'gray')}
+
+                    {/* Cadence calibration — where the naive depletion model is
+                        too erratic to trust (interval spread ≥ mean). This is
+                        the instrumentation step: it points at exactly which
+                        items would benefit from a smarter (learned) model. */}
+                    {lowConfidenceCadence.length > 0 && (
+                      <div className="bg-card rounded-lg border border-yellow-200 dark:border-yellow-800 overflow-hidden">
+                        <div className="px-4 py-3 border-b border-border bg-muted/30 flex items-center gap-2">
+                          <span aria-hidden="true">📉</span>
+                          <h3 className="text-sm font-semibold text-foreground">
+                            Predictions to trust less · {lowConfidenceCadence.length}
+                          </h3>
+                        </div>
+                        <ul className="divide-y divide-border">
+                          {lowConfidenceCadence.slice(0, 8).map((c) => (
+                            <li key={c.id} className="px-4 py-2.5 text-sm">
+                              <div className="font-medium text-foreground truncate">{c.productName}</div>
+                              <div className="text-xs text-muted-foreground">
+                                cadence ~{c.meanIntervalDays}d, but buys swing by {c.intervalSpreadDays}d over {c.sampleSize} purchase{c.sampleSize !== 1 ? 's' : ''} — prediction is rough
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </>
                 )}
               </div>
@@ -4542,6 +4734,7 @@ function KitchenInventoryContent() {
             <div className="space-y-3">
               {items.map(item => {
                 const categoryMeta = getCategoryMetadata(item.category)
+                const attention = scoreItem(item)
 
                 // Calculate expiration severity from item's expiresAt date
                 let expirationSeverity: 'expired' | 'critical' | 'warning' | 'normal' = 'normal'
@@ -4576,6 +4769,22 @@ function KitchenInventoryContent() {
                       }
                     }}
                   >
+                    {/* Allergen safety banner — categorical hard exclusion from
+                        the engine's unsafeFor (bypasses the numeric score). Names
+                        via the shared getMemberName, allergens humanized. */}
+                    {attention.unsafeFor.length > 0 && (
+                      <div className="mb-3 p-2.5 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 rounded text-red-700 dark:text-red-300 text-xs font-semibold flex items-start gap-1.5">
+                        <span aria-hidden="true">⚠️</span>
+                        <span>
+                          Unsafe for {attention.unsafeFor.map((id) => getMemberName(id)).filter(Boolean).join(', ')}
+                          {item.allergenTags && item.allergenTags.length > 0 &&
+                            ` — contains ${item.allergenTags.map((t) => ALLERGEN_LABEL[t] ?? t).join(', ')}`}
+                        </span>
+                      </div>
+                    )}
+                    {/* Condition/diet nudge (demand weight D) — the soft signal,
+                        below the hard allergen banner. */}
+                    {renderHealthNotes(item)}
                     <div className="flex items-center gap-4">
                       {/* Product Image — catalog (admin/barcodes) wins over the
                           row's snapshot, since admin migrations / OFF / USDA
@@ -4599,6 +4808,19 @@ function KitchenInventoryContent() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-foreground truncate flex items-center gap-2">
                           <span className="truncate">{item.productName || 'Unknown Product'}</span>
+                          {/* Discard always flags (expired = waste); restock /
+                              use-soon flag only when genuinely urgent (score ≥
+                              0.5 ≈ within ~5 days) so we don't badge the whole
+                              pantry — the list is already sorted by urgency. */}
+                          {attention.action !== 'ok' &&
+                            (attention.action === 'discard' || attention.score >= 0.5) && (
+                              <span
+                                className={`flex-shrink-0 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full ${ATTENTION_BADGE[attention.action].cls}`}
+                                title={`${ATTENTION_BADGE[attention.action].label} — attention score ${attention.score.toFixed(2)}`}
+                              >
+                                {ATTENTION_BADGE[attention.action].label}
+                              </span>
+                            )}
                           {/* Inline rename pencil — only shown for placeholder
                               names. Curated names are admin-only via the
                               /admin/barcodes edit flow. */}

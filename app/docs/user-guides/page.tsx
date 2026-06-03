@@ -21,6 +21,7 @@ import {
   QrcodeIcon,
   DownloadIcon,
   BellIcon,
+  ArchiveBoxIcon,
 } from '@/components/docs/DocIcons'
 
 export const metadata: Metadata = {
@@ -157,6 +158,14 @@ export default function UserGuidesPage() {
                 title="Shopping Lists"
                 description="Create and manage shopping lists"
                 accentColor="green"
+                size="small"
+              />
+              <DocCard
+                href="/docs/user-guides/inventory"
+                icon={<ArchiveBoxIcon className="w-5 h-5" />}
+                title="Kitchen Inventory"
+                description="Track what you have, restock timing, and health flags"
+                accentColor="teal"
                 size="small"
               />
               <DocCard

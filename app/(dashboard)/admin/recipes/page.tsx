@@ -18,6 +18,7 @@ import toast from 'react-hot-toast'
 import { getCSRFToken } from '@/lib/csrf'
 import { clearRecipeCache } from '@/hooks/useRecipes'
 import { mergeRecipesWithMedia } from '@/lib/recipe-merge'
+import { recipeMatchesQuery } from '@/lib/recipe-search'
 import { SearchInput } from '@/components/ui/SearchInput'
 
 interface Recipe {
@@ -222,15 +223,8 @@ export default function AdminRecipesPage() {
               const matchesArray = (r as any).mealTypes?.includes(mealTypeFilter)
               if (!matchesPrimary && !matchesArray) return false
             }
-            // Search filter
-            if (!searchQuery.trim()) return true
-            const q = searchQuery.toLowerCase()
-            return (
-              r.name?.toLowerCase().includes(q) ||
-              r.description?.toLowerCase().includes(q) ||
-              r.mealType?.toLowerCase().includes(q) ||
-              r.ingredients?.some(i => i.toLowerCase().includes(q))
-            )
+            // Search filter — shared token-AND predicate (matches /recipes).
+            return recipeMatchesQuery(r, searchQuery)
           }).map((recipe) => (
             <div key={recipe.id} className="bg-card rounded-lg shadow overflow-hidden hover:shadow-lg transition-shadow flex flex-col">
               {/* Image */}

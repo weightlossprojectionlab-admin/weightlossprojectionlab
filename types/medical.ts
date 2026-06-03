@@ -756,6 +756,21 @@ export type AppointmentType =
   | 'telehealth'
   | 'other'
 
+/**
+ * WHO delivers this appointment — the axis that decides whose calendar
+ * it's the spine of. Orthogonal to AppointmentType (the clinical kind).
+ *
+ *  - 'member-medical'  : a family member's own external visit (their
+ *                        doctor, lab, specialist). The practice tracks it
+ *                        to coordinate — transport, prep, follow-up.
+ *                        This is every legacy appointment, so it's the
+ *                        default when the field is absent.
+ *  - 'caregiver-visit' : the practice's own staff attends (onsite or
+ *                        in-office). This lands on the practitioner's
+ *                        OWN schedule — the forward-looking agenda.
+ */
+export type CareContext = 'caregiver-visit' | 'member-medical'
+
 export type AppointmentStatus =
   | 'scheduled'
   | 'confirmed'
@@ -807,6 +822,17 @@ export interface Appointment {
   location?: string // simplified - can be address string or location name
   status: AppointmentStatus
   notes?: string
+
+  // Delivery context — see CareContext. Absent = 'member-medical'
+  // (every legacy appointment is a member's external visit).
+  careContext?: CareContext
+  // Set only on caregiver-visits: the practice delivering it + which
+  // staff member attends. tenantId is denormalized so the franchise
+  // dashboard can find its own visits in a single collectionGroup query
+  // instead of sweeping every managed family.
+  tenantId?: string
+  practiceStaffId?: string
+  practiceStaffName?: string
 
   // Source - HOW was this appointment created?
   createdFrom: AppointmentSource
