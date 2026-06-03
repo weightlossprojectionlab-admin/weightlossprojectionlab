@@ -2,7 +2,9 @@ import type { Metadata } from 'next'
 
 export const SITE_URL = 'https://www.wellnessprojectionlab.com'
 export const SITE_NAME = 'Wellness Projection Lab'
-export const DEFAULT_OG_IMAGE = '/screenshots/family-care/family-dashboard-overview-desktop-light.png'
+// Brand OG image (WPL logo) in public/, served at this path. Every page without
+// an explicit `image` uses it. JPEG so the served content-type matches the file.
+export const DEFAULT_OG_IMAGE = '/og-image.jpg'
 
 export interface PageMetaInput {
   title: string
