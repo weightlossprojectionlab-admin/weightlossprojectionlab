@@ -33,8 +33,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [
     { url: BASE_URL, lastModified: now, changeFrequency: 'weekly', priority: 1.0 },
     { url: `${BASE_URL}/pricing`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${BASE_URL}/caregivers/aging-parents`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${BASE_URL}/caregivers/new-parents`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${BASE_URL}/franchise`, lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
     { url: `${BASE_URL}/find-a-provider`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${BASE_URL}/about`, lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
@@ -56,6 +54,16 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${BASE_URL}/franchise-agreement`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${BASE_URL}/data-policy`, lastModified: now, changeFrequency: 'yearly', priority: 0.3 },
   ]
+
+  // Caregiver landing pages — derived from app/caregivers/* so a new audience
+  // page (e.g. sandwich-generation) appears automatically. High priority: these
+  // are top SEO/conversion entry points.
+  const caregiverPages: MetadataRoute.Sitemap = routeSlugs('app/caregivers').map((slug) => ({
+    url: `${BASE_URL}/caregivers/${slug}`,
+    lastModified: now,
+    changeFrequency: 'monthly' as const,
+    priority: 0.9,
+  }))
 
   // Blog pages (product discovery hub) — derived from app/blog/* so new posts
   // appear automatically.
@@ -92,5 +100,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.5,
   }))
 
-  return [...staticPages, ...legalPages, ...blogPages, ...docPages, ...userGuidePages]
+  return [...staticPages, ...caregiverPages, ...legalPages, ...blogPages, ...docPages, ...userGuidePages]
 }
