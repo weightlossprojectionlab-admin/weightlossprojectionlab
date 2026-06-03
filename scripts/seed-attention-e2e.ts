@@ -27,7 +27,7 @@ initializeApp({ credential: cert(require(findServiceAccountPath())) })
 const db = getFirestore()
 const EMAIL = 'weightlossprojectionlab@gmail.com'
 const DAY = 86_400_000
-const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-plenty', 'e2e-attn-erratic', 'e2e-attn-peanut']
+const IDS = ['e2e-attn-expired', 'e2e-attn-low', 'e2e-attn-spoiling', 'e2e-attn-plenty', 'e2e-attn-erratic', 'e2e-attn-peanut', 'e2e-attn-sugar']
 const PATIENT_ID = 'e2e-allergy-kid'
 
 ;(async () => {
@@ -70,16 +70,24 @@ const PATIENT_ID = 'e2e-allergy-kid'
       ] },
     // Allergen safety: peanut-tagged item; the seeded patient is peanut-allergic.
     { id: 'e2e-attn-peanut',   productName: 'E2E Peanut Snack',     category: 'pantry',  isPerishable: false, quantity: 5,  expiresAt: Timestamp.fromMillis(now + 300 * DAY), allergenTags: ['peanut'] },
+    // Nutrient panel (high sugar) + the diabetic member below → the condition/diet
+    // health NOTE (amber) + the details Nutrition Facts rows (sodium/sugars/satFat,
+    // "per 100 g"). No allergen, so the only flag is the soft note.
+    { id: 'e2e-attn-sugar',    productName: 'E2E Sugary Cereal',    category: 'pantry',  isPerishable: false, quantity: 5,  expiresAt: Timestamp.fromMillis(now + 300 * DAY),
+      nutrition: { calories: 500, protein: 8, carbs: 50, fat: 30, fiber: 2, servingSize: '' },
+      nutrients: { sodium: 50, sugars: 40, saturatedFat: 5, fiber: 2, protein: 8, calories: 500, basis: '100g' } },
   ]
   for (const { id, ...data } of items) {
     await db.collection('shopping_items').doc(id).set({ ...base, ...data })
   }
-  // A peanut-allergic household member so the safety banner has someone to warn.
+  // Household member: peanut-allergic (drives the red banner) AND diabetic via a
+  // REAL-WORLD condition string ("Type 2 Diabetes" — also exercises
+  // normalizeCondition end-to-end) so the sugary item earns the amber note.
   await db.collection('users').doc(uid).collection('patients').doc(PATIENT_ID).set({
     name: 'E2E Allergy Kid',
     dateOfBirth: '2015-01-01',
     foodAllergies: ['peanuts'],
-    healthConditions: [],
+    healthConditions: ['Type 2 Diabetes'],
     dietaryRestrictions: [],
     createdAt: Timestamp.now(),
     updatedAt: Timestamp.now(),
