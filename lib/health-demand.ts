@@ -72,9 +72,11 @@ export interface HealthDemandConfig {
 }
 
 export const DEFAULT_HEALTH_DEMAND_CONFIG: HealthDemandConfig = {
+  // Keys are CANONICAL condition tokens (see normalizeCondition). Free-form
+  // patient strings ("Type 2 Diabetes", "High Blood Pressure") are mapped to
+  // these before lookup, so one row serves every spelling/abbreviation.
   conditionNutrient: {
     hypertension: { sodium: -0.3, potassium: 0.15, saturatedFat: -0.1 },
-    high_blood_pressure: { sodium: -0.3, potassium: 0.15, saturatedFat: -0.1 },
     diabetes: { addedSugar: -0.35, fiber: 0.2, protein: 0.1 },
     heart_disease: { transFat: -0.4, saturatedFat: -0.25, sodium: -0.2 },
     high_cholesterol: { transFat: -0.4, saturatedFat: -0.3, fiber: 0.2 },
@@ -101,6 +103,28 @@ export const DEFAULT_HEALTH_DEMAND_CONFIG: HealthDemandConfig = {
 
 const lc = (s: string) => s.toLowerCase().trim()
 const clamp = (x: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, x))
+
+/**
+ * Map a free-form patient condition string to a CANONICAL conditionNutrient key,
+ * or null if it isn't one we model. Real profiles say "Type 2 Diabetes", "High
+ * Blood Pressure", "Hyperlipidemia" — none of which equal the config keys — so
+ * without this the demand weight is silently inert for actual patients. Same
+ * reconciliation role normalizeAllergen plays for allergens. Stem/phrase matching
+ * (leans toward catching a condition; the cost of a miss is an unflagged harm).
+ */
+const CONDITION_RULES: { canonical: string; re: RegExp }[] = [
+  { canonical: 'diabetes', re: /\b(diabet|prediabet|insulin resistance)/ },
+  { canonical: 'hypertension', re: /\b(hypertens|high blood pressure|elevated blood pressure|raised blood pressure|hbp\b|htn\b)/ },
+  { canonical: 'high_cholesterol', re: /\b(cholesterol|hyperlipid|dyslipidem)/ },
+  { canonical: 'heart_disease', re: /\b(heart disease|heart failure|coronary|cardiac|cardiovascular|isch[ae]+mic heart)/ },
+]
+export function normalizeCondition(raw: string): string | null {
+  const t = raw.toLowerCase().replace(/[-_]+/g, ' ').replace(/\s+/g, ' ').trim()
+  for (const { canonical, re } of CONDITION_RULES) {
+    if (re.test(t)) return canonical
+  }
+  return null
+}
 
 /** Normalize a nutrient level to [0,1]; missing level/ref → null (term skipped). */
 function normNutrient(level: number | undefined, ref: number | undefined): number | null {
@@ -166,7 +190,8 @@ export function memberNutrientContributions(
 ): Partial<Record<Nutrient, number>> {
   const out: Partial<Record<Nutrient, number>> = {}
   for (const c of m.conditions) {
-    const row = cfg.conditionNutrient[lc(c)] ?? cfg.conditionNutrient[c]
+    const key = normalizeCondition(c)
+    const row = key ? cfg.conditionNutrient[key] : undefined
     if (!row) continue
     for (const key of Object.keys(row) as Nutrient[]) {
       const x = normNutrient(item.nutrients?.[key], cfg.nutrientRef[key])

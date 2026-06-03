@@ -2,7 +2,7 @@
  * health-relevance Tests — the caregiver-voice note derived from the engine.
  */
 import { householdHealthNotes } from '@/lib/health-relevance'
-import type { ItemHealthProfile, MemberHealthProfile } from '@/lib/health-demand'
+import { normalizeCondition, type ItemHealthProfile, type MemberHealthProfile } from '@/lib/health-demand'
 
 const name = (id: string) => ({ dad: 'Dad', gran: 'Gran' }[id] ?? id)
 
@@ -45,5 +45,39 @@ describe('householdHealthNotes', () => {
 
   it('says nothing when the item has no nutrient panel', () => {
     expect(householdHealthNotes({}, [member('dad', ['diabetes'])], name)).toEqual([])
+  })
+
+  it('works for REAL-WORLD condition strings, not just the config key', () => {
+    // The bug: a member with "Type 2 Diabetes" got no flag because it didn't
+    // equal the literal config key "diabetes". normalizeCondition fixes it.
+    const sugary: ItemHealthProfile = { nutrients: { addedSugar: 56, sodium: 40, saturatedFat: 10 } }
+    for (const cond of ['Type 2 Diabetes', 'Type 1 Diabetes', 'diabetic']) {
+      const notes = householdHealthNotes(sugary, [member('dad', [cond])], name)
+      expect(notes[0]?.text).toBe('High in sugar — best to limit for Dad')
+    }
+    const salty: ItemHealthProfile = { nutrients: { sodium: 700, addedSugar: 2, saturatedFat: 1 } }
+    const notes = householdHealthNotes(salty, [member('gran', ['High Blood Pressure'])], name)
+    expect(notes[0]?.text).toBe('High in sodium — best to limit for Gran')
+  })
+})
+
+describe('normalizeCondition', () => {
+  it('maps free-form patient strings to canonical keys', () => {
+    expect(normalizeCondition('Type 2 Diabetes')).toBe('diabetes')
+    expect(normalizeCondition('Type 1 Diabetes')).toBe('diabetes')
+    expect(normalizeCondition('Diabetic')).toBe('diabetes')
+    expect(normalizeCondition('High Blood Pressure')).toBe('hypertension')
+    expect(normalizeCondition('hypertension')).toBe('hypertension')
+    expect(normalizeCondition('HTN')).toBe('hypertension')
+    expect(normalizeCondition('Hyperlipidemia')).toBe('high_cholesterol')
+    expect(normalizeCondition('High Cholesterol')).toBe('high_cholesterol')
+    expect(normalizeCondition('Coronary Artery Disease')).toBe('heart_disease')
+    expect(normalizeCondition('Congestive Heart Failure')).toBe('heart_disease')
+  })
+
+  it('returns null for conditions we do not model', () => {
+    expect(normalizeCondition('Common Cold')).toBeNull()
+    expect(normalizeCondition('Asthma')).toBeNull()
+    expect(normalizeCondition('')).toBeNull()
   })
 })
