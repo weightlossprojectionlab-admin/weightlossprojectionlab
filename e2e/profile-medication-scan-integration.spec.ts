@@ -56,7 +56,14 @@ import path from 'path'
  */
 
 const ENABLED = process.env.RUN_OCR_INTEGRATION === '1'
-const FIXTURES_DIR = path.join(__dirname, 'fixtures', 'medication-labels')
+// Default to the in-repo fixtures dir, but allow an absolute override
+// via OCR_FIXTURES_DIR. The override lets you point the run at a folder
+// of REAL prescription screenshots that live OUTSIDE the repo — so PHI
+// never gets committed. Example:
+//   OCR_FIXTURES_DIR="C:\Users\percy\Pictures\Screenshots\medication labels"
+const FIXTURES_DIR = process.env.OCR_FIXTURES_DIR
+  ? path.resolve(process.env.OCR_FIXTURES_DIR)
+  : path.join(__dirname, 'fixtures', 'medication-labels')
 const SUPPORTED_EXT = /\.(jpe?g|png|webp)$/i
 
 /**
@@ -197,6 +204,49 @@ test.describe('/profile — Medication scan integration (real Gemini)', () => {
           '\n',
       )
 
+      // --- Observe the patient-assignment outcome (auto-match feature) ---
+      // patientName isn't a rendered input — it only drives matching —
+      // so we read the outcome from the hint the modal shows and the
+      // dropdown's current selection. This turns the real-label run into
+      // proof of BOTH paths: a household name should MATCH (green hint,
+      // member pre-selected); a stranger's name should warn (amber, no
+      // selection). We log rather than assert per-image because the spec
+      // can't know which fixtures name household members — a human reads
+      // the log + screenshot to confirm. The screenshot is captured for
+      // every fixture (not just failures) as visual evidence.
+      const isMatched = await page
+        .getByText(/Matched from prescription label/i)
+        .isVisible()
+        .catch(() => false)
+      const isUnmatched = await page
+        .getByText(/isn't in your family yet/i)
+        .isVisible()
+        .catch(() => false)
+      const assignLabel = page
+        .locator('label')
+        .filter({ hasText: /Assign to Family Member/i })
+        .first()
+      const familySelect = assignLabel.locator('xpath=following-sibling::select[1]')
+      const selectedMember =
+        (await familySelect.locator('option:checked').textContent().catch(() => ''))?.trim() ?? ''
+
+      const safeName = fixtureName.replace(/[^a-z0-9._-]/gi, '_')
+      // Write evidence OUTSIDE test-results: Playwright owns that dir and
+      // wipes it at run start, which would race our screenshots.
+      await page
+        .screenshot({ path: `med-ocr-evidence/${safeName}.png` })
+        .catch(() => {})
+
+      // eslint-disable-next-line no-console
+      console.log(
+        `[Integration] Assignment for ${fixtureName}: ` +
+          JSON.stringify({
+            matched: isMatched,
+            unmatched: isUnmatched,
+            selectedMember: selectedMember || '(none)',
+          }),
+      )
+
       // --- Minimum-bar assertions ---
       // We don't assert specific values (Gemini output varies). The
       // bar is: extraction returned non-empty for the medication name
@@ -211,12 +261,19 @@ test.describe('/profile — Medication scan integration (real Gemini)', () => {
       ).toEqual([])
 
       // --- Cancel the review modal so the test account isn't polluted ---
-      const cancelBtn = page
-        .getByRole('button', { name: /^Cancel$/ })
-        .first()
-      if (await cancelBtn.isVisible().catch(() => false)) {
-        await cancelBtn.click()
-      }
+      // Best-effort cleanup: the assertions above already validated the
+      // extraction. Target the REVIEW modal's footer Cancel specifically
+      // — the underlying MedicationLabelCapture modal is still mounted
+      // and renders its own "Cancel", so a bare .first() grabs the
+      // covered one and the click never lands (a `grid grid-cols-2`
+      // photo-pane overlay intercepts it). Scope to the footer that also
+      // holds "Save Medication", cap the timeout, and never let a
+      // cleanup hiccup fail an otherwise-passing test.
+      const reviewCancel = page
+        .locator('div.flex.gap-3')
+        .filter({ has: page.getByRole('button', { name: /Save Medication/i }) })
+        .getByRole('button', { name: 'Cancel', exact: true })
+      await reviewCancel.click({ timeout: 5_000 }).catch(() => {})
     })
   }
 })
