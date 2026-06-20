@@ -15,6 +15,11 @@ import * as path from 'path'
  * nonsense number. Then flips to a plausible-but-severe BMI (~50) and asserts
  * the open-ended red "severe" treatment. Cleans up after.
  *
+ * ALSO guards the cross-patient data leak: this patient has one weight log and
+ * no meals, so the summary stats must read 0 — not the account-wide aggregate
+ * (+370 lbs / 35 meals) that bled in before chart-data-aggregator was scoped
+ * by patientId.
+ *
  * Watch it run:
  *   npx playwright test e2e/bmi-guard.spec.ts --project=chromium --no-deps --headed
  */
@@ -71,6 +76,14 @@ test.describe.serial('BMI guard — visible in the UI', () => {
     await page.keyboard.press('Escape').catch(() => {})
     await expect(page.getByText(/Current BMI/i)).toBeVisible({ timeout: 90_000 })
     await expect(page.getByText(/Check height/i)).toBeVisible({ timeout: 20_000 })
+
+    // Cross-patient leak guard: 1 weight log, no meals → summary stats read 0,
+    // NOT the account-wide aggregate (+370 lbs / 35 meals) that leaked before.
+    const weightChange = page.getByText('Weight Change', { exact: true }).locator('xpath=following-sibling::p[1]')
+    await expect(weightChange).toHaveText(/^0 lbs$/, { timeout: 20_000 })
+    const mealsLogged = page.getByText('Meals Logged', { exact: true }).locator('xpath=following-sibling::p[1]')
+    await expect(mealsLogged).toHaveText('0')
+
     await page.waitForTimeout(4000) // beat so a human can see it
   })
 

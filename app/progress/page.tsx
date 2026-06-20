@@ -232,11 +232,13 @@ function ProgressContent() {
       const stepGoal = activeProfile?.goals?.dailySteps || 10000
 
       // Load calorie, macro, step data, and stats (weight is real-time via useEffect)
+      // Scope to the selected patient so a multi-patient account doesn't sum
+      // every patient's logs together (cross-patient leak). null → owner-wide.
       const [calories, macros, steps, stats] = await Promise.all([
-        getCalorieIntakeLastNDays(effectiveUserId, timeRange, calorieGoal),
-        getMacroDistributionLastNDays(effectiveUserId, timeRange),
-        getStepCountLastNDays(effectiveUserId, timeRange, stepGoal),
-        getSummaryStatistics(effectiveUserId, startDate, endDate)
+        getCalorieIntakeLastNDays(effectiveUserId, timeRange, calorieGoal, selectedPatientId),
+        getMacroDistributionLastNDays(effectiveUserId, timeRange, selectedPatientId),
+        getStepCountLastNDays(effectiveUserId, timeRange, stepGoal, selectedPatientId),
+        getSummaryStatistics(effectiveUserId, startDate, endDate, selectedPatientId)
       ])
 
       setCalorieData(calories)
@@ -258,7 +260,7 @@ function ProgressContent() {
     } finally {
       setLoading(false)
     }
-  }, [effectiveUserId, timeRange, profile?.goals?.dailyCalorieGoal, profile?.goals?.dailySteps, patientProfile])
+  }, [effectiveUserId, timeRange, profile?.goals?.dailyCalorieGoal, profile?.goals?.dailySteps, patientProfile, selectedPatientId])
 
   // Real-time weight data subscription for chart
   useEffect(() => {
