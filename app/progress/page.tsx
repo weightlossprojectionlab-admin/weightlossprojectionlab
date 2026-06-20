@@ -387,7 +387,8 @@ function ProgressContent() {
       const response = await fetch('/api/fix-start-weight', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken()
         }
       })
 
