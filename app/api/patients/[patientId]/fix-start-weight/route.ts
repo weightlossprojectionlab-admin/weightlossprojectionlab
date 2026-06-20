@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
-import { errorResponse, forbiddenResponse, notFoundResponse } from '@/lib/api-response'
+import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 
 /**
@@ -11,10 +11,6 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ patientId: string }> }
 ) {
-  if (process.env.NODE_ENV === 'production') {
-    return forbiddenResponse('Not available in production')
-  }
-
   try {
     const { patientId } = await params
 
