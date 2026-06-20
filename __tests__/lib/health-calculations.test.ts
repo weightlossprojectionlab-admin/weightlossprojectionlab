@@ -2,6 +2,7 @@ import {
   calculateBMR,
   calculateTDEE,
   calculateBMI,
+  assessBMI,
   calculateOptimalCalories,
   calculateLifestyleImpact,
   calculateOptimalTargets,
@@ -605,5 +606,27 @@ describe('health-calculations', () => {
 
       expect(result.dailyCalories).toBeGreaterThanOrEqual(1200)
     })
+  })
+})
+
+describe('assessBMI — guarded, severity-aware BMI', () => {
+  it('flags impossible inputs (46 in + 590 lbs → 196) as not plausible', () => {
+    const r = assessBMI(590, 46)!
+    expect(r.bmi).toBe(196)
+    expect(r.plausible).toBe(false)
+    expect(r.category).toBe('severe')
+  })
+
+  it('categorizes real values, with an open-ended top tier', () => {
+    expect(assessBMI(110, 66)).toMatchObject({ category: 'underweight', plausible: true })
+    expect(assessBMI(130, 66)).toMatchObject({ category: 'normal', plausible: true })
+    expect(assessBMI(170, 66)).toMatchObject({ category: 'overweight', plausible: true })
+    expect(assessBMI(210, 66)).toMatchObject({ category: 'obese', plausible: true })
+    expect(assessBMI(260, 66)).toMatchObject({ category: 'severe', plausible: true })
+  })
+
+  it('returns null when height or weight is non-positive', () => {
+    expect(assessBMI(0, 66)).toBeNull()
+    expect(assessBMI(180, 0)).toBeNull()
   })
 })

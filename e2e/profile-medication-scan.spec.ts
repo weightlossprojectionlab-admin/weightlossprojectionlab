@@ -268,4 +268,144 @@ test.describe('/profile — Medication scan failure UX', () => {
 
     expect(pageErrors, `uncaught page error during successful scan:\n${pageErrors.join('\n')}`).toEqual([])
   })
+
+  test('auto-matches OCR patientName to the family-member dropdown', async ({ page }) => {
+    // The strongest signal we have about who a medication is for is the
+    // patient name printed on the label. This locks in the Step-1
+    // auto-match: an OCR patientName that resolves to a household member
+    // pre-selects that member AND surfaces the "Matched from
+    // prescription label" hint.
+    //
+    // The mock uses the inverted "Last, First" form pharmacies print on
+    // info-sheet banners — exercising normalizePatientName's comma
+    // inversion + honorific strip in the same pass. The test account
+    // has a "Tom Calloway" family member; "Calloway, Tom" must resolve
+    // to him. If the account's roster changes, update MATCH_NAME /
+    // MATCH_PATIENT_ID below.
+    const MATCH_NAME = 'Calloway, Tom'
+    const MATCH_PATIENT_ID = 'f42ef3cf-9c41-459a-abb6-eb687256bd76'
+
+    const { pageErrors } = attachCollectors(page)
+
+    await page.route(OCR_ENDPOINT, (route: Route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            medicationName: 'Atorvastatin',
+            strength: '20 mg',
+            dosageForm: 'tablet',
+            frequency: 'Take 1 tablet by mouth at bedtime',
+            rxNumber: null,
+            ndc: null,
+            prescribingDoctor: null,
+            patientName: MATCH_NAME,
+            patientAddress: null,
+            pharmacy: null,
+            pharmacyPhone: null,
+            quantity: null,
+            refills: null,
+            fillDate: null,
+            expirationDate: null,
+            warnings: null,
+            rawText: '',
+            suggestedConditions: [],
+          },
+        }),
+      })
+    })
+
+    await gotoProfileMedications(page)
+    await uploadAndSubmitFrontOnly(page)
+
+    await expect(
+      page.getByRole('heading', { name: /Review Medication/i }),
+    ).toBeVisible({ timeout: 15_000 })
+
+    // The green "matched" hint is the user-visible proof the auto-match
+    // fired, and it echoes the exact OCR name so the user can sanity
+    // check the resolution.
+    await expect(page.getByText(/Matched from prescription label/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(MATCH_NAME, { exact: false })).toBeVisible()
+
+    // The dropdown itself must be pre-selected to the matched member —
+    // the hint without the selection would be a lie. The page has
+    // several selects, so scope to the one carrying the family-member
+    // options (it lists Tom Calloway).
+    const familySelect = page.locator('select', {
+      has: page.locator('option', { hasText: 'Tom Calloway' }),
+    })
+    await expect(familySelect).toHaveValue(MATCH_PATIENT_ID)
+
+    expect(pageErrors, `uncaught page error during auto-match scan:\n${pageErrors.join('\n')}`).toEqual([])
+  })
+
+  test('no-match OCR patientName warns and refuses to pre-select (safety)', async ({ page }) => {
+    // The dangerous case: the label clearly names a person who is NOT
+    // in the household. The OLD behavior silently fell back to the
+    // account holder, so one click would save (e.g.) Barbara's heart
+    // medication onto Roger's record. The fix: select NOBODY and warn,
+    // forcing a conscious pick. "Barbara Rice" is deliberately absent
+    // from the test account roster.
+    const NO_MATCH_NAME = 'Barbara Rice'
+
+    const { pageErrors } = attachCollectors(page)
+
+    await page.route(OCR_ENDPOINT, (route: Route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            medicationName: 'Metoprolol Succ ER',
+            strength: '200 mg',
+            dosageForm: 'tablet',
+            frequency: 'Take 2 tablets by mouth once daily',
+            rxNumber: null,
+            ndc: null,
+            prescribingDoctor: null,
+            patientName: NO_MATCH_NAME,
+            patientAddress: null,
+            pharmacy: null,
+            pharmacyPhone: null,
+            quantity: null,
+            refills: null,
+            fillDate: null,
+            expirationDate: null,
+            warnings: null,
+            rawText: '',
+            suggestedConditions: [],
+          },
+        }),
+      })
+    })
+
+    await gotoProfileMedications(page)
+    await uploadAndSubmitFrontOnly(page)
+
+    await expect(
+      page.getByRole('heading', { name: /Review Medication/i }),
+    ).toBeVisible({ timeout: 15_000 })
+
+    // The amber warning must name the unmatched person so the user
+    // knows whose label this is and why nothing was auto-selected.
+    await expect(page.getByText(/isn't in your family yet/i)).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByText(NO_MATCH_NAME, { exact: false })).toBeVisible()
+
+    // Critically: the dropdown must be EMPTY, not defaulted to a real
+    // member. An empty value is what blocks the silent mis-assignment.
+    const familySelect = page.locator('select', {
+      has: page.locator('option', { hasText: 'Tom Calloway' }),
+    })
+    await expect(familySelect).toHaveValue('')
+
+    // And the green "matched" hint must NOT be showing — this is the
+    // miss path, not the match path.
+    await expect(page.getByText(/Matched from prescription label/i)).toHaveCount(0)
+
+    expect(pageErrors, `uncaught page error during no-match scan:\n${pageErrors.join('\n')}`).toEqual([])
+  })
 })

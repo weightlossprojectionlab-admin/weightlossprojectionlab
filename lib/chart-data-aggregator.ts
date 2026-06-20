@@ -79,33 +79,76 @@ export interface WeeklyAverages {
 /**
  * Get weight trend data for the specified date range
  */
+/**
+ * Build a per-patient-scoped log query.
+ *
+ * WHY THIS EXISTS: these aggregators previously queried only by `userId`, so a
+ * multi-patient account's calorie / step / summary stats summed EVERY patient's
+ * logs together — a cross-patient data leak (one patient's Progress page showed
+ * another's totals). Passing `patientId` scopes them.
+ *
+ * When `patientId` is given we scope on it and apply the date range in JS: the
+ * `patientId == X` + loggedAt-range + orderBy combo needs a composite index
+ * that isn't deployed — the same trade-off the /progress weightLogs
+ * subscription makes; per-patient volume is small. Without `patientId`, the
+ * legacy account-wide ranged query is preserved (callers that don't scope are
+ * unchanged).
+ */
+function buildLogQuery(
+  userId: string,
+  subcollection: string,
+  startDate: Date,
+  endDate: Date,
+  patientId?: string | null,
+) {
+  const ref = collection(db, COLLECTIONS.USERS, userId, subcollection)
+  return patientId
+    ? query(ref, where('patientId', '==', patientId))
+    : query(
+        ref,
+        where('loggedAt', '>=', Timestamp.fromDate(startDate)),
+        where('loggedAt', '<=', Timestamp.fromDate(endDate)),
+        orderBy('loggedAt', 'asc'),
+      )
+}
+
+/**
+ * True when `ts` is within [startDate, endDate]. Only enforced for the scoped
+ * branch (which has no server-side range); the unscoped branch already ranged
+ * in Firestore, so it short-circuits to true.
+ */
+function withinRange(ts: Date, startDate: Date, endDate: Date, patientId?: string | null): boolean {
+  if (!patientId) return true
+  const t = ts.getTime()
+  return t >= startDate.getTime() && t <= endDate.getTime()
+}
+
 export async function getWeightTrendData(
   userId: string,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  patientId?: string | null
 ): Promise<WeightDataPoint[]> {
   try {
-    // Query subcollection: users/{userId}/weightLogs
-    const weightRef = collection(db, COLLECTIONS.USERS, userId, 'weightLogs')
-    const q = query(
-      weightRef,
-      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
-      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
-      orderBy('loggedAt', 'asc')
-    )
-
+    const q = buildLogQuery(userId, 'weightLogs', startDate, endDate, patientId)
     const snapshot = await getDocs(q)
 
-    const dataPoints: WeightDataPoint[] = snapshot.docs.map(doc => {
-      const data = doc.data()
-      const timestamp = data.loggedAt.toDate()
+    // .sort() handles the scoped branch (no server-side orderBy); the unscoped
+    // branch is already ordered but re-sorting is harmless + keeps weightChange
+    // (last − first) correct.
+    const dataPoints: WeightDataPoint[] = snapshot.docs
+      .filter(doc => withinRange(doc.data().loggedAt.toDate(), startDate, endDate, patientId))
+      .map(doc => {
+        const data = doc.data()
+        const timestamp = data.loggedAt.toDate()
 
-      return {
-        date: timestamp.toISOString().split('T')[0],
-        weight: data.weight,
-        timestamp
-      }
-    })
+        return {
+          date: timestamp.toISOString().split('T')[0],
+          weight: data.weight,
+          timestamp
+        }
+      })
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
 
     return dataPoints
   } catch (error) {
@@ -119,13 +162,14 @@ export async function getWeightTrendData(
  */
 export async function getWeightTrendLastNDays(
   userId: string,
-  days: number = 30
+  days: number = 30,
+  patientId?: string | null
 ): Promise<WeightDataPoint[]> {
   const endDate = new Date()
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
 
-  return getWeightTrendData(userId, startDate, endDate)
+  return getWeightTrendData(userId, startDate, endDate, patientId)
 }
 
 // ============================================================================
@@ -139,18 +183,11 @@ export async function getCalorieIntakeData(
   userId: string,
   startDate: Date,
   endDate: Date,
-  calorieGoal: number
+  calorieGoal: number,
+  patientId?: string | null
 ): Promise<CalorieDataPoint[]> {
   try {
-    // Query subcollection: users/{userId}/mealLogs
-    const mealsRef = collection(db, COLLECTIONS.USERS, userId, 'mealLogs')
-    const q = query(
-      mealsRef,
-      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
-      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
-      orderBy('loggedAt', 'asc')
-    )
-
+    const q = buildLogQuery(userId, 'mealLogs', startDate, endDate, patientId)
     const snapshot = await getDocs(q)
 
     // Group meals by date and sum calories
@@ -159,6 +196,7 @@ export async function getCalorieIntakeData(
     snapshot.docs.forEach(doc => {
       const data = doc.data()
       const timestamp = data.loggedAt.toDate()
+      if (!withinRange(timestamp, startDate, endDate, patientId)) return
       const dateKey = timestamp.toISOString().split('T')[0]
       const calories = data.totalCalories || data.estimatedCalories || 0
 
@@ -189,13 +227,14 @@ export async function getCalorieIntakeData(
 export async function getCalorieIntakeLastNDays(
   userId: string,
   days: number = 30,
-  calorieGoal: number = 2000
+  calorieGoal: number = 2000,
+  patientId?: string | null
 ): Promise<CalorieDataPoint[]> {
   const endDate = new Date()
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
 
-  return getCalorieIntakeData(userId, startDate, endDate, calorieGoal)
+  return getCalorieIntakeData(userId, startDate, endDate, calorieGoal, patientId)
 }
 
 // ============================================================================
@@ -208,18 +247,11 @@ export async function getCalorieIntakeLastNDays(
 export async function getMacroDistributionData(
   userId: string,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  patientId?: string | null
 ): Promise<MacroDataPoint[]> {
   try {
-    // Query subcollection: users/{userId}/mealLogs
-    const mealsRef = collection(db, COLLECTIONS.USERS, userId, 'mealLogs')
-    const q = query(
-      mealsRef,
-      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
-      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
-      orderBy('loggedAt', 'asc')
-    )
-
+    const q = buildLogQuery(userId, 'mealLogs', startDate, endDate, patientId)
     const snapshot = await getDocs(q)
 
     // Group meals by date and sum macros
@@ -228,6 +260,7 @@ export async function getMacroDistributionData(
     snapshot.docs.forEach(doc => {
       const data = doc.data()
       const timestamp = data.loggedAt.toDate()
+      if (!withinRange(timestamp, startDate, endDate, patientId)) return
       const dateKey = timestamp.toISOString().split('T')[0]
 
       const protein = data.macros?.protein || 0
@@ -267,13 +300,14 @@ export async function getMacroDistributionData(
  */
 export async function getMacroDistributionLastNDays(
   userId: string,
-  days: number = 30
+  days: number = 30,
+  patientId?: string | null
 ): Promise<MacroDataPoint[]> {
   const endDate = new Date()
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
 
-  return getMacroDistributionData(userId, startDate, endDate)
+  return getMacroDistributionData(userId, startDate, endDate, patientId)
 }
 
 // ============================================================================
@@ -287,18 +321,11 @@ export async function getStepCountData(
   userId: string,
   startDate: Date,
   endDate: Date,
-  goalSteps: number = 10000
+  goalSteps: number = 10000,
+  patientId?: string | null
 ): Promise<StepDataPoint[]> {
   try {
-    // Query subcollection: users/{userId}/stepLogs
-    const stepsRef = collection(db, COLLECTIONS.USERS, userId, 'stepLogs')
-    const q = query(
-      stepsRef,
-      where('loggedAt', '>=', Timestamp.fromDate(startDate)),
-      where('loggedAt', '<=', Timestamp.fromDate(endDate)),
-      orderBy('loggedAt', 'asc')
-    )
-
+    const q = buildLogQuery(userId, 'stepLogs', startDate, endDate, patientId)
     const snapshot = await getDocs(q)
 
     // Group steps by date
@@ -307,6 +334,7 @@ export async function getStepCountData(
     snapshot.docs.forEach(doc => {
       const data = doc.data()
       const timestamp = data.loggedAt.toDate()
+      if (!withinRange(timestamp, startDate, endDate, patientId)) return
       const dateKey = timestamp.toISOString().split('T')[0]
 
       const steps = data.steps || 0
@@ -338,13 +366,14 @@ export async function getStepCountData(
 export async function getStepCountLastNDays(
   userId: string,
   days: number = 30,
-  goalSteps: number = 10000
+  goalSteps: number = 10000,
+  patientId?: string | null
 ): Promise<StepDataPoint[]> {
   const endDate = new Date()
   const startDate = new Date()
   startDate.setDate(startDate.getDate() - days)
 
-  return getStepCountData(userId, startDate, endDate, goalSteps)
+  return getStepCountData(userId, startDate, endDate, goalSteps, patientId)
 }
 
 // ============================================================================
@@ -356,7 +385,8 @@ export async function getStepCountLastNDays(
  */
 export async function getWeeklyAverages(
   userId: string,
-  weeks: number = 4
+  weeks: number = 4,
+  patientId?: string | null
 ): Promise<WeeklyAverages[]> {
   try {
     const endDate = new Date()
@@ -365,9 +395,9 @@ export async function getWeeklyAverages(
 
     // Get all data for the period
     const [weightData, calorieData, macroData] = await Promise.all([
-      getWeightTrendData(userId, startDate, endDate),
-      getCalorieIntakeData(userId, startDate, endDate, 2000), // Goal doesn't matter for averages
-      getMacroDistributionData(userId, startDate, endDate)
+      getWeightTrendData(userId, startDate, endDate, patientId),
+      getCalorieIntakeData(userId, startDate, endDate, 2000, patientId), // Goal doesn't matter for averages
+      getMacroDistributionData(userId, startDate, endDate, patientId)
     ])
 
     // Group by week
@@ -477,13 +507,14 @@ export async function getWeeklyAverages(
 export async function getSummaryStatistics(
   userId: string,
   startDate: Date,
-  endDate: Date
+  endDate: Date,
+  patientId?: string | null
 ) {
   try {
     const [weightData, calorieData, macroData] = await Promise.all([
-      getWeightTrendData(userId, startDate, endDate),
-      getCalorieIntakeData(userId, startDate, endDate, 2000),
-      getMacroDistributionData(userId, startDate, endDate)
+      getWeightTrendData(userId, startDate, endDate, patientId),
+      getCalorieIntakeData(userId, startDate, endDate, 2000, patientId),
+      getMacroDistributionData(userId, startDate, endDate, patientId)
     ])
 
     // Weight statistics
