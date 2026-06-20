@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useSubscription } from '@/hooks/useSubscription'
 import { canAccessFeature } from '@/lib/feature-gates'
+import { assessBMI } from '@/lib/health-calculations'
 import { getPlanById } from '@/lib/plan-details'
 import { medicalOperations } from '@/lib/medical-operations'
 import { calculateWeightProjection } from '@/lib/weight-projection-agent'
@@ -1221,21 +1222,48 @@ function ProgressContent() {
                 </div>
               )}
 
-              {/* BMI — uses logged weight if any, else the onboarding weight. */}
-              {activeProfile.height && (weightData.length > 0 || typeof profileCurrentWeight === 'number') && (
-                <div>
-                  <p className="text-xs text-muted-foreground">Current BMI</p>
-                  <p className="text-xl font-bold text-foreground">
-                    {(() => {
-                      const heightInInches = activeProfile.height!
-                      const currentWeight =
-                        weightData.length > 0 ? weightData[weightData.length - 1].weight : (profileCurrentWeight ?? 0)
-                      const bmi = (currentWeight / (heightInInches * heightInInches)) * 703
-                      return bmi.toFixed(1)
-                    })()}
-                  </p>
-                </div>
-              )}
+              {/* BMI — uses logged weight if any, else the onboarding weight.
+                  Guarded + severity-colored via assessBMI: implausible inputs
+                  (e.g. a placeholder height → BMI 196) render a "check your data"
+                  warning instead of a silent neutral number; real values get an
+                  open-ended severity tone so extreme cases never fall through. */}
+              {activeProfile.height && (weightData.length > 0 || typeof profileCurrentWeight === 'number') && (() => {
+                const currentWeight =
+                  weightData.length > 0 ? weightData[weightData.length - 1].weight : (profileCurrentWeight ?? 0)
+                const r = assessBMI(currentWeight, activeProfile.height!)
+                if (!r) return null
+                if (!r.plausible) {
+                  return (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Current BMI</p>
+                      <p className="text-sm font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                        <span aria-hidden="true">⚠️</span> Check height &amp; weight
+                      </p>
+                    </div>
+                  )
+                }
+                const tone =
+                  r.category === 'severe'
+                    ? 'text-red-600 dark:text-red-400'
+                    : r.category === 'obese'
+                      ? 'text-orange-600 dark:text-orange-400'
+                      : r.category === 'overweight' || r.category === 'underweight'
+                        ? 'text-amber-600 dark:text-amber-400'
+                        : 'text-foreground'
+                return (
+                  <div>
+                    <p className="text-xs text-muted-foreground">Current BMI</p>
+                    <p className={`text-xl font-bold ${tone}`}>
+                      {r.bmi}
+                      {r.category !== 'normal' && (
+                        <span className="ml-1.5 align-middle text-[10px] font-semibold uppercase tracking-wide">
+                          {r.category}
+                        </span>
+                      )}
+                    </p>
+                  </div>
+                )
+              })()}
 
               {/* BMR */}
               {activeProfile.goals?.bmr && (

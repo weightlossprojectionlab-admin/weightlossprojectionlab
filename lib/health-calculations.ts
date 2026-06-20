@@ -180,6 +180,32 @@ export function calculateBMI(params: {
   return { bmi, category }
 }
 
+/**
+ * Display-oriented BMI assessment (imperial: lbs + inches). Adds a SEVERITY tier
+ * (Class III obesity → 'severe', open-ended at the top so extreme outliers can't
+ * fall through unstyled) and a `plausible` flag. A real human BMI sits ~8–80, so
+ * anything outside that — almost always impossible height/weight test data
+ * (e.g. 46 in + 590 lbs → 196) — is flagged so the UI shows a "check your data"
+ * warning instead of rendering a nonsense number in neutral styling. Returns
+ * null when there's no positive height/weight yet.
+ */
+export type BMISeverity = 'underweight' | 'normal' | 'overweight' | 'obese' | 'severe'
+export function assessBMI(
+  weightLbs: number,
+  heightInches: number,
+): { bmi: number; category: BMISeverity; plausible: boolean } | null {
+  if (!(weightLbs > 0) || !(heightInches > 0)) return null
+  const bmi = Number(((weightLbs / (heightInches * heightInches)) * 703).toFixed(1))
+  const plausible = heightInches >= 24 && heightInches <= 96 && bmi >= 8 && bmi <= 80
+  let category: BMISeverity
+  if (bmi < 18.5) category = 'underweight'
+  else if (bmi < 25) category = 'normal'
+  else if (bmi < 30) category = 'overweight'
+  else if (bmi < 40) category = 'obese'
+  else category = 'severe' // open-ended — catches Class III + extreme outliers
+  return { bmi, category, plausible }
+}
+
 export interface TargetWeightSuggestion {
   bmi: number
   category: 'underweight' | 'normal' | 'overweight' | 'obese'
