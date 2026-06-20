@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { useVitals } from '@/hooks/useVitals'
+import { medicalOperations } from '@/lib/medical-operations'
 import { PatientProfile } from '@/types/medical'
 import { capitalizeName } from '@/lib/utils'
 import { logger } from '@/lib/logger'
@@ -17,7 +17,6 @@ export interface QuickWeightModalProps {
 
 export function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightModalProps) {
   const { user } = useAuth()
-  const { logVital } = useVitals({ patientId: patient.id })
   const [weight, setWeight] = useState('')
 
   const isNewbornOrInfant = patient.type === 'human' && patient.dateOfBirth
@@ -42,21 +41,31 @@ export function QuickWeightModal({ patient, onClose, onSuccess }: QuickWeightMod
     try {
       if (!user) throw new Error('Not authenticated')
 
-      // Save weight as a vital using the hook
-      const vitalData = {
-        type: 'weight' as const,
-        value: weightValue,
-        unit: weightUnit,
-        recordedAt: new Date().toISOString(),
-        method: 'manual' as const
+      // Weight must be logged via the canonical weight-logs API, not the
+      // vitals API (the server rejects type:'weight' vitals). weight-logs also
+      // sets the startWeight baseline on the first log. It tracks progress in
+      // lbs/kg, so convert oz→lbs and g→kg (this modal offers oz/g for newborns
+      // + small pets) to keep the unit type-correct and the charts consistent.
+      let logValue = weightValue
+      let logUnit: 'lbs' | 'kg'
+      if (weightUnit === 'oz') {
+        logValue = weightValue / 16
+        logUnit = 'lbs'
+      } else if (weightUnit === 'g') {
+        logValue = weightValue / 1000
+        logUnit = 'kg'
+      } else {
+        logUnit = weightUnit
       }
 
-      const result = await logVital(vitalData)
-      if (result.approvalStatus === 'pending') {
-        toast.success('Weight submitted for caregiver approval')
-      } else {
-        toast.success('Weight saved successfully!')
-      }
+      await medicalOperations.weightLogs.logWeight(patient.id, {
+        weight: logValue,
+        unit: logUnit,
+        loggedAt: new Date().toISOString(),
+        source: 'manual',
+        tags: []
+      })
+      toast.success('Weight saved successfully!')
       onSuccess()
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : String(error)
