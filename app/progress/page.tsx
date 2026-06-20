@@ -489,7 +489,14 @@ function ProgressContent() {
   // (nested under .profile) — read both shapes.
   const profileCurrentWeight = activeProfile?.currentWeight ?? activeProfile?.profile?.currentWeight
   const profileHeight = activeProfile?.height ?? activeProfile?.profile?.height
-  const hasCompletedOnboarding = !!activeProfile && (
+  // Single source of truth for "is there an explicit subject?". /progress must
+  // never silently chart the account owner — the subject is always a selected
+  // Patient (0 → none; 1 → auto-selected by the effect below; 2+ → must be
+  // picked). Folding this into hasCompletedOnboarding gates EVERY data section
+  // at once, so the owner-fallback in `activeProfile` can't leak into output
+  // until a subject is chosen.
+  const hasSubject = !!selectedPatientId
+  const hasCompletedOnboarding = hasSubject && !!activeProfile && (
     weightData.length > 0 || !!profileCurrentWeight || !!profileHeight
   )
 
@@ -896,6 +903,24 @@ function ProgressContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* No explicit subject → prompt to pick/add one instead of silently
+            charting the account owner (enforces the 0/1/2+ rule above). The
+            1-patient case auto-selects, so it shows neither prompt nor a flash
+            of owner data. */}
+        {!hasSubject && (hasNoPatients || showPatientSelector) && (
+          <div className="bg-muted/40 border-2 border-dashed border-border rounded-lg p-10 text-center mb-6">
+            <p className="text-4xl mb-3">{hasNoPatients ? '👋' : '👆'}</p>
+            <h3 className="text-lg font-bold text-foreground mb-1">
+              {hasNoPatients ? 'Add a family member to start tracking' : 'Pick a family member to view their progress'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {hasNoPatients
+                ? 'Once someone is added, their weight, meals, and trends show up here.'
+                : 'Use the menu above — progress is shown for one person at a time.'}
+            </p>
+          </div>
+        )}
+
         {/* Onboarding-required banner — show only when the page
             genuinely can't render anything useful: no weight data
             anywhere AND no currentWeight cached on the profile AND
