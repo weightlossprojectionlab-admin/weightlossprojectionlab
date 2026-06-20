@@ -98,4 +98,16 @@ test.describe.serial('BMI guard — visible in the UI', () => {
     await expect(page.getByText(/^severe$/i)).toBeVisible({ timeout: 20_000 })
     await page.waitForTimeout(4000)
   })
+
+  test('no member selected (2+ members) → prompt, not owner data', async ({ page }) => {
+    // bmi-guard-demo + the account's other patients = 2+, so /progress with no
+    // ?patientId must REQUIRE a pick — not silently chart the account owner.
+    await page.goto('/progress', { waitUntil: 'domcontentloaded' })
+    await page.keyboard.press('Escape').catch(() => {})
+    await expect(
+      page.getByText(/Pick a family member to view their progress/i),
+    ).toBeVisible({ timeout: 60_000 })
+    // The data sections must NOT render for a non-subject.
+    await expect(page.getByText('Your Journey', { exact: true })).toHaveCount(0)
+  })
 })
