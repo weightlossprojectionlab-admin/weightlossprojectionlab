@@ -34,7 +34,7 @@ export interface AssertPatientAccessResult {
 /**
  * Verify auth token and extract user ID
  */
-export async function verifyAuthToken(authHeader: string | null): Promise<{ userId: string } | null> {
+export async function verifyAuthToken(authHeader: string | null): Promise<{ userId: string; email: string | null } | null> {
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     logger.warn('[RBAC] Missing or invalid Authorization header')
     return null
@@ -43,7 +43,9 @@ export async function verifyAuthToken(authHeader: string | null): Promise<{ user
   try {
     const token = authHeader.substring(7)
     const decodedToken = await adminAuth.verifyIdToken(token)
-    return { userId: decodedToken.uid }
+    // Expose the VERIFIED email too — invite acceptance must match against this,
+    // not a users-doc field a brand-new invitee may not have written yet.
+    return { userId: decodedToken.uid, email: decodedToken.email ?? null }
   } catch (error) {
     logger.error('[RBAC] Token verification failed', error as Error)
     return null
