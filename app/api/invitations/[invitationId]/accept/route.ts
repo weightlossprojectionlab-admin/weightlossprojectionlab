@@ -37,7 +37,10 @@ export async function POST(
     // Get user profile
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    const userEmail = userData?.email || ''
+    // Match against the VERIFIED auth email (always present), falling back to the
+    // users-doc email. A freshly-signed-up invitee may have no users doc / email
+    // yet — using the auth email avoids 403'ing them on their own invitation.
+    const userEmail = authResult.email || userData?.email || ''
     const userName = userData?.displayName || userData?.name || 'Family Member'
 
     // Get invitation
@@ -53,8 +56,8 @@ export async function POST(
 
     const invitation = { id: invitationDoc.id, ...invitationDoc.data() } as FamilyInvitation
 
-    // Verify invitation is for this user
-    if (invitation.recipientEmail !== userEmail) {
+    // Verify invitation is for this user (case-insensitive — email casing varies).
+    if ((invitation.recipientEmail || '').toLowerCase() !== userEmail.toLowerCase()) {
       return NextResponse.json(
         { success: false, error: 'This invitation is not for you' },
         { status: 403 }
