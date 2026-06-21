@@ -267,7 +267,7 @@ export default function DataExportPage() {
 
       <h3>Who Can Export</h3>
       <ul>
-        <li><strong>Account Owner:</strong> Can export all family data</li>
+        <li><strong>Principal Owner:</strong> Can export all family data</li>
         <li><strong>Adult Family Members:</strong> Can export own data only</li>
         <li><strong>Caregivers (Full Access):</strong> Can export assigned patient data</li>
         <li><strong>Caregivers (View Only):</strong> No export permissions</li>

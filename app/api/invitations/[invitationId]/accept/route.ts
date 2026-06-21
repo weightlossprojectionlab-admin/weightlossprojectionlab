@@ -109,7 +109,7 @@ export async function POST(
       patientsAccess: invitation.patientsShared,
       lastActive: acceptedAt,
 
-      // Family Role Management (Account Owner System)
+      // Family Role Management (Principal Owner System)
       familyRole: invitation.familyRole || 'caregiver', // Default to caregiver if not specified
       managedBy: invitation.invitedByUserId, // Who invited/manages them
       canBeEditedBy: [invitation.invitedByUserId], // Initial editor is the inviter

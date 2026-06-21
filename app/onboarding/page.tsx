@@ -7,7 +7,7 @@ import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useSubscription } from '@/hooks/useSubscription'
-import { doc, setDoc, Timestamp } from 'firebase/firestore'
+import { collection, doc, setDoc, Timestamp } from 'firebase/firestore'
 import { updateProfile } from 'firebase/auth'
 import { db } from '@/lib/firebase'
 import {
@@ -18,7 +18,7 @@ import {
 } from '@/lib/self-patient'
 import { logger } from '@/lib/logger'
 import { medicalOperations } from '@/lib/medical-operations'
-import { getTargetWeightSuggestion } from '@/lib/health-calculations'
+import { getTargetWeightSuggestion, getHealthRiskProfile } from '@/lib/health-calculations'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { FacePhotoCapture } from '@/components/family/FacePhotoCapture'
@@ -61,7 +61,10 @@ interface OnboardingScreen {
    *  suggestion (from height + current weight) above a pre-filled target
    *  input; 'options' (default) renders the option-button list with
    *  auto-advance on tap. */
-  inputType?: 'options' | 'text' | 'number' | 'height' | 'goal' | 'date'
+  inputType?: 'options' | 'text' | 'number' | 'height' | 'goal' | 'date' | 'roster'
+  /** When true, the step can be Continued with an empty value (e.g. the owner's
+   *  last name — a legal-anchor nicety, not essential to start). */
+  optional?: boolean
   placeholder?: string
   maxLength?: number
 }
@@ -102,6 +105,10 @@ function OnboardingContent() {
   const [answers, setAnswers] = useState<Record<string, any>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showPhotoCapture, setShowPhotoCapture] = useState(fromInvitation)
+  // Roster draft (slice 3): the member currently being added on the roster step.
+  const [rosterDraft, setRosterDraft] = useState<{ type: string; name: string; dob: string; species: string }>({
+    type: '', name: '', dob: '', species: '',
+  })
   const [pendingApproval, setPendingApproval] = useState(false)
   const [acceptedInvitation, setAcceptedInvitation] = useState<any>(null)
   const [onboardingStartTime, setOnboardingStartTime] = useState<number | null>(null)
@@ -143,14 +150,51 @@ function OnboardingContent() {
     }
   }, [user, onboardingStartTime, fromInvitation])
 
-  function determineUserMode(role: PrimaryRole): UserMode {
-    if (role === 'myself') return 'single'
-    if (role === 'family') return 'household'
-    return 'single'
+  // Roster (slice 3): per-subject capture. Each member carries a type, so its
+  // fields + validation fork human vs pet (the "validation is a property of the
+  // subject, not the step" rule). Captured into answers.roster; the write to
+  // patients is the next, separately-verified step.
+  function addRosterMember() {
+    const d = rosterDraft
+    if (!d.type || !d.name.trim()) return
+    if (d.type === 'pet' && !d.species.trim()) return
+    const existing: any[] = Array.isArray(answers.roster) ? answers.roster : []
+    const member = {
+      id: `${d.type}-${d.name.trim()}-${existing.length}`,
+      type: d.type,
+      name: capitalizeName(d.name.trim()),
+      ...(d.type !== 'pet' && d.dob ? { dob: d.dob } : {}),
+      ...(d.type === 'pet' && d.species.trim() ? { species: d.species.trim() } : {}),
+    }
+    setAnswers((prev) => ({
+      ...prev,
+      roster: [...(Array.isArray(prev.roster) ? prev.roster : []), member],
+    }))
+    setRosterDraft({ type: '', name: '', dob: '', species: '' })
+  }
+
+  function removeRosterMember(id: string) {
+    setAnswers((prev) => ({
+      ...prev,
+      roster: (Array.isArray(prev.roster) ? prev.roster : []).filter((m: any) => m.id !== id),
+    }))
   }
 
   // Visibility parser. Minimal — string-match against known forms.
   function isScreenVisible(screen: OnboardingScreen): boolean {
+    // Archetype gating (slice 2): the self-health block runs only when the
+    // owner is tracking their own health. Household screens are still handled
+    // by the binary visibleIf strings below via the derived userMode.
+    const role = answers.role_selection
+    const tracksSelf = role === 'just_me' || role === 'household'
+    const SELF_BLOCK = [
+      'your_last_name', 'date_of_birth', 'biological_sex', 'your_height',
+      'current_weight', 'goal_direction', 'goal_weight', 'weekly_pace',
+    ]
+    if (role && !tracksSelf && SELF_BLOCK.includes(screen.id)) {
+      return false
+    }
+
     if (!screen.visibleIf) return true
     if (screen.visibleIf === "userMode != 'myself'") {
       return answers.userMode !== 'single'
@@ -162,6 +206,12 @@ function OnboardingContent() {
     // These capture the activation inputs the day-1 projection needs.
     if (screen.visibleIf === "userMode === 'myself'") {
       return answers.userMode === 'single'
+    }
+    // Goal weight + pace are meaningless for a maintain goal (target =
+    // current, pace = 0), so skip them when the user picked Maintain.
+    // For lose/gain they show normally.
+    if (screen.visibleIf === "goalDirection != 'maintain'") {
+      return answers.goalDirection !== 'maintain'
     }
     // Family path AND user's plan unlocks multi-patient. Free-plan
     // users skip this screen and route straight to /dashboard so we
@@ -197,13 +247,135 @@ function OnboardingContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentScreen?.id])
 
+  // ── Semantic input validation ──────────────────────────────────────────
+  // Onboarding always describes the ACCOUNT HOLDER — a human adult — so enforce
+  // human-plausible values: a legal-adult DOB, a real height (inches 0–11,
+  // 3′–8′), and a real weight. Children + pets are added afterward via their
+  // own flows, which carry their own ranges. `stepError` gates Continue and
+  // renders inline, so nothing impossible can be committed.
+  function ageInYears(dob: Date, now: Date): number {
+    let age = now.getFullYear() - dob.getFullYear()
+    const m = now.getMonth() - dob.getMonth()
+    if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--
+    return age
+  }
+
+  function getStepError(): string | null {
+    if (!currentScreen) return null
+    const id = currentScreen.id
+
+    if (id === 'date_of_birth') {
+      const v = String(answers.date_of_birth ?? '').trim()
+      if (!v) return null
+      const dob = new Date(v)
+      if (Number.isNaN(dob.getTime())) return 'Enter a valid date.'
+      const now = new Date()
+      if (dob > now) return 'Date of birth can’t be in the future.'
+      if (ageInYears(dob, now) < 18) {
+        return 'You must be at least 18 to set up an account — you can add younger family members in a moment.'
+      }
+      return null
+    }
+
+    if (currentScreen.inputType === 'height') {
+      const feetRaw = String(answers.height_feet ?? '').trim()
+      const inchesRaw = String(answers.height_inches ?? '').trim()
+      if (!feetRaw && !inchesRaw) return null
+      const feet = parseInt(feetRaw || '0', 10)
+      const inches = parseInt(inchesRaw || '0', 10)
+      if (inches > 11) return 'Inches must be 0–11 (12 inches is 1 foot).'
+      const total = feet * 12 + inches
+      if (total > 0 && (total < 36 || total > 96)) return 'Enter a realistic height (3′0″ to 8′0″).'
+      return null
+    }
+
+    if (id === 'current_weight') {
+      const raw = String(answers.current_weight ?? '').trim()
+      if (!raw) return null
+      const w = parseFloat(raw)
+      if (!(w > 0)) return 'Enter a valid weight.'
+      if (w < 50 || w > 1000) return 'Enter a realistic weight (50–1000 lbs).'
+      return null
+    }
+
+    return null
+  }
+  const stepError = getStepError()
+
+  // DOB picker upper bound: 18 years ago today (legal-adult gate).
+  const maxAdultDobIso = (() => {
+    const d = new Date()
+    d.setFullYear(d.getFullYear() - 18)
+    return d.toISOString().slice(0, 10)
+  })()
+
+  // ── Q8: restore the health warnings on the goal step ──
+  // getHealthRiskProfile already encodes the BMI-band warnings (Class I/II/III
+  // obesity, cardiovascular + diabetes risk). Surfacing them is an early, honest
+  // health signal — shown before the user sets a goal, and later for every
+  // family member. Sex (collected in the self-block) feeds the female-specific
+  // risk flags; age is derived from the DOB step.
+  const accountAge = (() => {
+    const v = String(answers.date_of_birth ?? '').trim()
+    if (!v) return 0
+    const dob = new Date(v)
+    return Number.isNaN(dob.getTime()) ? 0 : ageInYears(dob, new Date())
+  })()
+  const healthRisk =
+    currentScreen?.inputType === 'goal' && goalSuggestion
+      ? getHealthRiskProfile({
+          bmi: goalSuggestion.bmi,
+          gender: answers.biological_sex === 'female' ? 'female' : 'male',
+          age: accountAge,
+        })
+      : null
+
+  // ── Q9: recommend a weekly pace from the user's own numbers ──
+  // Safe sustainable rate ≈ 1% of body weight/week, snapped to an offered option
+  // and clamped 0.5–2 lb/week (the healthy max). Heavier bodies can safely lose
+  // faster in absolute terms; lighter bodies get a gentler default.
+  const recommendedPace = (() => {
+    if (currentScreen?.id !== 'weekly_pace') return null
+    const w = parseFloat(String(answers.current_weight ?? ''))
+    if (!(w > 0)) return null
+    // Derive the offered paces from the PRD options so the recommendation can
+    // never drift from what's actually shown (DRY — not a hardcoded range).
+    const paces = (currentScreen.options ?? []).map((o) => parseFloat(o)).filter((n) => n > 0)
+    if (paces.length === 0) return null
+    const lo = Math.min(...paces)
+    const hi = Math.max(...paces)
+    const target = Math.min(hi, Math.max(lo, w * 0.01))
+    const nearest = paces.reduce((a, b) => (Math.abs(b - target) < Math.abs(a - target) ? b : a))
+    return `${nearest} lb/week`
+  })()
+
   function handleAnswer(value: string) {
     if (!currentScreen) return
     const questionId = currentScreen.id
     const updatedAnswers: Record<string, any> = { ...answers, [questionId]: value }
 
     if (questionId === 'role_selection') {
-      updatedAnswers.userMode = determineUserMode(value as PrimaryRole)
+      // Self-vs-others is the ONLY axis that gates the flow. Whether an "other"
+      // is family or a pet is a per-member fact captured in the roster — not an
+      // account-level choice — so the archetype is mutually exclusive.
+      //   just_me   → tracks self, no household
+      //   household → tracks self AND others
+      //   caregiver → tracks others, NOT self
+      updatedAnswers.userMode =
+        value === 'household' || value === 'caregiver' ? 'household' : 'single'
+    }
+
+    // Normalize the goal-direction option ("Lose weight" / "Maintain
+    // weight" / "Gain weight") into a stable 'lose' | 'maintain' |
+    // 'gain' token. Downstream visibility (skip goal-weight/pace for
+    // maintain) and completeOnboarding both read answers.goalDirection.
+    if (questionId === 'goal_direction') {
+      const v = value.toLowerCase()
+      updatedAnswers.goalDirection = v.includes('maintain')
+        ? 'maintain'
+        : v.includes('gain')
+          ? 'gain'
+          : 'lose'
     }
 
     setAnswers(updatedAnswers)
@@ -227,12 +399,18 @@ function OnboardingContent() {
 
   function handleTextAnswer(value: string) {
     if (!currentScreen) return
+    // Validation gate — an Enter keypress or a stale-enabled button can't
+    // commit an impossible value.
+    if (getStepError()) return
     const questionId = currentScreen.id
     // Normalize name fields on commit via capitalizeName (handles
     // McDonald / O'Brien / multi-word). Applies to both first name
     // and family last name. Other text inputs trim only.
     const trimmed = value.trim()
-    const isNameField = questionId === 'your_name' || questionId === 'family_last_name'
+    const isNameField =
+      questionId === 'your_name' ||
+      questionId === 'family_last_name' ||
+      questionId === 'your_last_name'
     const stored = isNameField ? capitalizeName(trimmed) : trimmed
     const updatedAnswers = { ...answers, [questionId]: stored }
     setAnswers(updatedAnswers)
@@ -262,9 +440,20 @@ function OnboardingContent() {
       const userMode = answers.userMode as UserMode
       const primaryRole = answers.role_selection as PrimaryRole
       const firstName = (answers.your_name as string | undefined)?.trim() || undefined
+      // Family surname — household mode only. It's the shared family
+      // last name AND the default lastName for members added later.
+      // Gated to household so single mode never persists an uncollected
+      // surname (previously the OAuth displayName leaked e.g. "Production"
+      // into a single user's record even though no last name was asked).
       const familyLastName =
-        (answers.family_last_name as string | undefined)?.trim() || undefined
-      const addFamilyNow = answers.add_now === 'yes'
+        userMode === 'household'
+          ? (answers.family_last_name as string | undefined)?.trim() || undefined
+          : undefined
+      // The account holder's OWN surname — its own field now, asked in both the
+      // single AND household paths (gated on tracksSelf), so it's the SINGLE
+      // source of truth for the self-Patient's legal surname. No longer
+      // conflated with the household name in family mode (blended-family safe).
+      const ownLastName = (answers.your_last_name as string | undefined)?.trim() || undefined
 
       // The ACCOUNT HOLDER's own goal-setup answers — captured in BOTH single
       // AND family modes (the organizer is a self-Patient too, not a stub).
@@ -275,6 +464,24 @@ function OnboardingContent() {
       const currentWeightNum = parseFloat(String(answers.current_weight ?? ''))
       const goalWeightNum = parseFloat(String(answers.goal_weight ?? ''))
       const weeklyPaceNum = parseFloat(String(answers.weekly_pace ?? ''))
+      // Goal direction drives the whole projection. Default 'lose' for
+      // back-compat with any pre-existing partial answers, but the screen
+      // is always shown so this is normally explicit. Maintain has no
+      // goal-weight / pace screen (skipped via visibleIf): the target IS
+      // the current weight and pace is 0.
+      const goalDirection =
+        (answers.goalDirection as 'lose' | 'maintain' | 'gain' | undefined) ?? 'lose'
+      const isMaintainGoal = goalDirection === 'maintain'
+      const effectiveTargetWeight = isMaintainGoal
+        ? currentWeightNum
+        : Number.isFinite(goalWeightNum) && goalWeightNum > 0
+          ? goalWeightNum
+          : undefined
+      const effectiveWeeklyPace = isMaintainGoal
+        ? 0
+        : Number.isFinite(weeklyPaceNum) && weeklyPaceNum > 0
+          ? weeklyPaceNum
+          : 1
       // Height is stored as total inches by the 'height' input. Pairs with
       // weight for BMI / early health-risk signals (same as the family wizard).
       const heightInches = parseFloat(String(answers.your_height ?? ''))
@@ -321,7 +528,7 @@ function OnboardingContent() {
         kitchenMode: '' as any,
         mealLoggingMode: '' as any,
         automationLevel: 'no' as AutomationLevel,
-        addFamilyNow,
+        addFamilyNow: false,
         completedAt: new Date(),
       }
 
@@ -337,13 +544,15 @@ function OnboardingContent() {
             onboardingCompleted: true,
             onboardingCompletedAt: Timestamp.now(),
             ...(firstName ? { firstName } : {}),
-            // familyLastName seeds the account holder's surname AND
-            // becomes the default lastName for any family member
-            // added via the wizard. Per-household scope today (one
+            // familyLastName is the HOUSEHOLD surname — the default lastName
+            // for any family member added via the wizard (the owner's own
+            // surname now comes from your_last_name, not this).
+            // Per-household scope today (one
             // user.profile); when multi-household lands, this moves
             // onto the household record itself. See deferred work
             // in project_household_composition_state_machine.
-            ...(familyLastName ? { familyLastName, lastName: familyLastName } : {}),
+            ...(familyLastName ? { familyLastName } : {}),
+            ...(ownLastName ? { lastName: ownLastName } : {}),
             // memberCount + recommendedPlan: the user's declared
             // household size and the plan tier that satisfies the
             // patient cap. Drives the upgrade CTA on /dashboard and
@@ -367,7 +576,7 @@ function OnboardingContent() {
       // the self-Patient is the canonical name source. Best-effort:
       // failure here is non-fatal (the Firestore writes already
       // landed and are the source of truth).
-      const desiredDisplayName = [firstName, familyLastName]
+      const desiredDisplayName = [firstName, ownLastName]
         .filter(Boolean)
         .join(' ')
         .trim()
@@ -435,7 +644,7 @@ function OnboardingContent() {
       // would update Auth + profile but leave the existing patient
       // record stale.
       try {
-        const composedLegalName = [firstName, familyLastName]
+        const composedLegalName = [firstName, ownLastName]
           .filter(Boolean)
           .join(' ')
           .trim()
@@ -449,7 +658,7 @@ function OnboardingContent() {
             patientId: existingSelfPatientId,
             displayName: patientName,
             ...(firstName ? { firstName } : {}),
-            ...(familyLastName ? { lastName: familyLastName } : {}),
+            ...(ownLastName ? { lastName: ownLastName } : {}),
             db,
           })
           selfPatientId = existingSelfPatientId
@@ -463,7 +672,7 @@ function OnboardingContent() {
             userId: user.uid,
             displayName: patientName,
             ...(firstName ? { firstName } : {}),
-            ...(familyLastName ? { lastName: familyLastName } : {}),
+            ...(ownLastName ? { lastName: ownLastName } : {}),
             db,
           })
           selfPatientId = patientId
@@ -489,13 +698,21 @@ function OnboardingContent() {
               ...(hasHeight ? { height: heightInches, heightUnit: 'imperial' } : {}),
               // Date of birth as entered at onboarding (canonical; age derived).
               ...(dateOfBirthIso ? { dateOfBirth: dateOfBirthIso } : {}),
+              // Biological sex — load-bearing for BMR / calorie targets +
+              // sex-specific health-risk flags (the self-block collects it).
+              ...(answers.biological_sex ? { gender: answers.biological_sex } : {}),
               goals: {
                 startWeight: currentWeightNum,
-                ...(Number.isFinite(goalWeightNum) && goalWeightNum > 0
-                  ? { targetWeight: goalWeightNum }
+                // Direction the user explicitly chose — lose / maintain /
+                // gain. /progress reads this to frame the projection,
+                // sign, and copy instead of assuming weight loss.
+                goalDirection,
+                ...(effectiveTargetWeight
+                  ? { targetWeight: effectiveTargetWeight }
                   : {}),
-                weeklyWeightLossGoal:
-                  Number.isFinite(weeklyPaceNum) && weeklyPaceNum > 0 ? weeklyPaceNum : 1,
+                // Kept under the legacy 'weeklyWeightLossGoal' key (it's
+                // the rate magnitude, direction-agnostic). 0 for maintain.
+                weeklyWeightLossGoal: effectiveWeeklyPace,
               },
               lastModified: Timestamp.now(),
             },
@@ -526,6 +743,46 @@ function OnboardingContent() {
         logger.error('[Onboarding] Self-Patient create-or-update failed (non-fatal)', err as Error)
       }
 
+      // Slice 3b: persist the household roster as patient records. Best-effort +
+      // non-fatal — a roster-write failure must NEVER break account creation.
+      // Gated on canAddPatients: multi-patient is a paid feature, so free
+      // accounts keep the roster in their onboarding answers and convert it at
+      // the in-context upgrade moment (slice 4). Mirrors the self-Patient's
+      // minimal-doc shape (requiresProfileCompletion → the Info-tab editor
+      // prompts for the rest); human-vs-pet is the per-member row type.
+      const roster: Array<{ type?: string; name?: string; dob?: string; species?: string }> =
+        Array.isArray(answers.roster) ? answers.roster : []
+      if (canAddPatients && roster.length > 0) {
+        const rosterNow = Timestamp.now()
+        await Promise.all(
+          roster.map(async (m) => {
+            try {
+              if (!m?.name) return
+              const isPet = m.type === 'pet'
+              const ref = doc(collection(db, 'users', user.uid, 'patients'))
+              const data: Record<string, unknown> = {
+                userId: user.uid,
+                name: m.name,
+                type: isPet ? 'pet' : 'human',
+                relationship: isPet ? 'pet' : m.type === 'child' ? 'child' : 'family',
+                requiresProfileCompletion: true,
+                createdAt: rosterNow,
+                lastModified: rosterNow,
+              }
+              if (!isPet && m.dob) data.dateOfBirth = new Date(m.dob).toISOString()
+              if (isPet && m.species) data.species = m.species
+              await setDoc(ref, data)
+            } catch (memberErr) {
+              logger.warn('[Onboarding] Roster member create failed (non-fatal)', {
+                name: m?.name,
+                error: (memberErr as Error)?.message,
+              })
+            }
+          }),
+        )
+        logger.info('[Onboarding] Roster persisted', { userId: user.uid, count: roster.length })
+      }
+
       // Analytics
       if (onboardingStartTime) {
         const totalTimeSpent = Date.now() - onboardingStartTime
@@ -543,11 +800,9 @@ function OnboardingContent() {
 
       toast.success(firstName ? `Welcome, ${firstName}!` : 'Welcome aboard!')
 
-      // Routing — pets/humans/newborn are all picked inside the
-      // wizard's type_selection step. Onboarding's job ends here.
-      if (addFamilyNow) {
-        router.push('/patients/new')
-      } else if (hasGoalData) {
+      // Routing — household members + pets are captured inline on the roster
+      // step now, so there's no separate add-member detour. Onboarding ends here.
+      if (hasGoalData) {
         // Land single users on /progress — the projection chip fires from the
         // weight + goal they just entered. This IS the "here's your plan"
         // first-session payoff that hooks the trial.
@@ -764,7 +1019,110 @@ function OnboardingContent() {
               )}
             </div>
 
-            {currentScreen.inputType === 'text' || currentScreen.inputType === 'number' ? (
+            {/* Principal Owner framing — the person setting up the account is
+                the household's Principal Owner (the account_owner role). Shown
+                on the name step; gold to match the owner badge. */}
+            {currentScreen.id === 'your_name' && (
+              <div className="mb-4 rounded-xl border border-amber-300/60 bg-amber-50 px-4 py-3 text-left dark:bg-amber-900/15">
+                <p className="text-sm text-foreground">
+                  <span aria-hidden="true">👑</span> You’re the{' '}
+                  <span className="font-semibold">Principal Owner</span>
+                  {answers.family_last_name
+                    ? <> of the {capitalizeName(String(answers.family_last_name))} household</>
+                    : ' of this account'}
+                  {' '}— full control, and you can add others in a moment.
+                </p>
+              </div>
+            )}
+
+            {currentScreen.inputType === 'roster' ? (
+              <div className="space-y-4">
+                {/* Members added so far */}
+                {Array.isArray(answers.roster) && answers.roster.length > 0 && (
+                  <div className="space-y-2">
+                    {(answers.roster as any[]).map((m) => (
+                      <div key={m.id} className="flex items-center justify-between rounded-xl bg-accent px-4 py-3">
+                        <span className="text-sm font-medium text-foreground">
+                          {m.name}{' '}
+                          <span className="text-muted-foreground">· {m.type === 'pet' ? (m.species || 'pet') : m.type}</span>
+                        </span>
+                        <button onClick={() => removeRosterMember(m.id)} className="text-xs font-semibold text-error">
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Add-member sub-form: type picks the fields + validation */}
+                <div className="space-y-3 rounded-xl border border-border p-4">
+                  <div className="flex gap-2">
+                    {['adult', 'child', 'pet'].map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setRosterDraft({ ...rosterDraft, type: t })}
+                        className={`flex-1 rounded-lg px-3 py-2 text-sm font-semibold capitalize transition-colors ${
+                          rosterDraft.type === t ? 'bg-primary text-primary-foreground' : 'bg-accent text-foreground hover:bg-accent/80'
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  {rosterDraft.type && (
+                    <>
+                      <input
+                        type="text"
+                        value={rosterDraft.name}
+                        onChange={(e) => setRosterDraft({ ...rosterDraft, name: e.target.value })}
+                        placeholder={rosterDraft.type === 'pet' ? "Pet's name" : 'First name'}
+                        className="w-full rounded-lg border-2 border-transparent bg-accent p-3 text-foreground focus:border-primary focus:outline-none"
+                      />
+                      {rosterDraft.type === 'pet' ? (
+                        <input
+                          type="text"
+                          value={rosterDraft.species}
+                          onChange={(e) => setRosterDraft({ ...rosterDraft, species: e.target.value })}
+                          placeholder="Species (dog, cat, …)"
+                          className="w-full rounded-lg border-2 border-transparent bg-accent p-3 text-foreground focus:border-primary focus:outline-none"
+                        />
+                      ) : (
+                        <input
+                          type="date"
+                          max={new Date().toISOString().slice(0, 10)}
+                          value={rosterDraft.dob}
+                          onChange={(e) => setRosterDraft({ ...rosterDraft, dob: e.target.value })}
+                          className="w-full rounded-lg border-2 border-transparent bg-accent p-3 text-foreground focus:border-primary focus:outline-none"
+                        />
+                      )}
+                      <button
+                        onClick={addRosterMember}
+                        disabled={!rosterDraft.name.trim() || (rosterDraft.type === 'pet' && !rosterDraft.species.trim())}
+                        className="w-full rounded-lg bg-primary/10 p-3 font-semibold text-primary transition-colors hover:bg-primary/20 disabled:opacity-50"
+                      >
+                        + Add {rosterDraft.type}
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => {
+                    // Auto-commit a filled-but-unadded draft so a typed member is
+                    // never silently dropped when the user taps Continue instead
+                    // of "+ Add". addRosterMember() no-ops on an invalid draft.
+                    const d = rosterDraft
+                    const draftReady = !!d.type && !!d.name.trim() && !(d.type === 'pet' && !d.species.trim())
+                    if (draftReady) addRosterMember()
+                    setStep(step + 1)
+                  }}
+                  className="w-full rounded-xl bg-primary p-4 font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+                >
+                  Continue
+                  {Array.isArray(answers.roster) && answers.roster.length > 0 ? ` (${answers.roster.length} added)` : ''}
+                </button>
+              </div>
+            ) : currentScreen.inputType === 'text' || currentScreen.inputType === 'number' ? (
               <div className="space-y-4">
                 <input
                   type={currentScreen.inputType === 'number' ? 'number' : 'text'}
@@ -783,9 +1141,10 @@ function OnboardingContent() {
                   autoFocus
                   className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium transition-colors"
                 />
+                {stepError && <p className="text-sm font-medium text-error">{stepError}</p>}
                 <button
                   onClick={() => handleTextAnswer((answers[currentScreen.id] as string) || '')}
-                  disabled={!((answers[currentScreen.id] as string) || '').trim()}
+                  disabled={(!((answers[currentScreen.id] as string) || '').trim() && !currentScreen.optional) || !!stepError}
                   className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
@@ -802,6 +1161,30 @@ function OnboardingContent() {
                       {goalSuggestion.maxHealthyWeight} lbs.
                     </p>
                     <p className="text-xs text-muted-foreground">{goalSuggestion.reason}</p>
+                  </div>
+                )}
+                {/* Health warnings (Q8) — early, honest BMI-band signal. Shows
+                    here for the account holder, and the same logic surfaces for
+                    every family member you add. */}
+                {healthRisk && healthRisk.warnings.length > 0 && (
+                  <div
+                    className={`rounded-xl border p-4 text-left ${
+                      healthRisk.riskLevel === 'severe' || healthRisk.riskLevel === 'high'
+                        ? 'bg-error-light border-error/40'
+                        : 'bg-warning-light border-warning/40'
+                    }`}
+                  >
+                    <p className="mb-1 flex items-center gap-1 text-sm font-semibold text-foreground">
+                      <span aria-hidden="true">⚠️</span> {healthRisk.bmiCategory}
+                    </p>
+                    <ul className="list-inside list-disc space-y-1 text-xs text-muted-foreground">
+                      {healthRisk.warnings.map((w, i) => (
+                        <li key={i}>{w}</li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-[11px] text-muted-foreground">
+                      Early awareness is the point — we’ll help you (and everyone you add) track this over time. Not medical advice.
+                    </p>
                   </div>
                 )}
                 <input
@@ -863,6 +1246,7 @@ function OnboardingContent() {
                     <p className="text-center text-xs text-muted-foreground mt-1">inches</p>
                   </div>
                 </div>
+                {stepError && <p className="text-sm font-medium text-error">{stepError}</p>}
                 <button
                   onClick={() => {
                     const feet = parseInt(String(answers.height_feet ?? ''), 10) || 0
@@ -870,7 +1254,7 @@ function OnboardingContent() {
                     const total = feet * 12 + inches
                     if (total > 0) handleTextAnswer(String(total))
                   }}
-                  disabled={!(parseInt(String(answers.height_feet ?? ''), 10) > 0)}
+                  disabled={!(parseInt(String(answers.height_feet ?? ''), 10) > 0) || !!stepError}
                   className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
@@ -884,16 +1268,17 @@ function OnboardingContent() {
                     can't be picked. */}
                 <input
                   type="date"
-                  max={new Date().toISOString().slice(0, 10)}
+                  max={maxAdultDobIso}
                   min={`${new Date().getFullYear() - 120}-01-01`}
                   value={(answers[currentScreen.id] as string) || ''}
                   onChange={(e) => setAnswers({ ...answers, [currentScreen.id]: e.target.value })}
                   autoFocus
                   className="w-full p-5 rounded-xl bg-accent text-foreground border-2 border-transparent focus:border-primary focus:outline-none text-lg font-medium text-center transition-colors"
                 />
+                {stepError && <p className="text-sm font-medium text-error">{stepError}</p>}
                 <button
                   onClick={() => handleTextAnswer((answers[currentScreen.id] as string) || '')}
-                  disabled={!((answers[currentScreen.id] as string) || '').trim()}
+                  disabled={(!((answers[currentScreen.id] as string) || '').trim() && !currentScreen.optional) || !!stepError}
                   className="w-full p-4 bg-primary text-primary-foreground rounded-xl font-semibold hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Continue
@@ -905,6 +1290,9 @@ function OnboardingContent() {
                   const isSelected = answers[currentScreen.id] === option
                   const description = currentScreen.optionDescriptions?.[option]
                   const label = option.replace(/_/g, ' ')
+                  // Q9: personalized pace pick from the user's own weight.
+                  const isRecommended =
+                    currentScreen.id === 'weekly_pace' && !!recommendedPace && option === recommendedPace
 
                   return (
                     <button
@@ -915,11 +1303,20 @@ function OnboardingContent() {
                         ${
                           isSelected
                             ? 'bg-primary text-primary-foreground border-2 border-primary shadow-lg scale-[1.02]'
-                            : 'bg-accent hover:bg-accent/80 border-2 border-transparent hover:border-primary/30 hover:scale-[1.01]'
+                            : isRecommended
+                              ? 'bg-accent border-2 border-primary hover:bg-accent/80 hover:scale-[1.01]'
+                              : 'bg-accent hover:bg-accent/80 border-2 border-transparent hover:border-primary/30 hover:scale-[1.01]'
                         }
                       `}
                     >
-                      <div className="capitalize text-lg font-semibold mb-0.5">{label}</div>
+                      <div className="capitalize text-lg font-semibold mb-0.5 flex items-center gap-2">
+                        {label}
+                        {isRecommended && (
+                          <span className="normal-case text-[10px] font-bold tracking-wide px-2 py-0.5 rounded-full bg-primary text-primary-foreground">
+                            ✨ Recommended for you
+                          </span>
+                        )}
+                      </div>
                       {description && (
                         <div className="text-sm leading-relaxed text-white/80">{description}</div>
                       )}

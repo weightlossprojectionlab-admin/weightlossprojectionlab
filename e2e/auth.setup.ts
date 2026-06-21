@@ -69,10 +69,17 @@ setup('sign in', async ({ page }) => {
         'E2E_AUTH_MODE=password requires E2E_TEST_USER_EMAIL and E2E_TEST_USER_PASSWORD in .env.local.',
       )
     }
-    // Wait for the form to render — the page shows "Loading..." while
-    // Firebase determines auth state.
+    // Wait for the auth form to render (the page shows "Loading..." while
+    // Firebase determines auth state).
     const emailInput = page.getByLabel('Email address')
     await emailInput.waitFor({ state: 'visible', timeout: 90_000 })
+    // The /auth page DEFAULTS to sign-up ("Create account"). If that form is
+    // showing, switch to sign-in first — otherwise the exact "Sign in" submit
+    // doesn't exist, the click no-ops, and we time out.
+    if (await page.getByRole('button', { name: 'Create account', exact: true }).isVisible().catch(() => false)) {
+      await page.getByRole('button', { name: /Switch to sign in/i }).click()
+      await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor({ state: 'visible', timeout: 15_000 })
+    }
     await emailInput.fill(email)
     await page.getByLabel('Password', { exact: true }).fill(password)
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()

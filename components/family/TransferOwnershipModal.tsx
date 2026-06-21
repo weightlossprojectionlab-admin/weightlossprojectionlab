@@ -1,9 +1,9 @@
 /**
  * Transfer Ownership Modal Component
  *
- * Modal for transferring Account Owner role to another family member
- * - Shows current Account Owner
- * - Select new Account Owner from eligible family members
+ * Modal for transferring Principal Owner role to another family member
+ * - Shows current Principal Owner
+ * - Select new Principal Owner from eligible family members
  * - Warning message about irreversibility
  * - Requires typing "TRANSFER" to confirm
  * - Calls transferOwnership() function
@@ -97,7 +97,7 @@ export function TransferOwnershipModal({
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-foreground">
-              Transfer Account Ownership
+              Transfer Principal Ownership
             </h2>
             <button
               onClick={onClose}
@@ -157,7 +157,7 @@ export function TransferOwnershipModal({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-3">
-                  Select New Account Owner
+                  Select New Principal Owner
                 </label>
 
                 {eligibleMembers.length === 0 ? (
@@ -293,7 +293,7 @@ export function TransferOwnershipModal({
                       This Action Cannot Be Undone!
                     </p>
                     <ul className="text-xs text-error-dark space-y-1">
-                      <li>• {selectedMember.name} will become the new Account Owner</li>
+                      <li>• {selectedMember.name} will become the new Principal Owner</li>
                       <li>• You will no longer have full ownership privileges</li>
                       <li>• Only the new owner can transfer ownership back to you</li>
                       <li>• All patient data and settings will remain under their control</li>

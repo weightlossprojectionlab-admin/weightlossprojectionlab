@@ -5,11 +5,13 @@
     "screens": [
       {
         "id": "role_selection",
-        "question": "Who will you primarily be managing?",
-        "options": ["myself", "family"],
+        "question": "Who are you setting up for?",
+        "subtitle": "This picks the right flow — you'll add the specific people and pets next.",
+        "options": ["just_me", "household", "caregiver"],
         "optionDescriptions": {
-          "myself": "Just tracking my own health and wellness",
-          "family": "Tracking health with others — partner, kids, parents, siblings, roommates, or anyone you share care with"
+          "just_me": "My own health and goals",
+          "household": "Me, plus the family and pets I care for",
+          "caregiver": "Family or pets — I'm not tracking my own health"
         },
         "sets": "userMode"
       },
@@ -48,12 +50,34 @@
         "sets": "firstName"
       },
       {
+        "id": "your_last_name",
+        "question": "What's your last name?",
+        "subtitle": "So your records read with your full name. You can change it later.",
+        "options": [],
+        "inputType": "text",
+        "placeholder": "e.g. Rice",
+        "maxLength": 60,
+        "optional": true,
+        "sets": "lastName"
+      },
+      {
         "id": "date_of_birth",
         "question": "What's your date of birth?",
         "subtitle": "Used to personalize your calorie targets and surface age-related health risks early. More precise than age — and you'll never have to update it.",
         "options": [],
         "inputType": "date",
         "sets": "dateOfBirth"
+      },
+      {
+        "id": "biological_sex",
+        "question": "What's your biological sex?",
+        "subtitle": "Used for accurate calorie targets and health-risk math — this is about biology, not identity.",
+        "options": ["female", "male"],
+        "optionDescriptions": {
+          "female": "",
+          "male": ""
+        },
+        "sets": "gender"
       },
       {
         "id": "your_height",
@@ -72,6 +96,17 @@
         "maxLength": 6,
         "sets": "currentWeight"      },
       {
+        "id": "goal_direction",
+        "question": "What's your weight goal?",
+        "subtitle": "This shapes the plan and the projections we build for you.",
+        "options": ["Lose weight", "Maintain weight", "Gain weight"],
+        "optionDescriptions": {
+          "Lose weight": "Move toward a lower target weight",
+          "Maintain weight": "Stay around where you are now",
+          "Gain weight": "Move toward a higher target weight"
+        },
+        "sets": "goalDirection"      },
+      {
         "id": "goal_weight",
         "question": "What's your goal weight?",
         "subtitle": "We've suggested a healthy target from your height and weight — adjust it to whatever feels right for you.",
@@ -79,6 +114,7 @@
         "inputType": "goal",
         "placeholder": "e.g. 160",
         "maxLength": 6,
+        "visibleIf": "goalDirection != 'maintain'",
         "sets": "goalWeight"      },
       {
         "id": "weekly_pace",
@@ -91,17 +127,16 @@
           "1.5 lb/week": "Faster — takes more focus",
           "2 lb/week": "Aggressive — the healthy maximum"
         },
+        "visibleIf": "goalDirection != 'maintain'",
         "sets": "weeklyPace"      },
       {
-        "id": "add_now",
-        "question": "Want to add someone now?",
-        "subtitle": "Family member, pet, or newborn — you'll pick the type next. Skip to set up later from your dashboard.",
-        "options": ["yes", "no"],
-        "optionDescriptions": {
-          "yes": "I'll add someone right now",
-          "no": "I'll do this later from the dashboard"
-        },
-        "visibleIf": "userMode != 'myself' && canAddPatients"
+        "id": "household_roster",
+        "question": "Who else is in your household?",
+        "subtitle": "Add the people and pets you'll track. You can always add more later.",
+        "inputType": "roster",
+        "options": [],
+        "sets": "roster",
+        "visibleIf": "userMode === 'household'"
       }
     ],
     "userModes": {

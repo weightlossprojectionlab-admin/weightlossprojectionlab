@@ -6,7 +6,7 @@
  * Backfill patient-level family member records for existing family members
  * This fixes the issue where family members don't see patients properly
  *
- * Authorization: Account Owner only
+ * Authorization: Principal Owner only
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (!isAccountOwner) {
       return NextResponse.json(
-        { success: false, error: 'Unauthorized', message: 'Only Account Owners can run migrations' },
+        { success: false, error: 'Unauthorized', message: 'Only Principal Owners can run migrations' },
         { status: 403 }
       )
     }

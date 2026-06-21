@@ -4,7 +4,7 @@
  * PATCH /api/family/members/:memberId - Update member role and patient access
  * DELETE /api/family/members/:memberId - Remove member from family account
  *
- * Authorization: Account Owner or Co-Admin only
+ * Authorization: Principal Owner or Co-Admin only
  * Rate Limit: 30 requests per minute
  */
 
@@ -105,7 +105,7 @@ export async function PATCH(
       const currentMember = familyMemberSnapshot.docs[0].data() as FamilyMember
       if (currentMember.familyRole !== 'co_admin' && currentMember.familyRole !== 'account_owner') {
         return NextResponse.json(
-          { success: false, error: 'Unauthorized', message: 'Only Account Owners and Co-Admins can edit members' },
+          { success: false, error: 'Unauthorized', message: 'Only Principal Owners and Co-Admins can edit members' },
           { status: 403 }
         )
       }
@@ -347,7 +347,7 @@ export async function DELETE(
       const currentMember = familyMemberSnapshot.docs[0].data() as FamilyMember
       if (currentMember.familyRole !== 'co_admin' && currentMember.familyRole !== 'account_owner') {
         return NextResponse.json(
-          { success: false, error: 'Unauthorized', message: 'Only Account Owners and Co-Admins can remove members' },
+          { success: false, error: 'Unauthorized', message: 'Only Principal Owners and Co-Admins can remove members' },
           { status: 403 }
         )
       }

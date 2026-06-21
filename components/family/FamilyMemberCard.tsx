@@ -57,7 +57,7 @@ export function FamilyMemberCard({
 
   const grantedPermissions = getGrantedPermissions()
 
-  // Check if this is the Account Owner (add gold border)
+  // Check if this is the Principal Owner (add gold border)
   const isAccountOwner = member.familyRole === 'account_owner'
   const borderClass = isAccountOwner
     ? 'border-amber-400 dark:border-amber-500'
@@ -108,12 +108,12 @@ export function FamilyMemberCard({
         </div>
       )}
 
-      {/* Managed By (for non-Account Owners) */}
+      {/* Managed By (for non-Principal Owners) */}
       {!isAccountOwner && member.managedBy && (
         <div className="mb-3">
           <span className="text-xs text-muted-foreground dark:text-muted-foreground">Managed by: </span>
           <span className="text-sm text-foreground">
-            {member.managedBy === 'self' ? 'Account Owner' : 'Family Administrator'}
+            {member.managedBy === 'self' ? 'Principal Owner' : 'Family Administrator'}
           </span>
         </div>
       )}

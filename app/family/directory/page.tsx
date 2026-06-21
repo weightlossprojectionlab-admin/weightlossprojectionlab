@@ -223,7 +223,7 @@ function DirectoryContent() {
                 className="w-full px-4 py-2 border border-border rounded-lg bg-background text-foreground"
               >
                 <option value="all">All Roles</option>
-                <option value="account_owner">Account Owner</option>
+                <option value="account_owner">Principal Owner</option>
                 <option value="co_admin">Co-Admin</option>
                 <option value="caregiver">Caregiver</option>
                 <option value="viewer">Viewer</option>
