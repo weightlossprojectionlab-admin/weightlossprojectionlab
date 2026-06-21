@@ -33,7 +33,7 @@ export default function EpisodeExportModal({
 
   const isLegal = episode.type === 'abuse_concern'
   const generatedAt = new Date().toLocaleString()
-  const generatedBy = auth.currentUser?.email || 'Account Owner'
+  const generatedBy = auth.currentUser?.email || 'Principal Owner'
 
   async function handlePrint() {
     // Record the export

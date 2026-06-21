@@ -619,7 +619,7 @@ export default function FamilyMemberOnboardingWizard({
       ...prev,
       primaryCaregivers: [
         {
-          name: user.displayName || user.email || 'Account Owner',
+          name: user.displayName || user.email || 'Principal Owner',
           relationship: 'Parent',
           userId: user.uid,
         },

@@ -172,7 +172,7 @@ export function FamilyMembersTab({
                       className="w-full px-3 py-2 border-2 border-border rounded-lg bg-background text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-purple-600/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="account_owner" disabled>
-                        Account Owner
+                        Principal Owner
                       </option>
                       <option value="co_admin">Co-Admin</option>
                       <option value="caregiver">Caregiver</option>

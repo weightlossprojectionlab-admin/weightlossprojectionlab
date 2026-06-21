@@ -1,14 +1,14 @@
 /**
- * Account Ownership Transfer API
+ * Principal Ownership Transfer API
  *
- * POST /api/family/roles/transfer-ownership - Transfer Account Owner status to another family member
+ * POST /api/family/roles/transfer-ownership - Transfer Principal Owner status to another family member
  *
- * Authorization: Current Account Owner only
+ * Authorization: Current Principal Owner only
  * Rate Limit: 10 requests per minute (strict)
  *
  * This is a critical operation that:
- * 1. Removes Account Owner status from current owner
- * 2. Grants Account Owner status to new owner
+ * 1. Removes Principal Owner status from current owner
+ * 2. Grants Principal Owner status to new owner
  * 3. Updates family member roles accordingly
  * 4. Creates audit logs
  * 5. Sends notification to new owner
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Step 3: Verify requester is Account Owner
+    // Step 3: Verify requester is Principal Owner
     const currentOwnerDoc = await adminDb.collection('users').doc(currentOwnerUserId).get()
     if (!currentOwnerDoc.exists) {
       return NextResponse.json(
@@ -78,14 +78,14 @@ export async function POST(request: NextRequest) {
     const isCurrentOwner = currentOwnerData?.preferences?.isAccountOwner === true
 
     if (!isCurrentOwner) {
-      logger.warn('[API /family/roles/transfer-ownership POST] User is not Account Owner', {
+      logger.warn('[API /family/roles/transfer-ownership POST] User is not Principal Owner', {
         currentOwnerUserId
       })
       return NextResponse.json(
         {
           success: false,
           error: 'Forbidden',
-          message: 'Only the current Account Owner can transfer ownership'
+          message: 'Only the current Principal Owner can transfer ownership'
         },
         { status: 403 }
       )
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Confirmation required',
-          message: 'Transferring Account Owner status is a permanent action that cannot be undone without the new owner\'s cooperation. You will lose all administrative privileges. The new owner will have full control over the family account and can remove you. Please confirm you understand these consequences.',
+          message: 'Transferring Principal Owner status is a permanent action that cannot be undone without the new owner\'s cooperation. You will lose all administrative privileges. The new owner will have full control over the family account and can remove you. Please confirm you understand these consequences.',
           requiresConfirmation: true
         },
         { status: 400 }
@@ -174,14 +174,14 @@ export async function POST(request: NextRequest) {
     // Step 9: Begin transaction-like updates (using batch)
     const batch = adminDb.batch()
 
-    // 9a. Update old owner's user document (remove Account Owner status)
+    // 9a. Update old owner's user document (remove Principal Owner status)
     const oldOwnerUpdateData = {
       'preferences.isAccountOwner': false,
       'preferences.accountOwnerSince': null
     }
     batch.update(currentOwnerDoc.ref, oldOwnerUpdateData)
 
-    // 9b. Update new owner's user document (set Account Owner status)
+    // 9b. Update new owner's user document (set Principal Owner status)
     const newOwnerUpdateData = {
       'preferences.isAccountOwner': true,
       'preferences.accountOwnerSince': new Date().toISOString()
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
       roleAssignedAt: new Date().toISOString(),
       roleAssignedBy: currentOwnerUserId,
       permissions: getDefaultPermissionsForRole('account_owner'),
-      canBeEditedBy: [] // Account Owners cannot be edited
+      canBeEditedBy: [] // Principal Owners cannot be edited
     }
     batch.update(newOwnerFamilyMemberDoc.ref, newOwnerFamilyMemberUpdateData)
 
@@ -220,8 +220,8 @@ export async function POST(request: NextRequest) {
     const notificationRef = adminDb.collection('users').doc(newOwnerUserId).collection('notifications').doc()
     batch.set(notificationRef, {
       type: 'ownership_transferred',
-      title: 'You are now the Account Owner',
-      message: `${currentOwnerData?.name || 'A family member'} has transferred Account Owner status to you. You now have full control over the family account.`,
+      title: 'You are now the Principal Owner',
+      message: `${currentOwnerData?.name || 'A family member'} has transferred Principal Owner status to you. You now have full control over the family account.`,
       fromUserId: currentOwnerUserId,
       fromUserName: currentOwnerData?.name || 'Unknown',
       read: false,

@@ -3,7 +3,7 @@
  *
  * POST /api/family/roles/assign - Assign or change family member roles
  *
- * Authorization: Account Owner or Co-Admin only
+ * Authorization: Principal Owner or Co-Admin only
  * Rate Limit: 60 requests per minute
  */
 
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
       confirmed
     })
 
-    // Step 4: Get requester's role (check if they're Account Owner or Co-Admin)
+    // Step 4: Get requester's role (check if they're Principal Owner or Co-Admin)
     const requesterUserDoc = await adminDb.collection('users').doc(userId).get()
     if (!requesterUserDoc.exists) {
       return NextResponse.json(
@@ -134,7 +134,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error: 'Forbidden',
-          message: 'Only Account Owners and Co-Admins can assign roles'
+          message: 'Only Principal Owners and Co-Admins can assign roles'
         },
         { status: 403 }
       )
@@ -200,9 +200,9 @@ export async function POST(request: NextRequest) {
 
     // If assigning co_admin or higher, update canBeEditedBy
     if (newRole === 'co_admin') {
-      updateData.canBeEditedBy = [ownerUserId] // Only Account Owner can edit Co-Admins
+      updateData.canBeEditedBy = [ownerUserId] // Only Principal Owner can edit Co-Admins
     } else {
-      updateData.canBeEditedBy = [ownerUserId] // Account Owner can edit all members
+      updateData.canBeEditedBy = [ownerUserId] // Principal Owner can edit all members
       // Co-Admins can also edit caregivers and viewers
       if (newRole === 'caregiver' || newRole === 'viewer') {
         // Find all Co-Admins in this family and add them

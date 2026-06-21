@@ -37,7 +37,7 @@ export function hasHigherAuthority(roleA: FamilyRole, roleB: FamilyRole): boolea
 // ==================== ROLE DISPLAY ====================
 
 export const ROLE_LABELS: Record<FamilyRole, string> = {
-  account_owner: 'Account Owner',
+  account_owner: 'Principal Owner',
   co_admin: 'Co-Admin',
   caregiver: 'Caregiver',
   viewer: 'Viewer'

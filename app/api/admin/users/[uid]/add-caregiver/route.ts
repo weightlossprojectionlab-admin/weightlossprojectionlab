@@ -154,7 +154,7 @@ export async function POST(
     // 3. Add or extend caregiverOf entry on caregiver's profile.
     const ownerDoc = await adminDb.collection('users').doc(accountOwnerId).get()
     const ownerData = ownerDoc.data()
-    const ownerName = ownerData?.name || ownerData?.displayName || ownerData?.email || 'Account Owner'
+    const ownerName = ownerData?.name || ownerData?.displayName || ownerData?.email || 'Principal Owner'
 
     await upsertCaregiverOf(caregiverUserId, {
       accountOwnerId,

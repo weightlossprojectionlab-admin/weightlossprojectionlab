@@ -1166,7 +1166,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
               <div><strong>Caregiver For:</strong> {user.caregiverOf?.length || 0} accounts</div>
               <div><strong>User Mode:</strong> {user.userMode || 'Not set'}</div>
               <div><strong>Onboarding:</strong> {user.onboardingCompleted ? '✓ Completed' : '⚠ Not completed'}</div>
-              <div><strong>Account Owner:</strong> {user.isAccountOwner ? 'Yes' : 'No'}</div>
+              <div><strong>Principal Owner:</strong> {user.isAccountOwner ? 'Yes' : 'No'}</div>
             </div>
           )}
 
@@ -1458,7 +1458,7 @@ function UserDetailsModal({ user, onClose, onRefresh }: UserDetailsModalProps) {
                       const ownerProfile = caregiverForOwners[ctx.accountOwnerId]
                       // Best available name: fetched profile > stored name (if not generic) > email > UID
                       const householdName = ownerProfile?.displayName || ownerProfile?.name
-                        || (ctx.accountOwnerName && ctx.accountOwnerName !== 'Account Owner' ? ctx.accountOwnerName : null)
+                        || (ctx.accountOwnerName && ctx.accountOwnerName !== 'Principal Owner' ? ctx.accountOwnerName : null)
                         || ctx.accountOwnerEmail
                         || ctx.accountOwnerId
                         || 'Unknown Household'

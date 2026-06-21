@@ -3,7 +3,7 @@
  * Family Admin Route: /family-admin/roles
  *
  * Manage family member roles and permissions
- * - Display role hierarchy (Account Owner > Co-Admins > Caregivers > Viewers)
+ * - Display role hierarchy (Principal Owner > Co-Admins > Caregivers > Viewers)
  * - Change member roles (if permitted)
  * - Transfer ownership
  * - View role capabilities and permissions
@@ -164,21 +164,21 @@ function ManageRolesContent() {
                     Family Role Hierarchy
                   </h3>
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Account Owner</strong> → <strong>Co-Admins</strong> → <strong>Caregivers</strong> → <strong>Viewers</strong>
+                    <strong>Principal Owner</strong> → <strong>Co-Admins</strong> → <strong>Caregivers</strong> → <strong>Viewers</strong>
                   </p>
                   <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
-                    Higher roles can manage lower roles. Only the Account Owner can transfer ownership or delete the family account.
+                    Higher roles can manage lower roles. Only the Principal Owner can transfer ownership or delete the family account.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Account Owner Section */}
+            {/* Principal Owner Section */}
             {accountOwner && (
               <section>
                 <h2 className="text-lg font-bold text-foreground mb-3 flex items-center gap-2">
                   <ShieldCheckIcon className="w-5 h-5 text-amber-500" />
-                  Account Owner
+                  Principal Owner
                 </h2>
                 <MemberCard
                   member={accountOwner}

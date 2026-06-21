@@ -4,7 +4,7 @@
  * GET /api/family/hierarchy - Retrieve family role hierarchy and management structure
  *
  * Returns:
- * - Account Owner information
+ * - Principal Owner information
  * - All family members with their roles and permissions
  * - Management relationships (who manages whom)
  * - Role capabilities for each member
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     const userId = decodedToken.uid
 
-    // Step 2: Determine Account Owner
+    // Step 2: Determine Principal Owner
     const userDoc = await adminDb.collection('users').doc(userId).get()
     if (!userDoc.exists) {
       return NextResponse.json(
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Step 3: Get Account Owner info
+    // Step 3: Get Principal Owner info
     let accountOwnerInfo
     const ownerDoc = await adminDb.collection('users').doc(ownerUserId).get()
     if (!ownerDoc.exists) {

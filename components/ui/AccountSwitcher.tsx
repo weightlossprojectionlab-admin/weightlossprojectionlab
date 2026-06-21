@@ -105,7 +105,7 @@ export function AccountSwitcher() {
 
   // Step 3: resolve each owner's *live* display name from THEIR user doc.
   // The accountOwnerName field on caregiverOf is denormalized and can be
-  // stale ("Account Owner" is the giveaway). Source of truth lives on the
+  // stale ("Principal Owner" is the giveaway). Source of truth lives on the
   // owner's user doc; useOwnerNames reads it there via a server endpoint.
   const caregiverOwnerIds = useMemo(
     () => uniqueCaregiverEntries.map((c) => c.accountOwnerId),

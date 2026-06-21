@@ -395,7 +395,7 @@ export default function DocumentsPage() {
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span><strong>Deletion Controls:</strong> Only Admins and Account Owners can delete documents</span>
+                  <span><strong>Deletion Controls:</strong> Only Admins and Principal Owners can delete documents</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircleIcon className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
@@ -432,7 +432,7 @@ export default function DocumentsPage() {
               <div>
                 <h3 className="text-xl font-semibold text-foreground mb-4">Access Control</h3>
                 <ul className="space-y-2 text-muted-foreground">
-                  <li>• <strong>Account Owner:</strong> Full access (upload, view, delete)</li>
+                  <li>• <strong>Principal Owner:</strong> Full access (upload, view, delete)</li>
                   <li>• <strong>Co-Admin:</strong> Full access (upload, view, delete)</li>
                   <li>• <strong>Caregiver:</strong> Upload and view permissions</li>
                   <li>• <strong>Viewer:</strong> View-only access</li>
@@ -520,11 +520,11 @@ export default function DocumentsPage() {
             />
             <FAQItem
               question="Can family members see all documents?"
-              answer="Family members can only see documents for patients they have access to, based on their role and permissions. Account Owners and Co-Admins have access to all documents."
+              answer="Family members can only see documents for patients they have access to, based on their role and permissions. Principal Owners and Co-Admins have access to all documents."
             />
             <FAQItem
               question="How long are documents retained?"
-              answer="Medical documents are retained for 7 years per HIPAA requirements. You can delete documents at any time if you're an Admin or Account Owner."
+              answer="Medical documents are retained for 7 years per HIPAA requirements. You can delete documents at any time if you're an Admin or Principal Owner."
             />
             <FAQItem
               question="Can I download documents for sharing with providers?"

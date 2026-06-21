@@ -2,7 +2,7 @@
  * Family Role Management Page
  *
  * Manage family member roles and permissions
- * - Display role hierarchy (Account Owner > Co-Admins > Caregivers > Viewers)
+ * - Display role hierarchy (Principal Owner > Co-Admins > Caregivers > Viewers)
  * - Change member roles (if permitted)
  * - Transfer ownership
  * - View role capabilities and permissions
@@ -223,18 +223,18 @@ function ManageRolesContent() {
               <p className="font-semibold mb-1">Role Hierarchy</p>
               <p>
                 Family members are organized by authority level. Higher roles can
-                manage lower roles. Only the Account Owner can transfer ownership.
+                manage lower roles. Only the Principal Owner can transfer ownership.
               </p>
             </div>
           </div>
         </div>
 
-        {/* Account Owner Section */}
+        {/* Principal Owner Section */}
         {accountOwner && (
           <section className="mb-8">
             <div className="flex items-center gap-2 mb-4">
               <span className="text-2xl">👑</span>
-              <h2 className="text-xl font-bold text-foreground">Account Owner</h2>
+              <h2 className="text-xl font-bold text-foreground">Principal Owner</h2>
             </div>
             <FamilyMemberCard
               member={accountOwner}
@@ -499,7 +499,7 @@ function FamilyMemberCard({
               Managed By
             </h4>
             <p className="text-sm text-muted-foreground">
-              {managedByMember || 'Account Owner'}
+              {managedByMember || 'Principal Owner'}
             </p>
           </div>
 

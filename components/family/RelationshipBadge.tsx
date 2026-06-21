@@ -17,7 +17,7 @@ interface RelationshipBadgeProps {
 
 const roleConfig: Record<FamilyRole, { label: string; color: string; icon: string }> = {
   account_owner: {
-    label: 'Account Owner',
+    label: 'Principal Owner',
     color: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
     icon: '👑'
   },
