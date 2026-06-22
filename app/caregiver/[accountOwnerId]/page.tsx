@@ -377,8 +377,13 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
         const userData = userDoc.data()
 
         if (!userData) {
-          console.error('User data not found')
-          router.push('/auth')
+          // AuthGuard already guarantees the user is signed in, so a missing
+          // users doc is a data/propagation issue, NOT an auth one. Redirecting
+          // to /auth bounces the (authenticated) user straight back here →
+          // infinite /caregiver <-> /auth loop (hit by brand-new invitees whose
+          // doc is still settling). Stop loading instead of looping.
+          console.error('[Caregiver] users doc not readable for authenticated user', user.uid)
+          setLoading(false)
           return
         }
 
