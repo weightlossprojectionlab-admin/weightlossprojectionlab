@@ -70,6 +70,16 @@ export async function determineUserDestination(
     return { type: 'stay', reason: 'Admin page - handled by admin layout' }
   }
 
+  // The invite-accept page must stay reachable for ANY signed-in user — even a
+  // brand-new invitee with no profile / no caregiverOf yet. Otherwise routing
+  // bounces them to /onboarding, the pending invite code bounces them back, and
+  // they loop and can never click Accept. It handles its own flow (incl. the
+  // unauthenticated case).
+  if (currentPath.startsWith('/accept-invitation')) {
+    logger.debug('[AuthRouter] Invite-accept page - letting it handle its own flow')
+    return { type: 'stay', reason: 'Invite-accept page - self-handled' }
+  }
+
   // Franchise users must NEVER enter the consumer auth flow. If the user
   // has a tenantRole claim, they're a franchise owner or staff — the consumer
   // routing (onboarding, /patients redirect, family plan checks) is irrelevant
