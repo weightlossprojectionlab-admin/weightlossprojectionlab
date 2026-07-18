@@ -8,6 +8,7 @@
 import Link from 'next/link'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { blogPostingSchema, faqPageSchema, softwareApplicationSchema, itemListSchema } from '@/lib/json-ld'
+import { KeyTakeaway } from '@/components/blog/KeyTakeaway'
 import { Metadata } from 'next'
 import {
   SparklesIcon,
@@ -231,6 +232,17 @@ export default function WeightTrackingBlogPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+
+        {/* ── Why it matters — reframes weight tracking from a fitness number to
+            a proactive, caregiver-safety and whole-family tool. ── */}
+        <div className="max-w-3xl mx-auto mb-16">
+          <KeyTakeaway>
+            Weight tracking is not just a fitness number — it&apos;s an early-warning signal. Projecting the
+            trend turns scattered weigh-ins into a <strong>proactive</strong> tool: you can see you&apos;re on
+            track even through a plateau, catch a concerning change in an aging parent early, or validate a
+            child&apos;s growth for the pediatrician — for everyone in the family, on one shared account.
+          </KeyTakeaway>
+        </div>
 
         {/* ── Definition — direct, snippet-extractable answer. A question-form
             H2 + a self-contained genus-and-differentia definition is the
