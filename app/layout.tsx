@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     default: 'Wellness Projection Lab — Family Health Tracking for Caregivers',
     template: '%s | Wellness Projection Lab',
   },
-  description: 'Track vitals, medications, meals, and appointments for your entire family. From newborns to seniors to pets — one HIPAA-compliant platform. Share access with caregivers instantly.',
+  description: 'Track vitals, medications, meals, and appointments for your entire family. From newborns to seniors to pets — one HIPAA-aligned platform. Share access with caregivers instantly.',
   manifest: '/manifest.json',
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://www.wellnessprojectionlab.com'),
   alternates: {
@@ -40,7 +40,7 @@ export const metadata: Metadata = {
     locale: 'en_US',
     siteName: 'Wellness Projection Lab',
     title: 'Wellness Projection Lab — Family Health Tracking for Caregivers',
-    description: 'Track vitals, medications, meals, and appointments for your entire family. From newborns to seniors to pets — one HIPAA-compliant platform.',
+    description: 'Track vitals, medications, meals, and appointments for your entire family. From newborns to seniors to pets — one HIPAA-aligned platform.',
     images: [
       {
         url: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     'newborn tracking',
     'family medical records',
     'health dashboard',
-    'HIPAA compliant health app',
+    'HIPAA-aligned health app',
     'wellness app',
   ],
   icons: {
@@ -134,7 +134,7 @@ export default async function RootLayout({
               applicationSubCategory: 'Family Caregiver Coordination',
               operatingSystem: 'Web, iOS, Android',
               description:
-                'Family health tracking app for caregivers. Track medications, vitals, appointments, and meals for aging parents, kids, partners, and pets — and share access with siblings, spouses, or sitters. AI-powered photo capture (meals, documents) plus a self-teaching ML engine that personalizes recommendations to each family member over time. HIPAA-compliant. Not a financial or retirement planning tool.',
+                'Family health tracking app for caregivers. Track medications, vitals, appointments, and meals for aging parents, kids, partners, and pets — and share access with siblings, spouses, or sitters. AI-powered photo capture (meals, documents) plus self-teaching personalization that adapts recommendations to each family member over time. HIPAA-aligned. Not a financial or retirement planning tool.',
               url: 'https://www.wellnessprojectionlab.com',
               audience: {
                 '@type': 'Audience',
@@ -154,7 +154,7 @@ export default async function RootLayout({
                 'AI meal photo analysis (Gemini Vision parses photos into structured meal logs)',
                 'Medical document OCR (Gemini Vision extracts data from scanned records)',
                 'Self-teaching health reports — learn each family member’s baseline and surface personalized trends',
-                'Adaptive shopping lists — learn what your household buys and prioritize accordingly',
+                'Self-teaching shopping lists — learn what your household buys and prioritize accordingly',
                 'Self-teaching recipe recommendations that adapt to each family member',
                 'Self-teaching dashboard insights that get more personalized over time',
                 'Kitchen and pantry inventory tracking across households',

@@ -73,8 +73,8 @@ export default function PrivacyPage() {
                 Your Privacy is Our Priority
               </h2>
               <p className="text-gray-700 text-sm leading-relaxed">
-                Wellness Projection Lab (WPL) is HIPAA compliant and committed to protecting
-                your personal health information. We never sell your data and only use it to
+                Wellness Projection Lab (WPL) is built to support HIPAA compliance and committed
+                to protecting your personal health information. We never sell your data and only use it to
                 provide you with the best health tracking experience.
               </p>
               <div className="flex gap-4 mt-3 text-xs">
@@ -86,7 +86,7 @@ export default function PrivacyPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  HIPAA Compliant
+                  HIPAA-aligned
                 </span>
                 <span className="flex items-center gap-1 text-green-700">
                   <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -106,7 +106,7 @@ export default function PrivacyPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  SOC 2 Certified
+                  AES-256 Encrypted
                 </span>
               </div>
             </div>
@@ -409,7 +409,7 @@ export default function PrivacyPage() {
                   Access Controls
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Role-based access, multi-factor authentication, principle of least privilege.
+                  Role-based access, biometric sign-in (WebAuthn), principle of least privilege.
                 </p>
               </div>
 
@@ -419,8 +419,8 @@ export default function PrivacyPage() {
                   Security Monitoring
                 </h3>
                 <p className="text-sm text-gray-600">
-                  24/7 monitoring, intrusion detection, regular security audits and penetration
-                  testing.
+                  Continuous monitoring and intrusion detection on Google Cloud infrastructure,
+                  with regular internal security review.
                 </p>
               </div>
 
@@ -430,7 +430,8 @@ export default function PrivacyPage() {
                   Backups
                 </h3>
                 <p className="text-sm text-gray-600">
-                  Automated encrypted backups, disaster recovery plans, 99.9% uptime SLA.
+                  Automated encrypted backups and disaster recovery on Google Cloud's
+                  high-availability infrastructure.
                 </p>
               </div>
 
@@ -458,8 +459,9 @@ export default function PrivacyPage() {
 
             <div className="bg-blue-50 rounded-lg p-4 mt-6">
               <p className="text-sm text-gray-700">
-                <strong>Certifications:</strong> SOC 2 Type II, ISO 27001, HIPAA compliant
-                infrastructure
+                <strong>Security posture:</strong> HIPAA-aligned controls, AES-256 encryption at
+                rest, TLS 1.3 in transit, hosted on SOC 2-certified Google Cloud infrastructure.
+                WPL does not currently hold its own SOC 2 or ISO 27001 certification.
               </p>
             </div>
           </section>

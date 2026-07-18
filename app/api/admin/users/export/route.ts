@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { logAdminAction } from '@/lib/admin/audit'
-import { logger } from '@/lib/logger'
 import { errorResponse, unauthorizedResponse, forbiddenResponse } from '@/lib/api-response'
 import { isSuperAdmin } from '@/lib/admin/permissions'
+import { collectUserExport } from '@/lib/user-data-export'
 
 /**
  * GET /api/admin/users/export?uid=<uid>
@@ -42,30 +42,13 @@ export async function GET(request: NextRequest) {
     // Get user auth data
     const userRecord = await adminAuth.getUser(uid)
 
-    // Get user Firestore data
-    const userDoc = await adminDb.collection('users').doc(uid).get()
-    const userData = userDoc.data()
-
-    // Get all subcollections
-    const [
-      mealLogs,
-      weightLogs,
-      stepLogs,
-      biometricCredentials,
-      cookingSessions,
-      recipeQueue,
-    ] = await Promise.all([
-      adminDb.collection(`users/${uid}/mealLogs`).get(),
-      adminDb.collection(`users/${uid}/weightLogs`).get(),
-      adminDb.collection(`users/${uid}/stepLogs`).get(),
-      adminDb.collection(`users/${uid}/biometricCredentials`).get(),
-      adminDb.collection('cooking-sessions').where('userId', '==', uid).get(),
-      adminDb.collection('recipe-queue').where('userId', '==', uid).get(),
-    ])
+    // Gather all Firestore data via the shared collector (same shape as the
+    // user-facing /api/user/export).
+    const data = await collectUserExport(uid)
 
     // Build export data
     const exportData = {
-      exportedAt: new Date().toISOString(),
+      ...data,
       exportedBy: adminEmail,
       user: {
         uid: userRecord.uid,
@@ -77,13 +60,6 @@ export async function GET(request: NextRequest) {
         createdAt: userRecord.metadata.creationTime,
         lastSignInTime: userRecord.metadata.lastSignInTime,
       },
-      profile: userData || {},
-      mealLogs: mealLogs.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      weightLogs: weightLogs.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      stepLogs: stepLogs.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      biometricCredentials: biometricCredentials.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      cookingSessions: cookingSessions.docs.map(doc => ({ id: doc.id, ...doc.data() })),
-      recipeQueue: recipeQueue.docs.map(doc => ({ id: doc.id, ...doc.data() })),
     }
 
     // Log action

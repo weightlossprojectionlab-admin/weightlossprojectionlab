@@ -6,6 +6,8 @@ import { adminDb } from '@/lib/firebase-admin'
 import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { Timestamp } from 'firebase-admin/firestore'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { generateHealthSummary, type HealthSummaryInput } from '@/lib/health-summary-generator'
+import { generateHealthReport } from '@/lib/health-report-generator'
 
 /**
  * GET /api/patients/[patientId]/health-reports
@@ -244,15 +246,35 @@ export async function POST(
       ...doc.data()
     }))
 
-    // Generate the report using the same logic as ai-health-report
-    const reportText = await generateHealthReport({
+    // Generate analysis + report via the shared generator (identical path to
+    // /ai-health-report — one source of truth, no divergence).
+    // Firestore reads are loosely typed; cast at the boundary (same as the
+    // /ai-health-report path, which feeds untyped request JSON).
+    const summaryInput: HealthSummaryInput = {
+      patient: patient as HealthSummaryInput['patient'],
+      medications: medications as HealthSummaryInput['medications'],
+      vitals: vitals as HealthSummaryInput['vitals'],
+      documents: documents as HealthSummaryInput['documents'],
+      weightData: weightData as HealthSummaryInput['weightData'],
+      stepsData: stepsData as HealthSummaryInput['stepsData'],
+      todayMeals: todayMeals as HealthSummaryInput['todayMeals'],
+    }
+    const analyses = generateHealthSummary(summaryInput)
+    const reportText = generateHealthReport({
       patient,
-      medications,
-      vitals,
-      documents,
-      todayMeals,
-      weightData,
-      stepsData
+      age: analyses.age,
+      isPet: analyses.isPet,
+      species: analyses.species,
+      weightAnalysis: analyses.weightAnalysis,
+      activityAnalysis: analyses.activityAnalysis,
+      nutritionAnalysis: analyses.nutritionAnalysis,
+      vitalsAnalysis: analyses.vitalsAnalysis,
+      medicationAnalysis: analyses.medicationAnalysis,
+      documentAnalysis: analyses.documentAnalysis,
+      petFeedingAnalysis: analyses.petFeedingAnalysis,
+      petVaccinationAnalysis: analyses.petVaccinationAnalysis,
+      documentsCount: documents?.length || 0,
+      analyses,
     })
 
     // Get user name for attribution
@@ -459,159 +481,3 @@ export async function POST(
   }
 }
 
-// Helper function to generate health report (adapted from ai-health-report)
-async function generateHealthReport(data: {
-  patient: any
-  medications: any[]
-  vitals: any[]
-  documents: any[]
-  todayMeals: any[]
-  weightData: any[]
-  stepsData: any[]
-}): Promise<string> {
-  const { patient, medications, vitals, documents, todayMeals, weightData, stepsData } = data
-
-  // Import the helper functions from ai-health-report route
-  // For now, we'll use a simplified version
-  const reportDate = new Date().toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-
-  let report = `# HEALTH SUMMARY REPORT\n\n`
-  report += `**Patient:** ${patient.name}  \n`
-  report += `**Report Date:** ${reportDate}  \n\n`
-  report += `---\n\n`
-
-  // Executive Summary
-  report += `## EXECUTIVE SUMMARY\n\n`
-  report += `| Key Metric | Count/Value |\n`
-  report += `|------------|-------------|\n`
-  report += `| Active Medications | ${medications.length} |\n`
-  report += `| Vital Sign Records | ${vitals.length} |\n`
-  report += `| Weight Measurements | ${weightData.length} |\n`
-  report += `| Step Logs | ${stepsData.length} |\n`
-  report += `| Meals Today | ${todayMeals.length} |\n`
-  report += `| Medical Documents | ${documents.length} |\n`
-  report += `\n---\n\n`
-
-  // Current Medications
-  if (medications.length > 0) {
-    report += `## CURRENT MEDICATIONS\n\n`
-    report += `**Total Active Prescriptions:** ${medications.length}\n\n`
-
-    medications.forEach((med: any, i: number) => {
-      report += `### ${i + 1}. ${med.name}\n\n`
-      report += `| Detail | Information |\n`
-      report += `|--------|-------------|\n`
-      if (med.strength) report += `| Strength | ${med.strength} |\n`
-      if (med.dosageForm) report += `| Form | ${med.dosageForm} |\n`
-      if (med.frequency) report += `| Frequency | ${med.frequency} |\n`
-      if (med.prescribedFor) report += `| Prescribed For | ${med.prescribedFor} |\n`
-      report += `\n`
-    })
-  }
-
-  // Recent Vitals
-  if (vitals.length > 0) {
-    report += `## VITAL SIGNS\n\n`
-    report += `**Recent Readings:**\n\n`
-    report += `| Date | Type | Value |\n`
-    report += `|------|------|-------|\n`
-
-    vitals.slice(0, 10).forEach((vital: any) => {
-      const date = vital.recordedAt ? new Date(vital.recordedAt).toLocaleDateString() : 'N/A'
-      const type = vital.type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
-      const value = formatVitalValue(vital)
-      report += `| ${date} | ${type} | ${value} |\n`
-    })
-    report += `\n`
-  }
-
-  // Weight Tracking
-  if (weightData.length > 0) {
-    report += `## WEIGHT TRACKING\n\n`
-    const latestWeight = weightData[0]?.weight
-    const targetWeight = patient.goals?.targetWeight
-    report += `**Current Weight:** ${latestWeight} lbs  \n`
-    if (targetWeight) {
-      report += `**Target Weight:** ${targetWeight} lbs  \n`
-      report += `**Remaining:** ${Math.abs(latestWeight - targetWeight).toFixed(1)} lbs  \n`
-    }
-    report += `**Measurements Recorded:** ${weightData.length}  \n\n`
-  }
-
-  // Activity
-  if (stepsData.length > 0) {
-    report += `## ACTIVITY TRACKING\n\n`
-    const totalSteps = stepsData.reduce((sum: number, log: any) => sum + (log.steps || 0), 0)
-    const avgSteps = Math.round(totalSteps / stepsData.length)
-    report += `**Average Daily Steps:** ${avgSteps.toLocaleString()}  \n`
-    report += `**Logs Recorded:** ${stepsData.length}  \n\n`
-  }
-
-  // Medical Documents (structured data from OCR)
-  const processedDocs = documents.filter((d: any) => d.ocrStatus === 'completed' && d.structuredData)
-  if (processedDocs.length > 0) {
-    report += `## MEDICAL DOCUMENTS\n\n`
-    report += `**Documents Analyzed:** ${processedDocs.length} of ${documents.length}\n\n`
-
-    // Aggregate lab results from all documents
-    const allLabResults: any[] = []
-    const allDiagnoses: Set<string> = new Set()
-
-    for (const doc of processedDocs) {
-      const data = doc.structuredData
-      if (data?.labResults) allLabResults.push(...data.labResults)
-      if (data?.diagnoses) data.diagnoses.forEach((d: string) => allDiagnoses.add(d))
-    }
-
-    if (allLabResults.length > 0) {
-      report += `### Lab Results (from documents)\n\n`
-      report += `| Test | Value | Reference Range | Status |\n`
-      report += `|------|-------|-----------------|--------|\n`
-      allLabResults.forEach((lr: any) => {
-        const status = lr.status ? lr.status.charAt(0).toUpperCase() + lr.status.slice(1) : '—'
-        report += `| ${lr.testName} | ${lr.value} ${lr.unit || ''} | ${lr.referenceRange || '—'} | ${status} |\n`
-      })
-      report += `\n`
-    }
-
-    if (allDiagnoses.size > 0) {
-      report += `### Diagnoses (from documents)\n\n`
-      Array.from(allDiagnoses).forEach(d => {
-        report += `- ${d}\n`
-      })
-      report += `\n`
-    }
-  } else if (documents.length > 0) {
-    report += `## MEDICAL DOCUMENTS\n\n`
-    report += `**${documents.length} document(s) uploaded** — OCR processing pending or in progress.\n\n`
-  }
-
-  // Disclaimer
-  report += `---\n\n`
-  report += `**DISCLAIMER:** This report is generated from patient health data for informational and tracking purposes only. It does not constitute medical advice, diagnosis, or treatment. All medical decisions should be made in consultation with qualified healthcare providers.\n`
-
-  return report
-}
-
-function formatVitalValue(vital: any): string {
-  if (vital.type === 'blood_pressure') {
-    const systolic = vital.systolic || vital.value?.systolic || 'N/A'
-    const diastolic = vital.diastolic || vital.value?.diastolic || 'N/A'
-    return `${systolic}/${diastolic} mmHg`
-  } else if (vital.type === 'blood_sugar') {
-    return `${vital.value} mg/dL`
-  } else if (vital.type === 'pulse_oximeter') {
-    return `${vital.value}%`
-  } else if (vital.type === 'temperature') {
-    return `${vital.value}°${vital.unit === 'celsius' ? 'C' : 'F'}`
-  } else if (vital.type === 'weight') {
-    return `${vital.value} ${vital.unit}`
-  }
-  return `${vital.value || 'N/A'}`
-}

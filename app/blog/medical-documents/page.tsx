@@ -26,7 +26,7 @@ import {
 
 export const metadata: Metadata = {
   title: 'Insurance Cards, Lab Results, Prescriptions — Always With You | Wellness Projection Lab',
-  description: 'Store insurance cards, lab results, prescriptions, and vaccination records in a secure HIPAA-compliant vault. Instant access for emergencies, specialist visits, and school forms. OCR search across all documents.',
+  description: 'Store insurance cards, lab results, prescriptions, and vaccination records in a secure HIPAA-aligned vault. Instant access for emergencies, specialist visits, and school forms. OCR search across all documents.',
   keywords: 'medical documents, insurance card storage, lab results, prescriptions, vaccination records, HIPAA document vault, OCR medical search, emergency medical access, family medical records',
   openGraph: {
     title: 'Insurance Cards, Lab Results, Prescriptions — Always With You',
@@ -52,7 +52,7 @@ export default function MedicalDocumentsBlogPage() {
       <JsonLd
         data={blogPostingSchema({
           headline: 'Insurance Cards, Lab Results, Prescriptions — Always With You',
-          description: 'Store insurance cards, lab results, prescriptions, and vaccination records in a secure HIPAA-compliant vault. Instant access for emergencies, specialist visits, and school forms. OCR search across all documents.',
+          description: 'Store insurance cards, lab results, prescriptions, and vaccination records in a secure HIPAA-aligned vault. Instant access for emergencies, specialist visits, and school forms. OCR search across all documents.',
           slug: 'medical-documents',
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
@@ -226,7 +226,7 @@ export default function MedicalDocumentsBlogPage() {
             />
             <FeatureCard
               icon={<ShieldCheckIcon className="w-12 h-12 text-green-600" />}
-              title="HIPAA-Compliant Storage"
+              title="HIPAA-Aligned Storage"
               description="AES-256 encryption at rest and in transit. Your medical documents get the same security level as hospital systems."
             />
             <FeatureCard
@@ -248,13 +248,14 @@ export default function MedicalDocumentsBlogPage() {
             <h2 className="text-4xl font-bold text-foreground mb-6">Your Most Important Documents, Protected and Always Accessible</h2>
             <p className="text-lg text-muted-foreground mb-8">
               Medical documents contain some of the most sensitive information about you and your family.
-              WPL treats that responsibility seriously — HIPAA-compliant security, encrypted storage,
-              and full control over who can see what. No third-party access, no data selling, no compromises.
+              WPL treats that responsibility seriously — HIPAA-aligned security, encrypted storage,
+              and full control over who can see what. Your data is never sold, and document OCR is
+              processed by Google&apos;s Gemini under strict data terms.
             </p>
             <div className="grid md:grid-cols-3 gap-6 text-left">
               <div className="bg-card rounded-xl border-2 border-border p-6">
                 <CheckCircleIcon className="w-8 h-8 text-green-600 mb-3" />
-                <h3 className="font-semibold text-foreground mb-2">HIPAA Compliant</h3>
+                <h3 className="font-semibold text-foreground mb-2">HIPAA-aligned</h3>
                 <p className="text-sm text-muted-foreground">Full compliance with healthcare data protection standards. Your data is handled like a hospital handles it.</p>
               </div>
               <div className="bg-card rounded-xl border-2 border-border p-6">

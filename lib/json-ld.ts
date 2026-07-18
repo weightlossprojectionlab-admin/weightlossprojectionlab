@@ -22,7 +22,7 @@ export function organizationSchema() {
     legalName: 'Wellness Projection Lab LLC',
     alternateName: ['WPL', 'Wellness Projection Lab LLC'],
     description:
-      'Family health tracking platform for caregivers. HIPAA-compliant medication, vitals, appointment, and meal coordination for aging parents, kids, partners, and pets — with shared access for siblings, spouses, and sitters. Not a financial planning tool.',
+      'Family health tracking platform for caregivers. HIPAA-aligned medication, vitals, appointment, and meal coordination for aging parents, kids, partners, and pets — with shared access for siblings, spouses, and sitters. Not a financial planning tool.',
     url: SITE_URL,
     logo: absoluteUrl('/icon-512x512.png'),
     sameAs: [
@@ -44,7 +44,7 @@ export function organizationSchema() {
       'Household duty and chore coordination',
       'Family invitation and role-based access',
       'Kitchen and pantry inventory',
-      'Self-teaching ML personalization for family health data',
+      'Self-teaching personalization for family health data',
       'AI vision for meal photo analysis and medical document OCR',
     ],
     contactPoint: {
@@ -56,6 +56,13 @@ export function organizationSchema() {
   }
 }
 
+export interface BlogPostAuthor {
+  name: string
+  url?: string
+  jobTitle?: string
+  knowsAbout?: string[]
+}
+
 export interface BlogPostingInput {
   headline: string
   description: string
@@ -64,11 +71,26 @@ export interface BlogPostingInput {
   datePublished?: string
   dateModified?: string
   keywords?: string
+  /** Named person author for E-E-A-T. Falls back to Organization if omitted. */
+  author?: BlogPostAuthor
 }
 
 export function blogPostingSchema(input: BlogPostingInput) {
   const url = absoluteUrl(`/blog/${input.slug}`)
   const img = absoluteUrl(input.image || DEFAULT_OG_IMAGE)
+  const author = input.author
+    ? {
+        '@type': 'Person',
+        name: input.author.name,
+        ...(input.author.url ? { url: input.author.url } : {}),
+        ...(input.author.jobTitle ? { jobTitle: input.author.jobTitle } : {}),
+        ...(input.author.knowsAbout ? { knowsAbout: input.author.knowsAbout } : {}),
+      }
+    : {
+        '@type': 'Organization',
+        name: SITE_NAME,
+        url: SITE_URL,
+      }
   return {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
@@ -82,11 +104,7 @@ export function blogPostingSchema(input: BlogPostingInput) {
     url,
     datePublished: input.datePublished,
     dateModified: input.dateModified || input.datePublished,
-    author: {
-      '@type': 'Organization',
-      name: SITE_NAME,
-      url: SITE_URL,
-    },
+    author,
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,

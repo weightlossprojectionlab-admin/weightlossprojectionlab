@@ -151,7 +151,7 @@ export default function PartnersPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-600 mt-0.5">✓</span>
-                    <span>HIPAA-compliant infrastructure</span>
+                    <span>HIPAA-aligned infrastructure</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-600 mt-0.5">✓</span>
@@ -392,7 +392,7 @@ export default function PartnersPage() {
                   </div>
                   <h3 className="font-bold text-gray-900 mb-2">Market Leadership</h3>
                   <p className="text-sm text-gray-600">
-                    Associate with a trusted HIPAA-compliant platform
+                    Associate with a trusted HIPAA-aligned platform
                   </p>
                 </div>
 

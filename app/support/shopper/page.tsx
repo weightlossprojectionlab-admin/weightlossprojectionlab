@@ -67,7 +67,7 @@ export default function ShopperSupportPage() {
           </Link>
 
           <Link
-            href="/support/contact?type=shopper"
+            href="/contact?subject=shopper-support"
             className="bg-card border border-border rounded-lg p-4 hover:border-green-500 transition-colors"
           >
             <div className="text-3xl mb-2">💬</div>
@@ -97,17 +97,11 @@ export default function ShopperSupportPage() {
                 For urgent issues during active deliveries (unsafe location, card declined, emergency):
               </p>
               <div className="flex flex-col sm:flex-row gap-2">
-                <a
-                  href="tel:555-123-4567"
+                <Link
+                  href="/contact?subject=urgent-delivery"
                   className="btn bg-red-600 hover:bg-red-700 text-white text-sm"
                 >
-                  Call 24/7 Support: (555) 123-4567
-                </a>
-                <Link
-                  href="/support/live-chat?priority=urgent"
-                  className="btn btn-secondary text-sm"
-                >
-                  Emergency Chat
+                  Contact Support
                 </Link>
               </div>
             </div>
@@ -219,26 +213,20 @@ export default function ShopperSupportPage() {
         <div className="bg-gradient-to-r from-green-500/10 to-green-600/10 border border-green-500/20 rounded-lg p-6 text-center">
           <h2 className="text-xl font-bold text-foreground mb-2">Still need help?</h2>
           <p className="text-muted-foreground mb-4">
-            Our shopper support team is available 24/7 to assist you
+            Reach our shopper support team through the contact form
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a
-              href="tel:555-123-4567"
+            <Link
+              href="/contact?subject=shopper-support"
               className="btn bg-green-600 hover:bg-green-700 text-white"
             >
-              Call (555) 123-4567
-            </a>
-            <Link
-              href="/support/contact?type=shopper"
-              className="btn btn-secondary"
-            >
-              Submit Ticket
+              Contact Support
             </Link>
             <Link
-              href="/support/live-chat"
+              href="/support"
               className="btn btn-secondary"
             >
-              Live Chat
+              Browse Help Articles
             </Link>
           </div>
         </div>

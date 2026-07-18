@@ -9,7 +9,7 @@ import { buildPageMetadata } from '@/lib/seo'
 export const metadata = buildPageMetadata({
   title: 'About Us | Wellness Projection Lab',
   description:
-    'Wellness Projection Lab is on a mission to make family health tracking intelligent, accessible, and HIPAA-compliant for caregivers at every life stage.',
+    'Wellness Projection Lab is on a mission to make family health tracking intelligent, accessible, and secure for caregivers at every life stage.',
   path: '/about',
   keywords: 'about wellness projection lab, family health company, caregiver technology mission, HIPAA health platform',
 })
@@ -205,8 +205,8 @@ export default function AboutPage() {
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-2">Innovation</h3>
                   <p className="text-sm text-gray-600">
-                    We leverage the latest machine learning technology to provide insights that were
-                    previously impossible.
+                    We leverage modern AI (Google Gemini) and a self-teaching personalization
+                    layer to provide insights that were previously impossible.
                   </p>
                 </div>
 
@@ -296,9 +296,9 @@ export default function AboutPage() {
                       Healthcare-Grade Security
                     </h3>
                     <p className="text-gray-700">
-                      We're fully HIPAA compliant with SOC 2 Type II and ISO 27001
-                      certifications. Your health data is protected with the same level of
-                      security used by hospitals and healthcare providers.
+                      Built to healthcare-grade security standards: AES-256 encryption at rest
+                      and TLS 1.3 in transit, role-based access controls, and audit logging.
+                      Designed to support HIPAA-compliant care workflows.
                     </p>
                   </div>
                 </div>
@@ -349,23 +349,23 @@ export default function AboutPage() {
 
               <div className="grid md:grid-cols-4 gap-8">
                 <div className="text-center">
-                  <div className="text-4xl font-bold mb-2">99.9%</div>
-                  <div className="text-blue-100 text-sm">Uptime SLA</div>
+                  <div className="text-4xl font-bold mb-2">AES-256</div>
+                  <div className="text-blue-100 text-sm">Encryption at rest</div>
                 </div>
 
                 <div className="text-center">
-                  <div className="text-4xl font-bold mb-2">256-bit</div>
-                  <div className="text-blue-100 text-sm">AES Encryption</div>
+                  <div className="text-4xl font-bold mb-2">TLS 1.3</div>
+                  <div className="text-blue-100 text-sm">Encrypted in transit</div>
                 </div>
 
                 <div className="text-center">
-                  <div className="text-4xl font-bold mb-2">&lt;2s</div>
-                  <div className="text-blue-100 text-sm">Analysis Time</div>
+                  <div className="text-4xl font-bold mb-2">456K+</div>
+                  <div className="text-blue-100 text-sm">Products in barcode catalog</div>
                 </div>
 
                 <div className="text-center">
-                  <div className="text-4xl font-bold mb-2">24/7</div>
-                  <div className="text-blue-100 text-sm">Support Available</div>
+                  <div className="text-4xl font-bold mb-2">7-day</div>
+                  <div className="text-blue-100 text-sm">Free trial, no card required</div>
                 </div>
               </div>
             </div>
@@ -406,15 +406,15 @@ export default function AboutPage() {
                   <ul className="space-y-2 text-sm text-gray-700">
                     <li className="flex items-center gap-2">
                       <span className="text-purple-600">✓</span>
-                      <span>OpenAI GPT-4 Vision</span>
+                      <span>Google Gemini 2.5 Flash (vision + text)</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-purple-600">✓</span>
-                      <span>Google Gemini Pro</span>
+                      <span>USDA &amp; Open Food Facts data</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-purple-600">✓</span>
-                      <span>Custom ML models</span>
+                      <span>Rule-based health &amp; safety engine</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <span className="text-purple-600">✓</span>
@@ -448,59 +448,63 @@ export default function AboutPage() {
             </div>
           </section>
 
-          {/* Certifications & Compliance */}
+          {/* Security & Privacy */}
           <section>
             <div className="bg-white rounded-2xl shadow-lg p-10">
               <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-                Certifications & Compliance
+                Security & Privacy
               </h2>
 
               <div className="grid md:grid-cols-3 gap-6">
                 <div className="text-center p-6 bg-blue-50 rounded-xl">
                   <div className="text-4xl mb-4">🏥</div>
-                  <h3 className="font-bold text-gray-900 mb-2">HIPAA Compliant</h3>
+                  <h3 className="font-bold text-gray-900 mb-2">Built for HIPAA workflows</h3>
                   <p className="text-sm text-gray-600">
-                    Full compliance with healthcare privacy and security regulations
+                    Controls aligned with the HIPAA Privacy and Security Rules, designed to
+                    support compliant care
                   </p>
                 </div>
 
                 <div className="text-center p-6 bg-purple-50 rounded-xl">
                   <div className="text-4xl mb-4">🔒</div>
-                  <h3 className="font-bold text-gray-900 mb-2">SOC 2 Type II</h3>
+                  <h3 className="font-bold text-gray-900 mb-2">Encryption everywhere</h3>
                   <p className="text-sm text-gray-600">
-                    Independently audited security and availability controls
+                    AES-256 encryption at rest and TLS 1.3 in transit, on Google Cloud
+                    infrastructure
                   </p>
                 </div>
 
                 <div className="text-center p-6 bg-green-50 rounded-xl">
-                  <div className="text-4xl mb-4">🌍</div>
-                  <h3 className="font-bold text-gray-900 mb-2">ISO 27001</h3>
+                  <div className="text-4xl mb-4">🔑</div>
+                  <h3 className="font-bold text-gray-900 mb-2">Role-based access</h3>
                   <p className="text-sm text-gray-600">
-                    International information security management certification
+                    Granular caregiver permissions and audit logging of access to health
+                    records
                   </p>
                 </div>
 
                 <div className="text-center p-6 bg-orange-50 rounded-xl">
                   <div className="text-4xl mb-4">🇪🇺</div>
-                  <h3 className="font-bold text-gray-900 mb-2">GDPR Compliant</h3>
+                  <h3 className="font-bold text-gray-900 mb-2">GDPR-aligned practices</h3>
                   <p className="text-sm text-gray-600">
-                    Full compliance with EU data protection regulations
+                    Privacy-by-design principles; data export and deletion available on request
                   </p>
                 </div>
 
                 <div className="text-center p-6 bg-red-50 rounded-xl">
                   <div className="text-4xl mb-4">💳</div>
-                  <h3 className="font-bold text-gray-900 mb-2">PCI DSS</h3>
+                  <h3 className="font-bold text-gray-900 mb-2">Secure payments</h3>
                   <p className="text-sm text-gray-600">
-                    Secure payment processing through certified partners
+                    Payments handled by Stripe (PCI DSS Level 1) — card data never touches our
+                    servers
                   </p>
                 </div>
 
                 <div className="text-center p-6 bg-indigo-50 rounded-xl">
                   <div className="text-4xl mb-4">♿</div>
-                  <h3 className="font-bold text-gray-900 mb-2">WCAG 2.1 AA</h3>
+                  <h3 className="font-bold text-gray-900 mb-2">Accessibility</h3>
                   <p className="text-sm text-gray-600">
-                    Accessible to users with disabilities
+                    Designed for accessibility; working toward WCAG 2.1 AA conformance
                   </p>
                 </div>
               </div>

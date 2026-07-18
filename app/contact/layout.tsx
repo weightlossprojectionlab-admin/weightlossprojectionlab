@@ -29,7 +29,7 @@ const CONTACT_FAQS = [
   {
     question: 'How do I report a security issue?',
     answer:
-      'Use the contact form and select "Privacy/Security Concern". We monitor security submissions 24/7 and take all reports very seriously.',
+      'Use the contact form and select "Privacy/Security Concern". We review security submissions promptly and take all reports very seriously.',
   },
   {
     question: 'Where can I find technical documentation?',

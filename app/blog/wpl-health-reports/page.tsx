@@ -365,7 +365,7 @@ export default function AiHealthReportsBlogPage() {
             </Link>
           </div>
           <p className="text-sm text-white/70 mt-8">
-            No credit card required &bull; 7-day free trial &bull; Cancel anytime &bull; HIPAA compliant
+            No credit card required &bull; 7-day free trial &bull; Cancel anytime &bull; HIPAA-aligned
           </p>
           <div className="flex items-center justify-center gap-6 mt-6 text-sm">
             <Link href="/security" className="text-white/80 hover:text-white underline">

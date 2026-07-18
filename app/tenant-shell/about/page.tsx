@@ -110,7 +110,7 @@ export default async function TenantAboutPage() {
             </h2>
             <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
               {companyName} is an independent care practice powered by
-              Wellness Projection Lab. They use the same HIPAA-compliant
+              Wellness Projection Lab. They use the same HIPAA-aligned
               platform to track families, coordinate care, and surface
               health insights — under their own brand and on their own
               terms.

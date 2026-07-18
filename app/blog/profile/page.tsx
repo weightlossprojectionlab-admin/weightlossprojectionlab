@@ -496,7 +496,7 @@ export default function ProfileBlogPage() {
                 <ul className="space-y-2 text-muted-foreground">
                   <li>Real-time sync across all devices via Firestore</li>
                   <li>Automatic backup and version history</li>
-                  <li>HIPAA-compliant data encryption (AES-256)</li>
+                  <li>HIPAA-aligned data encryption (AES-256)</li>
                   <li>Data export in JSON, CSV, PDF formats</li>
                 </ul>
               </div>

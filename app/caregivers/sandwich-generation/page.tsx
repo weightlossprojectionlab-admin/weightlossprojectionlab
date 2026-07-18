@@ -54,7 +54,7 @@ const FAQ = [
   {
     question: 'Is my family’s health information secure?',
     answer:
-      'Yes. Wellness Projection Lab is HIPAA-compliant, and only the people you invite can see your family’s information. You control who sees what for each profile.',
+      'Yes. Wellness Projection Lab is built to support HIPAA compliance, and only the people you invite can see your family’s information. You control who sees what for each profile.',
   },
   {
     question: 'Is there a free trial?',
@@ -103,7 +103,7 @@ export default function SandwichGenerationPage() {
               Start a Free 7-Day Trial
             </Link>
             <p className="text-xs text-muted-foreground mt-3">
-              HIPAA compliant &middot; Cancel anytime
+              HIPAA-aligned &middot; Cancel anytime
             </p>
           </div>
         </section>
@@ -201,16 +201,16 @@ export default function SandwichGenerationPage() {
           </ol>
         </section>
 
-        {/* Testimonial */}
+        {/* Example scenario */}
         <section className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl shadow-2xl p-8 text-white">
-          <p className="text-lg italic mb-4 leading-relaxed">
-            &ldquo;I&apos;m raising two teenagers and helping my mother through
-            chemo. I used to keep it all in a notebook I was terrified of losing.
-            Now my husband and my brother can see everything I see — I finally
-            feel like I&apos;m not doing it alone.&rdquo;
+          <div className="text-xs uppercase tracking-wide opacity-80 mb-3">Example scenario</div>
+          <p className="text-lg mb-4 leading-relaxed">
+            A caregiver raising two teenagers while helping a parent through chemo
+            no longer keeps it all in a notebook they&apos;re terrified of losing.
+            A spouse and a sibling can see everything they see — so no one is doing
+            it alone.
           </p>
-          <div className="text-sm font-semibold">Dana R.</div>
-          <div className="text-xs opacity-80">Sandwich-generation caregiver — two kids, one parent</div>
+          <div className="text-xs opacity-80">Sandwich-generation caregiving — two kids, one parent</div>
         </section>
 
         {/* FAQ */}
@@ -281,7 +281,7 @@ export default function SandwichGenerationPage() {
             Start Your Free Trial
           </Link>
           <p className="text-xs text-muted-foreground">
-            HIPAA compliant &middot; Cancel anytime
+            HIPAA-aligned &middot; Cancel anytime
           </p>
         </section>
       </div>

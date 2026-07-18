@@ -323,7 +323,7 @@ export default function PatientProfilesPage() {
       </ul>
 
       <h3>Soft Delete</h3>
-      <p>HIPAA-compliant deletion for privacy:</p>
+      <p>HIPAA-aligned deletion for privacy:</p>
       <ul>
         <li>Profile marked as deleted but data retained</li>
         <li>Hidden from all users</li>

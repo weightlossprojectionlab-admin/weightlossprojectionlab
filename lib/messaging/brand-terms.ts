@@ -137,11 +137,11 @@ export const BRAND_CATEGORIES = {
  * Maps brand term to user-friendly explanation
  */
 export const BRAND_DESCRIPTIONS: Record<string, string> = {
-  [BRAND_TERMS.WPL_VISION]: 'Advanced computer vision technology that identifies your meals from photos and calculates nutrition automatically. Trained on millions of meal images for accurate recognition.',
+  [BRAND_TERMS.WPL_VISION]: 'Advanced computer vision that identifies your meals from photos and calculates nutrition automatically, powered by Google\'s Gemini vision model.',
 
-  [BRAND_TERMS.WELLNESS_INTELLIGENCE]: 'Your personal health analytics engine that learns from your data to predict outcomes, identify trends, and provide personalized wellness recommendations.',
+  [BRAND_TERMS.WELLNESS_INTELLIGENCE]: 'Your personal health analytics engine that learns from your data to identify trends and provide personalized wellness suggestions.',
 
-  [BRAND_TERMS.WPL_PRESCRIBE]: 'Clinical-grade optical character recognition that reads medication labels and prescriptions, automatically extracting drug names, dosages, and instructions with HIPAA-compliant accuracy.',
+  [BRAND_TERMS.WPL_PRESCRIBE]: 'Optical character recognition that reads medication labels and prescriptions, automatically extracting drug names, dosages, and instructions.',
 
   [BRAND_TERMS.SMART_SUGGESTIONS]: 'Intelligent shopping recommendations that consider your health goals, dietary needs, current inventory, and nutritional optimization to suggest the best items to buy.',
 
@@ -153,7 +153,7 @@ export const BRAND_DESCRIPTIONS: Record<string, string> = {
 
   [BRAND_TERMS.FRESHNESS_ALERTS]: 'Predictive modeling that estimates when food items will expire based on purchase date, storage conditions, and product category to help reduce waste.',
 
-  [BRAND_TERMS.SAFETY_ALERTS]: 'Clinical safety system that checks meals for potential allergens, medication-food interactions, and health condition conflicts to keep you safe.',
+  [BRAND_TERMS.SAFETY_ALERTS]: 'Safety checks that scan meals for potential allergens and health-condition conflicts to help keep you safe.',
 
   [BRAND_TERMS.PET_HEALTH_TRACKING]: 'Veterinary-calibrated health monitoring for dogs and cats, with breed-specific weight ranges and species-appropriate vital tracking.'
 }
@@ -163,25 +163,25 @@ export const BRAND_DESCRIPTIONS: Record<string, string> = {
  * More detailed than tooltips, emphasizes technical sophistication
  */
 export const TECHNICAL_DESCRIPTIONS: Record<string, string> = {
-  [BRAND_TERMS.WPL_VISION]: 'Multi-modal deep learning system combining convolutional neural networks (CNNs) for image classification with natural language processing for portion estimation. Trained on 10M+ annotated meal images with 95%+ accuracy across 300k+ food items integrated from USDA database.',
+  [BRAND_TERMS.WPL_VISION]: 'Meal recognition powered by Google\'s Gemini vision model: identifies foods from a photo and estimates nutrition, with results validated against the USDA nutrition database.',
 
-  [BRAND_TERMS.WELLNESS_INTELLIGENCE]: 'Machine learning platform utilizing LSTM neural networks for time-series analysis, Bayesian inference for outcome prediction, and ensemble models for personalized recommendation generation. Processes 50+ health variables to identify actionable correlations.',
+  [BRAND_TERMS.WELLNESS_INTELLIGENCE]: 'Health analytics that correlate vitals, meals, medications, and weight trends to surface actionable insights, combining rule-based heuristics with Gemini-generated summaries.',
 
-  [BRAND_TERMS.WPL_PRESCRIBE]: 'HIPAA-compliant OCR pipeline leveraging Google Cloud Vision API with pharmaceutical vocabulary NLP post-processing. Achieves 99.7% accuracy on medication name extraction and 98.2% on dosage parsing across 20k+ FDA-approved medications.',
+  [BRAND_TERMS.WPL_PRESCRIBE]: 'HIPAA-aligned OCR pipeline using Gemini vision with pharmaceutical-vocabulary post-processing to extract drug names, dosages, and instructions from medication labels and prescriptions.',
 
-  [BRAND_TERMS.SMART_SUGGESTIONS]: 'Hybrid recommendation engine combining collaborative filtering, content-based filtering, and constraint-based optimization. Balances nutritional goals (macro/micronutrient targets), inventory depletion prediction, and user preference learning.',
+  [BRAND_TERMS.SMART_SUGGESTIONS]: 'Recommendation engine combining health-goal rules, allergen and dietary constraints, and purchase-history heuristics (frequently-bought-together and due-to-buy), with Gemini-generated suggestions.',
 
-  [BRAND_TERMS.WELLNESS_COACH]: 'GPT-4-powered conversational agent fine-tuned on 100k+ clinical nutrition interactions and behavioral psychology research. Implements evidence-based coaching frameworks including motivational interviewing and cognitive behavioral therapy principles.',
+  [BRAND_TERMS.WELLNESS_COACH]: 'Gemini-powered conversational coach guided by evidence-based frameworks such as motivational interviewing, with safety guardrails that redirect clinical or crisis topics.',
 
-  [BRAND_TERMS.GOAL_PROJECTIONS]: 'Bayesian regression model with confidence interval estimation, accounting for metabolic adaptation, adherence variability, and plateau detection. Provides 80% confidence projections based on rolling 30-day trend analysis.',
+  [BRAND_TERMS.GOAL_PROJECTIONS]: 'Statistical weight-trend projection using rolling trend analysis of recent weigh-ins to estimate timelines and flag plateaus.',
 
-  [BRAND_TERMS.HEALTH_PATTERNS]: 'Correlation matrix analysis with causal inference algorithms (Granger causality, structural equation modeling) to identify statistically significant relationships between nutrition, vitals, medications, and health outcomes (p<0.05).',
+  [BRAND_TERMS.HEALTH_PATTERNS]: 'Analytics that surface correlations between nutrition, vitals, medications, and health outcomes from your logged data, presented as trends and insights rather than clinical findings.',
 
-  [BRAND_TERMS.FRESHNESS_ALERTS]: 'Time-to-event analysis (survival modeling) trained on USDA FoodKeeper data and product shelf-life metadata. Adjusts predictions based on storage temperature classification (refrigerated, frozen, pantry) and product category.',
+  [BRAND_TERMS.FRESHNESS_ALERTS]: 'Shelf-life estimates based on product category and storage type (refrigerated, frozen, pantry), generated with Gemini.',
 
-  [BRAND_TERMS.SAFETY_ALERTS]: 'Multi-database query system integrating FDA drug-nutrient interaction warnings, USDA allergen data, and clinical contraindication rules. NLP parsing extracts ingredients from meal descriptions for real-time safety validation.',
+  [BRAND_TERMS.SAFETY_ALERTS]: 'Rule-based safety checks: allergen matching against Open Food Facts allergen tags and dietary-restriction conflicts, run on parsed meal and product ingredients.',
 
-  [BRAND_TERMS.PET_HEALTH_TRACKING]: 'Species-specific neural networks trained on veterinary medical databases (VIN, AAHA) with breed-aware reference ranges. Provides canine and feline physiology-calibrated BMI calculations and vital sign interpretations.'
+  [BRAND_TERMS.PET_HEALTH_TRACKING]: 'Veterinary reference ranges for dogs and cats, with breed- and species-aware weight ranges and vital-sign interpretation drawn from published veterinary references.'
 }
 
 /**

@@ -33,11 +33,11 @@ import {
 
 export const metadata: Metadata = {
   title: 'AI Meal Tracking — Photo Food Logging with Instant Nutrition Analysis | Wellness Projection Lab',
-  description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member. Per-person dietary tracking with 85-95% accuracy.',
+  description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member. Per-person dietary tracking for the whole family.',
   keywords: 'meal tracking, food tracking app, photo food logger, AI calorie counter, nutrition tracker, family meal tracking, allergen detection, macro tracker, food diary, meal logging app, AI nutrition analysis, family food tracker',
   openGraph: {
     title: 'AI Meal Tracking — Photo Food Logging with Instant Nutrition Analysis',
-    description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member with 85-95% accuracy.',
+    description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member.',
     type: 'article',
     images: [{ url: 'https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png', width: 1200, height: 630, alt: 'Wellness Projection Lab - Meal Tracking' }],
     url: 'https://www.wellnessprojectionlab.com/blog/meal-tracking',
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     images: ['https://www.wellnessprojectionlab.com/screenshots/family-care/family-dashboard-overview-desktop-light.png'],
     title: 'AI Meal Tracking — Photo Food Logging with Instant Nutrition Analysis',
-    description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member with 85-95% accuracy.',
+    description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member.',
   },
   alternates: {
     canonical: 'https://www.wellnessprojectionlab.com/blog/meal-tracking'
@@ -107,7 +107,7 @@ export default function MealtrackingBlogPage() {
       <JsonLd
         data={blogPostingSchema({
           headline: 'AI Meal Tracking — Photo Food Logging with Instant Nutrition Analysis',
-          description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member. Per-person dietary tracking with 85-95% accuracy.',
+          description: 'Snap a photo of any meal and get instant AI-powered nutritional analysis. Track calories, macros, and allergens for every family member. Per-person dietary tracking for the whole family.',
           slug: 'meal-tracking',
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           datePublished: '2026-01-15T00:00:00-05:00',
@@ -398,11 +398,11 @@ export default function MealtrackingBlogPage() {
           <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-2 border-amber-200 dark:border-amber-800 rounded-2xl p-8 md:p-12">
             <div className="max-w-3xl mx-auto text-center">
               <LightBulbIcon className="w-12 h-12 text-amber-600 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold text-foreground mb-4">Accuracy You Can Count On</h2>
+              <h2 className="text-3xl font-bold text-foreground mb-4">Accurate, and Easy to Correct</h2>
               <p className="text-lg text-muted-foreground mb-6 leading-relaxed">
-                WPL&apos;s AI vision delivers <span className="font-semibold text-amber-700 dark:text-amber-400">85&ndash;95% accuracy</span> on
-                food identification and nutritional estimates out of the box. When something isn&apos;t quite right, you correct it &mdash; and
-                the self-teaching layer remembers your family&apos;s actual portions, foods, and patterns. The more your family uses it, the smarter it gets.
+                WPL&apos;s AI vision gives you a strong nutritional estimate from a single photo. When something
+                isn&apos;t quite right, you correct it &mdash; and your corrections are saved, so logging your
+                family&apos;s regular meals gets faster over time.
               </p>
               <div className="grid sm:grid-cols-3 gap-6 mt-8">
                 <div className="text-center">
@@ -427,11 +427,11 @@ export default function MealtrackingBlogPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <TrustBadge
               icon={<ShieldCheckIcon className="w-6 h-6 text-amber-600" />}
-              label="HIPAA Compliant"
+              label="HIPAA-aligned"
             />
             <TrustBadge
               icon={<DocumentCheckIcon className="w-6 h-6 text-amber-600" />}
-              label="SOC 2 Practices"
+              label="AES-256 Encrypted"
             />
             <TrustBadge
               icon={<HandThumbUpIcon className="w-6 h-6 text-amber-600" />}

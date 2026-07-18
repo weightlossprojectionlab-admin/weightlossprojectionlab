@@ -104,6 +104,26 @@ export interface VitalsAnalysis {
     severity: 'info' | 'warning' | 'critical'
     message: string
   }>
+  /** Per-type averages/min/max/latest over the full set — for the doctor summary. */
+  averages?: VitalAverage[]
+}
+
+/** Rollup statistics for one vital type over the reporting window. */
+export interface VitalAverage {
+  type: string
+  label: string
+  count: number
+  unit?: string
+  // Scalar vitals (glucose, SpO2, temperature, heart rate, weight)
+  average?: number
+  min?: number
+  max?: number
+  latest?: number
+  // Blood pressure (two components)
+  averageSystolic?: number
+  averageDiastolic?: number
+  latestSystolic?: number
+  latestDiastolic?: number
 }
 
 /**
@@ -373,13 +393,78 @@ export function getVitalStatus(vital: any, referenceRanges?: VitalReferenceRange
  * @param referenceRanges - Species-specific reference ranges (optional)
  * @returns Vitals analysis with recent measurements and alerts
  */
+/** Extract the numeric reading(s) from a vital, mirroring formatVitalValue's field access. */
+function extractVitalNumbers(v: any): { systolic: number; diastolic: number } | number | null {
+  if (v?.type === 'blood_pressure') {
+    const systolic = Number(v.value?.systolic ?? v.systolic)
+    const diastolic = Number(v.value?.diastolic ?? v.diastolic)
+    if (Number.isFinite(systolic) && Number.isFinite(diastolic)) return { systolic, diastolic }
+    return null
+  }
+  const n = Number(typeof v?.value === 'object' ? NaN : v?.value)
+  return Number.isFinite(n) ? n : null
+}
+
+const round1 = (n: number): number => Math.round(n * 10) / 10
+
+/**
+ * Per-type rollups (avg/min/max/latest) over the full vitals set. Assumes the
+ * input is ordered most-recent-first (same assumption as `recent`), so the
+ * first reading of each type is the latest.
+ */
+export function computeVitalAverages(vitals: any[]): VitalAverage[] {
+  const byType = new Map<string, any[]>()
+  for (const v of vitals) {
+    if (!v?.type) continue
+    if (!byType.has(v.type)) byType.set(v.type, [])
+    byType.get(v.type)!.push(v)
+  }
+
+  const averages: VitalAverage[] = []
+  for (const [type, readings] of byType) {
+    const label = type.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())
+    const unit = (readings[0] as any)?.unit
+
+    if (type === 'blood_pressure') {
+      const sys: number[] = []
+      const dia: number[] = []
+      readings.forEach(r => {
+        const nums = extractVitalNumbers(r)
+        if (nums && typeof nums === 'object') { sys.push(nums.systolic); dia.push(nums.diastolic) }
+      })
+      if (sys.length === 0) continue
+      const latest = extractVitalNumbers(readings[0])
+      averages.push({
+        type, label, count: sys.length, unit: 'mmHg',
+        averageSystolic: round1(sys.reduce((a, b) => a + b, 0) / sys.length),
+        averageDiastolic: round1(dia.reduce((a, b) => a + b, 0) / dia.length),
+        latestSystolic: latest && typeof latest === 'object' ? latest.systolic : undefined,
+        latestDiastolic: latest && typeof latest === 'object' ? latest.diastolic : undefined,
+      })
+      continue
+    }
+
+    const nums = readings.map(extractVitalNumbers).filter((n): n is number => typeof n === 'number')
+    if (nums.length === 0) continue
+    const latest = extractVitalNumbers(readings[0])
+    averages.push({
+      type, label, count: nums.length, unit,
+      average: round1(nums.reduce((a, b) => a + b, 0) / nums.length),
+      min: Math.min(...nums),
+      max: Math.max(...nums),
+      latest: typeof latest === 'number' ? latest : undefined,
+    })
+  }
+  return averages
+}
+
 export function analyzeVitals(
   vitals: VitalSign[] | any[],
   patient?: PatientProfile,
   referenceRanges?: VitalReferenceRanges
 ): VitalsAnalysis {
   if (!vitals || vitals.length === 0) {
-    return { status: 'no_data', message: 'No vitals recorded', recent: [], totalCount: 0 }
+    return { status: 'no_data', message: 'No vitals recorded', recent: [], totalCount: 0, averages: [] }
   }
 
   const alerts: Array<{ type: string; severity: 'info' | 'warning' | 'critical'; message: string }> = []
@@ -445,7 +530,8 @@ export function analyzeVitals(
     message: `${vitals.length} vitals recorded`,
     recent: recentVitals,
     totalCount: vitals.length,
-    alerts: alerts.length > 0 ? alerts : undefined
+    alerts: alerts.length > 0 ? alerts : undefined,
+    averages: computeVitalAverages(vitals)
   }
 }
 

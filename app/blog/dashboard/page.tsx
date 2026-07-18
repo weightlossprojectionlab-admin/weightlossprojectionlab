@@ -130,14 +130,14 @@ export default function DashboardBlogPage() {
         data={softwareApplicationSchema({
           name: 'Wellness Projection Lab Dashboard',
           description:
-            'A HIPAA-compliant family health dashboard that centralizes vitals, medications, meals, and appointments for every member of a household — up to 20 people — in one intelligent, self-teaching view.',
+            'A HIPAA-aligned family health dashboard that centralizes vitals, medications, meals, and appointments for every member of a household — up to 20 people — in one intelligent, self-teaching view.',
           url: '/blog/dashboard',
           image: '/screenshots/family-care/family-dashboard-overview-desktop-light.png',
           featureList: [
             'Centralized family health overview',
             'Per-member health profiles',
             'Proactive smart alerts',
-            'Self-teaching ML health insights',
+            'Self-teaching health insights',
             'AI photo meal capture and analysis (Gemini Vision)',
             'Caregiver coordination and task management',
             'Role-based privacy controls',
@@ -184,7 +184,7 @@ export default function DashboardBlogPage() {
                 engine can lift verbatim. Kept consistent with the
                 SoftwareApplication schema description. */}
             <p className="text-base text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
-              The <strong>WPL Dashboard</strong> is a HIPAA-compliant family health platform that centralizes
+              The <strong>WPL Dashboard</strong> is a HIPAA-aligned family health platform that centralizes
               vitals, medications, meals, and appointments for up to 20 household members in a single,
               self-teaching view.
             </p>
@@ -327,7 +327,7 @@ export default function DashboardBlogPage() {
               title="Weekly Family Health Review"
               time="Sunday Evening"
               gradient="from-indigo-500 to-purple-500"
-              narrative="Every Sunday, the Patel family sits down and reviews the Dashboard together. They look at weight progress for the adults, meal quality scores for the kids, and check if any upcoming appointments need drivers assigned. The self-teaching insights flag that their son&apos;s vegetable intake dropped 40% this week — time to get creative with dinner."
+              narrative="Every Sunday, the Patel family sits down and reviews the Dashboard together. They look at weight progress for the adults, meal quality for the kids, and check if any upcoming appointments need drivers assigned. The insights highlight that their son&apos;s vegetable intake dipped this week — time to get creative with dinner."
               outcome="A 10-minute ritual that keeps the whole family aligned."
             />
           </div>
@@ -423,7 +423,7 @@ export default function DashboardBlogPage() {
               icon={<LockClosedIcon className="w-12 h-12 text-emerald-600" />}
               title="Privacy Controls"
               benefit="Share only what each person needs to see"
-              description="Granular role-based permissions let you control who sees what. Each family member&apos;s data is protected with HIPAA-compliant storage, encryption, and access controls."
+              description="Granular role-based permissions let you control who sees what. Each family member&apos;s data is protected with HIPAA-aligned storage, encryption, and access controls."
             />
           </div>
         </section>
@@ -488,7 +488,7 @@ export default function DashboardBlogPage() {
             <TrustBadge
               icon={<ShieldCheckIcon className="w-8 h-8 text-emerald-600" />}
               value="HIPAA"
-              label="Compliant & Encrypted"
+              label="Aligned & Encrypted"
             />
             <TrustBadge
               icon={<UserGroupIcon className="w-8 h-8 text-emerald-600" />}

@@ -350,8 +350,8 @@ export default function TermsPage() {
                   </li>
                 </ul>
                 <p className="text-sm text-gray-600 mt-3 italic">
-                  We strongly recommend enabling multi-factor authentication (MFA) to protect
-                  your account.
+                  We strongly recommend enabling biometric sign-in (Face ID / Touch ID) and
+                  using a strong, unique password to protect your account.
                 </p>
               </div>
 

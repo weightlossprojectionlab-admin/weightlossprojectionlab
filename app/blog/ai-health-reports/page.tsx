@@ -161,7 +161,7 @@ export default function AihealthreportsBlogPage() {
                 'Monitor patient data between visits',
                 'Receive alerts for abnormal values',
                 'Export reports for medical records',
-                'HIPAA-compliant access and storage'
+                'HIPAA-aligned access and storage'
               ]}
             />
           </div>

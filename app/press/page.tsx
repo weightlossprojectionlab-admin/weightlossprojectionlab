@@ -128,7 +128,7 @@ export default function PressPage() {
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-3">About WPL</h3>
                   <p className="text-gray-700 leading-relaxed mb-4">
-                    Weight Loss Projection Lab (WPL) is a HIPAA-compliant health tracking platform
+                    Weight Loss Projection Lab (WPL) is a HIPAA-aligned health tracking platform
                     that combines artificial intelligence with enterprise-grade security to help
                     individuals and families manage their wellness journey.
                   </p>
@@ -155,8 +155,8 @@ export default function PressPage() {
                       <dd className="text-gray-900">Healthcare Technology, Intelligent Systems, Digital Health</dd>
                     </div>
                     <div>
-                      <dt className="font-medium text-gray-700">Certifications</dt>
-                      <dd className="text-gray-900">HIPAA, SOC 2 Type II, ISO 27001, GDPR</dd>
+                      <dt className="font-medium text-gray-700">Security posture</dt>
+                      <dd className="text-gray-900">HIPAA-aligned, GDPR-aligned, AES-256 encryption, SOC 2-certified Google Cloud hosting</dd>
                     </div>
                     <div>
                       <dt className="font-medium text-gray-700">Website</dt>
@@ -180,7 +180,7 @@ export default function PressPage() {
                     Wellness Projection Lab is a WPL-powered health tracking platform that helps
                     individuals and families achieve their wellness goals through intelligent meal
                     analysis, personalized insights, and comprehensive health management. With
-                    HIPAA compliance and enterprise-grade security, WPL provides the privacy and
+                    HIPAA-aligned, enterprise-grade security, WPL provides the privacy and
                     protection users need when managing sensitive health information. The platform
                     features advanced technology, biometric
                     authentication, and family care management tools that make health tracking
@@ -586,7 +586,7 @@ export default function PressPage() {
                   </h3>
                   <p className="text-sm text-gray-600 mb-4">
                     Wellness Projection Lab is redefining how families manage health data with
-                    HIPAA-compliant WPL technology...
+                    HIPAA-aligned WPL technology...
                   </p>
                   <a href="#" className="text-blue-600 hover:text-blue-700 font-medium text-sm">
                     Read Article →

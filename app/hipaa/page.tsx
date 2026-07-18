@@ -72,22 +72,22 @@ export default function HipaaPage() {
               </div>
             </div>
             <div>
-              <h2 className="text-2xl font-bold mb-3">HIPAA Compliant Platform</h2>
+              <h2 className="text-2xl font-bold mb-3">Built for HIPAA Workflows</h2>
               <p className="text-blue-100 leading-relaxed mb-4">
-                Wellness Projection Lab is fully compliant with the Health Insurance
-                Portability and Accountability Act (HIPAA). We implement comprehensive
-                administrative, physical, and technical safeguards to protect your Protected
-                Health Information (PHI).
+                Wellness Projection Lab is built to support compliance with the Health Insurance
+                Portability and Accountability Act (HIPAA). We implement administrative,
+                physical, and technical safeguards aligned with the HIPAA Privacy and Security
+                Rules to protect your Protected Health Information (PHI).
               </p>
               <div className="flex flex-wrap gap-3 text-sm">
                 <div className="bg-white/20 px-4 py-2 rounded-lg font-medium">
-                  Privacy Rule Compliant
+                  Privacy Rule&ndash;aligned
                 </div>
                 <div className="bg-white/20 px-4 py-2 rounded-lg font-medium">
-                  Security Rule Compliant
+                  Security Rule&ndash;aligned
                 </div>
                 <div className="bg-white/20 px-4 py-2 rounded-lg font-medium">
-                  Breach Notification Rule
+                  Encryption at rest &amp; in transit
                 </div>
               </div>
             </div>
@@ -579,7 +579,7 @@ export default function HipaaPage() {
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600 mt-0.5">•</span>
-                    <span>SOC 2 certified data centers</span>
+                    <span>SOC 2-certified cloud data centers (Google Cloud)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-purple-600 mt-0.5">•</span>
@@ -628,7 +628,7 @@ export default function HipaaPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-600 mt-0.5">•</span>
-                    <span>Multi-factor authentication</span>
+                    <span>Biometric sign-in (WebAuthn)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-600 mt-0.5">•</span>

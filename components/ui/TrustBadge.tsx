@@ -27,8 +27,8 @@ export interface TrustBadgeProps {
 /**
  * Trust Badge Component
  *
- * Emphasizes proprietary ML technology, HIPAA compliance, and privacy
- * to build trust and differentiate from third-party AI services.
+ * Emphasizes HIPAA-aligned security, encryption, and privacy
+ * to build trust.
  *
  * Use Cases:
  * - After meal photo upload (reassure about image privacy)
@@ -63,14 +63,14 @@ export const TrustBadge = memo(function TrustBadge({
     },
     'no-third-party': {
       icon: Lock,
-      label: 'No Third-Party AI APIs',
-      description: 'Your data never leaves our secure platform',
+      label: 'Encrypted & Private',
+      description: 'Your health data is encrypted in transit and at rest, and never sold',
       color: 'text-blue-600 dark:text-blue-400'
     },
     proprietary: {
       icon: Sparkles,
-      label: 'Proprietary ML',
-      description: 'WPL-owned machine learning technology',
+      label: 'Self-Teaching',
+      description: 'WPL-owned self-teaching personalization, built in-house',
       color: 'text-purple-600 dark:text-purple-400'
     }
   }
@@ -161,8 +161,9 @@ export function TrustMessage({ className = '' }: { className?: string }) {
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-foreground mb-1">Your Privacy is Protected</h3>
           <p className="text-sm text-muted-foreground mb-3">
-            WPL uses proprietary machine learning technology built in-house. Your health data
-            never leaves our HIPAA-secure platform and is never sent to third-party AI services.
+            Your health data is encrypted in transit and at rest, access-controlled, and never
+            sold. AI photo features are processed by Google&apos;s Gemini under strict data terms;
+            personalization is a WPL-owned, self-teaching layer built in-house.
           </p>
           <TrustBadge variant="compact" />
         </div>

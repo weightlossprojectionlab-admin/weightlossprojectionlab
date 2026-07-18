@@ -395,7 +395,7 @@ export default function FamilyCareBlogPage() {
             <FeatureCard
               icon={<LockClosedIcon className="w-12 h-12 text-emerald-600" />}
               title="Privacy & HIPAA Controls"
-              description="Granular role-based permissions. Each person's data is protected. HIPAA-compliant storage and access."
+              description="Granular role-based permissions. Each person's data is protected. HIPAA-aligned storage and access."
             />
           </div>
         </section>
@@ -407,7 +407,7 @@ export default function FamilyCareBlogPage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             <TrustBadge value="14" label="Care Categories" />
             <TrustBadge value="Newborn → Senior" label="Full Life Stage Support" />
-            <TrustBadge value="HIPAA" label="Compliant & Encrypted" />
+            <TrustBadge value="HIPAA" label="Aligned & Encrypted" />
             <TrustBadge value="7-Day" label="Free Trial, No Card" />
           </div>
         </section>

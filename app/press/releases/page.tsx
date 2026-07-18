@@ -11,7 +11,7 @@ import type { PressRelease } from '@/types/press'
 import { getCSRFToken } from '@/lib/csrf'
 export const metadata = {
   title: 'Press Releases | Weight Loss Projection Lab',
-  description: 'Latest news and press releases from WPL - HIPAA-compliant AI health platform',
+  description: 'Latest news and press releases from WPL - HIPAA-aligned AI health platform',
 }
 
 export default function PressReleasesPage() {

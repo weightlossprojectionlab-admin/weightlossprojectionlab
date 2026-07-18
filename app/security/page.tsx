@@ -9,9 +9,9 @@ import { buildPageMetadata } from '@/lib/seo'
 export const metadata = buildPageMetadata({
   title: 'Security | Wellness Projection Lab',
   description:
-    'Enterprise-grade security at Wellness Projection Lab — AES-256 encryption, TLS 1.3, SOC 2 infrastructure, MFA, role-based access, and audit logging for every action on PHI.',
+    'Healthcare-grade security at Wellness Projection Lab — AES-256 encryption, TLS 1.3, SOC 2-certified Google Cloud hosting, role-based access, and audit logging for every action on PHI.',
   path: '/security',
-  keywords: 'health data security, HIPAA security, AES-256 encryption, SOC 2 health app, multi-factor authentication, audit logs, secure health platform',
+  keywords: 'health data security, HIPAA security, AES-256 encryption, secure health platform, role-based access, audit logs',
 })
 
 export default function SecurityPage() {
@@ -71,22 +71,21 @@ export default function SecurityPage() {
             <div>
               <h2 className="text-2xl font-bold mb-3">Your Data is Safe With Us</h2>
               <p className="text-blue-100 leading-relaxed mb-4">
-                We employ bank-level encryption, undergo regular third-party security audits,
-                and maintain strict HIPAA compliance to ensure your health data remains private
-                and secure.
+                We employ AES-256 encryption at rest, TLS 1.3 in transit, HIPAA-aligned controls,
+                and role-based access to ensure your health data remains private and secure.
               </p>
               <div className="flex flex-wrap gap-3">
                 <div className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-                  🔒 HIPAA Compliant
+                  🔒 HIPAA-aligned controls
                 </div>
                 <div className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-                  ✓ SOC 2 Type II
+                  🔐 AES-256 at rest
                 </div>
                 <div className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-                  ✓ ISO 27001
+                  🌐 TLS 1.3 in transit
                 </div>
                 <div className="bg-white/20 px-3 py-1 rounded-full text-sm font-medium">
-                  🔐 AES-256 Encryption
+                  🔑 Role-based access
                 </div>
               </div>
             </div>
@@ -165,9 +164,10 @@ export default function SecurityPage() {
                     />
                   </svg>
                 </div>
-                <h3 className="font-bold text-gray-900 mb-2">Regular Audits</h3>
+                <h3 className="font-bold text-gray-900 mb-2">Ongoing Review</h3>
                 <p className="text-sm text-gray-600">
-                  Quarterly security audits and annual penetration testing by experts
+                  Regular internal security review and dependency scanning; third-party audits
+                  planned as we scale
                 </p>
               </div>
             </div>
@@ -204,8 +204,7 @@ export default function SecurityPage() {
                 <ul className="list-disc list-inside space-y-1 text-sm text-gray-600 ml-4">
                   <li>TLS 1.3 with perfect forward secrecy</li>
                   <li>HTTPS-only connections (HSTS enforced)</li>
-                  <li>Certificate pinning in mobile apps</li>
-                  <li>Secure WebSocket connections for real-time features</li>
+                  <li>Encrypted real-time data sync (Firestore listeners)</li>
                 </ul>
               </div>
 
@@ -247,16 +246,16 @@ export default function SecurityPage() {
                   </h3>
                   <p className="text-sm text-gray-700 mb-3">
                     Our infrastructure is hosted on Google Cloud Platform (GCP), which provides
-                    enterprise-grade security and is HIPAA compliant.
+                    enterprise-grade security and supports HIPAA-compliant workloads under a BAA.
                   </p>
                   <div className="grid sm:grid-cols-2 gap-2 text-sm text-gray-600">
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      <span>ISO 27001 certified</span>
+                      <span>ISO 27001 certified (Google Cloud)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
-                      <span>SOC 2/3 compliant</span>
+                      <span>SOC 2/3 compliant (Google Cloud)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-green-500">✓</span>
@@ -481,11 +480,7 @@ export default function SecurityPage() {
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start gap-2">
                     <span className="text-green-500">✓</span>
-                    <span>Multi-factor authentication (MFA)</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500">✓</span>
-                    <span>Biometric authentication (Face ID, Touch ID)</span>
+                    <span>Biometric authentication (Face ID, Touch ID via WebAuthn)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-500">✓</span>
@@ -493,15 +488,7 @@ export default function SecurityPage() {
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-500">✓</span>
-                    <span>Password breach monitoring</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500">✓</span>
                     <span>Session timeout after inactivity</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-green-500">✓</span>
-                    <span>Device fingerprinting</span>
                   </li>
                 </ul>
               </div>
@@ -577,26 +564,22 @@ export default function SecurityPage() {
             <div className="space-y-6">
               <div className="border-l-4 border-blue-500 pl-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  24/7 Security Monitoring
+                  Security Monitoring
                 </h3>
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
                     <span>
-                      Real-time threat detection using AI/ML anomaly detection
+                      Continuous monitoring with rule-based anomaly detection
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
-                    <span>Security Information and Event Management (SIEM)</span>
+                    <span>Google Cloud audit logging and alerting</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-blue-600 mt-0.5">•</span>
-                    <span>Automated alerting for suspicious activities</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-blue-600 mt-0.5">•</span>
-                    <span>Log aggregation and analysis</span>
+                    <span>Rate limiting and automatic session timeout</span>
                   </li>
                 </ul>
               </div>
@@ -606,25 +589,25 @@ export default function SecurityPage() {
                   Incident Response
                 </h3>
                 <p className="text-sm text-gray-700 mb-3">
-                  We have a comprehensive incident response plan that includes:
+                  We maintain a documented incident-response process:
                 </p>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <h4 className="font-semibold text-gray-900 text-sm mb-2">
-                      Response Team
+                      Who responds
                     </h4>
                     <ul className="space-y-1 text-sm text-gray-700">
                       <li className="flex items-start gap-2">
                         <span className="text-red-600 mt-0.5">•</span>
-                        <span>Dedicated security incident response team</span>
+                        <span>Founder-led incident response</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-red-600 mt-0.5">•</span>
-                        <span>On-call rotation 24/7/365</span>
+                        <span>Documented response runbook</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-red-600 mt-0.5">•</span>
-                        <span>External security consultants on retainer</span>
+                        <span>Google Cloud security tooling and alerts</span>
                       </li>
                     </ul>
                   </div>
@@ -635,11 +618,11 @@ export default function SecurityPage() {
                     <ul className="space-y-1 text-sm text-gray-700">
                       <li className="flex items-start gap-2">
                         <span className="text-red-600 mt-0.5">•</span>
-                        <span>Detection & triage within 15 minutes</span>
+                        <span>Prompt triage and investigation</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-red-600 mt-0.5">•</span>
-                        <span>Containment within 1 hour</span>
+                        <span>Containment and remediation</span>
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-red-600 mt-0.5">•</span>
@@ -667,8 +650,13 @@ export default function SecurityPage() {
           {/* Compliance & Certifications */}
           <section>
             <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Compliance & Certifications
+              Our Security &amp; Privacy Practices
             </h2>
+            <p className="text-sm text-gray-600 mb-6">
+              We are built to healthcare-grade security standards and designed to support
+              compliant care. We do not currently hold third-party certifications such as SOC 2
+              or ISO 27001.
+            </p>
 
             <div className="grid md:grid-cols-2 gap-6">
               <div className="border-2 border-blue-200 rounded-lg p-6 bg-blue-50">
@@ -677,27 +665,22 @@ export default function SecurityPage() {
                     H
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 mb-2">HIPAA Compliance</h3>
+                    <h3 className="font-bold text-gray-900 mb-2">Built for HIPAA workflows</h3>
                     <p className="text-sm text-gray-700 mb-2">
-                      Full compliance with the Health Insurance Portability and Accountability
-                      Act
+                      Controls aligned with the HIPAA Privacy and Security Rules
                     </p>
                     <ul className="space-y-1 text-xs text-gray-600">
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Privacy Rule compliance</span>
+                        <span>Privacy Rule&ndash;aligned access controls</span>
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Security Rule compliance</span>
+                        <span>Security Rule&ndash;aligned safeguards</span>
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Breach Notification Rule</span>
-                      </li>
-                      <li className="flex items-start gap-1">
-                        <span>✓</span>
-                        <span>Business Associate Agreements</span>
+                        <span>Audit logging of health-record access</span>
                       </li>
                     </ul>
                   </div>
@@ -706,30 +689,26 @@ export default function SecurityPage() {
 
               <div className="border-2 border-purple-200 rounded-lg p-6 bg-purple-50">
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold">
-                    SOC 2
+                  <div className="flex-shrink-0 w-12 h-12 bg-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-2xl">
+                    🔐
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 mb-2">SOC 2 Type II</h3>
+                    <h3 className="font-bold text-gray-900 mb-2">Encryption &amp; infrastructure</h3>
                     <p className="text-sm text-gray-700 mb-2">
-                      Audited annually by independent third parties
+                      Encrypted in transit and at rest on Google Cloud
                     </p>
                     <ul className="space-y-1 text-xs text-gray-600">
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Security controls</span>
+                        <span>AES-256 encryption at rest</span>
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Availability controls</span>
+                        <span>TLS 1.3 in transit (HSTS enforced)</span>
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Confidentiality controls</span>
-                      </li>
-                      <li className="flex items-start gap-1">
-                        <span>✓</span>
-                        <span>Processing integrity</span>
+                        <span>Automated, encrypted backups</span>
                       </li>
                     </ul>
                   </div>
@@ -738,26 +717,26 @@ export default function SecurityPage() {
 
               <div className="border-2 border-green-200 rounded-lg p-6 bg-green-50">
                 <div className="flex items-start gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
-                    ISO
+                  <div className="flex-shrink-0 w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center text-white font-bold text-2xl">
+                    🔑
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 mb-2">ISO 27001</h3>
+                    <h3 className="font-bold text-gray-900 mb-2">Access &amp; audit controls</h3>
                     <p className="text-sm text-gray-700 mb-2">
-                      International standard for information security management
+                      You decide who sees what, and every access is recorded
                     </p>
                     <ul className="space-y-1 text-xs text-gray-600">
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Information Security Management System (ISMS)</span>
+                        <span>Role-based caregiver permissions</span>
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Risk assessment framework</span>
+                        <span>Audit logging of record changes</span>
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Annual certification audits</span>
+                        <span>Automatic session timeout</span>
                       </li>
                     </ul>
                   </div>
@@ -770,9 +749,9 @@ export default function SecurityPage() {
                     GDPR
                   </div>
                   <div>
-                    <h3 className="font-bold text-gray-900 mb-2">GDPR Compliant</h3>
+                    <h3 className="font-bold text-gray-900 mb-2">GDPR-aligned practices</h3>
                     <p className="text-sm text-gray-700 mb-2">
-                      General Data Protection Regulation compliance for EU users
+                      Privacy-by-design principles for all users
                     </p>
                     <ul className="space-y-1 text-xs text-gray-600">
                       <li className="flex items-start gap-1">
@@ -781,11 +760,11 @@ export default function SecurityPage() {
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Right to erasure (Right to be forgotten)</span>
+                        <span>Data export on request</span>
                       </li>
                       <li className="flex items-start gap-1">
                         <span>✓</span>
-                        <span>Data portability</span>
+                        <span>Data deletion on request</span>
                       </li>
                     </ul>
                   </div>
@@ -882,7 +861,7 @@ export default function SecurityPage() {
                 <ul className="space-y-2 text-sm text-gray-700">
                   <li className="flex items-start gap-2">
                     <span className="text-green-600">✓</span>
-                    <span>Enable multi-factor authentication (MFA)</span>
+                    <span>Enable biometric sign-in (Face ID / Touch ID)</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <span className="text-green-600">✓</span>
@@ -984,8 +963,8 @@ export default function SecurityPage() {
                 </p>
                 <p className="text-sm text-gray-700">
                   Please do not publicly disclose the vulnerability until we've had a chance to
-                  address it. We appreciate security researchers and offer recognition (and
-                  rewards for significant findings) through our bug bounty program.
+                  address it. We appreciate security researchers who responsibly disclose issues
+                  and are glad to offer recognition for valid reports.
                 </p>
               </div>
             </div>
@@ -1014,22 +993,11 @@ export default function SecurityPage() {
               </div>
               <div className="flex items-start gap-3">
                 <span className="font-semibold text-gray-900 min-w-[140px]">
-                  Trust Center:
+                  Privacy & HIPAA:
                 </span>
-                <Link href="/trust" className="text-blue-600 hover:text-blue-700 underline">
-                  View our Trust Center
+                <Link href="/hipaa" className="text-blue-600 hover:text-blue-700 underline">
+                  View our HIPAA &amp; privacy practices
                 </Link>
-              </div>
-              <div className="flex items-start gap-3">
-                <span className="font-semibold text-gray-900 min-w-[140px]">
-                  Status Page:
-                </span>
-                <a
-                  href="https://status.wellnessproglab.com"
-                  className="text-blue-600 hover:text-blue-700 underline"
-                >
-                  status.wellnessproglab.com
-                </a>
               </div>
             </div>
           </section>

@@ -312,6 +312,42 @@ function ProfileContent() {
     }
   }
 
+  const [exportingData, setExportingData] = useState(false)
+
+  const handleExportMyData = async () => {
+    setExportingData(true)
+    try {
+      const auth = getAuth()
+      const token = await auth.currentUser?.getIdToken()
+      if (!token) {
+        toast.error('Please sign in to export your data')
+        return
+      }
+
+      const res = await fetch('/api/user/export', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      })
+      if (!res.ok) {
+        throw new Error(`Export failed (${res.status})`)
+      }
+
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'wpl-my-data-export.json'
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+      URL.revokeObjectURL(url)
+      toast.success('Your data is downloading')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not export your data')
+    } finally {
+      setExportingData(false)
+    }
+  }
+
   const handleSendVitalTestNotification = async (vitalType: string) => {
     try {
       const auth = getAuth()
@@ -1679,10 +1715,14 @@ function ProfileContent() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-medium">Data Export</p>
-                <p className="text-description">Download your personal data</p>
+                <p className="text-description">Download all your data (profile, logs, vitals, medications, appointments &amp; more) as JSON</p>
               </div>
-              <button className="btn btn-secondary">
-                📥 Export
+              <button
+                className="btn btn-secondary"
+                onClick={handleExportMyData}
+                disabled={exportingData}
+              >
+                {exportingData ? 'Preparing…' : '📥 Export'}
               </button>
             </div>
 

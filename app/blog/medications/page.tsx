@@ -30,7 +30,7 @@ import {
 
 const PAGE_TITLE = 'Medication Reminder App for Families & Elderly Parents'
 const PAGE_DESCRIPTION =
-  'Never miss a dose — for your kids, your aging parents, or yourself. Track medications across every family member with smart reminders, refill alerts, and shared caregiver access. HIPAA-compliant.'
+  'Never miss a dose — for your kids, your aging parents, or yourself. Track medications across every family member with smart reminders, refill alerts, and shared caregiver access. HIPAA-aligned.'
 const PAGE_IMAGE =
   'https://www.wellnessprojectionlab.com/screenshots/medications/medication-management-grid-desktop-light.png'
 const PAGE_URL = 'https://www.wellnessprojectionlab.com/blog/medications'
@@ -67,7 +67,7 @@ const FAQ_ITEMS = [
   {
     question: 'What is medication management?',
     answer:
-      'Medication management is the practice of tracking every medication a person takes — including doses, schedules, and refills — and recording when each dose is actually taken, so adherence can be verified and missed doses caught. Wellness Projection Lab is a HIPAA-compliant platform that does this for every member of a household: it logs each medication, sends reminders at the scheduled time, builds an adherence history, and alerts caregivers when a dose is skipped.',
+      'Medication management is the practice of tracking every medication a person takes — including doses, schedules, and refills — and recording when each dose is actually taken, so adherence can be verified and missed doses caught. Wellness Projection Lab is a HIPAA-aligned platform that does this for every member of a household: it logs each medication, sends reminders at the scheduled time, builds an adherence history, and alerts caregivers when a dose is skipped.',
   },
   {
     question: 'Who is a family medication tracker for?',
@@ -107,7 +107,7 @@ const FAQ_ITEMS = [
   {
     question: 'Is Wellness Projection Lab HIPAA compliant?',
     answer:
-      'Yes. Wellness Projection Lab is built as a HIPAA-compliant platform with fine-grained access controls, and BAAs are available for practitioners who license the platform.',
+      'Yes. Wellness Projection Lab is built to support HIPAA compliance with fine-grained access controls, and BAAs are available for practitioners who license the platform.',
   },
   {
     question: 'Is there a free trial?',
@@ -174,7 +174,7 @@ export default function MedicationsBlogPage() {
         data={softwareApplicationSchema({
           name: 'Wellness Projection Lab Medication Management',
           description:
-            'A HIPAA-compliant medication management platform that tracks unlimited medications, doses, and schedules for every member of a household, sends smart reminders and refill alerts, verifies adherence, and alerts caregivers when a dose is missed.',
+            'A HIPAA-aligned medication management platform that tracks unlimited medications, doses, and schedules for every member of a household, sends smart reminders and refill alerts, verifies adherence, and alerts caregivers when a dose is missed.',
           url: '/blog/medications',
           image: '/screenshots/medications/medication-management-grid-desktop-light.png',
           featureList: [
@@ -228,7 +228,7 @@ export default function MedicationsBlogPage() {
                 engine can lift verbatim. Kept consistent with the
                 SoftwareApplication schema description. */}
             <p className="text-base text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
-              <strong>WPL Medication Management</strong> is a HIPAA-compliant platform that tracks
+              <strong>WPL Medication Management</strong> is a HIPAA-aligned platform that tracks
               unlimited medications, doses, and schedules for every member of a household, sends
               reminders and refill alerts, verifies adherence, and alerts caregivers when a dose is
               missed.

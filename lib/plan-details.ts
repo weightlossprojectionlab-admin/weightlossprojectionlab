@@ -48,7 +48,7 @@ export const PLANS: Plan[] = [
     id: 'single',
     name: 'Single User',
     description:
-      'Personal wellness tracking with a 456,000-product catalog, in-store shopping mode, native health-app sync, smart recipes, and a coach that learns from your daily logs.',
+      'Personal wellness tracking with a 456,000-product catalog, in-store shopping mode, health-app step sync, smart recipes, and a coach that learns from your daily logs.',
     monthlyPrice: 9.99,
     yearlyPrice: 99,
     features: [
@@ -102,14 +102,14 @@ export const PLANS: Plan[] = [
       { name: 'Up to 3 external caregivers', included: true },
       // 7. Excluded — points at next-tier reason
       { name: 'Family members', included: false },
-      { name: 'Advanced ML insights', included: false },
+      { name: 'Advanced analytics & insights', included: false },
     ],
   },
   {
     id: 'family_basic',
     name: 'Family Basic',
     description:
-      'Care for the whole family — including members with allergies, dietary restrictions, or special needs. Up to 5 members with real-time shared shopping, ML illness detection, household duty tracking, allergen-aware recipes, and pet health tracking.',
+      'Care for the whole family — including members with allergies, dietary restrictions, or special needs. Up to 5 members with real-time shared shopping, illness detection, household duty tracking, allergen-aware recipes, and pet health tracking.',
     monthlyPrice: 19.99,
     yearlyPrice: 199,
     features: [
@@ -122,10 +122,10 @@ export const PLANS: Plan[] = [
       { name: 'Family health dashboard', included: true },
       // 3. Special-needs / allergen-aware care
       { name: 'Per-member allergies & dietary restrictions', included: true },
-      { name: 'Special-needs care flags & alerts', included: true },
+      { name: 'Special-needs care flags', included: true },
       { name: 'Allergen-aware recipes & meal planning', included: true },
-      // 4. ML illness detection — major family-care differentiator
-      { name: 'ML illness detection (vitals + mood patterns)', included: true },
+      // 4. Illness detection — major family-care differentiator
+      { name: 'Illness detection (vitals + mood patterns)', included: true },
       // 5. Household coordination
       { name: 'Household duty assignment & tracking', included: true },
       { name: 'Pet tracking & health reports', included: true },
@@ -133,7 +133,7 @@ export const PLANS: Plan[] = [
       { name: 'Role-based caregiver access', included: true },
       { name: 'Up to 5 external caregivers', included: true },
       // 7. Excluded — points at Family Plus's ML differentiation
-      { name: 'Advanced ML insights', included: false },
+      { name: 'Advanced analytics & insights', included: false },
     ],
   },
   {

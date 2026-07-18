@@ -235,7 +235,7 @@ export function AdvancedHealthProfile({
             </h2>
             <p className="text-sm text-muted-foreground mb-3">
               Provide detailed health information to get more accurate AI recommendations, meal
-              suggestions, and health insights. All data is encrypted and HIPAA/PHI compliant.
+              suggestions, and health insights. All data is encrypted and HIPAA-aligned.
             </p>
             <div className="flex items-center gap-2 text-xs text-primary">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
@@ -245,7 +245,7 @@ export function AdvancedHealthProfile({
                   clipRule="evenodd"
                 />
               </svg>
-              <span>HIPAA Compliant • Encrypted • Private</span>
+              <span>HIPAA-aligned • Encrypted • Private</span>
             </div>
           </div>
         </div>

@@ -132,7 +132,7 @@ const DIFFERENTIATORS = [
   {
     icon: ShieldCheckIcon,
     title: 'The kind your hospital lawyer would approve',
-    detail: 'HIPAA-compliant infrastructure with a real BAA. Same posture as your former employer.',
+    detail: 'HIPAA-aligned infrastructure with a real BAA. Same posture as your former employer.',
   },
   {
     icon: PaintBrushIcon,

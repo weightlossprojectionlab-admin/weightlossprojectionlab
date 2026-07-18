@@ -54,7 +54,7 @@ const FAQ = [
   {
     question: 'Is my parent\u2019s health information secure?',
     answer:
-      'Yes. Wellness Projection Lab is HIPAA-compliant, with BAAs available for practitioners who license the platform. Access controls mean only people you invite can see your parent\u2019s information.',
+      'Yes. Wellness Projection Lab is built to support HIPAA compliance, with BAAs available for practitioners who license the platform. Access controls mean only people you invite can see your parent\u2019s information.',
   },
   {
     question: 'What if my parent isn\u2019t comfortable with technology?',
@@ -108,7 +108,7 @@ export default function AgingParentsPage() {
               Start a Free 7-Day Trial
             </Link>
             <p className="text-xs text-muted-foreground mt-3">
-              HIPAA compliant &middot; Cancel anytime
+              HIPAA-aligned &middot; Cancel anytime
             </p>
           </div>
         </section>
@@ -210,16 +210,15 @@ export default function AgingParentsPage() {
           </ol>
         </section>
 
-        {/* Testimonial */}
+        {/* Example scenario */}
         <section className="bg-gradient-to-r from-blue-600 to-green-600 rounded-2xl shadow-2xl p-8 text-white">
-          <p className="text-lg italic mb-4 leading-relaxed">
-            &ldquo;My sister and I live in different states. Before Wellness
-            Projection Lab we spent an hour every Sunday on the phone piecing
-            together what had happened to dad that week. Now we just both look at
-            the same timeline.&rdquo;
+          <div className="text-xs uppercase tracking-wide opacity-80 mb-3">Example scenario</div>
+          <p className="text-lg mb-4 leading-relaxed">
+            Two siblings live in different states. Instead of an hour on the phone
+            every Sunday piecing together what happened to their dad that week, they
+            both look at the same timeline.
           </p>
-          <div className="text-sm font-semibold">Marcus T.</div>
-          <div className="text-xs opacity-80">Family caregiver, two siblings, one aging parent</div>
+          <div className="text-xs opacity-80">Family caregiving across two siblings and one aging parent</div>
         </section>
 
         {/* FAQ */}
@@ -290,7 +289,7 @@ export default function AgingParentsPage() {
             Start Your Free Trial
           </Link>
           <p className="text-xs text-muted-foreground">
-            HIPAA compliant &middot; Cancel anytime
+            HIPAA-aligned &middot; Cancel anytime
           </p>
         </section>
       </div>

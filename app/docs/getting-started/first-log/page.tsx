@@ -221,7 +221,7 @@ export default function FirstLogDocsPage() {
                   How accurate is the WPL photo analysis?
                 </summary>
                 <p className="text-gray-700 mt-2">
-                  WPL is 85-95% accurate depending on photo quality. You can always adjust portions and ingredients manually.
+                  Accuracy depends on photo quality and how clearly the food is visible. WPL gives you a strong starting estimate, and you can always adjust portions and ingredients manually.
                 </p>
               </details>
               <details className="border border-gray-200 rounded-lg p-4">

@@ -11,7 +11,7 @@ export const revalidate = false
 const HOMEPAGE_TITLE =
   'Family Health App for Caregivers — Track Aging Parents, Kids, and Pets in One Place'
 const HOMEPAGE_DESCRIPTION =
-  'The family health app for anyone caring for someone else. Track medications, vitals, appointments, and meals for aging parents, kids, partners, and pets — and share access with siblings, spouses, or sitters in seconds. HIPAA-compliant.'
+  'The family health app for anyone caring for someone else. Track medications, vitals, appointments, and meals for aging parents, kids, partners, and pets — and share access with siblings, spouses, or sitters in seconds. HIPAA-aligned security.'
 
 // Use absolute title to bypass the `%s | Wellness Projection Lab` template
 // defined in app/layout.tsx — the homepage title is already descriptive and
@@ -38,7 +38,7 @@ const HOMEPAGE_FAQ = [
   {
     question: "What is the best app to track an aging parent's medications?",
     answer:
-      'A family health app lets you log every medication for every person in one place, set reminders, and share access with anyone helping out — siblings, sitters, doctors. Wellness Projection Lab does this for the whole family (parents, kids, partners, and pets) on one HIPAA-compliant platform.',
+      'A family health app lets you log every medication for every person in one place, set reminders, and share access with anyone helping out — siblings, sitters, doctors. Wellness Projection Lab does this for the whole family (parents, kids, partners, and pets) on one HIPAA-aligned platform.',
   },
   {
     question: 'How can I monitor my elderly parent\u2019s health remotely?',
@@ -53,7 +53,7 @@ const HOMEPAGE_FAQ = [
   {
     question: 'Is Wellness Projection Lab HIPAA compliant?',
     answer:
-      'Yes. Wellness Projection Lab is built as a HIPAA-compliant platform, with BAAs available for practitioners who license the platform for their practice.',
+      'Wellness Projection Lab is built to support HIPAA-compliant workflows, with safeguards aligned to the HIPAA Privacy and Security Rules. Business Associate Agreements are available for practitioners who license the platform for their practice.',
   },
   {
     question: 'Does it work for newborns and pets, not just adults?',
@@ -153,24 +153,22 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Social Proof — Testimonials */}
+        {/* How Families Use WPL — example scenarios */}
         <div className="bg-gradient-to-r from-blue-600 to-green-600 rounded-2xl shadow-2xl p-8 text-white">
-          <h2 className="text-center text-2xl font-bold mb-6">Trusted by Families Like Yours</h2>
+          <h2 className="text-center text-2xl font-bold mb-2">How Families Use WPL</h2>
+          <p className="text-center text-sm opacity-80 mb-6">Example scenarios the platform is built for</p>
           <div className="grid md:grid-cols-3 gap-6">
             <div className="bg-white/10 backdrop-blur rounded-xl p-5">
-              <p className="text-sm mb-3 italic">"I manage my toddler, my mom with diabetes, and our dog's vet schedule. WPL replaced 4 apps."</p>
-              <div className="text-sm font-semibold">Sarah M.</div>
-              <div className="text-xs opacity-80">Working mom, 3 family profiles</div>
+              <p className="text-sm mb-3">Manage a toddler, a parent with diabetes, and the dog's vet schedule — in one place instead of four apps.</p>
+              <div className="text-xs opacity-80">Working parent, multiple profiles</div>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-xl p-5">
-              <p className="text-sm mb-3 italic">"My wife and I can both see our dad's vitals and medication schedule. It's been a lifesaver."</p>
-              <div className="text-sm font-semibold">Marcus T.</div>
-              <div className="text-xs opacity-80">Family caregiver</div>
+              <p className="text-sm mb-3">Two siblings both see Dad's vitals and medication schedule, so no one is left guessing.</p>
+              <div className="text-xs opacity-80">Shared family caregiving</div>
             </div>
             <div className="bg-white/10 backdrop-blur rounded-xl p-5">
-              <p className="text-sm mb-3 italic">"The AI meal logging saves me 20 minutes a day. I actually track consistently now."</p>
-              <div className="text-sm font-semibold">Diana L.</div>
-              <div className="text-xs opacity-80">Busy parent, 2 kids</div>
+              <p className="text-sm mb-3">Log a meal from a photo in seconds, so tracking actually sticks on busy days.</p>
+              <div className="text-xs opacity-80">AI meal logging</div>
             </div>
           </div>
         </div>
@@ -186,7 +184,7 @@ export default function HomePage() {
             Create Your Family Health Hub
           </Link>
           <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            Free 7-day trial. Cancel anytime. HIPAA compliant.
+            Free 7-day trial. Cancel anytime. HIPAA-aligned security.
           </p>
         </div>
 
@@ -194,7 +192,7 @@ export default function HomePage() {
         <div className="text-center space-y-2">
           <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
-              <span className="text-lg">&#x1F3E5;</span> HIPAA Compliant
+              <span className="text-lg">&#x1F3E5;</span> HIPAA-aligned security
             </span>
             <span className="flex items-center gap-1">
               <span className="text-lg">&#x1F46A;</span> Family Sharing Built In

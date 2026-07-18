@@ -129,7 +129,7 @@ export const ACQUISITION_TEMPLATES: AcquisitionEmailTemplate[] = [
 <a href="${appUrl}/ref/${vars.referralCode || ''}" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;">Claim Your Discount →</a>
 </td></tr>
 </table>
-<p style="font-size:14px;color:#6b7280;line-height:1.6;">Free 7-day trial included. HIPAA compliant.</p>
+<p style="font-size:14px;color:#6b7280;line-height:1.6;">Free 7-day trial included. HIPAA-aligned security.</p>
 </td></tr>
 <tr><td style="padding:24px 40px;background-color:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
 <p style="font-size:12px;color:#9ca3af;margin:0;">© 2026 Wellness Projection Lab. All rights reserved.</p>
@@ -171,7 +171,7 @@ export const ACQUISITION_TEMPLATES: AcquisitionEmailTemplate[] = [
 <a href="${appUrl}/auth" style="color:#ffffff;text-decoration:none;font-size:16px;font-weight:600;">Set Up Your Family →</a>
 </td></tr>
 </table>
-<p style="font-size:14px;color:#6b7280;line-height:1.6;">Free 7-day trial. No credit card required. HIPAA compliant.</p>
+<p style="font-size:14px;color:#6b7280;line-height:1.6;">Free 7-day trial. No credit card required. HIPAA-aligned security.</p>
 </td></tr>
 <tr><td style="padding:24px 40px;background-color:#f9fafb;border-top:1px solid #e5e7eb;text-align:center;">
 <p style="font-size:12px;color:#9ca3af;margin:0;">© 2026 Wellness Projection Lab. All rights reserved.</p>

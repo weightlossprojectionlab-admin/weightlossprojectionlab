@@ -21,7 +21,7 @@ const CURRENT_YEAR = new Date().getFullYear()
 export const metadata = buildPageMetadata({
   title: 'License Wellness Projection Lab — Launch Your Branded Health Practice',
   description:
-    'White-label the HIPAA-compliant family health platform under your own brand. Self-teaching personalization, AI photo capture, your subdomain, your colors, your clients. Launch in 48 hours.',
+    'White-label the HIPAA-aligned family health platform under your own brand. Self-teaching personalization, AI photo capture, your subdomain, your colors, your clients. Launch in 48 hours.',
   path: '/franchise',
   keywords: 'white label health platform, HIPAA franchise, private practice software, branded patient portal, nurse practice software, concierge health platform',
 })
@@ -33,7 +33,7 @@ const PROBLEMS = [
       'Tracking client vitals, meds, appointments and meals across notebooks, group texts, and shared docs. Nothing connects, nothing scales.',
   },
   {
-    title: 'No HIPAA-compliant tools',
+    title: 'No HIPAA-aligned tools',
     body:
       "Off-the-shelf consumer apps aren't BAA-eligible. Building your own would cost six figures and a year you don't have.",
   },
@@ -53,7 +53,7 @@ const FEATURES = [
   'Branded subdomain — yourname.wellnessprojectionlab.com',
   'Appointment scheduling and reminders',
   'Self-teaching health reports that adapt to each client',
-  'HIPAA-compliant infrastructure with BAA',
+  'HIPAA-aligned infrastructure with BAA',
   'Email + chat support',
 ]
 
@@ -67,7 +67,7 @@ const STEPS = [
 const FAQ = [
   {
     q: 'Is the platform really HIPAA compliant?',
-    a: 'Yes — we sign a Business Associate Agreement (BAA) with every franchise partner. All data is encrypted at rest and in transit, hosted on SOC 2 Type II certified infrastructure.',
+    a: 'The platform is built to support HIPAA compliance, and we sign a Business Associate Agreement (BAA) with every franchise partner. All data is encrypted at rest and in transit, hosted on SOC 2-certified Google Cloud infrastructure.',
   },
   {
     q: 'Who owns the client data?',
@@ -82,8 +82,8 @@ const FAQ = [
     a: 'Month-to-month service with 30-day cancellation notice. No long-term contracts. Annual billing is available at a 15% discount if you prefer.',
   },
   {
-    q: "What's the support SLA?",
-    a: '99.9% uptime guarantee. Email support on Starter, priority support on Professional, dedicated account manager on Enterprise. If we fall below 99.9% in any calendar month, you receive a prorated credit.',
+    q: "What are the service levels?",
+    a: 'We target high availability on Google Cloud\'s redundant infrastructure. Support scales by plan — email (Starter), priority (Professional), dedicated account manager (Enterprise). In the event of significant unplanned downtime, we work with you in good faith on a reasonable remedy.',
   },
   {
     q: 'Can I add seats later?',
@@ -104,7 +104,7 @@ export default function FranchiseMarketingPage() {
             Launch Your Branded Digital Health Practice in 48 Hours
           </h1>
           <p className="text-xl text-purple-100 max-w-2xl mx-auto">
-            White-label the HIPAA-compliant family health platform under your own brand.
+            White-label the HIPAA-aligned family health platform under your own brand.
             Your subdomain. Your colors. Your clients. Zero infrastructure to build.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
@@ -122,7 +122,7 @@ export default function FranchiseMarketingPage() {
             </a>
           </div>
           <div className="flex flex-wrap justify-center gap-6 text-sm pt-6">
-            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> HIPAA Compliant</span>
+            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> HIPAA-aligned</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> White-Label</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> Self-Teaching</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-300" /> Launch in 48 Hours</span>
@@ -250,7 +250,7 @@ export default function FranchiseMarketingPage() {
                   </li>
                   <li className="flex items-center gap-2">
                     <CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" />
-                    HIPAA compliant + BAA
+                    HIPAA-aligned + BAA
                   </li>
                 </ul>
                 <Link
@@ -269,20 +269,21 @@ export default function FranchiseMarketingPage() {
         </div>
       </section>
 
-      {/* TODO: real testimonials — placeholder copy below */}
+      {/* Example scenarios — illustrative, not attributed customer quotes */}
       <section className="py-16 px-4 bg-gradient-to-br from-purple-50 to-blue-50">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">Built for providers like you</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Built for providers like you</h2>
+          <p className="text-sm text-gray-500 mb-8">Example scenarios the platform is built for</p>
           <div className="grid md:grid-cols-3 gap-6 text-left">
             {[
-              { name: 'Maria R., RN', title: 'Solo home care nurse', quote: 'I used to juggle three apps and a notebook. Now everything for my 30 families lives in one place — branded as my practice.' },
-              { name: 'James T.', title: 'Wellness coach', quote: 'My clients used to text me their meals. Now they log them in my app, and I get personalized weekly summaries every Monday morning.' },
-              { name: 'Dr. Patel', title: 'Concierge physician', quote: 'The HIPAA compliance and BAA were non-negotiable. WPL handled both before I even asked.' },
+              { who: 'Solo home care nurse', scenario: 'Instead of juggling three apps and a notebook, everything for 30 families lives in one place — branded as your practice.' },
+              { who: 'Wellness coach', scenario: 'Clients log meals in your app instead of texting them, and you get personalized weekly summaries every Monday.' },
+              { who: 'Concierge physician', scenario: 'HIPAA-aligned controls and a signed BAA are in place, so the compliance basics are handled from day one.' },
             ].map(t => (
-              <div key={t.name} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
-                <p className="text-sm text-gray-700 italic mb-4">&ldquo;{t.quote}&rdquo;</p>
-                <div className="text-sm font-semibold text-gray-900">{t.name}</div>
-                <div className="text-xs text-gray-500">{t.title}</div>
+              <div key={t.who} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+                <div className="text-xs uppercase tracking-wide text-purple-500 mb-2">Example</div>
+                <p className="text-sm text-gray-700 mb-2">{t.scenario}</p>
+                <div className="text-xs text-gray-500">{t.who}</div>
               </div>
             ))}
           </div>
@@ -332,7 +333,7 @@ export default function FranchiseMarketingPage() {
             <Link href="/data-policy" className="hover:text-white">Data Policy</Link>
             <Link href="/" className="hover:text-white">Main site</Link>
           </div>
-          <p>&copy; {CURRENT_YEAR} Wellness Projection Lab. HIPAA Compliant | SOC 2 Type II.</p>
+          <p>&copy; {CURRENT_YEAR} Wellness Projection Lab. HIPAA-aligned | SOC 2-certified Google Cloud hosting.</p>
         </div>
       </footer>
     </main>

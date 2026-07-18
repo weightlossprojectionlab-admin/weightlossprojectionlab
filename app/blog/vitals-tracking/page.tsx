@@ -95,7 +95,7 @@ export default function VitalsTrackingBlogPage() {
         data={softwareApplicationSchema({
           name: 'Wellness Projection Lab Vitals Tracking',
           description:
-            'HIPAA-compliant vitals tracking that records blood pressure, blood glucose, heart rate, SpO2, temperature, mood, and pain level for every member of a household, then watches the readings for trends and alerts caregivers when something shifts.',
+            'HIPAA-aligned vitals tracking that records blood pressure, blood glucose, heart rate, SpO2, temperature, mood, and pain level for every member of a household, then watches the readings for trends and alerts caregivers when something shifts.',
           url: '/blog/vitals-tracking',
           image: '/screenshots/vitals-tracking/vital-reminders-desktop-light.png',
           featureList: [
@@ -140,7 +140,7 @@ export default function VitalsTrackingBlogPage() {
                 engine can lift verbatim. Kept consistent with the
                 SoftwareApplication schema description. */}
             <p className="text-base text-white/90 mb-8 leading-relaxed max-w-3xl mx-auto">
-              <strong>WPL Vitals Tracking</strong> is a HIPAA-compliant tool that records blood pressure,
+              <strong>WPL Vitals Tracking</strong> is a HIPAA-aligned tool that records blood pressure,
               blood glucose, heart rate, SpO2, temperature, mood, and pain level for every household member,
               then watches the readings for trends and alerts caregivers when something shifts.
             </p>

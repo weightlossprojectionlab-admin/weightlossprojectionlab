@@ -276,7 +276,7 @@ export default function PatientsBlogPage() {
             <FeatureCard
               icon={<ClipboardDocumentListIcon className="w-10 h-10 text-indigo-600" />}
               title="Medical Records"
-              description="Medications, vital signs, appointments, and medical documents — isolated per profile, HIPAA compliant."
+              description="Medications, vital signs, appointments, and medical documents — isolated per profile, HIPAA-aligned."
             />
             <FeatureCard
               icon={<BellAlertIcon className="w-10 h-10 text-red-600" />}
@@ -320,7 +320,7 @@ export default function PatientsBlogPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <TrustCard
               title="Data Isolation"
-              items={['Complete separation between profiles', 'Individual encryption per person', 'HIPAA-compliant access logging']}
+              items={['Complete separation between profiles', 'Individual encryption per person', 'HIPAA-aligned access logging']}
             />
             <TrustCard
               title="Collaboration"

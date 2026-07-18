@@ -46,8 +46,8 @@ export default function DataPolicyPage() {
             <li>TLS 1.3 encryption in transit</li>
             <li>Role-based access controls</li>
             <li>Automated daily backups</li>
-            <li>SOC 2 Type II certified infrastructure</li>
-            <li>HIPAA-compliant data handling per the BAA</li>
+            <li>Hosted on SOC 2-certified Google Cloud infrastructure</li>
+            <li>HIPAA-aligned data handling, with a BAA for licensed practitioners</li>
           </ul>
 
           <h2 className="text-xl font-bold">6. No Data Selling</h2>

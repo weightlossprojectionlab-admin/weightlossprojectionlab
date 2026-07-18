@@ -287,8 +287,12 @@ export default function HistoricalReportsModal({
   }, [])
 
   const handleExportPDF = useCallback(() => {
-    toast('PDF export coming soon!', { icon: '📄' })
-  }, [])
+    if (!selectedReport) return
+    // Reuses the same styled print window as Print — the browser's
+    // "Save as PDF" destination produces the doctor-ready PDF (no extra deps).
+    toast('Choose "Save as PDF" as the destination in the print dialog', { icon: '📄' })
+    handlePrint()
+  }, [selectedReport, handlePrint])
 
   // Track view count when report is selected
   useEffect(() => {
@@ -509,12 +513,11 @@ export default function HistoricalReportsModal({
                         </button>
                         <button
                           onClick={handleExportPDF}
-                          disabled
-                          className="flex items-center gap-1.5 px-3 py-2 bg-gray-100 dark:bg-gray-700 text-muted-foreground rounded-lg transition-colors text-sm font-medium opacity-50 cursor-not-allowed"
-                          title="Export PDF (coming soon)"
+                          className="flex items-center gap-1.5 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors text-sm font-medium"
+                          title="Download as PDF for your doctor"
                         >
                           <ArrowDownTrayIcon className="w-4 h-4" />
-                          <span>PDF</span>
+                          <span>PDF for Doctor</span>
                         </button>
                       </div>
                     </div>

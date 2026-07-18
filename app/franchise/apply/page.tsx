@@ -231,7 +231,7 @@ export default function FranchisePage() {
             Get the AI-powered platform that lets you manage 50 families from one dashboard.
           </p>
           <div className="flex flex-wrap justify-center gap-6 text-sm">
-            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> HIPAA Compliant</span>
+            <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> HIPAA-aligned</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> White-Label</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> AI-Powered</span>
             <span className="flex items-center gap-2"><CheckIcon className="h-5 w-5 text-green-400" /> Launch in 48 Hours</span>
@@ -429,7 +429,7 @@ export default function FranchisePage() {
                     <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> {plan.ai}</li>
                     <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> {plan.support}</li>
                     <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> White-label branding</li>
-                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> HIPAA compliant</li>
+                    <li className="flex items-center gap-2"><CheckIcon className="h-4 w-4 text-green-500 flex-shrink-0" /> HIPAA-aligned</li>
                   </ul>
                 </button>
               )
@@ -517,9 +517,9 @@ export default function FranchisePage() {
               { q: "Can I customize the branding?", a: "Yes — your logo, colors, company name, and subdomain. Your clients see your brand, not ours." },
               { q: "What if I need more seats later?", a: "Add seats anytime from your admin dashboard. Each additional seat is billed at your plan's per-seat rate." },
               { q: "Is there a contract?", a: "Month-to-month by default. Annual billing available at 15% discount. Cancel anytime with 30 days notice." },
-              { q: "What about HIPAA compliance?", a: "Fully HIPAA compliant. We sign a BAA with every franchise partner. All data encrypted at rest and in transit. SOC 2 Type II certified infrastructure." },
+              { q: "What about HIPAA compliance?", a: "The platform is built to support HIPAA compliance, and we sign a BAA with every franchise partner. All data is encrypted at rest and in transit, hosted on SOC 2-certified Google Cloud infrastructure. (WPL does not currently hold its own SOC 2 or ISO 27001 certification.)" },
               { q: "Who owns the client data?", a: "You do. We provide the infrastructure. Upon termination, all your data is exported and returned to you within 30 days." },
-              { q: "What's the SLA?", a: "99.9% uptime guarantee. If we fall below that in any calendar month, you receive a prorated credit." },
+              { q: "What are the service levels?", a: "We target high availability on Google Cloud's redundant infrastructure and work to minimize unplanned downtime. In the event of significant downtime, we'll work with you in good faith on a reasonable remedy." },
             ].map(({ q, a }, i) => (
               <details key={i} className="group">
                 <summary className="cursor-pointer font-medium text-gray-900 hover:text-purple-700 list-none flex items-center justify-between">
@@ -535,7 +535,7 @@ export default function FranchisePage() {
 
       <div className="bg-gray-900 text-white py-8 px-4 text-center text-sm">
         <p>&copy; {new Date().getFullYear()} Wellness Projection Lab. All rights reserved.</p>
-        <p className="text-gray-500 mt-1">HIPAA Compliant | SOC 2 Type II | ISO 27001</p>
+        <p className="text-gray-500 mt-1">HIPAA-aligned | SOC 2-certified Google Cloud hosting</p>
       </div>
     </main>
   )

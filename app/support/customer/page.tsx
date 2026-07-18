@@ -59,7 +59,7 @@ export default function CustomerSupportPage() {
           </Link>
 
           <Link
-            href="/support/contact"
+            href="/contact"
             className="bg-card border border-border rounded-lg p-4 hover:border-primary transition-colors"
           >
             <div className="text-3xl mb-2">💬</div>
@@ -136,16 +136,16 @@ export default function CustomerSupportPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              href="/support/contact"
+              href="/contact"
               className="btn btn-primary"
             >
               Contact Support
             </Link>
             <Link
-              href="/support/live-chat"
+              href="/support"
               className="btn btn-secondary"
             >
-              Live Chat
+              Browse Help Articles
             </Link>
           </div>
         </div>

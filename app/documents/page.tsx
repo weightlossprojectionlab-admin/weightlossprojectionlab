@@ -44,7 +44,7 @@ export default function DocumentsPage() {
             <h1 className="text-5xl font-bold mb-6">Medical Document Management</h1>
             <p className="text-xl text-blue-100 mb-8 leading-relaxed">
               Securely store, organize, and access medical documents for all family members in one centralized location.
-              HIPAA-compliant storage with powerful OCR text extraction and intelligent categorization.
+              HIPAA-aligned storage with powerful OCR text extraction and intelligent categorization.
             </p>
             <div className="flex flex-wrap gap-4 justify-center">
               <Link
@@ -508,7 +508,7 @@ export default function DocumentsPage() {
           <div className="space-y-4">
             <FAQItem
               question="How secure are my medical documents?"
-              answer="All documents are encrypted with AES-256 at rest and TLS 1.3 in transit. We are HIPAA, SOC 2 Type II, and ISO 27001 certified. Documents are stored in Firebase Cloud Storage with geo-redundant backups."
+              answer="All documents are encrypted with AES-256 at rest and TLS 1.3 in transit, with controls aligned to the HIPAA Privacy and Security Rules. Documents are stored in Firebase Cloud Storage (on SOC 2-certified Google Cloud infrastructure) with geo-redundant backups."
             />
             <FAQItem
               question="Can I upload multiple pages for a single document?"

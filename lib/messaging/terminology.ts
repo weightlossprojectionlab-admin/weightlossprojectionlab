@@ -8,10 +8,11 @@
  * - Product: Branded WPL technology for trust & differentiation
  *
  * Architecture note: WPL uses two distinct technology layers. AI (Gemini Vision)
- * powers photo-based capture (meals, medical document OCR). Self-teaching ML
- * (WPL-owned) powers personalization, projections, and recommendations that
- * learn each family member's patterns over time. Terminology in this file
- * reflects which layer actually powers each feature — do not inflate.
+ * powers photo-based capture (meals, medical document OCR). A self-teaching
+ * personalization layer (WPL-owned, rule-based + statistical heuristics — not a
+ * trained ML model) powers personalization, projections, and recommendations
+ * that adapt to each family member's patterns over time. Terminology in this
+ * file reflects which layer actually powers each feature — do not inflate.
  */
 
 /**
@@ -58,8 +59,8 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Computer Vision Meal Analysis',
-      description: 'Advanced neural network technology for precise meal identification and nutritional breakdown',
-      technicalDetails: 'Multi-modal deep learning models trained on 10M+ meal images'
+      description: 'Computer vision for meal identification and nutritional breakdown, powered by Google\'s Gemini vision model',
+      technicalDetails: 'Gemini vision for food recognition, with results validated against the USDA nutrition database'
     },
     product: {
       label: 'WPL Vision™',
@@ -68,7 +69,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Health Insights & Predictions (self-teaching ML)
+  // Health Insights & Predictions (self-teaching, statistical)
   healthInsights: {
     seo: {
       headline: 'Self-Teaching Health Insights & Predictions',
@@ -77,7 +78,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Predictive Health Analytics Engine',
-      description: 'Self-teaching ML algorithms analyze your health data to identify trends, predict outcomes, and provide evidence-based recommendations that adapt as new data accumulates',
+      description: 'Analytics that surface trends in your health data and provide evidence-based suggestions that adapt as you log more',
       technicalDetails: 'Time-series analysis with statistical models for outcome prediction; learns each family member\'s baseline over time'
     },
     product: {
@@ -96,8 +97,8 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Clinical-Grade OCR & NLP Medication Parser',
-      description: 'HIPAA-compliant optical character recognition with natural language processing to extract medication data from labels and prescriptions',
-      technicalDetails: 'Multi-language OCR with pharmaceutical vocabulary NLP for 99.7% accuracy'
+      description: 'HIPAA-aligned optical character recognition with natural language processing to extract medication data from labels and prescriptions',
+      technicalDetails: 'Gemini vision OCR with pharmaceutical-vocabulary post-processing for drug name, dosage, and instruction extraction'
     },
     product: {
       label: 'WPL Prescribe™',
@@ -106,17 +107,17 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Smart Shopping Suggestions (self-teaching ML, rule-based + collaborative filtering)
+  // Smart Shopping Suggestions (rule-based + purchase-history heuristics + Gemini)
   shoppingSuggestions: {
     seo: {
-      headline: 'Self-Teaching Smart Shopping Lists',
-      description: 'Adaptive shopping suggestions that learn what your household actually buys, based on health goals, inventory, and meal plans',
-      keywords: ['self-teaching shopping list', 'smart grocery suggestions', 'adaptive meal planning']
+      headline: 'Smart Shopping Lists That Adapt',
+      description: 'Adaptive shopping suggestions based on your household\'s purchase history, health goals, inventory, and meal plans',
+      keywords: ['smart shopping list', 'smart grocery suggestions', 'adaptive meal planning']
     },
     marketing: {
-      headline: 'Self-Teaching Shopping Recommendation Engine',
-      description: 'Multi-factor recommendation system combining health goals, dietary restrictions, inventory depletion, and nutritional optimization — learns your household\'s actual purchase patterns over time',
-      technicalDetails: 'Collaborative filtering with constraint-based optimization for health-aligned shopping'
+      headline: 'Smart Shopping Recommendation Engine',
+      description: 'Multi-factor suggestions combining health goals, dietary restrictions, and inventory — adapting to your household\'s purchase patterns over time',
+      technicalDetails: 'Health-goal rules and allergen/diet constraints plus purchase-history heuristics (frequently-bought-together, due-to-buy), with Gemini-generated suggestions'
     },
     product: {
       label: 'Smart Suggestions',
@@ -125,17 +126,17 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Recipe Generation (self-teaching ML, with Gemini fallback for missing recipe steps)
+  // Recipe Recommendations (inventory + popularity matching, with Gemini for recipe steps)
   recipeGeneration: {
     seo: {
-      headline: 'Self-Teaching Recipe Recommendations',
-      description: 'Personalized recipe recommendations that adapt to your family\'s inventory, health goals, restrictions, and preferences over time',
-      keywords: ['self-teaching recipe recommendations', 'personalized recipes', 'inventory recipe creator']
+      headline: 'Personalized Recipe Recommendations',
+      description: 'Recipe recommendations matched to your family\'s inventory, health goals, restrictions, and preferences',
+      keywords: ['personalized recipe recommendations', 'personalized recipes', 'inventory recipe creator']
     },
     marketing: {
       headline: 'Adaptive Recipe Recommendation System',
-      description: 'Self-teaching ML uses collaborative filtering on product associations and family preferences to recommend recipes optimized for your health conditions and available ingredients. Gemini Flash fills in missing recipe steps when needed.',
-      technicalDetails: 'Collaborative filtering with product-association mining; Gemini Flash Lite for recipe-step generation when inventory matches a recipe with incomplete instructions'
+      description: 'Matches recipes to your available ingredients, health conditions, and preferences using community-popularity and product-association signals. Gemini Flash fills in missing recipe steps when needed.',
+      technicalDetails: 'Product-association and community-popularity ranking (aggregate counts, not a trained model); Gemini Flash for recipe-step generation when inventory matches a recipe with incomplete instructions'
     },
     product: {
       label: 'Recipe Recommendations',
@@ -153,7 +154,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Predictive Wellness Coaching',
-      description: 'Self-teaching ML coaching surfaced from each family member\'s accumulated meal, vitals, weight, and adherence data. Not a conversational chatbot — it\'s evidence-based guidance derived from your actual patterns.',
+      description: 'Coaching surfaced from each family member\'s accumulated meal, vitals, weight, and adherence data. Not a conversational chatbot — it\'s guidance derived from your actual patterns.',
       technicalDetails: 'Pattern detection on time-series health data with rule-based intervention suggestions; roadmap feature, not yet shipped'
     },
     product: {
@@ -163,7 +164,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Weight Projections (self-teaching ML, statistical time-series)
+  // Weight Projections (self-teaching, statistical time-series)
   weightProjections: {
     seo: {
       headline: 'Self-Teaching Weight Loss Projections',
@@ -173,7 +174,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     marketing: {
       headline: 'Predictive Weight Modeling',
       description: 'Statistical time-series models analyze your weight trends and lifestyle factors to project realistic goal achievement timelines — refining as more data accumulates',
-      technicalDetails: 'Bayesian regression with confidence intervals for evidence-based projections'
+      technicalDetails: 'Statistical weight-trend projection from rolling trend analysis (linear regression)'
     },
     product: {
       label: 'Goal Projections',
@@ -201,7 +202,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Health Correlations (self-teaching ML, statistical correlation analysis)
+  // Health Correlations (self-teaching, statistical correlation analysis)
   healthCorrelations: {
     seo: {
       headline: 'Self-Teaching Health Pattern Detection',
@@ -239,7 +240,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Expiration Predictions (self-teaching ML on shelf-life data)
+  // Expiration Predictions (self-teaching, category + storage rules)
   expirationPredictions: {
     seo: {
       headline: 'Self-Teaching Food Expiration Tracker',
@@ -248,7 +249,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Predictive Inventory Degradation Modeling',
-      description: 'Self-teaching ML models trained on shelf-life data predict optimal consumption windows based on storage conditions and product categories',
+      description: 'Shelf-life estimates from storage conditions and product categories to suggest optimal consumption windows',
       technicalDetails: 'Time-to-event analysis with environmental factor adjustment for accurate predictions'
     },
     product: {
@@ -267,7 +268,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Unified Multi-Patient Analytics Platform',
-      description: 'Aggregate health intelligence across household members with role-based access control and HIPAA-compliant data segregation',
+      description: 'Aggregate health intelligence across household members with role-based access control and HIPAA-aligned data segregation',
       technicalDetails: 'RBAC-secured multi-tenant architecture with patient-level data isolation'
     },
     product: {
@@ -277,7 +278,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     }
   },
 
-  // Veterinary Intelligence (self-teaching ML, species-specific analytics)
+  // Veterinary Intelligence (self-teaching, species-specific reference ranges)
   veterinaryIntelligence: {
     seo: {
       headline: 'Self-Teaching Pet Health Tracking',
@@ -286,7 +287,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Species-Specific Veterinary Health Analytics',
-      description: 'Self-teaching ML calibrated for canine and feline physiology provides breed-aware health monitoring and veterinary care recommendations that adapt to your specific pet',
+      description: 'Breed- and species-aware health monitoring and veterinary care suggestions, using reference ranges for canine and feline physiology',
       technicalDetails: 'Species-specific statistical models on veterinary care guidelines and breed standards'
     },
     product: {
@@ -306,7 +307,7 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     marketing: {
       headline: 'Computer Vision Barcode Recognition',
       description: 'Real-time barcode detection with product database integration for instant nutritional data and inventory management',
-      technicalDetails: 'CNN-based barcode localization with Open Food Facts API integration for 2M+ products'
+      technicalDetails: 'Barcode scanning with Open Food Facts integration across 2M+ products'
     },
     product: {
       label: 'Barcode Scanner',
@@ -324,8 +325,8 @@ export const FEATURE_MESSAGING: Record<string, FeatureMessaging> = {
     },
     marketing: {
       headline: 'Clinical Safety Analysis Engine',
-      description: 'NLP-powered medication-food interaction detection combined with allergen analysis for patient safety',
-      technicalDetails: 'Drug-nutrient interaction database with allergy constraint checking for HIPAA-compliant safety'
+      description: 'Allergen analysis on parsed meal and product ingredients for patient safety',
+      technicalDetails: 'Drug-nutrient interaction database with allergy constraint checking for HIPAA-aligned safety'
     },
     product: {
       label: 'Safety Alerts',
@@ -452,7 +453,7 @@ export function getSEOKeywords(featureKey: string): string[] {
  *
  * @example
  * getTechnicalDetails('medicationParsing')
- * // 'Multi-language OCR with pharmaceutical vocabulary NLP for 99.7% accuracy'
+ * // 'Gemini vision OCR with pharmaceutical-vocabulary post-processing for drug name, dosage, and instruction extraction'
  */
 export function getTechnicalDetails(featureKey: string): string | undefined {
   const messaging = getFeatureMessaging(featureKey, 'marketing')

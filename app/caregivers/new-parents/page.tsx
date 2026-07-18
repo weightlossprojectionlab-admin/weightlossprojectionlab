@@ -64,7 +64,7 @@ const FAQ = [
   {
     question: 'Is Wellness Projection Lab HIPAA compliant?',
     answer:
-      'Yes. Wellness Projection Lab is built as a HIPAA-compliant platform with fine-grained access controls, and BAAs are available for practitioners who license the platform.',
+      'Yes. Wellness Projection Lab is built to support HIPAA compliance with fine-grained access controls, and BAAs are available for practitioners who license the platform.',
   },
   {
     question: 'Is there a free trial?',
@@ -112,7 +112,7 @@ export default function NewParentsPage() {
               Start a Free 7-Day Trial
             </Link>
             <p className="text-xs text-muted-foreground mt-3">
-              HIPAA compliant &middot; Cancel anytime
+              HIPAA-aligned &middot; Cancel anytime
             </p>
           </div>
         </section>
@@ -210,15 +210,14 @@ export default function NewParentsPage() {
           </ol>
         </section>
 
-        {/* Testimonial */}
+        {/* Example scenario */}
         <section className="bg-gradient-to-r from-pink-600 to-blue-600 rounded-2xl shadow-2xl p-8 text-white">
-          <p className="text-lg italic mb-4 leading-relaxed">
-            &ldquo;My husband and I stopped texting each other about feeds by week two.
-            We just both check the app. It sounds small, but at 3 a.m. it felt
-            enormous.&rdquo;
+          <div className="text-xs uppercase tracking-wide opacity-80 mb-3">Example scenario</div>
+          <p className="text-lg mb-4 leading-relaxed">
+            Two parents stop texting each other about feeds by week two — they both
+            just check the app. It sounds small, but at 3 a.m. it can feel enormous.
           </p>
-          <div className="text-sm font-semibold">Diana L.</div>
-          <div className="text-xs opacity-80">New parent, sharing with one partner and two grandparents</div>
+          <div className="text-xs opacity-80">A new parent sharing with one partner and two grandparents</div>
         </section>
 
         {/* FAQ */}
@@ -281,7 +280,7 @@ export default function NewParentsPage() {
             Start Your Free Trial
           </Link>
           <p className="text-xs text-muted-foreground">
-            HIPAA compliant &middot; Cancel anytime
+            HIPAA-aligned &middot; Cancel anytime
           </p>
         </section>
       </div>

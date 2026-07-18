@@ -195,7 +195,7 @@ export function Footer() {
               &copy; {currentYear} {tenantBranding?.companyName || 'Wellness Projection Lab'}. All rights reserved.
             </p>
             <p className="text-xs text-gray-500 mt-1">
-              {tenantBranding?.tagline || 'Intelligent wellness tracking with proprietary ML. HIPAA compliant.'}
+              {tenantBranding?.tagline || 'Intelligent wellness tracking. HIPAA-aligned security.'}
             </p>
           </div>
 
@@ -240,15 +240,15 @@ export function Footer() {
           <div className="flex items-center gap-4 text-xs text-gray-400">
             <div className="flex items-center gap-1">
               <span className="text-green-500">✓</span>
-              <span>HIPAA Compliant</span>
+              <span>HIPAA-aligned</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-green-500">✓</span>
-              <span>SOC 2 Type II</span>
+              <span>AES-256 encrypted</span>
             </div>
             <div className="flex items-center gap-1">
               <span className="text-green-500">✓</span>
-              <span>ISO 27001</span>
+              <span>Role-based access</span>
             </div>
           </div>
         </div>

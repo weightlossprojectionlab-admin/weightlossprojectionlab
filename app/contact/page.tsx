@@ -582,7 +582,7 @@ export default function ContactPage() {
                 How do I report a security issue?
               </h3>
               <p className="text-sm text-gray-600">
-                Use the contact form above and select "Privacy/Security Concern". We monitor security submissions 24/7 and take all reports very seriously.
+                Use the contact form above and select "Privacy/Security Concern". We review security submissions promptly and take all reports very seriously.
               </p>
             </div>
 
