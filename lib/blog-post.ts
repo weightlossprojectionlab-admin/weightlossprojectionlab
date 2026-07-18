@@ -20,6 +20,9 @@ import { getBlogAuthor } from '@/lib/blog-authors'
 export interface BlogPostConfig {
   slug: string
   title: string
+  /** Optional SEO/CTR-optimized <title> + OG title, distinct from the on-page
+   *  H1 (`title`). Falls back to `title`. The schema headline always uses `title`. */
+  metaTitle?: string
   description: string
   keywords: string
   datePublished: string
@@ -34,17 +37,34 @@ export interface BlogPostConfig {
   schemaKeywords?: string
   /** Author id from lib/blog-authors (defaults to the founder). */
   authorId?: string
+  /** schema.org `about` topic entities. Defaults to the PHR/caregiving topics
+   *  every caregiver post genuinely covers — a real topical signal for AEO/SGE
+   *  (not keyword stuffing). Override per post to add specific topics. */
+  about?: string[]
+  /** Authoritative outbound citations. Single source: drives BOTH the visible
+   *  Sources section (<Sources items={CONFIG.citations}/>) and schema `citation`.
+   *  Important for YMYL/health-post trust. */
+  citations?: BlogSource[]
 }
+
+export interface BlogSource {
+  label: string
+  url: string
+}
+
+/** Honest default topics for the caregiver PHR content — true of every post here. */
+const DEFAULT_ABOUT = ['Personal Health Record', 'Family Caregiving', 'Care Coordination']
 
 export function buildBlogPostMetadata(c: BlogPostConfig): Metadata {
   const url = `/blog/${c.slug}`
+  const seoTitle = c.metaTitle ?? c.title
   return {
-    title: { absolute: `${c.title} | Wellness Projection Lab` },
+    title: { absolute: `${seoTitle} | Wellness Projection Lab` },
     description: c.description,
     keywords: c.keywords,
     alternates: { canonical: url },
-    openGraph: { title: c.title, description: c.description, type: 'article', url },
-    twitter: { card: 'summary_large_image', title: c.title, description: c.description },
+    openGraph: { title: seoTitle, description: c.description, type: 'article', url },
+    twitter: { card: 'summary_large_image', title: seoTitle, description: c.description },
   }
 }
 
@@ -61,6 +81,8 @@ export function buildBlogPostJsonLd(c: BlogPostConfig) {
       dateModified: c.dateModified,
       keywords: c.schemaKeywords ?? c.keywords,
       author: { name: author.name, url: author.url, jobTitle: author.role, knowsAbout: author.knowsAbout },
+      about: c.about ?? DEFAULT_ABOUT,
+      ...(c.citations?.length ? { citations: c.citations.map(s => s.url) } : {}),
     }),
     faqPageSchema(c.faqItems),
     softwareApplicationSchema({

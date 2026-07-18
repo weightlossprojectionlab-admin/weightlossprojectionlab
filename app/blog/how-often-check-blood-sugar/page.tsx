@@ -7,6 +7,7 @@ import { AuthorByline, AuthorBio } from '@/components/blog/AuthorByline'
 import { SeriesNav } from '@/components/blog/SeriesNav'
 import { FaqAccordion } from '@/components/blog/FaqAccordion'
 import { CtaBand } from '@/components/blog/CtaBand'
+import { Sources } from '@/components/blog/Sources'
 
 const PAGE_SLUG = 'how-often-check-blood-sugar'
 const PAGE_TITLE = 'How Often Should You Record Blood Sugar Levels?'
@@ -51,6 +52,9 @@ const CONFIG: BlogPostConfig = {
   appUrl: '/patients',
   appDescription: 'Record blood sugar readings and see the pattern over time.',
   faqItems: FAQ_ITEMS,
+  citations: [
+    { label: 'MedlinePlus (NIH) — Blood Glucose / Blood Sugar', url: 'https://medlineplus.gov/bloodsugar.html' },
+  ],
 }
 
 export const metadata = buildBlogPostMetadata(CONFIG)
@@ -122,6 +126,8 @@ export default function HowOftenCheckBloodSugarPage() {
           primaryHref="/patients"
           primaryLabel="Log Blood Sugar"
         />
+
+        <Sources items={CONFIG.citations} />
 
         <p className="text-center text-sm text-muted-foreground mt-8">
           This article is educational and is not medical advice, diagnosis, or treatment. Your doctor or diabetes

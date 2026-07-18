@@ -13,6 +13,7 @@ import { AuthorByline, AuthorBio } from '@/components/blog/AuthorByline'
 import { SeriesNav } from '@/components/blog/SeriesNav'
 import { FaqAccordion } from '@/components/blog/FaqAccordion'
 import { CtaBand } from '@/components/blog/CtaBand'
+import { Sources } from '@/components/blog/Sources'
 import { ProblemCard, HowToStep } from '@/components/blog/cards'
 
 const PAGE_SLUG = 'track-vitals-at-home'
@@ -52,12 +53,16 @@ const CONFIG: BlogPostConfig = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords:
-    'track vital signs at home, home blood pressure monitoring, how to monitor vitals caregiver, blood sugar tracking at home, vital signs log',
+    'track vital signs at home, home blood pressure monitoring, how to monitor vitals caregiver, blood sugar tracking at home, vital signs log, chronic disease self-management, patient-controlled health record, personal health record tracking',
   datePublished: DATE_PUBLISHED,
   dateModified: DATE_MODIFIED,
   appUrl: '/patients',
   appDescription: 'Log vitals at home and watch the trends over time for every family member.',
   faqItems: FAQ_ITEMS,
+  citations: [
+    { label: 'MedlinePlus (NIH) — Vital Signs', url: 'https://medlineplus.gov/vitalsigns.html' },
+    { label: 'MedlinePlus (NIH) — High Blood Pressure', url: 'https://medlineplus.gov/highbloodpressure.html' },
+  ],
 }
 
 export const metadata = buildBlogPostMetadata(CONFIG)
@@ -131,6 +136,8 @@ export default function TrackVitalsAtHomePage() {
           primaryHref="/patients"
           primaryLabel="Start Tracking Vitals"
         />
+
+        <Sources items={CONFIG.citations} />
 
         <p className="text-center text-sm text-muted-foreground mt-8">
           Educational information for caregivers — not medical advice. Your care team sets the right targets and

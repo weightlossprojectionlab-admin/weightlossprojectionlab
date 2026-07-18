@@ -73,6 +73,12 @@ export interface BlogPostingInput {
   keywords?: string
   /** Named person author for E-E-A-T. Falls back to Organization if omitted. */
   author?: BlogPostAuthor
+  /** Topic entities the post is about (schema.org `about`). A real topical
+   *  signal for AI/answer engines — prefer this over stuffing `keywords`. */
+  about?: string[]
+  /** Authoritative source URLs cited by the post (schema.org `citation`).
+   *  An E-E-A-T/trust signal for YMYL content. */
+  citations?: string[]
 }
 
 export function blogPostingSchema(input: BlogPostingInput) {
@@ -105,6 +111,10 @@ export function blogPostingSchema(input: BlogPostingInput) {
     datePublished: input.datePublished,
     dateModified: input.dateModified || input.datePublished,
     author,
+    ...(input.about?.length
+      ? { about: input.about.map(name => ({ '@type': 'Thing', name })) }
+      : {}),
+    ...(input.citations?.length ? { citation: input.citations } : {}),
     publisher: {
       '@type': 'Organization',
       name: SITE_NAME,

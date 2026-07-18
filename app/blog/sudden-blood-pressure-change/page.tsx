@@ -7,6 +7,7 @@ import { AuthorByline, AuthorBio } from '@/components/blog/AuthorByline'
 import { SeriesNav } from '@/components/blog/SeriesNav'
 import { FaqAccordion } from '@/components/blog/FaqAccordion'
 import { CtaBand } from '@/components/blog/CtaBand'
+import { Sources } from '@/components/blog/Sources'
 
 const PAGE_SLUG = 'sudden-blood-pressure-change'
 const PAGE_TITLE = 'What Does a Sudden Change in Blood Pressure Mean?'
@@ -51,6 +52,10 @@ const CONFIG: BlogPostConfig = {
   appUrl: '/patients',
   appDescription: 'Log blood pressure at home and watch the trend over time.',
   faqItems: FAQ_ITEMS,
+  citations: [
+    { label: 'MedlinePlus (NIH) — High Blood Pressure / Hypertension', url: 'https://medlineplus.gov/highbloodpressure.html' },
+    { label: 'American Heart Association — High Blood Pressure', url: 'https://www.heart.org/en/health-topics/high-blood-pressure' },
+  ],
 }
 
 export const metadata = buildBlogPostMetadata(CONFIG)
@@ -125,6 +130,8 @@ export default function SuddenBloodPressureChangePage() {
           primaryHref="/patients"
           primaryLabel="Track Blood Pressure"
         />
+
+        <Sources items={CONFIG.citations} />
 
         <p className="text-center text-sm text-muted-foreground mt-8">
           This article is educational and is not medical advice, diagnosis, or treatment. Always consult a qualified

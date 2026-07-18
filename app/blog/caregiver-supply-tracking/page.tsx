@@ -17,8 +17,6 @@ import { ProblemCard, HowToStep } from '@/components/blog/cards'
 
 const PAGE_SLUG = 'caregiver-supply-tracking'
 const PAGE_TITLE = 'Beyond the Kitchen: Tracking Essential Medical & Household Supplies'
-const PAGE_DESCRIPTION =
-  'Running out of gauze, formula, or a special-diet staple can stall an entire care plan. Here is a simple way to track medical and household supplies by urgency and frequency — so you never scramble again.'
 const DATE_PUBLISHED = '2026-07-18T09:10:00-05:00'
 const DATE_MODIFIED = '2026-07-18T09:10:00-05:00'
 
@@ -31,6 +29,16 @@ const FAQ_ITEMS: FAQItem[] = [
       'Anything the care plan depends on: medications and refills, wound-care items like gauze and tape, incontinence supplies, formula or special-diet foods, and equipment parts such as CPAP filters. If running out would change someone’s day, it belongs on the list.',
   },
   {
+    question: 'Why do I keep buying duplicate medical supplies?',
+    answer:
+      'Usually because the count lives in your head or in a few different closets, so no one can see the real stock level at a glance. Move everything to one shared list and you get a single source of truth the whole family can check before a store run — which is how the double-buying stops.',
+  },
+  {
+    question: 'How can a shared inventory system save me money?',
+    answer:
+      'It prevents over-buying. When you and other caregivers can see current stock in real time, you stop grabbing "just in case" items you already have. You buy what is actually low — and you catch it before it runs out, so there are no emergency runs at premium prices either.',
+  },
+  {
     question: 'How should I organize supplies so nothing runs out?',
     answer:
       'Sort by two things: urgency (how bad is it if you run out today?) and frequency (how fast do you go through it?). High-urgency, fast-use items get the closest watch and the earliest reminders. Everything else can be checked less often.',
@@ -39,6 +47,11 @@ const FAQ_ITEMS: FAQItem[] = [
     question: 'Can I use a kitchen inventory tool for medical supplies?',
     answer:
       'Yes. The same idea that tracks pantry items — scan or add an item, set where it lives, and get a nudge before it runs low — works just as well for gauze, formula, or filters. One system for everything the household needs.',
+  },
+  {
+    question: 'How do smart shopping lists help caregivers?',
+    answer:
+      'A smart shopping list is shared and updates in real time. When a supply runs low it appears on one list the whole family can see, so anyone — a sibling, a spouse, or a sitter — can pick it up on their next trip. You are no longer the only person who knows what is running out, which makes it easy to hand off the shopping without a string of texts. Reorder-at points mean the important items are already on the list before you hit zero.',
   },
   {
     question: 'Do I need to count everything perfectly?',
@@ -50,9 +63,11 @@ const FAQ_ITEMS: FAQItem[] = [
 const CONFIG: BlogPostConfig = {
   slug: PAGE_SLUG,
   title: PAGE_TITLE,
-  description: PAGE_DESCRIPTION,
+  metaTitle: "Stop Buying Duplicate Supplies: A Caregiver's Guide to Inventory Tracking",
+  description:
+    'Constantly over-ordering medical or household supplies? Learn how to simplify your caregiver routine and save money by centralizing your inventory in one shared dashboard.',
   keywords:
-    'caregiver supplies, medical supply tracking, how to manage home health supplies inventory, how to manage senior health supplies, caregiver inventory checklist, household essentials tracker, sandwich generation caregiving help, never run out of caregiver supplies',
+    'caregiver supply tracking, medical inventory management for home, how to track family supplies, avoiding duplicate purchases, how to manage home health supplies inventory, caregiver inventory checklist, sandwich generation caregiving help, never run out of caregiver supplies',
   datePublished: DATE_PUBLISHED,
   dateModified: DATE_MODIFIED,
   appUrl: '/inventory',
@@ -136,16 +151,37 @@ export default function CaregiverSupplyTrackingPage() {
         </section>
 
         {/* Reuse the kitchen tool */}
-        <section className="mb-16">
+        <section className="mb-12">
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="text-xs uppercase tracking-wide text-emerald-600 dark:text-emerald-400 mb-2">Tip</div>
             <p className="text-muted-foreground leading-relaxed">
               You may already have the right tool. A kitchen inventory feature — scan or add an item, set where it
               lives, track expiration dates, and get a nudge before it runs low — works just as well for medical and
-              household supplies. Use it as a template for everything the household depends on, not just food. One
-              system, one place to look, and any helper can see what to buy.
+              household supplies. Use it as a template for everything the household depends on, not just food.
             </p>
           </div>
+        </section>
+
+        {/* Why a smart shopping list is the payoff */}
+        <section className="mb-16">
+          <h2 className="text-3xl font-bold text-foreground mb-4">The real payoff: a shared shopping list that restocks itself</h2>
+          <p className="text-lg text-muted-foreground leading-relaxed mb-4">
+            Tracking supplies is only half the win. The other half is what happens when something gets low. With a
+            <strong> smart shopping list</strong>, an item that hits its reorder point drops onto one{' '}
+            <strong>real-time list the whole family sees</strong> — so any helper can grab it on their next trip,
+            <em> before</em> you run out. You stop being the only person who knows you&apos;re low on gauze.
+          </p>
+          <p className="text-lg text-muted-foreground leading-relaxed mb-4">
+            That is the quiet superpower: it turns &ldquo;we&apos;re out&rdquo; into &ldquo;already handled,&rdquo; and
+            it lets you hand off the errand without a single text. A sibling picking up groceries just checks the list;
+            the reorder-at points mean the important things are already on it.
+          </p>
+          <p className="text-muted-foreground leading-relaxed">
+            WPL can build that list from what you actually use and what you&apos;re running low on.{' '}
+            <Link href="/blog/smart-shopping" className="text-emerald-700 dark:text-emerald-300 underline">
+              See how the full meal-to-cart pipeline works →
+            </Link>
+          </p>
         </section>
 
         {/* FAQ */}

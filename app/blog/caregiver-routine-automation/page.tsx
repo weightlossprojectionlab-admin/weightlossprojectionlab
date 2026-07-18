@@ -17,14 +17,22 @@ import { ProblemCard, HowToStep } from '@/components/blog/cards'
 
 const PAGE_SLUG = 'caregiver-routine-automation'
 const PAGE_TITLE = 'Compliance & Peace of Mind: Automating Your Caregiver Routine'
-const PAGE_DESCRIPTION =
-  'Memory is the weakest link in caregiving. Here is how to set up automatic reminders for medications, vitals, and appointments — so the routine runs even on your hardest days.'
 const DATE_PUBLISHED = '2026-07-18T09:20:00-05:00'
 const DATE_MODIFIED = '2026-07-18T09:20:00-05:00'
 
 const author = getBlogAuthor('founder')
 
 const FAQ_ITEMS: FAQItem[] = [
+  {
+    question: 'How do I stop forgetting if I gave a medication?',
+    answer:
+      'Stop relying on memory and use a shared log. When each dose is checked off in one place, you get immediate confirmation that the morning pill already happened — which ends the "did I already give that?" stress and prevents a second caregiver from doubling it.',
+  },
+  {
+    question: 'How does routine automation make caregiving safer?',
+    answer:
+      'It replaces memory-dependent tasks with system-backed reminders. Once the schedule is automated, the plan no longer depends on you being awake or in the room — reminders fire consistently, which helps prevent missed doses, skipped vitals, and forgotten appointments.',
+  },
   {
     question: 'What does "compliance" mean in caregiving?',
     answer:
@@ -50,9 +58,11 @@ const FAQ_ITEMS: FAQItem[] = [
 const CONFIG: BlogPostConfig = {
   slug: PAGE_SLUG,
   title: PAGE_TITLE,
-  description: PAGE_DESCRIPTION,
+  metaTitle: 'Caregiver Routine Automation: Peace of Mind for Your Daily Schedule',
+  description:
+    'Stop relying on your memory to track medications and daily tasks. Discover how to automate your caregiving routine and create shared accountability for a calmer, safer household.',
   keywords:
-    'caregiver reminders, medication reminders, how to track elderly parent medications, medication management tools for caregivers, automated caregiving task list, delegating caregiving tasks, vital sign reminders, medication compliance, automate caregiving, appointment reminders',
+    'caregiver routine automation, medication management for caregivers, automated caregiving dashboard, sharing caregiving duties, how to track elderly parent medications, delegating caregiving tasks, vital sign reminders, medication compliance, appointment reminders',
   datePublished: DATE_PUBLISHED,
   dateModified: DATE_MODIFIED,
   appUrl: '/patients',

@@ -52,7 +52,7 @@ const CONFIG: BlogPostConfig = {
   title: PAGE_TITLE,
   description: PAGE_DESCRIPTION,
   keywords:
-    'organize medical documents, medical records for aging parents, how to store medical records, caregiver document organization, digitize medical records',
+    'organize medical documents, medical records for aging parents, how to store medical records, caregiver document organization, digitize medical records, personal health record management, how to track medical history for aging parents, digitizing medical records for emergency preparedness',
   datePublished: DATE_PUBLISHED,
   dateModified: DATE_MODIFIED,
   appUrl: '/documents',
