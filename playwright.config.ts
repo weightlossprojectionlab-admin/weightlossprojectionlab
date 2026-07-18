@@ -111,7 +111,20 @@ export default defineConfig({
         /\.multirole\.spec\.ts$/,
         /\.single\.spec\.ts$/,
         /\.franchise\.spec\.ts$/,
+        /\.public\.spec\.ts$/,
       ],
+    },
+    {
+      // Public, unauthenticated pages (marketing, blog). No auth setup,
+      // no storage state — these routes don't require sign-in, which keeps
+      // them fast and immune to the auth-fixture cold-start. Pattern:
+      // name the spec *.public.spec.ts.
+      name: 'chromium-public',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 960, height: 940 },
+      },
+      testMatch: /\.public\.spec\.ts$/,
     },
     {
       // Caregiver-side specs use the percyrice fixture. Pattern: name

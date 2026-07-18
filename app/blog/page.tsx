@@ -31,7 +31,7 @@ interface BlogPost {
   slug: string
   title: string
   description: string
-  category: 'platform' | 'features' | 'healthcare'
+  category: 'platform' | 'features' | 'healthcare' | 'guides'
   icon: React.ReactNode
   readTime: string
   image?: string
@@ -60,6 +60,20 @@ export default function BlogPage() {
     { slug: '/blog/medications', title: 'Medication Safety', description: 'Every pill, every person, every reminder — handled.', category: 'healthcare', icon: <BellAlertIcon className="w-6 h-6" />, readTime: '6 min read' },
     { slug: '/blog/vitals-tracking', title: 'Vitals Monitoring', description: 'Catch problems before they become emergencies.', category: 'healthcare', icon: <HeartIcon className="w-6 h-6" />, readTime: '5 min read' },
     { slug: '/blog/medical-documents', title: 'Medical Documents', description: 'Insurance cards, lab results, prescriptions — always with you.', category: 'healthcare', icon: <DocumentTextIcon className="w-6 h-6" />, readTime: '6 min read' },
+    // Guides — The Organized Caregiver series (content cluster)
+    { slug: '/blog/caregiver-mental-clutter', title: 'Beat Caregiver Mental Clutter', description: 'Why juggling meds, supplies, and appointments in your head burns you out — and how a single command center fixes it.', category: 'guides', icon: <SparklesIcon className="w-6 h-6" />, readTime: '7 min read' },
+    { slug: '/blog/caregiver-supply-tracking', title: 'Track Medical & Household Supplies', description: 'Never run out of gauze, formula, or a special-diet staple again. A simple system for caregiver inventory.', category: 'guides', icon: <ClipboardDocumentListIcon className="w-6 h-6" />, readTime: '7 min read' },
+    { slug: '/blog/caregiver-routine-automation', title: 'Automate Your Caregiver Routine', description: 'Stop relying on memory. Set up reminders for meds, vitals, and appointments so nothing slips.', category: 'guides', icon: <BellAlertIcon className="w-6 h-6" />, readTime: '7 min read' },
+    // Guides — Caregiver Logistics series (how-to)
+    { slug: '/blog/organize-medical-documents', title: 'Organize Medical Documents', description: 'A step-by-step system for insurance cards, lab results, and records for an aging parent.', category: 'guides', icon: <DocumentTextIcon className="w-6 h-6" />, readTime: '7 min read' },
+    { slug: '/blog/medication-schedules-seniors', title: 'Manage Medication Schedules', description: 'Build an accurate daily medication routine for a senior — and actually keep up with it.', category: 'guides', icon: <BellAlertIcon className="w-6 h-6" />, readTime: '7 min read' },
+    { slug: '/blog/track-vitals-at-home', title: 'Track Vital Signs at Home', description: 'How to monitor blood pressure, glucose, and more at home without getting overwhelmed.', category: 'guides', icon: <HeartIcon className="w-6 h-6" />, readTime: '7 min read' },
+    // Guides — Health Data Security series
+    { slug: '/blog/healthcare-grade-security-why', title: 'Why Health Data Needs Real Security', description: 'What "healthcare-grade" security actually means — and why generic apps fall short.', category: 'guides', icon: <ShieldCheckIcon className="w-6 h-6" />, readTime: '6 min read' },
+    { slug: '/blog/share-health-data-securely', title: 'Share Health Updates Securely', description: 'Keep siblings and sitters in the loop without exposing sensitive health data.', category: 'guides', icon: <ShieldCheckIcon className="w-6 h-6" />, readTime: '6 min read' },
+    // Guides — Vitals Explained (direct-answer Q&A)
+    { slug: '/blog/sudden-blood-pressure-change', title: 'Sudden Blood Pressure Change?', description: 'What a sudden change in blood pressure can mean — in plain, non-medical language.', category: 'guides', icon: <HeartIcon className="w-6 h-6" />, readTime: '5 min read' },
+    { slug: '/blog/how-often-check-blood-sugar', title: 'How Often to Check Blood Sugar', description: 'A simple guide to how often to record blood sugar levels, and why consistency matters.', category: 'guides', icon: <HeartIcon className="w-6 h-6" />, readTime: '5 min read' },
   ]
 
   const filteredPosts = blogPosts.filter(post => {
@@ -74,6 +88,7 @@ export default function BlogPage() {
     { id: 'platform', label: 'Platform', count: blogPosts.filter(p => p.category === 'platform').length },
     { id: 'features', label: 'Intelligence', count: blogPosts.filter(p => p.category === 'features').length },
     { id: 'healthcare', label: 'Healthcare', count: blogPosts.filter(p => p.category === 'healthcare').length },
+    { id: 'guides', label: 'Guides', count: blogPosts.filter(p => p.category === 'guides').length },
   ]
 
   return (
