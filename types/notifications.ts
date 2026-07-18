@@ -29,6 +29,10 @@ export type NotificationType =
   | 'family_member_joined'
   | 'patient_added'
   | 'vital_alert'
+  // Proactive, INFORMATIONAL caregiver alert when a vital is trending toward a
+  // concerning threshold (from app/api/cron/health-trend-alerts). Not a
+  // diagnosis — surfaces a direction to watch and discuss with a provider.
+  | 'health_trend_alert'
   | 'medication_reminder'
   | 'appointment_reminder'
   | 'duty_assigned'
@@ -429,6 +433,7 @@ export interface NotificationPreferences {
 
   // Alerts
   vital_alert: NotificationChannelPreferences
+  health_trend_alert: NotificationChannelPreferences
   medication_reminder: NotificationChannelPreferences
 
   // Health episode notifications
@@ -495,6 +500,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   family_member_joined: { email: true, push: true, inApp: true },
   patient_added: { email: true, push: true, inApp: true },
   vital_alert: { email: true, push: true, inApp: true },
+  health_trend_alert: { email: true, push: true, inApp: true },
   medication_reminder: { email: true, push: true, inApp: true },
   episode_created: { email: true, push: true, inApp: true },
   episode_updated: { email: true, push: true, inApp: true },
