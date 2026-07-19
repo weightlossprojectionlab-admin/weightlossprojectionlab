@@ -29,6 +29,32 @@ export interface VitalDraft {
   rawTime: string
   /** Non-null when the row needs attention (unparseable time, implausible value). */
   issue?: string
+  /** True when a reading already exists at this minute (matches server dedupe). */
+  alreadyLogged?: boolean
+}
+
+/** Minute bucket for a timestamp — mirrors checkDuplicateVital's server-side key. */
+const minuteKey = (iso: string): number => Math.floor(new Date(iso).getTime() / 60000)
+
+/**
+ * Flag drafts that already exist in the patient's record (same type is assumed —
+ * caller passes blood_sugar recordedAt strings), matching the server's minute-
+ * level dedupe. Flagged rows are pre-unchecked so a re-scan only imports what's
+ * new; the save-time 409 remains the backstop.
+ */
+export function markAlreadyLogged(drafts: VitalDraft[], existingRecordedAt: string[]): VitalDraft[] {
+  const seen = new Set(
+    existingRecordedAt
+      .filter(Boolean)
+      .map(minuteKey)
+      .filter(n => Number.isFinite(n))
+  )
+  return drafts.map(d => {
+    if (d.recordedAt && seen.has(minuteKey(d.recordedAt))) {
+      return { ...d, alreadyLogged: true, include: false }
+    }
+    return d
+  })
 }
 
 /** Normalize a unit string to the two the vitals API accepts; defaults mg/dL. */

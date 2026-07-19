@@ -16,7 +16,7 @@ import { useState, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { XMarkIcon, CameraIcon, ArrowUpTrayIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { extractGlucometerReadings } from '@/lib/ocr-glucometer'
-import { toVitalDrafts, type VitalDraft } from '@/lib/glucometer-parse'
+import { toVitalDrafts, markAlreadyLogged, type VitalDraft } from '@/lib/glucometer-parse'
 import { compressImage } from '@/lib/image-compression'
 import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
@@ -110,11 +110,19 @@ export function GlucometerScanModal({ isOpen, onClose, patientId, onImported }: 
     setError(null)
     try {
       const result = await extractGlucometerReadings(images)
-      const parsed = toVitalDrafts(result)
+      let parsed = toVitalDrafts(result)
       if (parsed.length === 0) {
         setError('No readings were found on that screen. Try a clearer, straight-on photo.')
         setStep('capture')
         return
+      }
+      // Pre-flag readings already in the record so a re-scan only imports new
+      // ones (non-fatal: the save-time 409 dedupe is the backstop if this fails).
+      try {
+        const existing = await medicalOperations.vitals.getVitals(patientId, { type: 'blood_sugar' })
+        parsed = markAlreadyLogged(parsed, existing.map(v => v.recordedAt))
+      } catch (e) {
+        logger.warn('[GlucometerScan] Could not pre-check existing readings', { error: e instanceof Error ? e.message : String(e) })
       }
       setDrafts(parsed)
       setStep('review')
@@ -256,7 +264,13 @@ export function GlucometerScanModal({ isOpen, onClose, patientId, onImported }: 
                 {drafts.map((d, i) => (
                   <div
                     key={i}
-                    className={`p-3 rounded-lg border ${d.issue ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10' : 'border-gray-200 dark:border-gray-700'}`}
+                    className={`p-3 rounded-lg border ${
+                      d.alreadyLogged
+                        ? 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/40 opacity-70'
+                        : d.issue
+                        ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10'
+                        : 'border-gray-200 dark:border-gray-700'
+                    }`}
                   >
                     <div className="flex items-center gap-2">
                       <input
@@ -290,7 +304,10 @@ export function GlucometerScanModal({ isOpen, onClose, patientId, onImported }: 
                         aria-label="Time"
                       />
                     </div>
-                    {d.issue && (
+                    {d.alreadyLogged && (
+                      <p className="mt-1.5 ml-7 text-xs text-gray-500 dark:text-gray-400">Already logged — skipping. Re-check to import a duplicate.</p>
+                    )}
+                    {d.issue && !d.alreadyLogged && (
                       <p className="mt-1.5 ml-7 text-xs text-amber-700 dark:text-amber-300">{d.issue}</p>
                     )}
                   </div>

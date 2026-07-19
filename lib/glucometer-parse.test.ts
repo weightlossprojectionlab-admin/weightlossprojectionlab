@@ -3,6 +3,7 @@ import {
   isPlausibleGlucose,
   normalizeUnit,
   toVitalDrafts,
+  markAlreadyLogged,
 } from './glucometer-parse'
 import type { GlucometerOCRResponse } from '@/lib/validations/glucometer-ocr'
 
@@ -113,5 +114,42 @@ describe('toVitalDrafts', () => {
     const drafts = toVitalDrafts(response, NOW).filter(d => d.rawDate === '07-16')
     const minutes = new Set(drafts.map(d => d.recordedAt))
     expect(minutes.size).toBe(3)
+  })
+})
+
+describe('markAlreadyLogged', () => {
+  const drafts = toVitalDrafts(
+    {
+      unit: 'mg/dL',
+      confidence: 90,
+      readings: [
+        { date: '07-16', time: '6:10 AM', value: 329 },
+        { date: '07-16', time: '7:22 AM', value: 333 },
+      ],
+    },
+    NOW
+  )
+
+  it('flags + unchecks a row whose minute matches an existing reading (any second in the minute)', () => {
+    const existingIso = drafts.find(d => d.rawTime === '7:22 AM')!.recordedAt!
+    // Same minute, different seconds — should still match (minute-level key).
+    const bumped = new Date(new Date(existingIso).getTime() + 40_000).toISOString()
+    const marked = markAlreadyLogged(drafts, [bumped])
+    const seven22 = marked.find(d => d.rawTime === '7:22 AM')!
+    const six10 = marked.find(d => d.rawTime === '6:10 AM')!
+    expect(seven22.alreadyLogged).toBe(true)
+    expect(seven22.include).toBe(false)
+    expect(six10.alreadyLogged).toBeFalsy()
+    expect(six10.include).toBe(true)
+  })
+
+  it('marks nothing when there are no existing readings', () => {
+    const marked = markAlreadyLogged(drafts, [])
+    expect(marked.every(d => !d.alreadyLogged)).toBe(true)
+  })
+
+  it('ignores unparseable existing timestamps', () => {
+    const marked = markAlreadyLogged(drafts, ['not-a-date', ''])
+    expect(marked.every(d => !d.alreadyLogged)).toBe(true)
   })
 })
