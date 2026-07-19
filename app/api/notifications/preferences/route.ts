@@ -44,6 +44,7 @@ export async function GET(request: NextRequest) {
         family_member_joined: { email: true, push: true, inApp: true },
         patient_added: { email: true, push: true, inApp: true },
         vital_alert: { email: true, push: true, inApp: true },
+        health_trend_alert: { email: true, push: true, inApp: true },
         medication_reminder: { email: true, push: true, inApp: true },
         episode_created: { email: true, push: true, inApp: true },
         episode_updated: { email: true, push: true, inApp: true },

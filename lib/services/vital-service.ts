@@ -20,16 +20,24 @@ export interface DuplicateVitalCheckResult {
 }
 
 /**
- * Check if a vital entry already exists for the same type and date
+ * Check if a vital entry already exists for the same type at the same time.
  *
  * A duplicate is defined as:
- * - Same vital type (weight, bloodPressure, etc.)
- * - Same recordedAt date (normalized to UTC midnight)
+ * - Same vital type (blood_sugar, blood_pressure, etc.)
+ * - Same recordedAt instant, to the minute — NOT the same day. Vitals are
+ *   legitimately taken multiple times per day at different times (fasting vs
+ *   post-meal glucose; morning vs evening BP — a glucometer commonly logs
+ *   several a day), so those must all be allowed. Minute granularity matches
+ *   the time picker's precision and still blocks an accidental double-submit
+ *   of the very same reading.
  * - For the same patient
+ *
+ * This single function gates both the client picker and the server POST route,
+ * so the day→minute change fixes both at once.
  *
  * @param existingVitals - Array of existing vitals for the patient
  * @param vitalType - Type of vital being logged
- * @param recordedAt - Date the vital was recorded
+ * @param recordedAt - Date+time the vital was recorded
  * @returns DuplicateVitalCheckResult with duplicate status and details
  */
 export function checkDuplicateVital(
@@ -37,22 +45,22 @@ export function checkDuplicateVital(
   vitalType: string,
   recordedAt: Date
 ): DuplicateVitalCheckResult {
-  const normalizedRecorded = normalizeToUTCMidnight(recordedAt)
+  const toMinute = (d: Date) => Math.floor(d.getTime() / 60000)
+  const targetMinute = toMinute(recordedAt)
 
   // Find vitals of the same type
   const sameTypeVitals = existingVitals.filter(v => v.type === vitalType)
 
-  // Check for duplicate on the same date
+  // Check for duplicate at the same minute
   for (const vital of sameTypeVitals) {
     const vitalDate = new Date(vital.recordedAt)
-    const normalizedVitalDate = normalizeToUTCMidnight(vitalDate)
+    if (isNaN(vitalDate.getTime())) continue
 
-    // Compare normalized dates
-    if (normalizedVitalDate.getTime() === normalizedRecorded.getTime()) {
+    if (toMinute(vitalDate) === targetMinute) {
       return {
         isDuplicate: true,
         existingVital: vital,
-        message: `A ${vitalType} entry already exists for ${normalizedRecorded.toLocaleDateString()}`
+        message: `A ${vitalType} reading already exists for ${recordedAt.toLocaleString()}`
       }
     }
   }

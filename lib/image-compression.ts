@@ -8,7 +8,19 @@ import { logger } from '@/lib/logger'
  * @param file - Image file to compress
  * @returns Compressed file and base64 data URL
  */
-export async function compressImage(file: File): Promise<{
+export interface CompressImageOverrides {
+  /** Max output size in MB. */
+  maxSizeMB?: number
+  /** Longest edge in px. */
+  maxWidthOrHeight?: number
+  /** JPEG quality 0–1. */
+  initialQuality?: number
+}
+
+export async function compressImage(
+  file: File,
+  overrides?: CompressImageOverrides
+): Promise<{
   compressedFile: File
   base64DataUrl: string
   originalSize: number
@@ -17,13 +29,16 @@ export async function compressImage(file: File): Promise<{
 }> {
   const originalSize = file.size
 
-  // Compression options - VERY aggressive for Netlify dev server
+  // Compression options - VERY aggressive for Netlify dev server. Callers doing
+  // fine-text OCR (e.g. a glucometer LCD) pass overrides for more resolution;
+  // the small-text digits need it to stay legible.
   const options = {
     maxSizeMB: 0.08, // Maximum file size 80KB - very small for Netlify dev server
     maxWidthOrHeight: 600, // Lower resolution still works for AI
     useWebWorker: false, // Disabled: Web workers can crash Netlify dev tunnel
     fileType: 'image/jpeg', // JPEG for better compatibility
     initialQuality: 0.5, // Lower quality to ensure small size
+    ...overrides,
   }
 
   try {
