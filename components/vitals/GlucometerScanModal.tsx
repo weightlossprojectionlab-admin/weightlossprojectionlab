@@ -17,6 +17,7 @@ import toast from 'react-hot-toast'
 import { XMarkIcon, CameraIcon, ArrowUpTrayIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { extractGlucometerReadings } from '@/lib/ocr-glucometer'
 import { toVitalDrafts, type VitalDraft } from '@/lib/glucometer-parse'
+import { compressImage } from '@/lib/image-compression'
 import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
 
@@ -49,13 +50,18 @@ const combineDateTime = (dateStr: string, timeStr: string): string | null => {
   return isNaN(combined.getTime()) ? null : combined.toISOString()
 }
 
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(reader.result as string)
-    reader.onerror = () => reject(new Error('Could not read the photo.'))
-    reader.readAsDataURL(file)
+// Compress before upload. Raw phone photos are 2–4 MB each; six of them blow
+// past the ~10 MB request-body limit and truncate the JSON. We keep more
+// resolution than the default (600px/80KB) because the meter's small LCD digits
+// must stay legible for OCR — ~1400px / ~350KB is a good legibility/size balance
+// (6 × ~350KB ≈ 2 MB, safely under the limit).
+async function fileToUploadDataUrl(file: File): Promise<string> {
+  const { base64DataUrl } = await compressImage(file, {
+    maxSizeMB: 0.4,
+    maxWidthOrHeight: 1400,
+    initialQuality: 0.7,
   })
+  return base64DataUrl
 }
 
 /** A 409 (or duplicate-worded) error from logVital — the reading already exists. */
@@ -90,7 +96,7 @@ export function GlucometerScanModal({ isOpen, onClose, patientId, onImported }: 
         Array.from(files)
           .filter(f => f.type.startsWith('image/'))
           .slice(0, 6)
-          .map(readFileAsDataUrl)
+          .map(fileToUploadDataUrl)
       )
       setImages(prev => [...prev, ...urls].slice(0, 6))
     } catch (e) {
