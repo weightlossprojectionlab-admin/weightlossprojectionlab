@@ -1,4 +1,12 @@
-import { detectVitalTrend, linearRegression, type TrendPoint, type ThresholdBand } from './health-trend-detection'
+import {
+  detectVitalTrend,
+  detectVitalTrendGrouped,
+  mostConcerningTrend,
+  linearRegression,
+  type TrendPoint,
+  type ThresholdBand,
+  type GroupedTrendFinding,
+} from './health-trend-detection'
 
 const DAY = 1000 * 60 * 60 * 24
 const BASE = new Date('2026-06-01T09:00:00Z').getTime()
@@ -62,5 +70,76 @@ describe('detectVitalTrend', () => {
     // Falling systolic (only high thresholds configured) → nothing to warn about.
     const f = detectVitalTrend(series([150, 146, 142, 138, 134, 130]), SYSTOLIC)
     expect(f).toBeNull()
+  })
+})
+
+/** Tag a value series with a fixed group label. */
+function grouped(values: number[], group: string, stepDays = 2): Array<TrendPoint & { group: string }> {
+  return series(values, stepDays).map(p => ({ ...p, group }))
+}
+
+const GLUCOSE: ThresholdBand = { warnLow: 70, critLow: 54, warnHigh: 180, critHigh: 250, unit: 'mg/dL' }
+
+describe('detectVitalTrendGrouped', () => {
+  it('isolates a rising fasting-morning glucose from flat evening readings (no pooling)', () => {
+    // Morning readings climb toward the 180 high warning; evening readings are flat.
+    // Pooled, the flat evenings would flatten the slope and mask the morning trend.
+    const morning = grouped([120, 132, 144, 156, 168, 178], 'morning')
+    const evening = grouped([110, 112, 109, 111, 110, 112], 'evening')
+    const f = detectVitalTrendGrouped([...morning, ...evening], GLUCOSE)
+    expect(f).not.toBeNull()
+    expect(f!.direction).toBe('rising')
+    expect(f!.thresholdKind).toBe('warnHigh')
+    expect(f!.group).toBe('morning')
+  })
+
+  it('behaves like the pooled fit when readings have no group', () => {
+    const points = series([122, 126, 129, 132, 135, 138]).map(p => ({ ...p })) // no group
+    const groupedFinding = detectVitalTrendGrouped(points, SYSTOLIC)
+    const pooledFinding = detectVitalTrend(series([122, 126, 129, 132, 135, 138]), SYSTOLIC)
+    expect(groupedFinding).not.toBeNull()
+    expect(groupedFinding!.group).toBeUndefined()
+    expect(groupedFinding!.direction).toBe(pooledFinding!.direction)
+    expect(groupedFinding!.thresholdKind).toBe(pooledFinding!.thresholdKind)
+  })
+
+  it('returns null when every group is individually too sparse (conservative by construction)', () => {
+    // 6 rising readings split across 3 buckets = 2 each, below minReadings(4).
+    const f = detectVitalTrendGrouped(
+      [
+        ...grouped([120, 140], 'morning'),
+        ...grouped([130, 150], 'afternoon'),
+        ...grouped([135, 160], 'evening'),
+      ],
+      GLUCOSE
+    )
+    expect(f).toBeNull()
+  })
+})
+
+describe('mostConcerningTrend', () => {
+  const base: GroupedTrendFinding = {
+    direction: 'rising', currentValue: 100, projectedValue: 150, threshold: 140,
+    thresholdKind: 'warnHigh', daysToThreshold: 10, severity: 'watch', confidence: 'moderate',
+    slopePerDay: 1, rSquared: 0.7, sampleSize: 6, spanDays: 10,
+  }
+  it('prefers concern over watch', () => {
+    const pick = mostConcerningTrend([base, { ...base, severity: 'concern', group: 'x' }])
+    expect(pick!.group).toBe('x')
+  })
+  it('breaks ties on confidence, then soonest crossing', () => {
+    const pick = mostConcerningTrend([
+      { ...base, confidence: 'moderate', group: 'a' },
+      { ...base, confidence: 'high', group: 'b' },
+    ])
+    expect(pick!.group).toBe('b')
+    const pick2 = mostConcerningTrend([
+      { ...base, daysToThreshold: 10, group: 'a' },
+      { ...base, daysToThreshold: 3, group: 'b' },
+    ])
+    expect(pick2!.group).toBe('b')
+  })
+  it('returns null for no findings', () => {
+    expect(mostConcerningTrend([])).toBeNull()
   })
 })

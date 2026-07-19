@@ -187,3 +187,60 @@ export function detectVitalTrend(
     spanDays: Math.round(spanDays),
   }
 }
+
+/** A trend finding annotated with the reading group it came from (e.g. a time-of-day bucket). */
+export interface GroupedTrendFinding extends TrendFinding {
+  /** The group key this finding was fit within; undefined when readings weren't grouped. */
+  group?: string
+}
+
+const SEVERITY_RANK: Record<TrendFinding['severity'], number> = { concern: 2, watch: 1 }
+const CONFIDENCE_RANK: Record<TrendConfidence, number> = { high: 3, moderate: 2, low: 1 }
+
+/**
+ * Pick the single most clinically urgent finding: highest severity first, then
+ * highest confidence, then the soonest projected threshold crossing.
+ */
+export function mostConcerningTrend(findings: GroupedTrendFinding[]): GroupedTrendFinding | null {
+  if (findings.length === 0) return null
+  return findings.reduce((best, f) => {
+    if (SEVERITY_RANK[f.severity] !== SEVERITY_RANK[best.severity])
+      return SEVERITY_RANK[f.severity] > SEVERITY_RANK[best.severity] ? f : best
+    if (CONFIDENCE_RANK[f.confidence] !== CONFIDENCE_RANK[best.confidence])
+      return CONFIDENCE_RANK[f.confidence] > CONFIDENCE_RANK[best.confidence] ? f : best
+    return f.daysToThreshold < best.daysToThreshold ? f : best
+  })
+}
+
+/**
+ * Like detectVitalTrend, but first partitions readings by an optional `group`
+ * key (e.g. a time-of-day bucket) and fits each group independently, then
+ * returns the single most concerning finding across groups.
+ *
+ * This is the fix for pooling clinically distinct readings — a fasting-morning
+ * glucose downtrend and post-dinner spikes must not average into one line. Each
+ * group needs its own minReadings/span/fit to surface, so this is conservative
+ * by construction: a series too sparse once split simply yields no alert.
+ * Points with no `group` fall into a single shared bucket (== ungrouped).
+ */
+export function detectVitalTrendGrouped(
+  readings: Array<TrendPoint & { group?: string }>,
+  band: ThresholdBand,
+  config: TrendConfig = {}
+): GroupedTrendFinding | null {
+  const groups = new Map<string, TrendPoint[]>()
+  for (const r of readings) {
+    const key = r.group ?? '_all'
+    const pt = { value: r.value, at: r.at }
+    const arr = groups.get(key)
+    if (arr) arr.push(pt)
+    else groups.set(key, [pt])
+  }
+
+  const findings: GroupedTrendFinding[] = []
+  for (const [key, pts] of groups.entries()) {
+    const f = detectVitalTrend(pts, band, config)
+    if (f) findings.push(key === '_all' ? { ...f } : { ...f, group: key })
+  }
+  return mostConcerningTrend(findings)
+}

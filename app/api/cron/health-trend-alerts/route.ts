@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
-import { detectVitalTrend, type TrendPoint, type TrendFinding } from '@/lib/health-trend-detection'
+import { detectVitalTrendGrouped, type TrendPoint, type GroupedTrendFinding } from '@/lib/health-trend-detection'
 import { HUMAN_VITAL_BANDS, BP_BANDS, getHumanVitalBand, vitalLabel } from '@/lib/vital-thresholds'
+import { timeOfDayBucket } from '@/lib/time-of-day'
 import type { PatientProfile, VitalType } from '@/types/medical'
 
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,20 @@ export const runtime = 'nodejs'
 
 const SCALAR_TYPES: VitalType[] = ['blood_sugar', 'pulse_oximeter', 'temperature']
 const RECENT_LIMIT = 30 // most-recent readings per vital type to fit against
+
+// Vitals whose meaning depends on WHEN in the day they were taken (fasting vs
+// post-meal glucose, morning vs evening BP). For these we segment the series by
+// time-of-day before fitting, so clinically distinct readings aren't pooled
+// into one misleading trend. Others (SpO2, temperature) stay pooled to preserve
+// sample size. NOTE: bucketing uses UTC hour (no per-patient timezone here yet),
+// which still separates a given patient's morning/evening clusters; timezone-
+// accurate bucket LABELS are a deferred refinement, so copy stays generic.
+const TIME_SENSITIVE = new Set<string>(['blood_sugar', 'blood_pressure'])
+
+/** Time-of-day group for a reading, only for time-sensitive vital types. */
+function groupFor(vitalType: string, at: Date): string | undefined {
+  return TIME_SENSITIVE.has(vitalType) ? timeOfDayBucket(at) : undefined
+}
 
 function toDate(recordedAt: any): Date | null {
   if (!recordedAt) return null
@@ -65,17 +80,25 @@ async function fetchRecent(ownerUserId: string, patientId: string, vitalType: Vi
 }
 
 /** Build a caregiver-facing, non-diagnostic message for a finding. */
-function buildAlert(patientName: string, label: string, unit: string, f: TrendFinding) {
+function buildAlert(patientName: string, label: string, unit: string, f: GroupedTrendFinding) {
   const dir = f.direction === 'rising' ? 'rising' : 'falling'
   const window = f.spanDays >= 1 ? `the last ${f.spanDays} days` : 'recent readings'
   const near =
     f.daysToThreshold <= 0
       ? 'and is at a level worth a closer look'
       : `and, if it keeps up, could reach a level worth watching in about ${f.daysToThreshold} day${f.daysToThreshold === 1 ? '' : 's'}`
+  // When the finding came from a time-of-day-segmented series, say so — it tells
+  // the caregiver the trend is real (like-with-like readings), not an artifact of
+  // mixing fasting and post-meal values. Bucket name is omitted deliberately
+  // until timezone-accurate labels land.
+  const timeNote = f.group
+    ? ' This pattern holds within readings taken around the same time of day, so it is not just fasting-vs-after-meal variation.'
+    : ''
   return {
     title: `Heads up: ${patientName}'s ${label} is trending ${dir}`,
     message:
-      `Over ${window}, ${patientName}'s ${label} has been ${dir} (now ~${f.currentValue}${unit ? ' ' + unit : ''}) ${near}. ` +
+      `Over ${window}, ${patientName}'s ${label} has been ${dir} (now ~${f.currentValue}${unit ? ' ' + unit : ''}) ${near}.` +
+      `${timeNote} ` +
       `This is an informational heads-up based on the trend — not a diagnosis. Consider checking in with their healthcare provider.`,
   }
 }
@@ -123,36 +146,35 @@ export async function GET(request: NextRequest) {
           stats.patientsChecked++
 
           // Assemble (vitalType, finding) candidates.
-          const findings: Array<{ vitalType: string; label: string; unit: string; finding: TrendFinding }> = []
+          const findings: Array<{ vitalType: string; label: string; unit: string; finding: GroupedTrendFinding }> = []
 
-          // Scalar vitals.
+          // Scalar vitals. Time-sensitive types (glucose) are segmented by
+          // time-of-day inside detectVitalTrendGrouped; others fall into one
+          // group (group === undefined) and behave as a pooled fit.
           for (const vt of SCALAR_TYPES) {
             const band = getHumanVitalBand(vt)
             if (!band) continue
             const docs = await fetchRecent(userId, patientId, vt)
-            const points: TrendPoint[] = docs
-              .map(v => {
-                const value = scalarValue(v)
-                const at = toDate(v.recordedAt)
-                return value != null && at ? { value, at } : null
-              })
-              .filter((p): p is TrendPoint => p !== null)
-            const finding = detectVitalTrend(points, band)
+            const points: Array<TrendPoint & { group?: string }> = docs.flatMap(v => {
+              const value = scalarValue(v)
+              const at = toDate(v.recordedAt)
+              return value != null && at ? [{ value, at, group: groupFor(vt, at) }] : []
+            })
+            const finding = detectVitalTrendGrouped(points, band)
             if (finding) findings.push({ vitalType: vt, label: vitalLabel(vt), unit: band.unit || '', finding })
           }
 
-          // Blood pressure — systolic + diastolic series separately.
+          // Blood pressure — systolic + diastolic series separately, each
+          // segmented by time-of-day (morning vs evening BP differ).
           {
             const docs = await fetchRecent(userId, patientId, 'blood_pressure' as VitalType)
             for (const comp of ['systolic', 'diastolic'] as const) {
-              const points: TrendPoint[] = docs
-                .map(v => {
-                  const value = bpValue(v, comp)
-                  const at = toDate(v.recordedAt)
-                  return value != null && at ? { value, at } : null
-                })
-                .filter((p): p is TrendPoint => p !== null)
-              const finding = detectVitalTrend(points, BP_BANDS[comp])
+              const points: Array<TrendPoint & { group?: string }> = docs.flatMap(v => {
+                const value = bpValue(v, comp)
+                const at = toDate(v.recordedAt)
+                return value != null && at ? [{ value, at, group: groupFor('blood_pressure', at) }] : []
+              })
+              const finding = detectVitalTrendGrouped(points, BP_BANDS[comp])
               if (finding) {
                 findings.push({ vitalType: 'blood_pressure', label: `blood pressure (${comp})`, unit: 'mmHg', finding })
               }
