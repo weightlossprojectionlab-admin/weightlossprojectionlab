@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { adminAuth } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { generateGeminiJSON, validateGeminiConfig } from '@/lib/ai/gemini-client'
-import { GlucometerOCRResponseSchema } from '@/lib/validations/glucometer-ocr'
+import { GlucometerOCRResponseSchema, type GlucometerReading } from '@/lib/validations/glucometer-ocr'
 
 // A meter's results list can be long; match the receipt/medication headroom.
 export const maxDuration = 60
@@ -72,32 +72,65 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Each image must be a base64 data URL (data:image/...).' }, { status: 400 })
     }
 
-    let data
-    try {
-      data = await generateGeminiJSON({
-        fnName: 'extractGlucometerReadings',
-        prompt: PROMPT,
-        images: images.map(img => ({ data: img })),
-        validateSchema: GlucometerOCRResponseSchema,
-        // Slightly warmer than the 0.1 default: long numeric lists can trigger a
-        // degenerate digit-repeat loop at very low temperature (receipt-OCR fix).
-        temperature: 0.4,
-        maxOutputTokens: 8192,
-        inputSize: images.length,
-        metadata: { imageCount: images.length },
-      })
-    } catch (ocrError) {
-      // generateGeminiJSON throws on parse/validation/model failure. Surface a
-      // bounded reason (no PHI) so the client can show something actionable.
-      logger.warn('[Glucometer OCR] Extraction failed', {
-        error: ocrError instanceof Error ? ocrError.message : String(ocrError),
-      })
+    // One Gemini call PER image, in parallel, then merge. A single call over
+    // many photos can drive the model into a repetition loop that overruns the
+    // token budget (observed: a ~10 MiB truncated response → "Unterminated
+    // string in JSON"). Per-image bounds each response, isolates a bad photo,
+    // and mirrors the medication-scan pattern (per-image calls merged).
+    const results = await Promise.allSettled(
+      images.map((img, i) =>
+        generateGeminiJSON({
+          fnName: 'extractGlucometerReadings',
+          prompt: PROMPT,
+          images: [{ data: img }],
+          validateSchema: GlucometerOCRResponseSchema,
+          // Slightly warmer than the 0.1 default: long numeric lists can trigger a
+          // degenerate digit-repeat loop at very low temperature (receipt-OCR fix).
+          temperature: 0.4,
+          maxOutputTokens: 4096,
+          inputSize: 1,
+          metadata: { imageIndex: i, imageCount: images.length },
+        })
+      )
+    )
+
+    // Merge readings across photos, de-duplicating identical rows (meter pages
+    // overlap — the same reading is often visible on two consecutive photos).
+    const merged: GlucometerReading[] = []
+    const seen = new Set<string>()
+    let deviceUnit: string | undefined
+    let minConfidence = 100
+    let okCount = 0
+    for (const r of results) {
+      if (r.status !== 'fulfilled') {
+        logger.warn('[Glucometer OCR] One image failed', {
+          error: r.reason instanceof Error ? r.reason.message : String(r.reason),
+        })
+        continue
+      }
+      okCount++
+      const d = r.value
+      if (d.unit) deviceUnit = d.unit
+      minConfidence = Math.min(minConfidence, d.confidence)
+      for (const row of d.readings) {
+        const key = `${row.date}|${row.time}|${row.value}`
+        if (seen.has(key)) continue
+        seen.add(key)
+        merged.push(row)
+      }
+    }
+
+    if (okCount === 0 || merged.length === 0) {
       return NextResponse.json(
-        { error: 'Could not read the meter screen', details: 'Try a clearer, straight-on photo with the full list visible.' },
+        {
+          error: 'Could not read the meter screen',
+          details: 'Try clearer, straight-on photos with the full list visible and glare minimized.',
+        },
         { status: 502 }
       )
     }
 
+    const data = { readings: merged, unit: deviceUnit, confidence: minConfidence }
     return NextResponse.json({ success: true, data })
   } catch (error) {
     logger.error('[Glucometer OCR] Fatal error', error as Error)
