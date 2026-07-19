@@ -69,6 +69,7 @@ import { capitalizeName } from '@/lib/utils'
 import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import VitalsWizardRouter from '@/components/wizards/VitalsWizardRouter'
+import { GlucometerScanModal } from '@/components/vitals/GlucometerScanModal'
 import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
@@ -241,6 +242,7 @@ function PatientDetailContent() {
   const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
   const [showQuickWeightModal, setShowQuickWeightModal] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
+  const [showGlucometerScan, setShowGlucometerScan] = useState(false)
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
   const [summaryVitals, setSummaryVitals] = useState<VitalSign[]>([])
   const [summaryMood, setSummaryMood] = useState<string | undefined>(undefined)
@@ -1769,6 +1771,20 @@ function PatientDetailContent() {
                   onApprove={approveVital}
                   getDisplayName={getDisplayName}
                 />
+              )}
+
+              {/* Import from a glucose meter — humans only (blood sugar). */}
+              {canLogVitals && !isPet && (
+                <div className="flex justify-end">
+                  <button
+                    data-write="true"
+                    onClick={() => setShowGlucometerScan(true)}
+                    className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-primary text-primary hover:bg-purple-50 dark:hover:bg-purple-900/20 text-sm font-medium min-h-[44px] active:scale-95 transition-transform"
+                  >
+                    <CameraIcon className="w-5 h-5" />
+                    Scan glucose meter
+                  </button>
+                </div>
               )}
 
               {/* Quick Action Reminder - Use wizard instead of inline form (DRY) */}
@@ -3557,6 +3573,15 @@ function PatientDetailContent() {
       />
 
       {/* Vitals Wizard Integration */}
+      {patient && (
+        <GlucometerScanModal
+          isOpen={showGlucometerScan}
+          onClose={() => setShowGlucometerScan(false)}
+          patientId={patientId}
+          onImported={() => { refetch() }}
+        />
+      )}
+
       {patient && showVitalsWizard && (() => {
         logger.debug('[PatientDetail] Opening vitals wizard', { familyMembersCount: familyMembers.length })
         const caregivers = familyMembers.map(member => {
