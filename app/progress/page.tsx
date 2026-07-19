@@ -980,6 +980,7 @@ function ProgressContent() {
                 <DataCompletenessTracker
                   patientId={selectedPatientId}
                   className="mb-6"
+                  onLogWeight={() => setShowWeightModal(true)}
                 />
                 {/* Trust Badge - Health Insights Privacy */}
                 <div className="mb-6">

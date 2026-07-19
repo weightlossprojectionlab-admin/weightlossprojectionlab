@@ -12,6 +12,13 @@ import Link from 'next/link'
 export interface DataCompletenessTrackerProps {
   patientId?: string | null
   className?: string
+  /**
+   * When provided, the "Log Weight" action opens this handler (e.g. the
+   * QuickWeightLogModal on /progress) instead of navigating to actionUrl.
+   * Omit it and the button falls back to linking to /progress — correct on
+   * surfaces like the dashboard where navigating to progress is the goal.
+   */
+  onLogWeight?: () => void
 }
 
 interface CompletenessMetric {
@@ -22,6 +29,8 @@ interface CompletenessMetric {
   status: 'complete' | 'warning' | 'missing'
   actionLabel?: string
   actionUrl?: string
+  /** If set, the action renders as a button firing this handler instead of a link. */
+  onAction?: () => void
   isEnabled: boolean
   message?: string
 }
@@ -34,7 +43,7 @@ interface WeekData {
   bloodGlucoseReadings: number
 }
 
-export function DataCompletenessTracker({ patientId, className = '' }: DataCompletenessTrackerProps) {
+export function DataCompletenessTracker({ patientId, className = '', onLogWeight }: DataCompletenessTrackerProps) {
   const { user } = useAuth()
   const { profile } = useUserProfile()
   const [loading, setLoading] = useState(true)
@@ -189,6 +198,7 @@ export function DataCompletenessTracker({ patientId, className = '' }: DataCompl
       status: weekData.weightLogs >= 6 ? 'complete' : weekData.weightLogs >= 3 ? 'warning' : 'missing',
       actionLabel: 'Log Weight',
       actionUrl: '/progress',
+      onAction: onLogWeight,
       isEnabled: true,
       message: weekData.weightLogs >= 6
         ? 'Great consistency!'
@@ -335,13 +345,23 @@ export function DataCompletenessTracker({ patientId, className = '' }: DataCompl
                     )}
                   </div>
                 </div>
-                {metric.status !== 'complete' && metric.actionUrl && (
-                  <Link
-                    href={metric.actionUrl}
-                    className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-xs font-medium whitespace-nowrap"
-                  >
-                    {metric.actionLabel}
-                  </Link>
+                {metric.status !== 'complete' && (metric.onAction || metric.actionUrl) && (
+                  metric.onAction ? (
+                    <button
+                      type="button"
+                      onClick={metric.onAction}
+                      className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-xs font-medium whitespace-nowrap"
+                    >
+                      {metric.actionLabel}
+                    </button>
+                  ) : (
+                    <Link
+                      href={metric.actionUrl!}
+                      className="px-3 py-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-xs font-medium whitespace-nowrap"
+                    >
+                      {metric.actionLabel}
+                    </Link>
+                  )
                 )}
               </div>
 
