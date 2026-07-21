@@ -202,11 +202,16 @@ export function MedicationList({ patientId, patientOwnerId, medications, loading
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground">Frequency</label>
+                    {/* Labeled "Dosage Instructions" everywhere (Add / Edit / Detail): this
+                        field holds the COMPLETE sig, not just a frequency. Calling it
+                        "Frequency" invited bare numbers like "2", which are ambiguous
+                        between dose amount and times-per-day and break adherence math. */}
+                    <label className="text-xs text-muted-foreground">Dosage Instructions</label>
                     <input
                       type="text"
                       value={editForm.frequency || ''}
                       onChange={(e) => setEditForm({...editForm, frequency: e.target.value})}
+                      placeholder="e.g., Take 1 tablet by mouth twice daily"
                       className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
                     />
                   </div>

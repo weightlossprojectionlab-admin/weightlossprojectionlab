@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
+import { dosesPerDayFor, describeDosage, type DosageSource } from '@/lib/medication-dosage'
 
 /**
  * POST /api/patients/[patientId]/medications/[medicationId]/log-dose
@@ -57,13 +58,14 @@ export async function POST(
       notes: notes || null
     })
 
-    // Calculate adherence rate (simplified: percentage of expected doses taken in last 30 days)
-    // This is a simple implementation - can be enhanced later
+    // Adherence = share of expected doses taken in the last 30 days. Pass the whole
+    // medication (not just the prose) so the structured frequencyCode wins when present.
+    // Null result => leave adherenceRate absent rather than write a guess.
     const adherenceRate = await calculateAdherenceRate(
       ownerUserId,
       patientId,
       medicationId,
-      medication.frequency
+      medication as DosageSource
     )
 
     // Update medication document
@@ -78,6 +80,11 @@ export async function POST(
 
     if (adherenceRate !== null) {
       updates.adherenceRate = adherenceRate
+    } else if (medication.adherenceRate !== undefined) {
+      // The dosage isn't determinable, but a value is stored — it was fabricated by
+      // the old default-to-1 parser. Remove it rather than let a stale wrong number
+      // keep rendering as fact.
+      updates.adherenceRate = FieldValue.delete()
     }
 
     await medicationRef.update(updates)
@@ -112,18 +119,28 @@ export async function POST(
 }
 
 /**
- * Calculate adherence rate based on expected doses vs actual doses in last 30 days
+ * Calculate adherence rate based on expected doses vs actual doses in last 30 days.
+ *
+ * Returns null whenever the doses-per-day denominator isn't trustworthy — the caller
+ * then leaves adherenceRate ABSENT rather than writing a fabricated number. (This
+ * previously defaulted to 1 dose/day on any unparseable sig, so a med recorded as
+ * "2" reported someone taking half their doses as 100% adherent.)
  */
 async function calculateAdherenceRate(
   ownerUserId: string,
   patientId: string,
   medicationId: string,
-  frequency?: string
+  med: DosageSource
 ): Promise<number | null> {
   try {
-    // Parse frequency to determine expected doses per day
-    const expectedDosesPerDay = parseFrequency(frequency)
-    if (expectedDosesPerDay === null) {
+    // Single source of truth — prefers the structured frequencyCode, falls back to
+    // parsing the prose sig, and yields null rather than guessing.
+    const expectedDosesPerDay = dosesPerDayFor(med)
+    if (expectedDosesPerDay === null || expectedDosesPerDay <= 0) {
+      logger.info('[LogDose] Skipping adherence — dosage not determinable', {
+        medicationId,
+        confidence: describeDosage(med).confidence,
+      })
       return null
     }
 
@@ -156,41 +173,4 @@ async function calculateAdherenceRate(
     logger.error('[LogDose] Error calculating adherence rate', error as Error)
     return null
   }
-}
-
-/**
- * Parse frequency string to determine expected doses per day
- * Examples:
- * - "once daily" -> 1
- * - "twice daily" -> 2
- * - "three times daily" -> 3
- * - "every 12 hours" -> 2
- * - "every 8 hours" -> 3
- */
-function parseFrequency(frequency?: string): number | null {
-  if (!frequency) return null
-
-  const lower = frequency.toLowerCase()
-
-  // Check for "once daily", "twice daily", etc.
-  if (lower.includes('once') && lower.includes('daily')) return 1
-  if (lower.includes('twice') && lower.includes('daily')) return 2
-  if (lower.includes('three times') && lower.includes('daily')) return 3
-  if (lower.includes('four times') && lower.includes('daily')) return 4
-
-  // Check for "every X hours"
-  const hoursMatch = lower.match(/every\s+(\d+)\s+hours?/)
-  if (hoursMatch) {
-    const hours = parseInt(hoursMatch[1])
-    return Math.round(24 / hours)
-  }
-
-  // Check for "X times per day"
-  const timesMatch = lower.match(/(\d+)\s+times?\s+(per|a)\s+day/)
-  if (timesMatch) {
-    return parseInt(timesMatch[1])
-  }
-
-  // Default to 1 if we can't parse
-  return 1
 }
