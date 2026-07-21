@@ -86,6 +86,7 @@ import { SymptomLogger } from '@/components/pets/SymptomLogger'
 
 import { getCSRFToken } from '@/lib/csrf'
 import { QuickWeightModal } from './components/QuickWeightModal'
+import { formatDosage } from '@/lib/medication-dosage'
 
 // ============================================================
 // PatientFieldEditor option lists.
@@ -2993,11 +2994,11 @@ function PatientDetailContent() {
                         <p className="text-xs text-muted-foreground">
                           {med.strength} {med.dosageForm}
                         </p>
-                        {med.frequency && (
+                        {formatDosage(med) && (
                           <>
                             <span className="text-xs text-muted-foreground">•</span>
                             <p className="text-xs text-muted-foreground truncate">
-                              {med.frequency}
+                              {formatDosage(med)}
                             </p>
                           </>
                         )}

@@ -23,6 +23,7 @@
  */
 
 import type { ScheduleFrequency } from '@/types/vital-schedules'
+import type { MedicationRoute } from '@/types/medical'
 
 export type DoseConfidence =
   /** Explicit, unambiguous schedule ("twice daily", "BID", "every 8 hours"). */
@@ -183,6 +184,95 @@ export interface DosageSource {
   sig?: string | null
   /** Legacy prose field (named "frequency", actually the whole sig). */
   frequency?: string | null
+  /** How much per administration. */
+  dose?: { amount: number; unit: string } | null
+  /** How it's taken. */
+  route?: MedicationRoute | null
+  /** Conditions, e.g. ['with meals']. */
+  timing?: string[] | null
+}
+
+// ---- Shared display vocabulary ------------------------------------------
+// Single source for BOTH the editor (components/medications/DosageFields.tsx) and
+// the read-only surfaces. Keeping two copies is how "Frequency" vs "Dosage
+// Instructions" drifted apart in the first place.
+
+export const FREQUENCY_LABELS: Record<string, string> = {
+  '1x': 'once a day',
+  '2x': 'twice a day',
+  '3x': '3 times a day',
+  '4x': '4 times a day',
+  '6x': '6 times a day',
+  daily: 'once a day',
+  weekly: 'once a week',
+  biweekly: 'every 2 weeks',
+  monthly: 'once a month',
+}
+
+export const ROUTE_LABELS: Record<MedicationRoute, string> = {
+  oral: 'by mouth',
+  topical: 'on the skin',
+  injection: 'by injection',
+  other: '',
+}
+
+/** Ordered options for the editor's selects. */
+export const FREQUENCY_OPTIONS: Array<{ code: ScheduleFrequency; label: string }> = [
+  '1x', '2x', '3x', '4x', '6x', 'weekly', 'biweekly', 'monthly',
+].map(c => ({ code: c as ScheduleFrequency, label: FREQUENCY_LABELS[c] }))
+
+export const ROUTE_OPTIONS: Array<{ code: MedicationRoute; label: string }> = [
+  { code: 'oral', label: 'By mouth' },
+  { code: 'topical', label: 'On the skin' },
+  { code: 'injection', label: 'Injection' },
+  { code: 'other', label: 'Other' },
+]
+
+export const DOSE_UNITS = ['tablet', 'capsule', 'mg', 'mL', 'drop', 'puff', 'patch', 'unit']
+
+export const TIMING_OPTIONS = [
+  'with meals', 'before meals', 'on an empty stomach', 'in the morning', 'at bedtime',
+]
+
+/** Units that take an 's' when plural (mg/mL never do). */
+const COUNTABLE_UNITS = new Set(['tablet', 'capsule', 'drop', 'puff', 'patch', 'unit'])
+
+function formatDose(dose: { amount: number; unit: string }): string {
+  const plural = dose.amount !== 1 && COUNTABLE_UNITS.has(dose.unit)
+  return `${dose.amount} ${dose.unit}${plural ? 's' : ''}`
+}
+
+/**
+ * Human-readable dosage for DISPLAY surfaces.
+ *
+ * Composes the structured fields into a sentence ("1 tablet by mouth, twice a day,
+ * with meals"). Falls back to the verbatim sig when nothing is structured yet, so
+ * un-migrated rows still render exactly what the label said.
+ *
+ * Every read-only surface should use this rather than printing `frequency` raw —
+ * that's why a medication whose schedule was correctly recorded as 2x/day still
+ * displayed the meaningless string "2".
+ */
+export function formatDosage(med: DosageSource): string {
+  const parts: string[] = []
+
+  if (med.dose && Number.isFinite(med.dose.amount)) parts.push(formatDose(med.dose))
+
+  const route = med.route ? ROUTE_LABELS[med.route] : ''
+  if (route) parts.push(route)
+
+  const freq = med.frequencyCode ? FREQUENCY_LABELS[med.frequencyCode] : ''
+  if (freq) parts.push(freq)
+
+  if (med.timing && med.timing.length > 0) parts.push(med.timing.join(', '))
+
+  if (parts.length === 0) {
+    // Nothing structured — show the verbatim instructions.
+    return (med.sig ?? med.frequency ?? '').trim()
+  }
+
+  const sentence = parts.join(', ')
+  return sentence.charAt(0).toUpperCase() + sentence.slice(1)
 }
 
 /**

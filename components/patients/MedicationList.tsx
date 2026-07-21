@@ -8,6 +8,7 @@ import { logger } from '@/lib/logger'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 import DosageFields from '@/components/medications/DosageFields'
+import { formatDosage } from '@/lib/medication-dosage'
 
 interface MedicationListProps {
   patientId: string
@@ -318,9 +319,9 @@ export function MedicationList({ patientId, patientOwnerId, medications, loading
                   </div>
                 </div>
 
-          {med.frequency && (
+          {formatDosage(med) && (
             <div className="mt-2 p-2 bg-primary-light/50 rounded text-sm">
-              <span className="font-medium">Dosage:</span> {med.frequency}
+              <span className="font-medium">Dosage:</span> {formatDosage(med)}
             </div>
           )}
 

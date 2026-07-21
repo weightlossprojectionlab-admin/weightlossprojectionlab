@@ -14,7 +14,15 @@
  * can't drift apart again (they previously disagreed on even the field's NAME).
  */
 
-import { describeDosage } from '@/lib/medication-dosage'
+import {
+  describeDosage,
+  // Shared vocabulary — the read-only surfaces render from these same maps via
+  // formatDosage(), so the editor and the display can't drift apart.
+  FREQUENCY_OPTIONS,
+  ROUTE_OPTIONS,
+  DOSE_UNITS,
+  TIMING_OPTIONS,
+} from '@/lib/medication-dosage'
 import type { ScheduleFrequency } from '@/types/vital-schedules'
 import type { MedicationRoute } from '@/types/medical'
 
@@ -35,29 +43,6 @@ interface DosageFieldsProps {
   /** Compact grid for inline edit rows. */
   dense?: boolean
 }
-
-/** Human labels for the shared vitals frequency vocabulary. */
-const FREQUENCY_OPTIONS: Array<{ code: ScheduleFrequency; label: string }> = [
-  { code: '1x', label: 'Once a day' },
-  { code: '2x', label: 'Twice a day' },
-  { code: '3x', label: '3 times a day' },
-  { code: '4x', label: '4 times a day' },
-  { code: '6x', label: '6 times a day' },
-  { code: 'weekly', label: 'Once a week' },
-  { code: 'biweekly', label: 'Every 2 weeks' },
-  { code: 'monthly', label: 'Once a month' },
-]
-
-const ROUTE_OPTIONS: Array<{ code: MedicationRoute; label: string }> = [
-  { code: 'oral', label: 'By mouth' },
-  { code: 'topical', label: 'On the skin' },
-  { code: 'injection', label: 'Injection' },
-  { code: 'other', label: 'Other' },
-]
-
-const DOSE_UNITS = ['tablet', 'capsule', 'mg', 'mL', 'drop', 'puff', 'patch', 'unit']
-
-const TIMING_CHIPS = ['with meals', 'before meals', 'on an empty stomach', 'in the morning', 'at bedtime']
 
 export function DosageFields({ value, onChange, dense = false }: DosageFieldsProps) {
   // What the app currently believes about this medication's schedule.
@@ -177,7 +162,7 @@ export function DosageFields({ value, onChange, dense = false }: DosageFieldsPro
           >
             <option value="">Not set</option>
             {FREQUENCY_OPTIONS.map(f => (
-              <option key={f.code} value={f.code}>{f.label}</option>
+              <option key={f.code} value={f.code}>{f.label.charAt(0).toUpperCase() + f.label.slice(1)}</option>
             ))}
           </select>
         </div>
@@ -202,7 +187,7 @@ export function DosageFields({ value, onChange, dense = false }: DosageFieldsPro
         <div>
           <label className={label}>Timing</label>
           <div className="flex flex-wrap gap-1.5">
-            {TIMING_CHIPS.map(t => {
+            {TIMING_OPTIONS.map(t => {
               const on = (value.timing || []).includes(t)
               return (
                 <button
