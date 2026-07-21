@@ -70,6 +70,8 @@ import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import VitalsWizardRouter from '@/components/wizards/VitalsWizardRouter'
 import { GlucometerScanModal } from '@/components/vitals/GlucometerScanModal'
+import EmergencyActionModal from '@/components/patients/EmergencyActionModal'
+import EmergencyAlertButton from '@/components/patients/EmergencyAlertButton'
 import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
@@ -253,6 +255,7 @@ function PatientDetailContent() {
   const [showQuickWeightModal, setShowQuickWeightModal] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showGlucometerScan, setShowGlucometerScan] = useState(false)
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false)
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
   const [summaryVitals, setSummaryVitals] = useState<VitalSign[]>([])
   const [summaryMood, setSummaryMood] = useState<string | undefined>(undefined)
@@ -1310,6 +1313,7 @@ function PatientDetailContent() {
                   <button
                     onClick={() => {
                       setActiveTab('emergency')
+                      setShowEmergencyModal(true)
                       setTimeout(() => {
                         document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
                       }, 100)
@@ -1795,6 +1799,19 @@ function PatientDetailContent() {
           {/* Show content based on active tab */}
           {activeTab === 'emergency' && patient && (
             <div className="space-y-4">
+              {/* Persistent actions — available even if the initial prompt modal was
+                  dismissed. The alert fires DIRECTLY on tap (no extra dialog); same
+                  shared button the modal uses. */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <EmergencyAlertButton patientId={patientId} patientName={patient.name} className="flex-1" />
+                <a
+                  href="tel:911"
+                  className="flex-1 py-3 border-2 border-red-600 text-red-700 dark:text-red-300 rounded-lg font-semibold flex items-center justify-center gap-2"
+                >
+                  Call 911
+                </a>
+              </div>
+
               <div className="rounded-xl border-2 border-red-500 bg-red-50 dark:bg-red-950/30 overflow-hidden">
                 {/* Header */}
                 <div className="bg-red-600 text-white px-5 py-3 flex items-center justify-between">
@@ -3759,6 +3776,15 @@ function PatientDetailContent() {
           onClose={() => setShowGlucometerScan(false)}
           patientId={patientId}
           onImported={() => { refetch() }}
+        />
+      )}
+
+      {patient && (
+        <EmergencyActionModal
+          isOpen={showEmergencyModal}
+          onClose={() => setShowEmergencyModal(false)}
+          patientId={patientId}
+          patientName={patient.name}
         />
       )}
 

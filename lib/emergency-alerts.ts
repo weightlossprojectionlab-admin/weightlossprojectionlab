@@ -16,7 +16,9 @@ import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
 
 export interface EmergencyAlert {
-  type: 'critical_vitals' | 'fall_detected' | 'medication_error' | 'no_response'
+  // 'manual_emergency' = a caregiver explicitly raised the alarm from the Emergency
+  // action (vs. the automated vitals-driven types). Reuses the same fan-out.
+  type: 'critical_vitals' | 'fall_detected' | 'medication_error' | 'no_response' | 'manual_emergency'
   severity: 'urgent' | 'emergency' // urgent = notify, emergency = notify + call
   familyMemberId: string
   familyMemberName: string
@@ -376,6 +378,8 @@ function getAlertTitle(alert: EmergencyAlert): string {
       return `${prefix}: ${alert.familyMemberName} - Medication Issue`
     case 'no_response':
       return `${prefix}: ${alert.familyMemberName} - No Response`
+    case 'manual_emergency':
+      return `${prefix}: ${alert.familyMemberName} needs help`
     default:
       return `${prefix}: ${alert.familyMemberName}`
   }
