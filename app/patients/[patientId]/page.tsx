@@ -123,6 +123,22 @@ const BLOOD_TYPE_OPTIONS: FieldOption[] = [
   { value: 'O-', label: 'O−' },
   { value: 'unknown', label: 'Unknown (no records)' },
 ]
+// Common drug allergies offered as one-tap quick-adds. NOT a fixed list — the field
+// stays free-text so any drug not here can still be entered (drug allergies are
+// open-ended; a closed list would silently drop real, life-critical allergies).
+// These ~cover the majority of clinically significant drug allergies.
+const DRUG_ALLERGY_SUGGESTIONS = [
+  'Penicillin',
+  'Sulfa (sulfonamides)',
+  'Aspirin / NSAIDs',
+  'Codeine / opioids',
+  'Cephalosporins',
+  'Contrast dye',
+  'Local anesthetics',
+  'Latex',
+  'Erythromycin',
+  'Tetracycline',
+]
 // Resuscitation preference. Plain-language labels so a caregiver picks the right
 // one; 'unknown' = no directive on record (a real answer, not a blank).
 const CODE_STATUS_OPTIONS: FieldOption[] = [
@@ -2416,7 +2432,8 @@ function PatientDetailContent() {
                   label="Drug allergies"
                   type="tag-input"
                   tone="negative"
-                  placeholder="e.g., penicillin, sulfa, codeine"
+                  placeholder="Type any drug, or tap a common one below…"
+                  suggestions={DRUG_ALLERGY_SUGGESTIONS}
                   value={patient.drugAllergies}
                   canEdit={canEditProfile}
                   emptyLabel="None recorded — the first thing a responder asks"

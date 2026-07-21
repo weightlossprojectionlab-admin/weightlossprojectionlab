@@ -80,6 +80,10 @@ interface TagInputProps extends BaseProps {
    *  vs `'negative'` (red chips, for avoid lists) vs `'neutral'`
    *  (default muted chips). Pure cosmetic. */
   tone?: 'positive' | 'negative' | 'neutral'
+  /** Common values offered as one-tap quick-add chips. Free text is still
+   *  allowed for anything not listed — this is a combobox, not a fixed list
+   *  (essential for open-ended fields like drug allergies). */
+  suggestions?: string[]
 }
 
 type Props = TextProps | NumberProps | SelectProps | MultiSelectProps | TagInputProps
@@ -386,6 +390,25 @@ export function PatientFieldEditor(props: Props) {
                   autoFocus
                   className="w-full px-2 py-1.5 border border-border bg-background text-foreground rounded text-sm focus:outline-none focus:ring-1 focus:ring-primary"
                 />
+                {/* Quick-add common values. Free text above still works for anything
+                    not listed — this stays a combobox, never a fixed list. */}
+                {props.suggestions && props.suggestions.some(s => !tags.includes(s)) && (
+                  <div className="mt-2 pt-2 border-t border-border">
+                    <p className="text-[11px] text-muted-foreground mb-1">Common — tap to add:</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {props.suggestions.filter(s => !tags.includes(s)).map(s => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => addTag(s)}
+                          className="text-xs px-2 py-1 rounded-full border border-dashed border-border text-muted-foreground hover:border-primary hover:text-primary"
+                        >
+                          + {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )
           })()}
