@@ -1875,26 +1875,6 @@
       ]
     },
     {
-      "collectionGroup": "conversation_analytics",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "date",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "press_contacts",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "contactedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "press_contacts",
       "queryScope": "COLLECTION",
       "fields": [
@@ -1918,26 +1898,6 @@
         },
         {
           "fieldPath": "contactedAt",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "press_contact_stats",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "totalContacts",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
-      "collectionGroup": "press_contact_stats",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "lastContactedAt",
           "order": "DESCENDING"
         }
       ]
