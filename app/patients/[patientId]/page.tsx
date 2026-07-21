@@ -247,7 +247,7 @@ function PatientDetailContent() {
   const [loadingFamilyHistory, setLoadingFamilyHistory] = useState(false)
   const [showFamilyHistoryForm, setShowFamilyHistoryForm] = useState(false)
   const [deletingFamilyHistory, setDeletingFamilyHistory] = useState<FamilyHistoryEntry | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'emergency' | 'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
   const [showQuickWeightModal, setShowQuickWeightModal] = useState(false)
@@ -1302,6 +1302,27 @@ function PatientDetailContent() {
                       <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Settings</span>
                     </button>
                   )}
+
+                  {/* Emergency — pinned to the BOTTOM of Quick Actions. Always visible,
+                      visually distinct (red), full-width on mobile so it's unmissable.
+                      The one-tap "what does she take?" entry point to the read-only
+                      emergency view. */}
+                  <button
+                    onClick={() => {
+                      setActiveTab('emergency')
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
+                    }}
+                    className={`col-span-4 lg:col-span-1 w-full p-2 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-row items-center justify-center lg:justify-start gap-2 border-2 ${
+                      activeTab === 'emergency'
+                        ? 'bg-red-600 text-white border-red-600'
+                        : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-300 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40'
+                    }`}
+                  >
+                    <span className="text-xl">🚨</span>
+                    <span className="text-sm text-center lg:text-left leading-tight font-semibold">Emergency</span>
+                  </button>
                 </div>
 
                 {/* Document upload now renders as a ResponsiveModal
@@ -1772,6 +1793,115 @@ function PatientDetailContent() {
         {/* Main Content - Switches based on activeTab */}
         <div className="space-y-6">
           {/* Show content based on active tab */}
+          {activeTab === 'emergency' && patient && (
+            <div className="space-y-4">
+              <div className="rounded-xl border-2 border-red-500 bg-red-50 dark:bg-red-950/30 overflow-hidden">
+                {/* Header */}
+                <div className="bg-red-600 text-white px-5 py-3 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2"><span aria-hidden>🚨</span> Emergency Info</h2>
+                    <p className="text-sm text-red-100">{patient.name}{patient.dateOfBirth ? ` · ${calculateAge(patient.dateOfBirth)} yrs` : ''}{patient.gender ? ` · ${patient.gender}` : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-red-100 uppercase tracking-wide">Blood type</div>
+                    <div className="text-2xl font-bold">{patient.bloodType && patient.bloodType !== 'unknown' ? patient.bloodType : '—'}</div>
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-5">
+                  {/* Drug allergies — the first question a responder asks. READ-ONLY:
+                      the emergency view is for reading the record under stress, not
+                      authoring it. Editing happens calmly on the Info tab. */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-300 mb-1">Drug allergies</h3>
+                    {patient.drugAllergies && patient.drugAllergies.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {patient.drugAllergies.map((a) => (
+                          <span key={a} className="px-2.5 py-1 rounded-full bg-red-600 text-white text-sm font-semibold">{a}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded — add it from the Info tab</p>
+                    )}
+                  </div>
+
+                  {/* Code status — READ-ONLY here. A DNR/resuscitation preference is an
+                      advance decision; it must be established calmly in advance (Info tab,
+                      governed write), NEVER set or changed during an emergency. The
+                      responder reads it; no one authors an end-of-life choice under panic. */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-300 mb-1">Code status</h3>
+                    {patient.codeStatus && patient.codeStatus !== 'unknown' ? (
+                      <span className={`inline-block px-3 py-1 rounded-md text-base font-bold ${
+                        patient.codeStatus === 'full'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-red-700 text-white'
+                      }`}>
+                        {CODE_STATUS_OPTIONS.find(o => o.value === patient.codeStatus)?.label ?? patient.codeStatus}
+                      </span>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Not on file — set it in advance from the Info tab</p>
+                    )}
+                  </div>
+
+                  {/* Conditions */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Conditions</h3>
+                    {patient.healthConditions && patient.healthConditions.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {patient.healthConditions.map((c) => (
+                          <span key={c} className="px-2.5 py-1 rounded-full bg-muted text-foreground text-sm capitalize">{c}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded</p>
+                    )}
+                  </div>
+
+                  {/* Medications */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Medications</h3>
+                    {medications && medications.length > 0 ? (
+                      <ul className="space-y-2">
+                        {medications.map((med) => (
+                          <li key={med.id} className="text-sm">
+                            <span className="font-semibold text-foreground">{med.name}</span>
+                            {med.strength ? <span className="text-muted-foreground"> {med.strength}</span> : null}
+                            <div className="text-muted-foreground">{formatDosage(med) || 'Dosage not recorded'}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded</p>
+                    )}
+                  </div>
+
+                  {/* Emergency contacts */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Emergency contacts</h3>
+                    {patient.emergencyContacts && patient.emergencyContacts.length > 0 ? (
+                      <ul className="space-y-1">
+                        {patient.emergencyContacts.map((c) => (
+                          <li key={c.id} className="text-sm text-foreground">
+                            <span className="font-medium">{c.name}</span>
+                            {c.relationship ? <span className="text-muted-foreground"> · {c.relationship}</span> : null}
+                            {c.phone ? <a href={`tel:${c.phone}`} className="text-primary underline ml-1">{c.phone}</a> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground px-1">
+                Informational summary of records on file — not a substitute for professional medical judgment.
+                Fields marked “None recorded” have no data; complete them from the Info tab so they’re here when needed.
+              </p>
+            </div>
+          )}
+
           {activeTab === 'vitals' && (
             <>
               {/* Pending Weight Approvals — visible to caregivers/admins */}
@@ -2254,15 +2384,15 @@ function PatientDetailContent() {
                 />
               </div>
 
-              {/* Emergency Information — the facts a first responder asks for.
-                  Drug allergies (DISTINCT from food allergies) and code status
-                  were previously unmodeled; emergency contacts were modeled but
-                  never surfaced. Kept together so the emergency-critical data isn't
-                  scattered through the daily-tracking view. */}
+              {/* Emergency Information — the CALM edit surface for the emergency-critical
+                  fields. Deliberately here, not in the 🚨 Emergency view: code status
+                  (DNR) is an advance decision that must be set ahead of time, never during
+                  a crisis. The Emergency view reads these; this is where they're authored. */}
               <div className="border-t border-border pt-4 mt-4 space-y-1">
-                <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
                   <span aria-hidden>🚨</span> Emergency Information
                 </h3>
+                <p className="text-xs text-muted-foreground mb-2">Set these calmly, in advance — they appear in the Emergency quick action.</p>
                 <PatientFieldEditor
                   patientId={patientId}
                   field="drugAllergies"
@@ -2278,7 +2408,7 @@ function PatientDetailContent() {
                 <PatientFieldEditor
                   patientId={patientId}
                   field="codeStatus"
-                  label="Code status"
+                  label="Code status (advance decision)"
                   type="select"
                   options={CODE_STATUS_OPTIONS}
                   value={patient.codeStatus}
@@ -2286,27 +2416,8 @@ function PatientDetailContent() {
                   emptyLabel="Not recorded"
                   onUpdated={(v) => setPatient({ ...patient, codeStatus: v as PatientProfile['codeStatus'] })}
                 />
-
-                {/* Emergency contacts — already modeled, previously rendered
-                    nowhere. Read-only display for now; full CRUD editor lands with
-                    the emergency-mode build. */}
-                <div className="pt-2">
-                  <p className="text-xs text-muted-foreground mb-1">Emergency contacts</p>
-                  {patient.emergencyContacts && patient.emergencyContacts.length > 0 ? (
-                    <ul className="space-y-1">
-                      {patient.emergencyContacts.map((c) => (
-                        <li key={c.id} className="text-sm text-foreground">
-                          <span className="font-medium">{c.name}</span>
-                          {c.relationship ? <span className="text-muted-foreground"> · {c.relationship}</span> : null}
-                          {c.phone ? <span className="text-muted-foreground"> · {c.phone}</span> : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">None recorded</p>
-                  )}
-                </div>
               </div>
+
 
               {/* Vitals profile (goals + lifestyle) — distinct from
                   the time-series Vitals tab where individual readings
