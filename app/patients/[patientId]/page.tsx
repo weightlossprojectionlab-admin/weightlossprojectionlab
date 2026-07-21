@@ -121,6 +121,15 @@ const BLOOD_TYPE_OPTIONS: FieldOption[] = [
   { value: 'O-', label: 'O−' },
   { value: 'unknown', label: 'Unknown (no records)' },
 ]
+// Resuscitation preference. Plain-language labels so a caregiver picks the right
+// one; 'unknown' = no directive on record (a real answer, not a blank).
+const CODE_STATUS_OPTIONS: FieldOption[] = [
+  { value: 'full', label: 'Full code (resuscitate)' },
+  { value: 'dnr', label: 'DNR — do not resuscitate' },
+  { value: 'dni', label: 'DNI — do not intubate' },
+  { value: 'dnr_dni', label: 'DNR + DNI' },
+  { value: 'unknown', label: 'Unknown / no directive on file' },
+]
 const ACTIVITY_LEVEL_OPTIONS: FieldOption[] = [
   { value: 'sedentary', label: 'Sedentary' },
   { value: 'light', label: 'Light activity' },
@@ -2243,6 +2252,60 @@ function PatientDetailContent() {
                   emptyLabel="Not recorded — useful in emergencies"
                   onUpdated={(v) => setPatient({ ...patient, bloodType: v })}
                 />
+              </div>
+
+              {/* Emergency Information — the facts a first responder asks for.
+                  Drug allergies (DISTINCT from food allergies) and code status
+                  were previously unmodeled; emergency contacts were modeled but
+                  never surfaced. Kept together so the emergency-critical data isn't
+                  scattered through the daily-tracking view. */}
+              <div className="border-t border-border pt-4 mt-4 space-y-1">
+                <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-2">
+                  <span aria-hidden>🚨</span> Emergency Information
+                </h3>
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="drugAllergies"
+                  label="Drug allergies"
+                  type="tag-input"
+                  tone="negative"
+                  placeholder="e.g., penicillin, sulfa, codeine"
+                  value={patient.drugAllergies}
+                  canEdit={canEditProfile}
+                  emptyLabel="None recorded — the first thing a responder asks"
+                  onUpdated={(v) => setPatient({ ...patient, drugAllergies: v })}
+                />
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="codeStatus"
+                  label="Code status"
+                  type="select"
+                  options={CODE_STATUS_OPTIONS}
+                  value={patient.codeStatus}
+                  canEdit={canEditProfile}
+                  emptyLabel="Not recorded"
+                  onUpdated={(v) => setPatient({ ...patient, codeStatus: v as PatientProfile['codeStatus'] })}
+                />
+
+                {/* Emergency contacts — already modeled, previously rendered
+                    nowhere. Read-only display for now; full CRUD editor lands with
+                    the emergency-mode build. */}
+                <div className="pt-2">
+                  <p className="text-xs text-muted-foreground mb-1">Emergency contacts</p>
+                  {patient.emergencyContacts && patient.emergencyContacts.length > 0 ? (
+                    <ul className="space-y-1">
+                      {patient.emergencyContacts.map((c) => (
+                        <li key={c.id} className="text-sm text-foreground">
+                          <span className="font-medium">{c.name}</span>
+                          {c.relationship ? <span className="text-muted-foreground"> · {c.relationship}</span> : null}
+                          {c.phone ? <span className="text-muted-foreground"> · {c.phone}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">None recorded</p>
+                  )}
+                </div>
               </div>
 
               {/* Vitals profile (goals + lifestyle) — distinct from

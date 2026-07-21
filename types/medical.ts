@@ -173,6 +173,16 @@ export interface PatientProfile {
   foodAllergies?: string[] // e.g., ['peanuts', 'shellfish', 'dairy']
 
   /**
+   * DRUG / medication allergies — DISTINCT from foodAllergies. This is the
+   * question a paramedic asks first ("allergic to any medications?"), and it
+   * was previously unmodeled: the only allergy fields were for food. Drug
+   * allergies drive what a responder can safely administer, so they belong in
+   * the emergency-critical cluster, not with dietary needs.
+   * e.g. ['penicillin', 'sulfa', 'codeine']
+   */
+  drugAllergies?: string[]
+
+  /**
    * Blood type for emergency identification (transfusion
    * compatibility). Surfaced on the patient profile edit form +
    * the family-member onboarding wizard. 'unknown' is a real
@@ -180,6 +190,25 @@ export interface PatientProfile {
    * record that they don't know.
    */
   bloodType?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'unknown'
+
+  /**
+   * Resuscitation preference / code status — the single most consequential
+   * emergency fact ("do we resuscitate?"), previously unmodeled anywhere.
+   * 'unknown' is a real answer (no directive on record), distinct from absence.
+   * Changing this is an end-of-life decision: writes must be GOVERNED — audit-
+   * logged and an alert fired to all other authorized caregivers, so no one
+   * alters it in secret (see the emergency-layer plan).
+   */
+  codeStatus?: 'full' | 'dnr' | 'dni' | 'dnr_dni' | 'unknown'
+
+  /**
+   * Whether a legal advance directive / living will / POLST exists on file, plus
+   * an optional note on where it lives. The app stores a REFERENCE, not the legal
+   * instrument — "directive on file, see attached" is honest; rendering a will
+   * in-app is not legally valid and must not be implied.
+   */
+  advanceDirectiveOnFile?: boolean
+  advanceDirectiveNote?: string // e.g. "POLST in top drawer" / "with attorney J. Smith"
 
   // ===== Family-meal PRD additions (Commit A foundation) =====
   // All optional — existing patients get defaults via absence.

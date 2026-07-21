@@ -69,6 +69,13 @@ export const patientProfileSchema = z.object({
   // is a valid stored value (not a missing field) so users who
   // genuinely don't know can record that explicitly.
   bloodType: z.enum(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', 'unknown']).optional(),
+  // Emergency-critical, previously unmodeled. Drug allergies are DISTINCT from
+  // foodAllergies (the first question a responder asks). Code status is the
+  // resuscitation preference; changing it is a governed write (see plan).
+  drugAllergies: z.array(z.string()).optional(),
+  codeStatus: z.enum(['full', 'dnr', 'dni', 'dnr_dni', 'unknown']).optional(),
+  advanceDirectiveOnFile: z.boolean().optional(),
+  advanceDirectiveNote: z.string().max(500).optional(),
 
   // Metadata
   createdAt: z.string().datetime(),
