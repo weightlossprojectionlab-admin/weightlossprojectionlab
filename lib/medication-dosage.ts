@@ -242,37 +242,51 @@ function formatDose(dose: { amount: number; unit: string }): string {
   return `${dose.amount} ${dose.unit}${plural ? 's' : ''}`
 }
 
+/** True once there's a schedule (frequency or route) but NO amount-per-dose. */
+export function dosageAmountMissing(med: DosageSource): boolean {
+  const hasSchedule = !!med.frequencyCode || !!med.route
+  const hasAmount = !!med.dose && Number.isFinite(med.dose.amount)
+  return hasSchedule && !hasAmount
+}
+
 /**
  * Human-readable dosage for DISPLAY surfaces.
  *
- * Composes the structured fields into a sentence ("1 tablet by mouth, twice a day,
- * with meals"). Falls back to the verbatim sig when nothing is structured yet, so
- * un-migrated rows still render exactly what the label said.
+ * Composes the structured fields into a prescription-style phrase — leading with
+ * the amount and a "Take" verb the way a real sig reads ("Take 1 tablet by mouth
+ * twice a day, with meals"). Falls back to the verbatim sig when nothing is
+ * structured yet, so un-migrated rows render exactly what the label said.
+ *
+ * Deliberately does NOT invent an amount when one is absent — "how much" is the
+ * single most important field, and guessing it is the whole class of bug this work
+ * removed. When the amount is missing, callers should pair this with a visible
+ * "add amount" affordance (see dosageAmountMissing) rather than let the phrase read
+ * as if it were complete.
  *
  * Every read-only surface should use this rather than printing `frequency` raw —
  * that's why a medication whose schedule was correctly recorded as 2x/day still
  * displayed the meaningless string "2".
  */
 export function formatDosage(med: DosageSource): string {
-  const parts: string[] = []
-
-  if (med.dose && Number.isFinite(med.dose.amount)) parts.push(formatDose(med.dose))
-
+  const hasAmount = !!med.dose && Number.isFinite(med.dose!.amount)
   const route = med.route ? ROUTE_LABELS[med.route] : ''
-  if (route) parts.push(route)
-
   const freq = med.frequencyCode ? FREQUENCY_LABELS[med.frequencyCode] : ''
-  if (freq) parts.push(freq)
+  const timing = med.timing && med.timing.length > 0 ? med.timing.join(', ') : ''
 
-  if (med.timing && med.timing.length > 0) parts.push(med.timing.join(', '))
-
-  if (parts.length === 0) {
-    // Nothing structured — show the verbatim instructions.
+  // Nothing structured at all — show the verbatim instructions.
+  if (!hasAmount && !route && !freq && !timing) {
     return (med.sig ?? med.frequency ?? '').trim()
   }
 
-  const sentence = parts.join(', ')
-  return sentence.charAt(0).toUpperCase() + sentence.slice(1)
+  // Core reads like a sig: "Take 1 tablet by mouth twice a day". The "Take" verb
+  // only makes sense with an amount — without one, lead with the route/frequency
+  // (the missing amount is surfaced separately via dosageAmountMissing).
+  const core = (hasAmount ? ['Take', formatDose(med.dose!), route, freq] : [route, freq])
+    .filter(Boolean)
+    .join(' ')
+  const sentence = timing ? `${core}, ${timing}` : core
+
+  return hasAmount ? sentence : sentence.charAt(0).toUpperCase() + sentence.slice(1)
 }
 
 /**

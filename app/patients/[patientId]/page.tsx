@@ -86,7 +86,7 @@ import { SymptomLogger } from '@/components/pets/SymptomLogger'
 
 import { getCSRFToken } from '@/lib/csrf'
 import { QuickWeightModal } from './components/QuickWeightModal'
-import { formatDosage } from '@/lib/medication-dosage'
+import { formatDosage, dosageAmountMissing } from '@/lib/medication-dosage'
 
 // ============================================================
 // PatientFieldEditor option lists.
@@ -3001,6 +3001,11 @@ function PatientDetailContent() {
                               {formatDosage(med)}
                             </p>
                           </>
+                        )}
+                        {dosageAmountMissing(med) && (
+                          <span className="text-xs text-amber-600 dark:text-amber-400 whitespace-nowrap" title="No amount-per-dose recorded — edit to add how much to take">
+                            · add amount
+                          </span>
                         )}
                       </div>
                       {med.addedBy && (
