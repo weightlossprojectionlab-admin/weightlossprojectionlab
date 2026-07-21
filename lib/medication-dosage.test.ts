@@ -6,7 +6,6 @@ import {
   isUsableForAdherence,
   frequencyCodeForDosesPerDay,
   formatDosage,
-  dosageAmountMissing,
 } from './medication-dosage'
 
 describe('parseDoseFrequency — explicit schedules (high confidence)', () => {
@@ -198,15 +197,5 @@ describe('formatDosage', () => {
   })
   it('falls back to the verbatim sig when nothing is structured', () => {
     expect(formatDosage({ frequency: 'Take 1 tablet twice daily' })).toBe('Take 1 tablet twice daily')
-  })
-})
-
-describe('dosageAmountMissing', () => {
-  it('true when a schedule exists but no amount', () => {
-    expect(dosageAmountMissing({ frequencyCode: '2x', route: 'oral' })).toBe(true)
-  })
-  it('false when the amount is present, or nothing structured at all', () => {
-    expect(dosageAmountMissing({ dose: { amount: 1, unit: 'tablet' }, frequencyCode: '2x' })).toBe(false)
-    expect(dosageAmountMissing({ frequency: 'some prose' })).toBe(false)
   })
 })

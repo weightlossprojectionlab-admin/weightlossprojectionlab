@@ -11,7 +11,7 @@ import MedicationDataReviewModal from '@/components/medications/MedicationDataRe
 import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
-import { formatDosage, dosageAmountMissing } from '@/lib/medication-dosage'
+import { formatDosage } from '@/lib/medication-dosage'
 
 interface MedicationDetailModalProps {
   medication: PatientMedication | ScannedMedication
@@ -404,11 +404,6 @@ export default function MedicationDetailModal({ medication, onClose, patientId, 
               </h3>
               <div className="bg-muted rounded-lg p-4">
                 <p className="text-foreground">{formatDosage(medication)}</p>
-                {dosageAmountMissing(medication) && (
-                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                    Amount per dose not recorded — edit this medication to add how much to take.
-                  </p>
-                )}
               </div>
             </div>
           )}

@@ -8,7 +8,7 @@ import { logger } from '@/lib/logger'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import MedicationDetailModal from '@/components/health/MedicationDetailModal'
 import DosageFields from '@/components/medications/DosageFields'
-import { formatDosage, dosageAmountMissing } from '@/lib/medication-dosage'
+import { formatDosage } from '@/lib/medication-dosage'
 
 interface MedicationListProps {
   patientId: string
@@ -322,15 +322,6 @@ export function MedicationList({ patientId, patientOwnerId, medications, loading
           {formatDosage(med) && (
             <div className="mt-2 p-2 bg-primary-light/50 rounded text-sm">
               <span className="font-medium">Dosage:</span> {formatDosage(med)}
-              {dosageAmountMissing(med) && (
-                <button
-                  onClick={(e) => handleEditClick(med, e)}
-                  className="ml-2 text-xs text-amber-700 dark:text-amber-400 underline"
-                  title="No amount-per-dose recorded"
-                >
-                  add amount
-                </button>
-              )}
             </div>
           )}
 

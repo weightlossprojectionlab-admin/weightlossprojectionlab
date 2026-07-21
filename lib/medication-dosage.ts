@@ -265,13 +265,6 @@ function formatDose(dose: { amount: number; unit: string }): string {
   return `${dose.amount} ${dose.unit}${plural ? 's' : ''}`
 }
 
-/** True once there's a schedule (frequency or route) but NO amount-per-dose. */
-export function dosageAmountMissing(med: DosageSource): boolean {
-  const hasSchedule = !!med.frequencyCode || !!med.route
-  const hasAmount = !!med.dose && Number.isFinite(med.dose.amount)
-  return hasSchedule && !hasAmount
-}
-
 /**
  * Human-readable dosage for DISPLAY surfaces.
  *
@@ -282,9 +275,8 @@ export function dosageAmountMissing(med: DosageSource): boolean {
  *
  * Deliberately does NOT invent an amount when one is absent — "how much" is the
  * single most important field, and guessing it is the whole class of bug this work
- * removed. When the amount is missing, callers should pair this with a visible
- * "add amount" affordance (see dosageAmountMissing) rather than let the phrase read
- * as if it were complete.
+ * removed. Without an amount the phrase just leads with route/frequency; it never
+ * fabricates a count.
  *
  * Every read-only surface should use this rather than printing `frequency` raw —
  * that's why a medication whose schedule was correctly recorded as 2x/day still
@@ -302,8 +294,7 @@ export function formatDosage(med: DosageSource): string {
   }
 
   // Core reads like a sig: "Take 1 tablet by mouth twice a day". The "Take" verb
-  // only makes sense with an amount — without one, lead with the route/frequency
-  // (the missing amount is surfaced separately via dosageAmountMissing).
+  // only makes sense with an amount — without one, lead with the route/frequency.
   const core = (hasAmount ? ['Take', formatDose(med.dose!), route, freq] : [route, freq])
     .filter(Boolean)
     .join(' ')
