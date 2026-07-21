@@ -1,6 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import DosageFields from '@/components/medications/DosageFields'
+import { describeDosage } from '@/lib/medication-dosage'
 import { XMarkIcon, CheckIcon, PencilIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import { ParsedMedicationData } from '@/lib/medication-parser'
 import { uploadMedicationImage, uploadMedicationImageRecord } from '@/lib/medication-image-upload'
@@ -206,6 +208,14 @@ export function MedicationReviewModal({
       return
     }
 
+    // Confidence gate: don't let an ambiguous dosage ("2" — dose-or-frequency?) commit
+    // unresolved. Same principle as the glucometer scan refusing to import flagged rows —
+    // a guessed schedule is exactly the fabrication this whole model change removes.
+    if (!editedData.frequencyCode && describeDosage({ sig: editedData.sig ?? editedData.frequency, frequency: editedData.frequency }).confidence === 'ambiguous') {
+      toast.error('Set how often this is taken — "' + (editedData.sig ?? editedData.frequency) + '" is ambiguous (amount per dose vs. times per day).')
+      return
+    }
+
     setIsSaving(true)
 
     try {
@@ -227,6 +237,11 @@ export function MedicationReviewModal({
           strength: editedData.strength,
           dosageForm: editedData.dosageForm || 'Unknown',
           frequency: editedData.frequency,
+          sig: editedData.sig ?? editedData.frequency,
+          dose: editedData.dose,
+          frequencyCode: editedData.frequencyCode,
+          route: editedData.route,
+          timing: editedData.timing,
           prescribedFor: editedData.prescribedFor,
           prescribingDoctor: editedData.prescribingDoctor,
           rxNumber: editedData.rxNumber,
@@ -321,6 +336,11 @@ export function MedicationReviewModal({
         strength: editedData.strength,
         dosageForm: editedData.dosageForm || 'Unknown',
         frequency: editedData.frequency,
+        sig: editedData.sig ?? editedData.frequency,
+        dose: editedData.dose,
+        frequencyCode: editedData.frequencyCode,
+        route: editedData.route,
+        timing: editedData.timing,
         prescribedFor: editedData.prescribedFor,
         prescribingDoctor: editedData.prescribingDoctor,
         rxNumber: editedData.rxNumber,
@@ -559,17 +579,20 @@ export function MedicationReviewModal({
                 </div>
               </div>
 
-              {/* Frequency */}
+              {/* Structured dosage — same editor as Add/Edit. OCR fills the prose sig;
+                  the user resolves any ambiguity (a bare "2") here BEFORE it's committed,
+                  mirroring the glucometer scan's "flagged rows can't import" gate. */}
               <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Dosage Instructions
-                </label>
-                <input
-                  type="text"
-                  value={editedData.frequency || ''}
-                  onChange={(e) => setEditedData({ ...editedData, frequency: e.target.value })}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  placeholder="e.g., Take 1 tablet twice daily"
+                <DosageFields
+                  value={{
+                    sig: editedData.sig ?? editedData.frequency,
+                    frequency: editedData.frequency,
+                    dose: editedData.dose,
+                    frequencyCode: editedData.frequencyCode,
+                    route: editedData.route,
+                    timing: editedData.timing,
+                  }}
+                  onChange={(patch) => setEditedData({ ...editedData, ...patch })}
                 />
               </div>
 
