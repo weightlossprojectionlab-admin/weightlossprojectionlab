@@ -176,6 +176,29 @@ export function dosesPerDayForCode(code?: ScheduleFrequency | null): number | nu
   }
 }
 
+/**
+ * Inverse of dosesPerDayForCode: map a doses-per-day number back to a
+ * ScheduleFrequency, or null when it doesn't correspond to a canonical code.
+ *
+ * Used by the backfill to convert a HIGH-confidence parse of legacy prose into the
+ * structured `frequencyCode`. Returns null for values with no exact code (e.g.
+ * "every 5 hours" -> 4.8/day) so the backfill leaves those for human review rather
+ * than snapping them to a wrong bucket.
+ */
+export function frequencyCodeForDosesPerDay(n: number | null): ScheduleFrequency | null {
+  if (n == null || !Number.isFinite(n)) return null
+  const eq = (a: number, b: number) => Math.abs(a - b) < 1e-6
+  if (eq(n, 1)) return '1x'
+  if (eq(n, 2)) return '2x'
+  if (eq(n, 3)) return '3x'
+  if (eq(n, 4)) return '4x'
+  if (eq(n, 6)) return '6x'
+  if (eq(n, 1 / 7)) return 'weekly'
+  if (eq(n, 1 / 14)) return 'biweekly'
+  if (eq(n, 1 / 30)) return 'monthly'
+  return null
+}
+
 /** The subset of a medication this module needs — keeps it decoupled from the full type. */
 export interface DosageSource {
   /** Phase 2 structured code — authoritative when present. */

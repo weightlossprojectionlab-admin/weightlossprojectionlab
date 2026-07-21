@@ -4,6 +4,9 @@ import {
   dosesPerDayForCode,
   describeDosage,
   isUsableForAdherence,
+  frequencyCodeForDosesPerDay,
+  formatDosage,
+  dosageAmountMissing,
 } from './medication-dosage'
 
 describe('parseDoseFrequency — explicit schedules (high confidence)', () => {
@@ -136,5 +139,74 @@ describe('describeDosage', () => {
   })
   it('reports high confidence when a structured code is set', () => {
     expect(describeDosage({ frequencyCode: '2x' })).toEqual({ dosesPerDay: 2, confidence: 'high' })
+  })
+})
+
+describe('frequencyCodeForDosesPerDay (backfill inverse mapping)', () => {
+  it.each([[1, '1x'], [2, '2x'], [3, '3x'], [4, '4x'], [6, '6x']] as const)(
+    '%s/day -> %s', (n, code) => expect(frequencyCodeForDosesPerDay(n)).toBe(code))
+
+  it('maps sub-daily cadences', () => {
+    expect(frequencyCodeForDosesPerDay(1 / 7)).toBe('weekly')
+    expect(frequencyCodeForDosesPerDay(1 / 30)).toBe('monthly')
+  })
+
+  it('returns null for non-canonical values (backfill leaves them for review)', () => {
+    expect(frequencyCodeForDosesPerDay(4.8)).toBeNull() // "every 5 hours"
+    expect(frequencyCodeForDosesPerDay(5)).toBeNull()
+    expect(frequencyCodeForDosesPerDay(null)).toBeNull()
+    expect(frequencyCodeForDosesPerDay(0.5)).toBeNull() // every other day — no code
+  })
+})
+
+describe('backfill classification (the branches the script takes)', () => {
+  // Mirrors backfill-medication-dosage.ts: only HIGH confidence + a canonical code migrates.
+  const classify = (frequency: string) => {
+    const parsed = describeDosage({ frequency })
+    const code = parsed.confidence === 'high' ? frequencyCodeForDosesPerDay(parsed.dosesPerDay) : null
+    return code ? { action: 'migrate', code } : { action: 'needs-review', confidence: parsed.confidence }
+  }
+
+  it('migrates high-confidence prose', () => {
+    expect(classify('Take 1 tablet twice daily')).toEqual({ action: 'migrate', code: '2x' })
+    expect(classify('every 8 hours')).toEqual({ action: 'migrate', code: '3x' })
+  })
+
+  it('leaves the ambiguous "2" untouched (the reported bug — must NOT auto-migrate)', () => {
+    expect(classify('2')).toEqual({ action: 'needs-review', confidence: 'ambiguous' })
+  })
+
+  it('leaves unparseable + non-canonical rows for review', () => {
+    expect(classify('as needed').action).toBe('needs-review')
+    expect(classify('every 5 hours').action).toBe('needs-review') // high conf, 4.8/day, no code
+    expect(classify('take daily').action).toBe('needs-review') // 'low' confidence, not migrated
+  })
+})
+
+describe('formatDosage', () => {
+  it('reads like a sig when an amount is present', () => {
+    expect(formatDosage({ dose: { amount: 1, unit: 'tablet' }, frequencyCode: '2x', route: 'oral', timing: ['with meals'] }))
+      .toBe('Take 1 tablet by mouth twice a day, with meals')
+  })
+  it('drops the "Take" verb and leads with route/freq when no amount', () => {
+    expect(formatDosage({ frequencyCode: '2x', route: 'oral', timing: ['with meals'] }))
+      .toBe('By mouth twice a day, with meals')
+  })
+  it('pluralizes countable units only', () => {
+    expect(formatDosage({ dose: { amount: 2, unit: 'tablet' }, frequencyCode: '1x' })).toBe('Take 2 tablets once a day')
+    expect(formatDosage({ dose: { amount: 500, unit: 'mg' }, frequencyCode: '1x' })).toBe('Take 500 mg once a day')
+  })
+  it('falls back to the verbatim sig when nothing is structured', () => {
+    expect(formatDosage({ frequency: 'Take 1 tablet twice daily' })).toBe('Take 1 tablet twice daily')
+  })
+})
+
+describe('dosageAmountMissing', () => {
+  it('true when a schedule exists but no amount', () => {
+    expect(dosageAmountMissing({ frequencyCode: '2x', route: 'oral' })).toBe(true)
+  })
+  it('false when the amount is present, or nothing structured at all', () => {
+    expect(dosageAmountMissing({ dose: { amount: 1, unit: 'tablet' }, frequencyCode: '2x' })).toBe(false)
+    expect(dosageAmountMissing({ frequency: 'some prose' })).toBe(false)
   })
 })
