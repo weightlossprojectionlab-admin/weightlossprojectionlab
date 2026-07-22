@@ -74,6 +74,7 @@ import EmergencyActionModal from '@/components/patients/EmergencyActionModal'
 import EmergencyAlertButton from '@/components/patients/EmergencyAlertButton'
 import EmergencyUnlockGate from '@/components/patients/EmergencyUnlockGate'
 import { useDirectiveChangeAlert } from '@/hooks/useDirectiveChangeAlert'
+import { emergencyCompleteness } from '@/lib/emergency-completeness'
 import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
@@ -2462,6 +2463,34 @@ function PatientDetailContent() {
                   <span aria-hidden>🚨</span> Emergency Information
                 </h3>
                 <p className="text-xs text-muted-foreground mb-2">Set these calmly, in advance — they appear in the Emergency quick action.</p>
+
+                {/* Completeness meter — the "fill it in while you're calm" nudge that makes
+                    the Emergency button worth pressing. Honest: blanks are surfaced, never
+                    counted as answered. */}
+                {(() => {
+                  const c = emergencyCompleteness(patient)
+                  return (
+                    <div className="mb-3 rounded-lg border border-border bg-muted/40 p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold text-foreground">
+                          Emergency info {c.pct}% complete
+                        </span>
+                        {c.complete && <span className="text-xs font-medium text-green-600 dark:text-green-400">✓ All set</span>}
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={c.pct} aria-valuemin={0} aria-valuemax={100} aria-label="Emergency info completeness">
+                        <div
+                          className={`h-full rounded-full transition-all ${c.complete ? 'bg-green-500' : 'bg-red-500'}`}
+                          style={{ width: `${c.pct}%` }}
+                        />
+                      </div>
+                      {!c.complete && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Add {c.missing.map((f) => f.label.toLowerCase()).join(', ')} below so it&apos;s there in an emergency.
+                        </p>
+                      )}
+                    </div>
+                  )
+                })()}
                 <PatientFieldEditor
                   patientId={patientId}
                   field="drugAllergies"
