@@ -18,6 +18,8 @@ import {
   hasBiometricCredential
 } from '@/lib/webauthn'
 import { checkProfileCompleteness } from '@/lib/profile-completeness'
+import { getEmergencyPinStatus } from '@/lib/emergency-pin-client'
+import EmergencyPinSetup from '@/components/patients/EmergencyPinSetup'
 import { Spinner } from '@/components/ui/Spinner'
 import { HealthSyncCard } from '@/components/health/HealthSyncCard'
 import { HealthConnectModal } from '@/components/health/HealthConnectModal'
@@ -83,6 +85,8 @@ function ProfileContent() {
   const userPrefs = useUserPreferences()
   const [biometricSupported, setBiometricSupported] = useState(false)
   const [biometricEnabled, setBiometricEnabled] = useState(false)
+  const [emergencyPinSet, setEmergencyPinSet] = useState(false)
+  const [showEmergencyPinSetup, setShowEmergencyPinSetup] = useState(false)
   const [loading, setLoading] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
@@ -244,6 +248,10 @@ function ProfileContent() {
       if (supported && user) {
         const enabled = await hasBiometricCredential(user.uid)
         setBiometricEnabled(enabled)
+      }
+      // Emergency-unlock PIN status (device-independent, so not gated on biometric support).
+      if (user) {
+        setEmergencyPinSet(await getEmergencyPinStatus())
       }
     } catch (error) {
       logger.error('Error checking biometric status', error as Error)
@@ -1003,6 +1011,48 @@ function ProfileContent() {
             )}
           </div>
         )}
+
+        {/* Emergency access PIN — set it calmly, in advance, so the emergency record
+            unlocks even when biometrics aren't available (a dead sensor, a shared device).
+            Same modal the emergency gate uses. */}
+        {isOwnProfileView && mounted && (
+          <div className="bg-card rounded-lg p-6 shadow-sm">
+            <h2 className="text-lg font-medium text-foreground mb-4">Emergency access PIN</h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">{emergencyPinSet ? '🔐' : '🔓'}</span>
+                  <div>
+                    <p className="font-medium">Personal unlock PIN</p>
+                    <p className="text-description">{emergencyPinSet ? 'Set' : 'Not set'}</p>
+                  </div>
+                </div>
+                <div className={`w-3 h-3 rounded-full ${emergencyPinSet ? 'bg-success' : 'bg-muted'}`} />
+              </div>
+
+              <p className="text-description">
+                A 4–6 digit PIN unlocks a patient&apos;s emergency record when biometrics
+                aren&apos;t available. It&apos;s stored securely and rate-limited against guessing.
+              </p>
+
+              <div className="pt-2">
+                <button
+                  onClick={() => setShowEmergencyPinSetup(true)}
+                  className={`btn w-full ${emergencyPinSet ? 'btn-secondary' : 'btn-primary'}`}
+                  aria-label={emergencyPinSet ? 'Change or remove emergency PIN' : 'Set up emergency PIN'}
+                >
+                  {emergencyPinSet ? '🔑 Change or remove PIN' : '🔐 Set up emergency PIN'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <EmergencyPinSetup
+          isOpen={showEmergencyPinSetup}
+          onClose={() => setShowEmergencyPinSetup(false)}
+          onChanged={(isSet) => setEmergencyPinSet(isSet)}
+        />
 
         {/* App Settings - Only show step tracking for own profile */}
         {isOwnProfileView && (
