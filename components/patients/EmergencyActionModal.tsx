@@ -25,7 +25,7 @@ export function EmergencyActionModal({ isOpen, onClose, patientId, patientName }
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-0 sm:p-4">
-      <div className="bg-white dark:bg-gray-900 w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl">
+      <div role="dialog" aria-modal="true" aria-label={`Emergency for ${patientName}`} className="bg-white dark:bg-gray-900 w-full sm:max-w-md sm:rounded-2xl rounded-t-2xl shadow-xl">
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-800">
           <h2 className="text-lg font-bold text-red-700 dark:text-red-400 flex items-center gap-2">
             <span aria-hidden>🚨</span> Emergency — {patientName}
