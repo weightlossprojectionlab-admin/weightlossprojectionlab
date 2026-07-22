@@ -99,6 +99,10 @@ export function NotificationBell() {
       case 'medication_error':
       case 'no_response':
         return '🚨'
+      // Governed advance-directive change (code status / DNR) — awareness, not a crisis,
+      // so a distinct 📋 rather than the 🚨 alarm.
+      case 'directive_changed':
+        return '📋'
       case 'medication_added':
       case 'medication_updated':
       case 'medication_deleted':

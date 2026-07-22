@@ -73,6 +73,7 @@ import { GlucometerScanModal } from '@/components/vitals/GlucometerScanModal'
 import EmergencyActionModal from '@/components/patients/EmergencyActionModal'
 import EmergencyAlertButton from '@/components/patients/EmergencyAlertButton'
 import EmergencyUnlockGate from '@/components/patients/EmergencyUnlockGate'
+import { useDirectiveChangeAlert } from '@/hooks/useDirectiveChangeAlert'
 import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
@@ -295,6 +296,9 @@ function PatientDetailContent() {
       /* non-fatal: unlock still holds in memory for this view */
     }
   }
+  // Governed write: editing an advance decision (code status / DNR) notifies the OTHER
+  // caregivers so it can't happen in secret. Reuses the emergency alert fan-out (DRY).
+  const { notifyDirectiveChange } = useDirectiveChangeAlert(patientId, patient?.name || '')
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
   const [summaryVitals, setSummaryVitals] = useState<VitalSign[]>([])
   const [summaryMood, setSummaryMood] = useState<string | undefined>(undefined)
@@ -2480,7 +2484,20 @@ function PatientDetailContent() {
                   value={patient.codeStatus}
                   canEdit={canEditProfile}
                   emptyLabel="Not recorded"
-                  onUpdated={(v) => setPatient({ ...patient, codeStatus: v as PatientProfile['codeStatus'] })}
+                  onUpdated={(v) => {
+                    const prev = patient.codeStatus
+                    setPatient({ ...patient, codeStatus: v as PatientProfile['codeStatus'] })
+                    // Governed write: on an actual change, notify the other caregivers.
+                    if (v && v !== prev) {
+                      const labelFor = (val?: string) =>
+                        CODE_STATUS_OPTIONS.find((o) => o.value === val)?.label ?? (val ? String(val) : 'Not recorded')
+                      notifyDirectiveChange({
+                        field: 'code status',
+                        fromLabel: labelFor(prev),
+                        toLabel: labelFor(v),
+                      })
+                    }
+                  }}
                 />
               </div>
 
