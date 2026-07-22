@@ -72,6 +72,7 @@ import VitalsWizardRouter from '@/components/wizards/VitalsWizardRouter'
 import { GlucometerScanModal } from '@/components/vitals/GlucometerScanModal'
 import EmergencyActionModal from '@/components/patients/EmergencyActionModal'
 import EmergencyAlertButton from '@/components/patients/EmergencyAlertButton'
+import EmergencyUnlockGate from '@/components/patients/EmergencyUnlockGate'
 import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
@@ -272,6 +273,28 @@ function PatientDetailContent() {
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showGlucometerScan, setShowGlucometerScan] = useState(false)
   const [showEmergencyModal, setShowEmergencyModal] = useState(false)
+  // Emergency record sits behind a deliberate unlock (see EmergencyUnlockGate).
+  // Persisted per-patient in sessionStorage so an active emergency doesn't re-prompt
+  // when the caregiver tabs away and back; cleared when the tab/session ends.
+  const [emergencyUnlocked, setEmergencyUnlocked] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (sessionStorage.getItem(`emergency-unlocked-${patientId}`) === '1') {
+        setEmergencyUnlocked(true)
+      }
+    } catch {
+      /* sessionStorage unavailable (private mode) — gate simply re-prompts */
+    }
+  }, [patientId])
+  const unlockEmergency = () => {
+    setEmergencyUnlocked(true)
+    try {
+      sessionStorage.setItem(`emergency-unlocked-${patientId}`, '1')
+    } catch {
+      /* non-fatal: unlock still holds in memory for this view */
+    }
+  }
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
   const [summaryVitals, setSummaryVitals] = useState<VitalSign[]>([])
   const [summaryMood, setSummaryMood] = useState<string | undefined>(undefined)
@@ -1828,6 +1851,13 @@ function PatientDetailContent() {
                 </a>
               </div>
 
+              {/* The assembled record is gated behind a deliberate unlock (audit +
+                  biometric-first). The action row above is NOT gated — summoning help
+                  must never wait on an unlock. */}
+              {!emergencyUnlocked ? (
+                <EmergencyUnlockGate patientName={patient.name} onUnlock={unlockEmergency} />
+              ) : (
+              <>
               <div className="rounded-xl border-2 border-red-500 bg-red-50 dark:bg-red-950/30 overflow-hidden">
                 {/* Header */}
                 <div className="bg-red-600 text-white px-5 py-3 flex items-center justify-between">
@@ -1932,6 +1962,8 @@ function PatientDetailContent() {
                 Informational summary of records on file — not a substitute for professional medical judgment.
                 Fields marked “None recorded” have no data; complete them from the Info tab so they’re here when needed.
               </p>
+              </>
+              )}
             </div>
           )}
 
