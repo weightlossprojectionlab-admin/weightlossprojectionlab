@@ -9,6 +9,7 @@
  */
 
 import { logger } from '@/lib/logger'
+import { getCSRFToken } from '@/lib/csrf'
 
 async function authHeaders(): Promise<Record<string, string> | null> {
   try {
@@ -16,7 +17,13 @@ async function authHeaders(): Promise<Record<string, string> | null> {
     const user = getAuth().currentUser
     if (!user) return null
     const token = await user.getIdToken()
-    return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    // X-CSRF-Token is required on POST/DELETE by proxy.ts — Bearer auth does NOT exempt
+    // a request from CSRF. Omitting it 403s in production (it's only skipped in dev).
+    return {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      'X-CSRF-Token': getCSRFToken(),
+    }
   } catch (e) {
     logger.error('[emergency-pin-client] Failed to get auth token', e as Error)
     return null

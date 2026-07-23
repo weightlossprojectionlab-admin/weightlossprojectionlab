@@ -182,6 +182,7 @@ export default function DocumentUpload({ patientId, onSuccess, onCancel }: Docum
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRF-Token': getCSRFToken(),
           },
           body: JSON.stringify({
             pdfUrl: fileUrl,
@@ -219,6 +220,7 @@ export default function DocumentUpload({ patientId, onSuccess, onCancel }: Docum
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'X-CSRF-Token': getCSRFToken(),
           },
           body: JSON.stringify({
             imageData,
