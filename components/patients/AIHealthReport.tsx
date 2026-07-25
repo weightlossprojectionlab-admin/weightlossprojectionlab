@@ -569,49 +569,58 @@ export function AIHealthReport({
                 const childrenArray = Array.isArray(children) ? children : [children]
                 const firstChild = childrenArray[0]
 
+                // remark-gfm renders `- [ ]` as a task-list item whose first child is a
+                // checkbox <input> ELEMENT (not the string "[ ] text"). Derive the label
+                // for BOTH shapes so Shopping & Supply items can become actionable.
+                const isCheckboxEl = (c: any) =>
+                  !!c && typeof c === 'object' && (c.props?.type === 'checkbox' || c.type === 'input')
+                const taskLabel = childrenArray.some(isCheckboxEl)
+                  ? childrenArray.filter((c: any) => !isCheckboxEl(c)).map((c: any) => (typeof c === 'string' ? c : '')).join('').trim()
+                  : typeof firstChild === 'string' && /^\[[ xX]\]/.test(firstChild)
+                    ? (firstChild.replace(/^\[[ xX]\]\s*/, '') + childrenArray.slice(1).map((c: any) => (typeof c === 'string' ? c : '')).join('')).trim()
+                    : ''
+
+                // Actionable Shopping & Supply row: [stock chip] item text [+ Add].
+                // Scoped by shoppingItemTexts so ONLY that section becomes interactive.
+                if (taskLabel && shoppingItemTexts.has(normalizeItem(taskLabel))) {
+                  const label = taskLabel
+                  const norm = normalizeItem(label)
+                  const added = addedItems.has(norm)
+                  const onList = !added && onListItems.has(norm)
+                  const stock = matchStock(norm, inventory)
+                  return (
+                    <li className="flex items-center gap-2 my-1.5 list-none -ml-6 text-foreground" {...props}>
+                      {stock && (
+                        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${stock === 'low' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                          {stock === 'low' ? 'Low' : 'In stock'}
+                        </span>
+                      )}
+                      <span className="flex-1">{label}</span>
+                      {added || onList ? (
+                        <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                          <CheckCircleIcon className="w-4 h-4" /> {added ? 'Added' : 'On list'}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleAddShoppingItem(label)}
+                          disabled={addingItem === norm}
+                          className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 disabled:opacity-60 transition-colors"
+                          aria-label={`Add ${label} to shopping list`}
+                        >
+                          <PlusIcon className="w-4 h-4" /> {addingItem === norm ? 'Adding…' : 'Add'}
+                        </button>
+                      )}
+                    </li>
+                  )
+                }
+
                 // Check for markdown task list syntax: "[ ]" or "[x]"
                 if (typeof firstChild === 'string') {
                   const checkboxMatch = firstChild.match(/^\[([ x])\]\s*(.*)/)
                   if (checkboxMatch) {
                     const isChecked = checkboxMatch[1] === 'x'
                     const text = checkboxMatch[2]
-
-                    // Actionable Shopping & Supply row: [stock chip] item text [+ Add].
-                    // Scoped by shoppingItemTexts so ONLY that section becomes interactive;
-                    // every other checkbox section keeps the plain tick-off behavior below.
-                    if (shoppingItemTexts.has(normalizeItem(text))) {
-                      const norm = normalizeItem(text)
-                      const clean = text.trim()
-                      const added = addedItems.has(norm)
-                      const onList = !added && onListItems.has(norm)
-                      const stock = matchStock(norm, inventory)
-                      return (
-                        <li className="flex items-center gap-2 my-1.5 list-none -ml-6 text-foreground" {...props}>
-                          {stock && (
-                            <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${stock === 'low' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                              {stock === 'low' ? 'Low' : 'In stock'}
-                            </span>
-                          )}
-                          <span className="flex-1">{clean}{childrenArray.slice(1)}</span>
-                          {added || onList ? (
-                            <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-green-600">
-                              <CheckCircleIcon className="w-4 h-4" /> {added ? 'Added' : 'On list'}
-                            </span>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleAddShoppingItem(text)}
-                              disabled={addingItem === norm}
-                              className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 disabled:opacity-60 transition-colors"
-                              aria-label={`Add ${clean} to shopping list`}
-                            >
-                              <PlusIcon className="w-4 h-4" /> {addingItem === norm ? 'Adding…' : 'Add'}
-                            </button>
-                          )}
-                        </li>
-                      )
-                    }
-
                     const itemKey = text.substring(0, 50) // Use first 50 chars as key
 
                     const localChecked = checkedItems.has(itemKey) || isChecked
