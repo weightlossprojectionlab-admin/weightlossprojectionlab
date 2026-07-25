@@ -589,26 +589,31 @@ export function AIHealthReport({
                   const onList = !added && onListItems.has(norm)
                   const stock = matchStock(norm, inventory)
                   return (
-                    <li className="flex items-center gap-2 my-1.5 list-none -ml-6 text-foreground" {...props}>
+                    // Mobile-first, fat-thumb: {...props} FIRST so react-markdown's task-list
+                    // className can't clobber our flex layout. Name left (wraps, never
+                    // truncates — caregivers must read the full item); chip + a solid ≥44px
+                    // Add button aligned right so every row's action lines up in a column.
+                    // Extra vertical spacing (my-2) reduces mis-taps between rows.
+                    <li {...props} className="flex items-center gap-2 my-2 list-none -ml-6 text-foreground">
+                      <span className="flex-1 min-w-0 leading-snug">{label}</span>
                       {stock && (
-                        <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${stock === 'low' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                        <span className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-semibold ${stock === 'low' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
                           {stock === 'low' ? 'Low' : 'In stock'}
                         </span>
                       )}
-                      <span className="flex-1">{label}</span>
                       {added || onList ? (
-                        <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-green-600">
-                          <CheckCircleIcon className="w-4 h-4" /> {added ? 'Added' : 'On list'}
+                        <span className="flex-shrink-0 inline-flex items-center justify-center gap-1 min-h-[44px] px-3 text-sm font-semibold text-green-700">
+                          <CheckCircleIcon className="w-5 h-5" /> {added ? 'Added' : 'On list'}
                         </span>
                       ) : (
                         <button
                           type="button"
                           onClick={() => handleAddShoppingItem(label)}
                           disabled={addingItem === norm}
-                          className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 disabled:opacity-60 transition-colors"
+                          className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 active:bg-purple-800 disabled:opacity-60 transition-colors"
                           aria-label={`Add ${label} to shopping list`}
                         >
-                          <PlusIcon className="w-4 h-4" /> {addingItem === norm ? 'Adding…' : 'Add'}
+                          <PlusIcon className="w-5 h-5" /> {addingItem === norm ? 'Adding…' : 'Add'}
                         </button>
                       )}
                     </li>
