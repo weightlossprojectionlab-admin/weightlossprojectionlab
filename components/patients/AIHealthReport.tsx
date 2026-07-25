@@ -145,7 +145,9 @@ export function AIHealthReport({
     setAddingItem(norm)
     try {
       // Verbatim free-text add — no canonical match needed, so no misclassification.
-      await addManualShoppingItem(user.uid, clean, { quantity: 1 })
+      // householdId MUST be set: useShopping subscribes on `householdId == userId`
+      // (single-user owner), so an item without it would be invisible to the live list.
+      await addManualShoppingItem(user.uid, clean, { quantity: 1, householdId: user.uid })
       setAddedItems(prev => new Set(prev).add(norm))
       toast.success(`Added "${clean}" to shopping list`)
     } catch {
