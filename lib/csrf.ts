@@ -30,11 +30,14 @@ export function getCSRFToken(): string {
     return existingToken
   }
 
-  // Fallback to sessionStorage if cookie doesn't work
+  // Fallback to sessionStorage if the cookie is missing (cleared, expired, ITP, etc.).
+  // The server (proxy.ts) requires the cookie AND the header to be present and equal, so
+  // returning the stored token on its own would guarantee a CSRF_TOKEN_MISSING 403 —
+  // re-plant the cookie so the two halves agree again.
   if (typeof window !== 'undefined' && window.sessionStorage) {
     const sessionToken = sessionStorage.getItem('csrf-token')
     if (sessionToken) {
-      console.log('[CSRF] Using token from sessionStorage (cookie fallback)')
+      setTokenCookie(sessionToken)
       return sessionToken
     }
   }

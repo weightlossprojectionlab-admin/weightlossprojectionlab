@@ -90,6 +90,19 @@ export function NotificationBell() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      // Emergency-alert types (lib/emergency-alerts.ts) — a caregiver raised the
+      // alarm or a critical event fired. Unmistakable 🚨 so it can't be mistaken
+      // for a routine notification in the bell.
+      case 'manual_emergency':
+      case 'critical_vitals':
+      case 'fall_detected':
+      case 'medication_error':
+      case 'no_response':
+        return '🚨'
+      // Governed advance-directive change (code status / DNR) — awareness, not a crisis,
+      // so a distinct 📋 rather than the 🚨 alarm.
+      case 'directive_changed':
+        return '📋'
       case 'medication_added':
       case 'medication_updated':
       case 'medication_deleted':

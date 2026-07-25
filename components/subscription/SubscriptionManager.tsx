@@ -13,6 +13,8 @@
 import { useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useSubscription } from '@/hooks/useSubscription'
+// proxy.ts requires X-CSRF-Token on unsafe methods; Bearer auth does NOT exempt it.
+import { getCSRFToken } from '@/lib/csrf'
 import {
   isInTrialPeriod,
   isTrialExpiringSoon,
@@ -90,6 +92,7 @@ export function SubscriptionManager({ className = '' }: SubscriptionManagerProps
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken(),
         },
       })
 
@@ -123,6 +126,7 @@ export function SubscriptionManager({ className = '' }: SubscriptionManagerProps
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken(),
         },
         body: JSON.stringify({
           newPlan,
@@ -157,6 +161,7 @@ export function SubscriptionManager({ className = '' }: SubscriptionManagerProps
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'X-CSRF-Token': getCSRFToken(),
         },
         body: JSON.stringify({
           returnUrl: window.location.href,

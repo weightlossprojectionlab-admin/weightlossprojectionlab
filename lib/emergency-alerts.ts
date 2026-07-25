@@ -16,7 +16,12 @@ import { db } from '@/lib/firebase'
 import { collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore'
 
 export interface EmergencyAlert {
-  type: 'critical_vitals' | 'fall_detected' | 'medication_error' | 'no_response'
+  // 'manual_emergency' = a caregiver explicitly raised the alarm from the Emergency
+  // action (vs. the automated vitals-driven types). Reuses the same fan-out.
+  // 'directive_changed' = a governed write to an advance decision (code status / DNR):
+  // an awareness+audit alert to the OTHER caregivers so no one alters an end-of-life
+  // choice in secret. Not a crisis — severity 'urgent' (notify, no siren/call).
+  type: 'critical_vitals' | 'fall_detected' | 'medication_error' | 'no_response' | 'manual_emergency' | 'directive_changed'
   severity: 'urgent' | 'emergency' // urgent = notify, emergency = notify + call
   familyMemberId: string
   familyMemberName: string
@@ -376,6 +381,12 @@ function getAlertTitle(alert: EmergencyAlert): string {
       return `${prefix}: ${alert.familyMemberName} - Medication Issue`
     case 'no_response':
       return `${prefix}: ${alert.familyMemberName} - No Response`
+    case 'manual_emergency':
+      return `${prefix}: ${alert.familyMemberName} needs help`
+    case 'directive_changed':
+      // Deliberately NOT the emergency/urgent prefix — this is an awareness alert about
+      // a record change, not a crisis. A calmer, specific title reads correctly in the bell.
+      return `📋 ${alert.familyMemberName} — advance directive updated`
     default:
       return `${prefix}: ${alert.familyMemberName}`
   }
@@ -523,5 +534,47 @@ export async function sendCriticalVitalAlert(
   }
 
   const result = await sendEmergencyAlert(alert)
+  return { success: result.success, notificationsSent: result.notificationsSent }
+}
+
+export interface DirectiveChange {
+  patientId: string
+  patientName: string
+  /** Human-readable field name, e.g. "code status". */
+  field: string
+  /** Human-readable previous value, e.g. "Not recorded". */
+  fromLabel: string
+  /** Human-readable new value, e.g. "DNR — do not resuscitate". */
+  toLabel: string
+  changedBy: EmergencyAlert['reportedBy']
+}
+
+/**
+ * Build the alert for a governed advance-directive change. Pure (no I/O) so the phrasing
+ * is unit-testable; the send helper below fans it out via sendEmergencyAlert.
+ */
+export function buildDirectiveChangeAlert(change: DirectiveChange): EmergencyAlert {
+  return {
+    type: 'directive_changed',
+    severity: 'urgent', // notify + bell, no siren/SMS/call — this is awareness, not a crisis
+    familyMemberId: change.patientId,
+    familyMemberName: change.patientName,
+    message: `${change.changedBy.name} changed ${change.patientName}'s ${change.field} from "${change.fromLabel}" to "${change.toLabel}".`,
+    guidance: 'Advance-directive changes are logged. If this was unexpected, review it and talk with the family right away.',
+    reportedBy: change.changedBy,
+    timestamp: new Date(),
+  }
+}
+
+/**
+ * Governed write: when an advance decision (code status / DNR) is edited, notify every
+ * OTHER authorized caregiver so no one alters an end-of-life choice in secret. The editor
+ * is excluded automatically (sendEmergencyAlert skips reportedBy.uid). Reuses the entire
+ * emergency fan-out + audit trail (notifications, bell, push, emergency_alerts log).
+ */
+export async function sendDirectiveChangeAlert(
+  change: DirectiveChange
+): Promise<{ success: boolean; notificationsSent: number }> {
+  const result = await sendEmergencyAlert(buildDirectiveChangeAlert(change))
   return { success: result.success, notificationsSent: result.notificationsSent }
 }

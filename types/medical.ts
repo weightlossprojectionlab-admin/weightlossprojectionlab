@@ -6,6 +6,10 @@
  */
 
 import { VitalReminderConfig } from '@/lib/services/patient-preferences'
+// Type-only import (fully erased) so the medical <-> vital-schedules cycle has no
+// runtime edge. Medications reuse the vitals frequency vocabulary rather than
+// inventing a parallel one — see MedicationRoute / PatientMedication below.
+import type { ScheduleFrequency } from './vital-schedules'
 
 // ==================== RBAC / AUTHORIZATION ====================
 
@@ -169,6 +173,16 @@ export interface PatientProfile {
   foodAllergies?: string[] // e.g., ['peanuts', 'shellfish', 'dairy']
 
   /**
+   * DRUG / medication allergies — DISTINCT from foodAllergies. This is the
+   * question a paramedic asks first ("allergic to any medications?"), and it
+   * was previously unmodeled: the only allergy fields were for food. Drug
+   * allergies drive what a responder can safely administer, so they belong in
+   * the emergency-critical cluster, not with dietary needs.
+   * e.g. ['penicillin', 'sulfa', 'codeine']
+   */
+  drugAllergies?: string[]
+
+  /**
    * Blood type for emergency identification (transfusion
    * compatibility). Surfaced on the patient profile edit form +
    * the family-member onboarding wizard. 'unknown' is a real
@@ -176,6 +190,25 @@ export interface PatientProfile {
    * record that they don't know.
    */
   bloodType?: 'A+' | 'A-' | 'B+' | 'B-' | 'AB+' | 'AB-' | 'O+' | 'O-' | 'unknown'
+
+  /**
+   * Resuscitation preference / code status — the single most consequential
+   * emergency fact ("do we resuscitate?"), previously unmodeled anywhere.
+   * 'unknown' is a real answer (no directive on record), distinct from absence.
+   * Changing this is an end-of-life decision: writes must be GOVERNED — audit-
+   * logged and an alert fired to all other authorized caregivers, so no one
+   * alters it in secret (see the emergency-layer plan).
+   */
+  codeStatus?: 'full' | 'dnr' | 'dni' | 'dnr_dni' | 'unknown'
+
+  /**
+   * Whether a legal advance directive / living will / POLST exists on file, plus
+   * an optional note on where it lives. The app stores a REFERENCE, not the legal
+   * instrument — "directive on file, see attached" is honest; rendering a will
+   * in-app is not legally valid and must not be implied.
+   */
+  advanceDirectiveOnFile?: boolean
+  advanceDirectiveNote?: string // e.g. "POLST in top drawer" / "with attorney J. Smith"
 
   // ===== Family-meal PRD additions (Commit A foundation) =====
   // All optional — existing patients get defaults via absence.
@@ -1335,6 +1368,15 @@ export interface MedicationImage {
   fileSize?: number // File size in bytes
 }
 
+/**
+ * How a medication is administered.
+ *
+ * Single source for humans AND pets — this vocabulary already existed on the pet
+ * model (types/pet-health.ts), which decomposed dosage correctly while the human
+ * model did not. Rather than invent a second enum, pets now import this one.
+ */
+export type MedicationRoute = 'oral' | 'topical' | 'injection' | 'other'
+
 export interface PatientMedication {
   id: string
   patientId: string
@@ -1347,7 +1389,29 @@ export interface PatientMedication {
   dosageForm: string // e.g., "tablet", "capsule", "gel", "injection"
 
   // Prescription Details
+  /**
+   * @deprecated Prose sig. Named "frequency" but contractually holds the COMPLETE
+   * dosage instructions, which is why it answered four questions at once and was a
+   * reliable answer to none. Kept for back-compat + as the fallback the parser reads
+   * (lib/medication-dosage.ts). Prefer `sig` + the structured fields below.
+   */
   frequency?: string // COMPLETE dosage instructions (e.g., "Take 1 tablet by mouth every day")
+
+  // ---- Structured dosage ------------------------------------------------
+  // One field per question, so each can be the source of truth for exactly one
+  // thing. The prose sig stays as PROVENANCE (what the label actually said);
+  // computation reads the structured fields. All optional — existing rows keep
+  // working via parse-on-read, and the backfill only fills high-confidence parses.
+  /** Verbatim instructions as printed on the label. Provenance/display, never the computational source. */
+  sig?: string
+  /** How much per administration, e.g. { amount: 1, unit: 'tablet' } or { amount: 500, unit: 'mg' }. */
+  dose?: { amount: number; unit: string }
+  /** How often. Reuses the vitals scheduling vocabulary so the app has ONE frequency language. */
+  frequencyCode?: ScheduleFrequency
+  /** How it is taken. Shared with pets — types/pet-health.ts imports this. */
+  route?: MedicationRoute
+  /** Conditions/timing, e.g. ['with meals', 'at bedtime']. */
+  timing?: string[]
   prescribedFor?: string // Condition name (e.g., "Type 2 Diabetes")
   prescribingDoctor?: string // Prescribing doctor name (e.g., "V.Atieh")
   rxNumber?: string // Prescription number

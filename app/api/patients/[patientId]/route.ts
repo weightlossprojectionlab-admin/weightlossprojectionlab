@@ -196,6 +196,11 @@ export async function PUT(
     // Emergency / medical identifiers
     if ('bloodType' in body) updateData.bloodType = body.bloodType
     if ('emergencyContacts' in body) updateData.emergencyContacts = body.emergencyContacts
+    // Emergency-critical additions (drug allergies, code status, directive).
+    if ('drugAllergies' in body) updateData.drugAllergies = body.drugAllergies
+    if ('codeStatus' in body) updateData.codeStatus = body.codeStatus
+    if ('advanceDirectiveOnFile' in body) updateData.advanceDirectiveOnFile = body.advanceDirectiveOnFile
+    if ('advanceDirectiveNote' in body) updateData.advanceDirectiveNote = body.advanceDirectiveNote
 
     // Vitals profile (goal/lifestyle data, distinct from logged vitals)
     if ('height' in body) updateData.height = body.height

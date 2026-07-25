@@ -13,7 +13,14 @@ export interface ParsedMedicationData {
   brandName?: string
   strength?: string
   dosageForm?: string
-  frequency?: string
+  frequency?: string // legacy prose sig (what OCR extracts) — kept as provenance
+  // Structured dosage (Phase 2) so the OCR review can decompose + resolve ambiguity
+  // before commit, instead of persisting a bare "2". Same fields as PatientMedication.
+  sig?: string
+  dose?: { amount: number; unit: string }
+  frequencyCode?: import('@/types/vital-schedules').ScheduleFrequency
+  route?: import('@/types/medical').MedicationRoute
+  timing?: string[]
   prescribedFor?: string
   patientName?: string
   prescribingDoctor?: string

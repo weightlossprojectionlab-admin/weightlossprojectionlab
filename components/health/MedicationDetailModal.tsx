@@ -11,6 +11,7 @@ import MedicationDataReviewModal from '@/components/medications/MedicationDataRe
 import { medicalOperations } from '@/lib/medical-operations'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
+import { formatDosage } from '@/lib/medication-dosage'
 
 interface MedicationDetailModalProps {
   medication: PatientMedication | ScannedMedication
@@ -395,14 +396,14 @@ export default function MedicationDetailModal({ medication, onClose, patientId, 
           )}
 
           {/* Dosage Instructions */}
-          {medication.frequency && (
+          {formatDosage(medication) && (
             <div>
               <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2 flex items-center gap-2">
                 <ClockIcon className="w-4 h-4" />
                 Dosage Instructions
               </h3>
               <div className="bg-muted rounded-lg p-4">
-                <p className="text-foreground">{medication.frequency}</p>
+                <p className="text-foreground">{formatDosage(medication)}</p>
               </div>
             </div>
           )}

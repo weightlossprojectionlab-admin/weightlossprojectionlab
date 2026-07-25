@@ -70,6 +70,11 @@ import { useDashboardData } from '@/hooks/useDashboardData'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
 import VitalsWizardRouter from '@/components/wizards/VitalsWizardRouter'
 import { GlucometerScanModal } from '@/components/vitals/GlucometerScanModal'
+import EmergencyActionModal from '@/components/patients/EmergencyActionModal'
+import EmergencyAlertButton from '@/components/patients/EmergencyAlertButton'
+import EmergencyUnlockGate from '@/components/patients/EmergencyUnlockGate'
+import { useDirectiveChangeAlert } from '@/hooks/useDirectiveChangeAlert'
+import { emergencyCompleteness } from '@/lib/emergency-completeness'
 import { getVitalRecommendations } from '@/lib/veterinary/vital-recommendation-engine'
 import VitalsSummaryModal from '@/components/wizards/VitalsSummaryModal'
 import AppointmentWizard from '@/components/wizards/AppointmentWizard'
@@ -86,6 +91,7 @@ import { SymptomLogger } from '@/components/pets/SymptomLogger'
 
 import { getCSRFToken } from '@/lib/csrf'
 import { QuickWeightModal } from './components/QuickWeightModal'
+import { formatDosage } from '@/lib/medication-dosage'
 
 // ============================================================
 // PatientFieldEditor option lists.
@@ -119,6 +125,31 @@ const BLOOD_TYPE_OPTIONS: FieldOption[] = [
   { value: 'O+', label: 'O+' },
   { value: 'O-', label: 'O−' },
   { value: 'unknown', label: 'Unknown (no records)' },
+]
+// Common drug allergies offered as one-tap quick-adds. NOT a fixed list — the field
+// stays free-text so any drug not here can still be entered (drug allergies are
+// open-ended; a closed list would silently drop real, life-critical allergies).
+// These ~cover the majority of clinically significant drug allergies.
+const DRUG_ALLERGY_SUGGESTIONS = [
+  'Penicillin',
+  'Sulfa (sulfonamides)',
+  'Aspirin / NSAIDs',
+  'Codeine / opioids',
+  'Cephalosporins',
+  'Contrast dye',
+  'Local anesthetics',
+  'Latex',
+  'Erythromycin',
+  'Tetracycline',
+]
+// Resuscitation preference. Plain-language labels so a caregiver picks the right
+// one; 'unknown' = no directive on record (a real answer, not a blank).
+const CODE_STATUS_OPTIONS: FieldOption[] = [
+  { value: 'full', label: 'Full code (resuscitate)' },
+  { value: 'dnr', label: 'DNR — do not resuscitate' },
+  { value: 'dni', label: 'DNI — do not intubate' },
+  { value: 'dnr_dni', label: 'DNR + DNI' },
+  { value: 'unknown', label: 'Unknown / no directive on file' },
 ]
 const ACTIVITY_LEVEL_OPTIONS: FieldOption[] = [
   { value: 'sedentary', label: 'Sedentary' },
@@ -237,12 +268,38 @@ function PatientDetailContent() {
   const [loadingFamilyHistory, setLoadingFamilyHistory] = useState(false)
   const [showFamilyHistoryForm, setShowFamilyHistoryForm] = useState(false)
   const [deletingFamilyHistory, setDeletingFamilyHistory] = useState<FamilyHistoryEntry | null>(null)
-  const [activeTab, setActiveTab] = useState<'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
+  const [activeTab, setActiveTab] = useState<'emergency' | 'info' | 'vitals' | 'meals' | 'steps' | 'medications' | 'recipes' | 'appointments' | 'episodes' | 'settings' | 'feeding' | 'activity' | 'grooming' | 'health-records'>(tabParam || 'vitals')
   const [fixingStartWeight, setFixingStartWeight] = useState(false)
   const [autoOpenFeedingModal, setAutoOpenFeedingModal] = useState(false)
   const [showQuickWeightModal, setShowQuickWeightModal] = useState(false)
   const [showVitalsWizard, setShowVitalsWizard] = useState(false)
   const [showGlucometerScan, setShowGlucometerScan] = useState(false)
+  const [showEmergencyModal, setShowEmergencyModal] = useState(false)
+  // Emergency record sits behind a deliberate unlock (see EmergencyUnlockGate).
+  // Persisted per-patient in sessionStorage so an active emergency doesn't re-prompt
+  // when the caregiver tabs away and back; cleared when the tab/session ends.
+  const [emergencyUnlocked, setEmergencyUnlocked] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      if (sessionStorage.getItem(`emergency-unlocked-${patientId}`) === '1') {
+        setEmergencyUnlocked(true)
+      }
+    } catch {
+      /* sessionStorage unavailable (private mode) — gate simply re-prompts */
+    }
+  }, [patientId])
+  const unlockEmergency = () => {
+    setEmergencyUnlocked(true)
+    try {
+      sessionStorage.setItem(`emergency-unlocked-${patientId}`, '1')
+    } catch {
+      /* non-fatal: unlock still holds in memory for this view */
+    }
+  }
+  // Governed write: editing an advance decision (code status / DNR) notifies the OTHER
+  // caregivers so it can't happen in secret. Reuses the emergency alert fan-out (DRY).
+  const { notifyDirectiveChange } = useDirectiveChangeAlert(patientId, patient?.name || '')
   const [showVitalsSummary, setShowVitalsSummary] = useState(false)
   const [summaryVitals, setSummaryVitals] = useState<VitalSign[]>([])
   const [summaryMood, setSummaryMood] = useState<string | undefined>(undefined)
@@ -1292,6 +1349,28 @@ function PatientDetailContent() {
                       <span className="text-[9px] lg:text-sm text-center lg:text-left leading-tight font-medium mt-0.5">Settings</span>
                     </button>
                   )}
+
+                  {/* Emergency — pinned to the BOTTOM of Quick Actions. Always visible,
+                      visually distinct (red), full-width on mobile so it's unmissable.
+                      The one-tap "what does she take?" entry point to the read-only
+                      emergency view. */}
+                  <button
+                    onClick={() => {
+                      setActiveTab('emergency')
+                      setShowEmergencyModal(true)
+                      setTimeout(() => {
+                        document.getElementById('main-content')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                      }, 100)
+                    }}
+                    className={`col-span-4 lg:col-span-1 w-full p-2 lg:px-4 lg:py-3 rounded-lg transition-colors flex flex-row items-center justify-center lg:justify-start gap-2 border-2 ${
+                      activeTab === 'emergency'
+                        ? 'bg-red-600 text-white border-red-600'
+                        : 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border-red-300 dark:border-red-800 hover:bg-red-100 dark:hover:bg-red-900/40'
+                    }`}
+                  >
+                    <span className="text-xl">🚨</span>
+                    <span className="text-sm text-center lg:text-left leading-tight font-semibold">Emergency</span>
+                  </button>
                 </div>
 
                 {/* Document upload now renders as a ResponsiveModal
@@ -1762,6 +1841,137 @@ function PatientDetailContent() {
         {/* Main Content - Switches based on activeTab */}
         <div className="space-y-6">
           {/* Show content based on active tab */}
+          {activeTab === 'emergency' && patient && (
+            <div className="space-y-4">
+              {/* Persistent actions — available even if the initial prompt modal was
+                  dismissed. The alert fires DIRECTLY on tap (no extra dialog); same
+                  shared button the modal uses. */}
+              <div className="flex flex-col sm:flex-row gap-2">
+                <EmergencyAlertButton patientId={patientId} patientName={patient.name} className="flex-1" />
+                <a
+                  href="tel:911"
+                  className="flex-1 py-3 border-2 border-red-600 text-red-700 dark:text-red-300 rounded-lg font-semibold flex items-center justify-center gap-2"
+                >
+                  Call 911
+                </a>
+              </div>
+
+              {/* The assembled record is gated behind a deliberate unlock (audit +
+                  biometric-first). The action row above is NOT gated — summoning help
+                  must never wait on an unlock. */}
+              {!emergencyUnlocked ? (
+                <EmergencyUnlockGate patientName={patient.name} onUnlock={unlockEmergency} />
+              ) : (
+              <>
+              <div className="rounded-xl border-2 border-red-500 bg-red-50 dark:bg-red-950/30 overflow-hidden">
+                {/* Header */}
+                <div className="bg-red-600 text-white px-5 py-3 flex items-center justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold flex items-center gap-2"><span aria-hidden>🚨</span> Emergency Info</h2>
+                    <p className="text-sm text-red-100">{patient.name}{patient.dateOfBirth ? ` · ${calculateAge(patient.dateOfBirth)} yrs` : ''}{patient.gender ? ` · ${patient.gender}` : ''}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-xs text-red-100 uppercase tracking-wide">Blood type</div>
+                    <div className="text-2xl font-bold">{patient.bloodType && patient.bloodType !== 'unknown' ? patient.bloodType : '—'}</div>
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-5">
+                  {/* Drug allergies — the first question a responder asks. READ-ONLY:
+                      the emergency view is for reading the record under stress, not
+                      authoring it. Editing happens calmly on the Info tab. */}
+                  <div>
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-300 mb-1">Drug allergies</h3>
+                    {patient.drugAllergies && patient.drugAllergies.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {patient.drugAllergies.map((a) => (
+                          <span key={a} className="px-2.5 py-1 rounded-full bg-red-600 text-white text-sm font-semibold">{a}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded — add it from the Info tab</p>
+                    )}
+                  </div>
+
+                  {/* Code status — READ-ONLY here. A DNR/resuscitation preference is an
+                      advance decision; it must be established calmly in advance (Info tab,
+                      governed write), NEVER set or changed during an emergency. The
+                      responder reads it; no one authors an end-of-life choice under panic. */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-red-700 dark:text-red-300 mb-1">Code status</h3>
+                    {patient.codeStatus && patient.codeStatus !== 'unknown' ? (
+                      <span className={`inline-block px-3 py-1 rounded-md text-base font-bold ${
+                        patient.codeStatus === 'full'
+                          ? 'bg-green-600 text-white'
+                          : 'bg-red-700 text-white'
+                      }`}>
+                        {CODE_STATUS_OPTIONS.find(o => o.value === patient.codeStatus)?.label ?? patient.codeStatus}
+                      </span>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Not on file — set it in advance from the Info tab</p>
+                    )}
+                  </div>
+
+                  {/* Conditions */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Conditions</h3>
+                    {patient.healthConditions && patient.healthConditions.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5">
+                        {patient.healthConditions.map((c) => (
+                          <span key={c} className="px-2.5 py-1 rounded-full bg-muted text-foreground text-sm capitalize">{c}</span>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded</p>
+                    )}
+                  </div>
+
+                  {/* Medications */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-2">Medications</h3>
+                    {medications && medications.length > 0 ? (
+                      <ul className="space-y-2">
+                        {medications.map((med) => (
+                          <li key={med.id} className="text-sm">
+                            <span className="font-semibold text-foreground">{med.name}</span>
+                            {med.strength ? <span className="text-muted-foreground"> {med.strength}</span> : null}
+                            <div className="text-muted-foreground">{formatDosage(med) || 'Dosage not recorded'}</div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded</p>
+                    )}
+                  </div>
+
+                  {/* Emergency contacts */}
+                  <div className="border-t border-red-200 dark:border-red-900 pt-4">
+                    <h3 className="text-xs font-bold uppercase tracking-wide text-muted-foreground mb-1">Emergency contacts</h3>
+                    {patient.emergencyContacts && patient.emergencyContacts.length > 0 ? (
+                      <ul className="space-y-1">
+                        {patient.emergencyContacts.map((c) => (
+                          <li key={c.id} className="text-sm text-foreground">
+                            <span className="font-medium">{c.name}</span>
+                            {c.relationship ? <span className="text-muted-foreground"> · {c.relationship}</span> : null}
+                            {c.phone ? <a href={`tel:${c.phone}`} className="text-primary underline ml-1">{c.phone}</a> : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">None recorded</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground px-1">
+                Informational summary of records on file — not a substitute for professional medical judgment.
+                Fields marked “None recorded” have no data; complete them from the Info tab so they’re here when needed.
+              </p>
+              </>
+              )}
+            </div>
+          )}
+
           {activeTab === 'vitals' && (
             <>
               {/* Pending Weight Approvals — visible to caregivers/admins */}
@@ -2243,6 +2453,83 @@ function PatientDetailContent() {
                   onUpdated={(v) => setPatient({ ...patient, bloodType: v })}
                 />
               </div>
+
+              {/* Emergency Information — the CALM edit surface for the emergency-critical
+                  fields. Deliberately here, not in the 🚨 Emergency view: code status
+                  (DNR) is an advance decision that must be set ahead of time, never during
+                  a crisis. The Emergency view reads these; this is where they're authored. */}
+              <div className="border-t border-border pt-4 mt-4 space-y-1">
+                <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-2">
+                  <span aria-hidden>🚨</span> Emergency Information
+                </h3>
+                <p className="text-xs text-muted-foreground mb-2">Set these calmly, in advance — they appear in the Emergency quick action.</p>
+
+                {/* Completeness meter — the "fill it in while you're calm" nudge that makes
+                    the Emergency button worth pressing. Honest: blanks are surfaced, never
+                    counted as answered. */}
+                {(() => {
+                  const c = emergencyCompleteness(patient)
+                  return (
+                    <div className="mb-3 rounded-lg border border-border bg-muted/40 p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold text-foreground">
+                          Emergency info {c.pct}% complete
+                        </span>
+                        {c.complete && <span className="text-xs font-medium text-green-600 dark:text-green-400">✓ All set</span>}
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-muted overflow-hidden" role="progressbar" aria-valuenow={c.pct} aria-valuemin={0} aria-valuemax={100} aria-label="Emergency info completeness">
+                        <div
+                          className={`h-full rounded-full transition-all ${c.complete ? 'bg-green-500' : 'bg-red-500'}`}
+                          style={{ width: `${c.pct}%` }}
+                        />
+                      </div>
+                      {!c.complete && (
+                        <p className="mt-1.5 text-xs text-muted-foreground">
+                          Add {c.missing.map((f) => f.label.toLowerCase()).join(', ')} below so it&apos;s there in an emergency.
+                        </p>
+                      )}
+                    </div>
+                  )
+                })()}
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="drugAllergies"
+                  label="Drug allergies"
+                  type="tag-input"
+                  tone="negative"
+                  placeholder="Type any drug, or tap a common one below…"
+                  suggestions={DRUG_ALLERGY_SUGGESTIONS}
+                  value={patient.drugAllergies}
+                  canEdit={canEditProfile}
+                  emptyLabel="None recorded — the first thing a responder asks"
+                  onUpdated={(v) => setPatient({ ...patient, drugAllergies: v })}
+                />
+                <PatientFieldEditor
+                  patientId={patientId}
+                  field="codeStatus"
+                  label="Code status (advance decision)"
+                  type="select"
+                  options={CODE_STATUS_OPTIONS}
+                  value={patient.codeStatus}
+                  canEdit={canEditProfile}
+                  emptyLabel="Not recorded"
+                  onUpdated={(v) => {
+                    const prev = patient.codeStatus
+                    setPatient({ ...patient, codeStatus: v as PatientProfile['codeStatus'] })
+                    // Governed write: on an actual change, notify the other caregivers.
+                    if (v && v !== prev) {
+                      const labelFor = (val?: string) =>
+                        CODE_STATUS_OPTIONS.find((o) => o.value === val)?.label ?? (val ? String(val) : 'Not recorded')
+                      notifyDirectiveChange({
+                        field: 'code status',
+                        fromLabel: labelFor(prev),
+                        toLabel: labelFor(v),
+                      })
+                    }
+                  }}
+                />
+              </div>
+
 
               {/* Vitals profile (goals + lifestyle) — distinct from
                   the time-series Vitals tab where individual readings
@@ -2993,11 +3280,11 @@ function PatientDetailContent() {
                         <p className="text-xs text-muted-foreground">
                           {med.strength} {med.dosageForm}
                         </p>
-                        {med.frequency && (
+                        {formatDosage(med) && (
                           <>
                             <span className="text-xs text-muted-foreground">•</span>
                             <p className="text-xs text-muted-foreground truncate">
-                              {med.frequency}
+                              {formatDosage(med)}
                             </p>
                           </>
                         )}
@@ -3579,6 +3866,15 @@ function PatientDetailContent() {
           onClose={() => setShowGlucometerScan(false)}
           patientId={patientId}
           onImported={() => { refetch() }}
+        />
+      )}
+
+      {patient && (
+        <EmergencyActionModal
+          isOpen={showEmergencyModal}
+          onClose={() => setShowEmergencyModal(false)}
+          patientId={patientId}
+          patientName={patient.name}
         />
       )}
 

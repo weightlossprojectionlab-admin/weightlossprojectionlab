@@ -4,6 +4,9 @@
 
 import { getErrorMessage } from '@/types/common'
 import { logger } from '@/lib/logger'
+// proxy.ts requires X-CSRF-Token on POST/PATCH/DELETE — Bearer auth does NOT exempt a
+// request from CSRF, so these writes 403 in production without it (dev skips the check).
+import { getCSRFToken } from '@/lib/csrf'
 
 export interface BiometricCredential {
   id: string
@@ -198,6 +201,7 @@ export const registerBiometric = async (userId: string, userEmail: string): Prom
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          'X-CSRF-Token': getCSRFToken(),
         },
         body: JSON.stringify({ credentialId }),
       })
@@ -295,6 +299,7 @@ export const authenticateBiometric = async (userId: string): Promise<boolean> =>
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
+            'X-CSRF-Token': getCSRFToken(),
           },
           body: JSON.stringify({ credentialId }),
         })
@@ -378,6 +383,7 @@ export const removeBiometricCredential = async (userId: string): Promise<void> =
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
+            'X-CSRF-Token': getCSRFToken(),
           },
           body: JSON.stringify({ credentialId }),
         })
@@ -468,6 +474,7 @@ export const migrateLocalStorageCredentials = async (userId: string): Promise<bo
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`,
+        'X-CSRF-Token': getCSRFToken(),
       },
       body: JSON.stringify({ credentialId }),
     })

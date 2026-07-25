@@ -7,6 +7,8 @@ import toast from 'react-hot-toast'
 import { logger } from '@/lib/logger'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import MedicationDetailModal from '@/components/health/MedicationDetailModal'
+import DosageFields from '@/components/medications/DosageFields'
+import { formatDosage } from '@/lib/medication-dosage'
 
 interface MedicationListProps {
   patientId: string
@@ -69,7 +71,14 @@ export function MedicationList({ patientId, patientOwnerId, medications, loading
       brandName: medication.brandName,
       strength: medication.strength,
       dosageForm: medication.dosageForm,
+      // Prose sig (legacy `frequency` is still the fallback for un-migrated rows)
+      // plus the structured fields, so editing preserves both.
       frequency: medication.frequency,
+      sig: medication.sig ?? medication.frequency,
+      dose: medication.dose,
+      frequencyCode: medication.frequencyCode,
+      route: medication.route,
+      timing: medication.timing,
       prescribedFor: medication.prescribedFor,
       prescribingDoctor: medication.prescribingDoctor,
       rxNumber: medication.rxNumber,
@@ -201,13 +210,15 @@ export function MedicationList({ patientId, patientOwnerId, medications, loading
                       className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
                     />
                   </div>
+                  {/* Structured dosage. Previously one box labeled "Frequency" that had to
+                      carry the whole sig — which is how "2" got in and silently became
+                      1 dose/day. DosageFields splits it into one control per question and
+                      asks an explicit either/or when a value is ambiguous. */}
                   <div className="md:col-span-2">
-                    <label className="text-xs text-muted-foreground">Frequency</label>
-                    <input
-                      type="text"
-                      value={editForm.frequency || ''}
-                      onChange={(e) => setEditForm({...editForm, frequency: e.target.value})}
-                      className="w-full mt-1 px-3 py-2 border border-border rounded bg-background text-foreground"
+                    <DosageFields
+                      dense
+                      value={editForm}
+                      onChange={(patch) => setEditForm({ ...editForm, ...patch })}
                     />
                   </div>
                   <div>
@@ -308,9 +319,9 @@ export function MedicationList({ patientId, patientOwnerId, medications, loading
                   </div>
                 </div>
 
-          {med.frequency && (
+          {formatDosage(med) && (
             <div className="mt-2 p-2 bg-primary-light/50 rounded text-sm">
-              <span className="font-medium">Dosage:</span> {med.frequency}
+              <span className="font-medium">Dosage:</span> {formatDosage(med)}
             </div>
           )}
 

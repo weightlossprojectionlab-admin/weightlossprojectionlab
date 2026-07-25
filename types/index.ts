@@ -322,6 +322,17 @@ export interface BiometricAuthData {
   biometricCredentials: BiometricCredential[]
 }
 
+// Personal emergency-unlock PIN. Server-managed; never sent to the client (the client
+// only learns whether one is set). Hash + salt via lib/emergency-pin (scrypt); the
+// attempt counters back the brute-force lockout.
+export interface EmergencyPinData {
+  hash: string
+  salt: string
+  updatedAt: Date
+  failedAttempts: number
+  lockedUntil: Date | null
+}
+
 export interface UserProfile {
   // Basic Info
   birthDate: Date // User's date of birth (for accurate age calculation and COPPA compliance)
@@ -399,9 +410,14 @@ export interface UserGoals {
   // Weight Goals
   targetWeight: number
   startWeight: number
-  weeklyWeightLossGoal: number // 0.5-2 lbs per week
+  weeklyWeightLossGoal: number // rate magnitude in lbs/week (0.5-2); 0 for maintain
   targetDate?: Date
   primaryGoal: 'lose-weight' | 'maintain-weight' | 'gain-muscle' | 'improve-health'
+  /** Direction of the weight goal, chosen explicitly at onboarding. Drives
+   *  /progress sign + copy (lose vs gain vs maintain). Distinct from
+   *  primaryGoal (motivation/type). Optional for back-compat — legacy
+   *  records derive direction from start vs target weight. */
+  goalDirection?: 'lose' | 'maintain' | 'gain'
 
   // Daily Targets
   dailyCalorieGoal: number

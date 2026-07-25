@@ -145,11 +145,26 @@ export default function MedicationAdherenceHistory({ patientId, medication }: Me
           </div>
           <div className="text-xs text-muted-foreground">Day Streak</div>
         </div>
+        {/* Adherence is only meaningful with a trustworthy doses-per-day denominator.
+            `?? 0` used to render an ABSENT rate as a confident "0%" — which reads as
+            "never takes it" and is exactly as misleading as the old fabricated 100%.
+            Show an explicit em-dash + hint instead. See lib/medication-dosage.ts. */}
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3 text-center">
-          <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-            {medication.adherenceRate?.toFixed(0) || 0}%
-          </div>
-          <div className="text-xs text-muted-foreground">Adherence</div>
+          {typeof medication.adherenceRate === 'number' ? (
+            <>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {medication.adherenceRate.toFixed(0)}%
+              </div>
+              <div className="text-xs text-muted-foreground">Adherence</div>
+            </>
+          ) : (
+            <>
+              <div className="text-2xl font-bold text-muted-foreground">—</div>
+              <div className="text-xs text-muted-foreground" title="Add dosage instructions like “Take 1 tablet twice daily” to track adherence">
+                Adherence · needs dosage info
+              </div>
+            </>
+          )}
         </div>
       </div>
 

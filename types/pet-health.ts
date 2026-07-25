@@ -4,6 +4,8 @@
  * Based on veterinary medical standards and species-specific requirements
  */
 
+import type { MedicationRoute } from './medical'
+
 // ============================================
 // SPECIES TAXONOMY
 // ============================================
@@ -310,7 +312,10 @@ export interface Medication {
   name: string;
   dosage: string;
   frequency: string;
-  route: 'oral' | 'topical' | 'injection' | 'other';
+  /** Shared vocabulary — see MedicationRoute in types/medical.ts. This model's
+   *  decomposition (dosage / frequency / route as separate fields) is the one the
+   *  human model converged onto; the enum now lives in one place. */
+  route: MedicationRoute;
   startDate: Date;
   endDate?: Date;
   prescribedBy?: string;

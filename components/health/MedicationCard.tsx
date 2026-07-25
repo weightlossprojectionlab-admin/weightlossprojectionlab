@@ -3,6 +3,7 @@
 import { ScannedMedication } from '@/lib/medication-lookup'
 import { PatientMedication } from '@/types/medical'
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { formatDosage } from '@/lib/medication-dosage'
 
 interface MedicationCardProps {
   medication: ScannedMedication | PatientMedication
@@ -214,9 +215,9 @@ export function MedicationCard({
           <span className="capitalize">{medication.dosageForm}</span>
         </div>
 
-        {medication.frequency && (
+        {formatDosage(medication) && (
           <div className="text-sm text-muted-foreground">
-            <span className="font-medium">Frequency:</span> {medication.frequency}
+            <span className="font-medium">Dosage:</span> {formatDosage(medication)}
           </div>
         )}
 
