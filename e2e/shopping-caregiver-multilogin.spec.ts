@@ -55,6 +55,28 @@ test.describe('Multi-caregiver real-login shopping access @caregiver-multilogin'
       await itemsCol.doc(itemId).delete().catch(() => {})
     }
 
+    // Defensive pre-sweep: a run that dies before finally would leave e2e-mcg-* accounts +
+    // relationships + mcg-member- patients/items behind. Clear ALL such leftovers up front so
+    // orphans can never accumulate on the owner account.
+    const sweepOrphans = async () => {
+      const stale = (await authAdmin.listUsers(1000)).users.filter((u) =>
+        String(u.email || '').startsWith('e2e-mcg-'),
+      )
+      for (const u of stale) {
+        await firestore.collection('users').doc(u.uid).delete().catch(() => {})
+        await famCol.doc(u.uid).delete().catch(() => {})
+        await authAdmin.deleteUser(u.uid).catch(() => {})
+      }
+      for (const d of (await patientsCol.get()).docs) {
+        if (d.id.startsWith('mcg-member-')) await d.ref.delete().catch(() => {})
+      }
+      for (const d of (await itemsCol.where('householdId', '==', ownerUserId).get()).docs) {
+        const m = d.get('memberId')
+        if (typeof m === 'string' && m.startsWith('mcg-member-')) await d.ref.delete().catch(() => {})
+      }
+    }
+    await sweepOrphans()
+
     try {
       const nowIso = new Date().toISOString()
 
