@@ -172,4 +172,131 @@ test.describe('Shopping single-source unification @shopping-unification', () => 
       }
     }
   })
+
+  test('Take-Inventory advisory shows with no on-hand stock, flips to an accurate chip once inStock exists', async ({
+    page,
+    ownerUserId,
+    firestore,
+    gotoPatientTab,
+  }) => {
+    const GROC = 'Fresh fruits and vegetables (pre-cut if easier)'
+    const col = firestore.collection('shopping_items')
+
+    // Snapshot the household's current on-hand rows and temporarily clear them so the report
+    // starts in the "no inventory" state (hasInventory === false). Restored in finally.
+    const householdSnap = await col.where('householdId', '==', ownerUserId).get()
+    const wasInStock = householdSnap.docs.filter((d) => d.get('inStock') === true)
+    const seeded: string[] = []
+
+    // The report row (custom <li>) for the grocery item.
+    const grocRow = page.locator('li').filter({ hasText: GROC })
+
+    try {
+      for (const d of wasInStock) await d.ref.update({ inStock: false })
+
+      await gotoPatientTab('info')
+      await expect(page.getByRole('heading', { name: 'Health Summary', level: 3 })).toBeVisible({ timeout: 30_000 })
+      const gen = page.getByRole('button', { name: /^Generate Report$|^Regenerate$/ })
+      await gen.click()
+      await expect(page.getByRole('button', { name: 'Regenerate' })).toBeVisible({ timeout: 90_000 })
+
+      // No on-hand inventory → the shared advisory shows under the Shopping heading, and the
+      // grocery row carries NO "In stock" chip.
+      await expect(page.getByText('No supplies counted yet', { exact: false })).toBeVisible({ timeout: 15_000 })
+      await expect(grocRow.getByText('In stock')).toHaveCount(0)
+
+      // Put ONE matching item genuinely on hand (inStock=true) — live, WITHOUT regenerating.
+      const ref = col.doc()
+      seeded.push(ref.id)
+      await ref.set({
+        userId: ownerUserId,
+        householdId: ownerUserId,
+        memberId: null,
+        productName: GROC,
+        manualIngredientName: GROC,
+        category: 'produce',
+        quantity: 1,
+        needed: false,
+        inStock: true,
+        isManual: true,
+        recipeIds: [],
+        source: 'manual',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+
+      // Live transition: the advisory disappears (hasInventory true) and the matching row shows
+      // an accurate "In stock" chip — no regeneration needed.
+      await expect(page.getByText('No supplies counted yet', { exact: false })).toBeHidden({ timeout: 15_000 })
+      await expect(grocRow.getByText('In stock')).toBeVisible({ timeout: 15_000 })
+    } finally {
+      for (const id of seeded) await col.doc(id).delete().catch(() => {})
+      for (const d of wasInStock) await d.ref.update({ inStock: true }).catch(() => {})
+    }
+  })
+
+  test('advisory is limbo-proof and stable across rapid inStock toggles', async ({
+    page,
+    ownerUserId,
+    firestore,
+    gotoPatientTab,
+  }) => {
+    const GROC = 'Whole grains: brown rice, quinoa, oatmeal'
+    const col = firestore.collection('shopping_items')
+    const householdSnap = await col.where('householdId', '==', ownerUserId).get()
+    const wasInStock = householdSnap.docs.filter((d) => d.get('inStock') === true)
+
+    const grocRow = page.locator('li').filter({ hasText: GROC })
+    const advisory = page.getByText('No supplies counted yet', { exact: false })
+    let limboId: string | undefined
+    let toggleId: string | undefined
+
+    const seedRow = async (inStock: boolean) => {
+      const ref = col.doc()
+      await ref.set({
+        userId: ownerUserId, householdId: ownerUserId, memberId: null,
+        productName: GROC, manualIngredientName: GROC, category: 'other', quantity: 1,
+        needed: false, inStock, isManual: true, recipeIds: [], source: 'manual',
+        createdAt: new Date(), updatedAt: new Date(),
+      })
+      return ref
+    }
+
+    try {
+      for (const d of wasInStock) await d.ref.update({ inStock: false })
+
+      // A LIMBO row: needed=false AND inStock=false. Must NEVER count as inventory (the bug).
+      limboId = (await seedRow(false)).id
+
+      await gotoPatientTab('info')
+      await expect(page.getByRole('heading', { name: 'Health Summary', level: 3 })).toBeVisible({ timeout: 30_000 })
+      const gen = page.getByRole('button', { name: /^Generate Report$|^Regenerate$/ })
+      await gen.click()
+      await expect(page.getByRole('button', { name: 'Regenerate' })).toBeVisible({ timeout: 90_000 })
+
+      // Limbo row present, yet advisory STILL shows and NO chip appears — the core guard.
+      await expect(advisory).toBeVisible({ timeout: 15_000 })
+      await expect(grocRow.getByText('In stock')).toHaveCount(0)
+
+      // A real on-hand row we flip on/off; the limbo row stays put the whole time.
+      const toggle = await seedRow(true)
+      toggleId = toggle.id
+
+      const CYCLES = Number(process.env.STRESS_CYCLES || 4)
+      for (let c = 0; c < CYCLES; c++) {
+        // inStock=true → advisory hidden, accurate chip shows.
+        await toggle.update({ inStock: true, updatedAt: new Date() })
+        await expect(advisory).toBeHidden({ timeout: 15_000 })
+        await expect(grocRow.getByText('In stock')).toBeVisible({ timeout: 15_000 })
+        // inStock=false → advisory returns, chip gone (limbo row still ignored).
+        await toggle.update({ inStock: false, updatedAt: new Date() })
+        await expect(advisory).toBeVisible({ timeout: 15_000 })
+        await expect(grocRow.getByText('In stock')).toHaveCount(0)
+      }
+    } finally {
+      if (limboId) await col.doc(limboId).delete().catch(() => {})
+      if (toggleId) await col.doc(toggleId).delete().catch(() => {})
+      for (const d of wasInStock) await d.ref.update({ inStock: true }).catch(() => {})
+    }
+  })
 })

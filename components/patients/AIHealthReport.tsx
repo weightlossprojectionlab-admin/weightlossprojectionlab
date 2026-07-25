@@ -25,6 +25,7 @@ import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 import { addManualShoppingItem, deleteShoppingItem } from '@/lib/shopping-operations'
 import { useShopping } from '@/hooks/useShopping'
+import { TakeInventoryPrompt } from '@/components/shopping/TakeInventoryPrompt'
 
 // Normalize a shopping-item string for set membership / matching.
 const normalizeItem = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -61,6 +62,9 @@ interface ReportInteractivity {
   onRemove: (label: string) => void
   checkedItems: Set<string>
   onToggleChecked: (key: string) => void
+  /** True when the household has any on-hand (inStock) item. When false, the Shopping & Supply
+   *  heading renders the shared "take inventory" advisory instead of relying on stock chips. */
+  hasInventory: boolean
 }
 
 const ReportInteractivityContext = createContext<ReportInteractivity | null>(null)
@@ -158,6 +162,31 @@ function ReportListItem({ node, children, ...props }: any) {
   return <li className="text-foreground" {...props}>{children}</li>
 }
 
+// h3 renderer that appends the shared "take inventory" advisory directly under the
+// "🛒 Shopping & Supply Lists" heading when the household has no on-hand inventory
+// (hasInventory === false). Reads the single interactivity context so its identity stays
+// stable — the report never remounts (same guarantee as ReportListItem).
+function ReportH3({ node, children, ...props }: any) {
+  const ctx = useContext(ReportInteractivityContext)
+  const text = (Array.isArray(children) ? children : [children])
+    .map((c: any) => (typeof c === 'string' ? c : ''))
+    .join('')
+  const isShoppingHeading = /shopping\s*&?\s*supply/i.test(text)
+  return (
+    <>
+      <h3 className="text-xl font-semibold mt-4 mb-2 text-foreground" {...props}>{children}</h3>
+      {isShoppingHeading && ctx && !ctx.hasInventory && (
+        <TakeInventoryPrompt
+          className="my-3 not-prose"
+          title="No supplies counted yet"
+          message="We don't have on-hand stock data for this list. Take a quick inventory to see what you already have before you shop."
+          ctaLabel="🛒 Take Inventory"
+        />
+      )}
+    </>
+  )
+}
+
 interface AIHealthReportProps {
   patient: PatientProfile
   medications: PatientMedication[]
@@ -234,7 +263,11 @@ export function AIHealthReport({
   const inventory = useMemo(() => {
     const map = new Map<string, 'in_stock' | 'low'>()
     for (const it of shoppingItems) {
-      if (it.needed) continue // needed==false = on-hand inventory
+      // Canonical "on hand" = inStock === true (matches getInventoryItems' where('inStock','==',true)).
+      // NOT merely !needed: a row can be needed=false AND inStock=false (e.g. an item removed from
+      // the list by the old park-to-inventory behavior) — that's limbo, not stock, and must not
+      // light the "In stock" chip.
+      if (!it.inStock) continue
       const name = normalizeItem(it.manualIngredientName || it.productName || '')
       if (!name) continue
       const low = typeof it.lowStockThreshold === 'number' && it.quantity <= it.lowStockThreshold
@@ -373,9 +406,7 @@ export function AIHealthReport({
     h2: ({ node, ...props }: any) => (
       <h2 className="text-2xl font-bold mt-6 mb-3 text-foreground border-b border-gray-300 dark:border-gray-600 pb-2" {...props} />
     ),
-    h3: ({ node, ...props }: any) => (
-      <h3 className="text-xl font-semibold mt-4 mb-2 text-foreground" {...props} />
-    ),
+    h3: ReportH3,
     p: ({ node, children, ...props }: any) => {
       // Render as div when it wraps block elements (e.g. image divs) to avoid invalid <p><div>.
       const hasBlockChild = Array.isArray(children) && children.some(
@@ -432,6 +463,8 @@ export function AIHealthReport({
     onRemove: handleRemoveShoppingItem,
     checkedItems,
     onToggleChecked: toggleChecked,
+    // Reuses the already-computed inStock inventory map — no extra query (optimize).
+    hasInventory: inventory.size > 0,
   }
 
   // Build the report DOM ONCE per report string. Because markdownComponents is stable, this

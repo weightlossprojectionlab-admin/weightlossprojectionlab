@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import Link from 'next/link'
 import { MealType, DietaryTag, MealSuggestion } from '@/lib/meal-suggestions'
 import { useRecipes } from '@/hooks/useRecipes'
 import { RecipeImageCarousel } from '@/components/RecipeImageCarousel'
@@ -20,6 +19,7 @@ import { RecipeSuggestions } from '@/components/inventory/RecipeSuggestions'
 import { SearchInput } from '@/components/ui/SearchInput'
 import { RecipeModal } from '@/components/ui/RecipeModal'
 import { generateRecipeFromInventory } from '@/lib/inventory-recipe-generator'
+import { TakeInventoryPrompt } from '@/components/shopping/TakeInventoryPrompt'
 
 interface RecipeViewProps {
   patientId: string
@@ -151,7 +151,10 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
   // Determine which recipes to display
   // If we have inventory and member recipes were generated, use those
   // Otherwise, fall back to base recipes
-  const hasInventory = inventoryItems.length > 0
+  // Single source of "on hand": inStock === true (matches getInventoryItems). Counting mere
+  // presence (length>0) would treat limbo rows — needed=false AND inStock=false, e.g. items
+  // parked by the old remove behavior — as inventory and wrongly suppress the prompt.
+  const hasInventory = inventoryItems.some((i) => i.inStock === true)
   const displayRecipes: (MealSuggestion & { safetyResult?: any; inventoryAvailability?: any; medicalBadges?: string[] })[] = hasInventory && memberRecipes.length > 0
     ? memberRecipes
     : recipes
@@ -590,29 +593,9 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
                   </div>
                 )}
 
-                {/* No Inventory Alert - Show on every card when inventory is empty */}
-                {!hasInventory && (
-                  <div className="mt-auto mb-4 bg-gradient-to-r from-orange-100 to-yellow-100 dark:from-orange-900/30 dark:to-yellow-900/30 border-2 border-orange-400 dark:border-orange-600 rounded-lg p-3 shadow-sm">
-                    <div className="flex items-start gap-2 mb-2">
-                      <span className="text-2xl">📦</span>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-orange-900 dark:text-orange-100 mb-1">
-                          Take Kitchen Inventory First
-                        </p>
-                        <p className="text-xs text-orange-800 dark:text-orange-200">
-                          Can you make this with what you have? Add your ingredients to find out!
-                        </p>
-                      </div>
-                    </div>
-                    <Link
-                      href="/shopping"
-                      onClick={(e) => e.stopPropagation()}
-                      className="block w-full text-center px-3 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-xs font-semibold transition-colors"
-                    >
-                      🛒 Add Ingredients to Shopping List
-                    </Link>
-                  </div>
-                )}
+                {/* No-inventory advisory — shared single-source component (also used by the
+                    Health Summary). Shown when there's no on-hand (inStock) inventory. */}
+                {!hasInventory && <TakeInventoryPrompt className="mt-auto mb-4" />}
 
                 {/* Medical Safety & Inventory Badges */}
                 {'safetyResult' in recipe && recipe.safetyResult && (
