@@ -217,15 +217,19 @@ export function AIHealthReport({
   // inventory are derived from this single live source.
   const { items: shoppingItems } = useShopping(patient.userId)
 
+  // Jimmy's on-list set = needed items scoped to THIS patient (memberId === patient.id).
+  // Household-general items (memberId == null) belong to the whole household, not Jimmy's
+  // personal list, so they're excluded here. Inventory below stays household-wide.
   const onListItems = useMemo(() => {
     const set = new Set<string>()
     for (const it of shoppingItems) {
       if (!it.needed) continue
+      if (it.memberId !== patient.id) continue
       const name = normalizeItem(it.manualIngredientName || it.productName || '')
       if (name) set.add(name)
     }
     return set
-  }, [shoppingItems])
+  }, [shoppingItems, patient.id])
 
   const inventory = useMemo(() => {
     const map = new Map<string, 'in_stock' | 'low'>()
@@ -271,10 +275,14 @@ export function AIHealthReport({
     if (onListItems.has(norm) || busyItems.has(norm)) return
     setBusy(norm, true)
     try {
-      // Verbatim free-text add — no canonical match needed, so no misclassification.
-      // Bucket = the patient's account holder (userId + householdId = patient.userId) so the
-      // row is shared across owner + caregivers and matches useShopping's householdId query.
-      await addManualShoppingItem(patient.userId, clean, { quantity: 1, householdId: patient.userId })
+      // Verbatim free-text add. Household bucket = patient.userId (shared owner+caregivers),
+      // and memberId = patient.id scopes it to THIS patient's personal list — the single-source
+      // field that makes it show up in "Viewing shopping list for {patient}" too.
+      await addManualShoppingItem(patient.userId, clean, {
+        quantity: 1,
+        householdId: patient.userId,
+        memberId: patient.id,
+      })
     } catch (err) {
       logger.error('[AI Health Report] Failed to add shopping item', err as Error)
     } finally {
@@ -290,7 +298,10 @@ export function AIHealthReport({
     // Snapshot the matching rows NOW so a concurrent onSnapshot can't shift the id set
     // mid-delete. Nothing to do if it isn't actually on the list.
     const targets = shoppingItems.filter(
-      (it) => it.needed && normalizeItem(it.manualIngredientName || it.productName || '') === norm
+      (it) =>
+        it.needed &&
+        it.memberId === patient.id &&
+        normalizeItem(it.manualIngredientName || it.productName || '') === norm
     )
     if (targets.length === 0) return
     setBusy(norm, true)

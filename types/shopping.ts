@@ -166,6 +166,11 @@ export interface ShoppingItem {
   id: string
   userId: string // Legacy: kept for backwards compatibility, now represents household owner
   householdId?: string // NEW: Account owner's userId for family plans
+  // Single-source shopping unification: which person this item is FOR.
+  //   null/undefined = household-general (dish soap, milk) — visible to any household member.
+  //   patientId      = specific to that patient (Jimmy's glucose strips) — gated by per-patient access.
+  // Views derive from this: member list = memberId==patientId; household list = all; inventory ignores it.
+  memberId?: string | null
 
   /**
    * Catalog id of the chain this item should be bought at (Phase 0b).

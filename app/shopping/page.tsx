@@ -66,97 +66,45 @@ function ShoppingListContent() {
   const dutyId = searchParams.get('dutyId') // Household duty ID from URL
   const userId = auth.currentUser?.uid || ''
 
-  // Use member-specific hook when viewing from patient page
+  // Household members (patients) this user can see. Declared HERE (loaded in an effect below)
+  // so a member-scoped view can resolve the patient's OWNER uid — members[memberId].userId —
+  // and read the OWNER's household bucket, not the viewer's. This is what lets a caregiver see
+  // the patient's list; without it, /shopping read the caregiver's own (empty) household.
+  const [members, setMembers] = useState<Record<string, PatientProfile>>({})
+
+  // When scoped to a patient (memberId), the shopping bucket = that patient's account owner.
+  // Undefined until members loads (the hook falls back to the viewer's uid, then re-subscribes).
+  const memberOwnerId = memberId ? members[memberId]?.userId : undefined
+
+  // Member-specific hook (kept for the household-inventory context used lower in the page).
   const memberShoppingData = useMemberShoppingList({
-    householdId: userId, // Current user is the household
+    householdId: memberOwnerId || userId,
     memberId: memberId || userId,
-    autoFetch: !!memberId // Only fetch if memberId is present
+    autoFetch: !!memberId
   })
 
-  // Use household hook for general shopping view
-  const householdShoppingData = useShopping()
+  // Household hook — the single source. Scoped to the patient's OWNER when viewing a member,
+  // otherwise the viewer's own household.
+  const householdShoppingData = useShopping(memberOwnerId)
 
   // Choose which data source based on memberId presence
+  // Single-source: when scoped to a patient (memberId), read the UNIFIED shopping_items store
+  // (the household hook) filtered to that patient's rows — the same store + memberId the health
+  // report writes to, so the two views stay in sync. Inventory/household methods pass through
+  // and operate on shopping_items by id, so they work on member rows too. Non-member view is
+  // the plain household list. (member_shopping_lists is being retired; see P4.)
   const shoppingData = memberId ? {
-    neededItems: memberShoppingData.memberItems.filter(item => item.needed).map(item => ({
-      id: item.id,
-      userId,
-      productName: item.productName,
-      brand: item.brand,
-      imageUrl: item.imageUrl,
-      category: item.category,
-      quantity: item.quantity,
-      unit: item.unit,
-      displayQuantity: item.displayQuantity,
-      priority: item.priority,
-      needed: item.needed,
-      inStock: memberShoppingData.isInHouseholdStock(item.productKey),
-      location: 'pantry' as const,
-      isPerishable: false,
-      purchaseHistory: [],
-      createdAt: item.addedAt,
-      updatedAt: item.updatedAt,
-      isManual: !item.barcode,
-      barcode: item.barcode,
-      productKey: item.productKey,
-      recipeIds: item.recipeIds,
-      reason: item.reason
-    } as any)),
-    items: memberShoppingData.memberItems.map(item => ({
-      id: item.id,
-      userId,
-      productName: item.productName,
-      brand: item.brand,
-      imageUrl: item.imageUrl,
-      category: item.category,
-      quantity: item.quantity,
-      unit: item.unit,
-      displayQuantity: item.displayQuantity,
-      priority: item.priority,
-      needed: item.needed,
-      inStock: memberShoppingData.isInHouseholdStock(item.productKey),
-      location: 'pantry' as const,
-      isPerishable: false,
-      purchaseHistory: [],
-      createdAt: item.addedAt,
-      updatedAt: item.updatedAt,
-      isManual: !item.barcode,
-      barcode: item.barcode,
-      productKey: item.productKey,
-      recipeIds: item.recipeIds
-    } as any)),
-    stores: [],
-    loading: memberShoppingData.loading,
-    purchaseItem: async (itemId: string, options: any) => {
-      const memberItem = memberShoppingData.memberItems.find(i => i.id === itemId)
-      if (memberItem) {
-        const householdItem = memberShoppingData.findInHouseholdInventory(memberItem.productKey)
-        if (householdItem) {
-          await memberShoppingData.purchaseItem(itemId, householdItem.id, options)
-        }
+    ...householdShoppingData,
+    neededItems: householdShoppingData.neededItems.filter((it: any) => it.memberId === memberId),
+    items: householdShoppingData.items.filter((it: any) => it.memberId === memberId),
+    getSummary: () => {
+      const mine = householdShoppingData.neededItems.filter((it: any) => it.memberId === memberId)
+      return {
+        neededItems: mine.length,
+        highPriorityItems: mine.filter((it: any) => it.priority === 'high').length,
+        totalItems: householdShoppingData.items.filter((it: any) => it.memberId === memberId).length,
       }
     },
-    toggleNeeded: async (itemId: string) => {
-      await memberShoppingData.updateItem(itemId, { needed: true })
-    },
-    removeItem: async (itemId: string) => {
-      const memberItem = memberShoppingData.memberItems.find(i => i.id === itemId)
-      if (memberItem) {
-        await memberShoppingData.removeItem(itemId, memberItem.productKey)
-      }
-    },
-    addItem: householdShoppingData.addItem, // Fall back to household for adding
-    updateItem: async (itemId: string, updates: any) => {
-      await memberShoppingData.updateItem(itemId, updates)
-    },
-    getSummary: () => ({
-      neededItems: memberShoppingData.summary?.neededItems || 0,
-      highPriorityItems: memberShoppingData.summary?.highPriorityItems || 0,
-      totalItems: memberShoppingData.summary?.totalItems || 0
-    }),
-    smartSort: householdShoppingData.smartSort,
-    addStore: householdShoppingData.addStore,
-    refresh: memberShoppingData.refresh
   } : householdShoppingData
 
   const {
@@ -227,7 +175,6 @@ function ShoppingListContent() {
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('')
   const [filterCategory, setFilterCategory] = useState<ProductCategory | 'all'>('all')
-  const [members, setMembers] = useState<Record<string, PatientProfile>>({})
 
   // Blocked operation state
   const [showBlockedModal, setShowBlockedModal] = useState(false)
@@ -1069,6 +1016,7 @@ function ShoppingListContent() {
                         onFixOrphaned={handleFixOrphanedItem}
                         searchQuery={searchQuery}
                         getMemberName={getMemberName}
+                        activeMemberId={memberId || undefined}
                         allergenWarning={allergenWarningFor(item.productName)}
                       />
                     ))}
@@ -1128,6 +1076,7 @@ function ShoppingListContent() {
                           showDebugInfo={showDebugMode}
                           searchQuery={searchQuery}
                           getMemberName={getMemberName}
+                          activeMemberId={memberId || undefined}
                           allergenWarning={allergenWarningFor(item.productName)}
                         />
                       ))}
@@ -1157,6 +1106,7 @@ function ShoppingListContent() {
                           showDebugInfo={showDebugMode}
                           searchQuery={searchQuery}
                           getMemberName={getMemberName}
+                          activeMemberId={memberId || undefined}
                           allergenWarning={allergenWarningFor(item.productName)}
                         />
                       ))}
@@ -1359,7 +1309,8 @@ function ShoppingItemCard({
   onFixOrphaned,
   searchQuery,
   getMemberName,
-  allergenWarning
+  allergenWarning,
+  activeMemberId
 }: {
   item: ShoppingItem
   onToggle: (id: string, current: boolean) => void
@@ -1372,6 +1323,9 @@ function ShoppingItemCard({
   searchQuery?: string
   getMemberName?: (userId?: string) => string
   allergenWarning?: { allergen: string; keyword: string }
+  /** The memberId currently being viewed (Model B). When set, the "For {name}" badge is
+   *  suppressed for items belonging to that member — it's redundant in a per-person view. */
+  activeMemberId?: string
 }) {
   const categoryMeta = getCategoryMetadata(item.category)
   const isOrphaned = !item.inStock && !item.needed && item.quantity === 0
@@ -1446,6 +1400,13 @@ function ShoppingItemCard({
           {(item.quantity > 0 || item.unit) && (
             <span className="text-xs px-2 py-1 bg-secondary-light text-blue-700 dark:text-blue-300 rounded">
               {item.displayQuantity || formatQuantityDisplay(item.quantity, item.unit)}
+            </span>
+          )}
+          {/* Model B: master household list badges WHO each item is for. Suppressed in the
+              per-person view (activeMemberId) where it'd be redundant. */}
+          {item.memberId && item.memberId !== activeMemberId && getMemberName && getMemberName(item.memberId) && (
+            <span className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200 font-medium">
+              For {getMemberName(item.memberId)}
             </span>
           )}
           {item.lastPurchased && (

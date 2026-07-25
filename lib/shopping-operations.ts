@@ -485,6 +485,12 @@ export async function addManualShoppingItem(
     priority?: 'low' | 'medium' | 'high'
     householdId?: string // NEW: If provided, uses household mode
     /**
+     * Single-source unification: which patient this item is FOR. Omit/undefined = null =
+     * household-general (unchanged behavior for the 9 existing callers). A patientId scopes
+     * the item to that person's list (e.g. the health report passes memberId = patient.id).
+     */
+    memberId?: string | null
+    /**
      * Override the category instead of inferring from the ingredient name.
      * Used by inventory's "Buy Again" so we keep the existing item's
      * (admin-curated) category instead of letting detectCategoryFromText
@@ -514,7 +520,12 @@ export async function addManualShoppingItem(
 
     const newItem: Omit<ShoppingItem, 'id'> = {
       userId,
-      householdId: options.householdId, // NEW: Add household ID if provided
+      // householdId is the ONE scoping key every reader (useShopping) filters on. Default it
+      // to userId so no caller can create an orphan doc that's invisible to household-scoped
+      // queries (which broke add/remove sync in the health report). Invariant: householdId==userId
+      // for single-owner households; caregivers pass the owner's uid explicitly.
+      householdId: options.householdId ?? userId,
+      memberId: options.memberId ?? null, // null = household-general (single-source unification)
       barcode: options.barcode,
       productName: ingredientName,
       brand: options.brand ?? '',
