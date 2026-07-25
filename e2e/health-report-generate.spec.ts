@@ -179,8 +179,10 @@ test.describe('AI Health Report — Phase A–E wiring @phase-a-e-report', () =>
       // Markdown rendered via ReactMarkdown — H2 headings become <h2>
       // elements. Match by accessible heading role for stability.
 
-      // Phase A — Blood Type appears in the Demographics table
-      await expect(page.getByText('Blood Type', { exact: false })).toBeVisible()
+      // Phase A — Blood Type appears in the Demographics table. Target the report's table CELL
+      // specifically — a "Blood type" label elsewhere on the patient page also matches getByText,
+      // tripping strict mode.
+      await expect(page.getByRole('cell', { name: 'Blood Type' })).toBeVisible()
       await expect(page.getByText('A+', { exact: false }).first()).toBeVisible()
 
       // Phase B — Immunizations section + the seeded vaccine
