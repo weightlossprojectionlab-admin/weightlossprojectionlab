@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { headers } from 'next/headers'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
+import { CsrfBootstrap } from '@/components/CsrfBootstrap'
 import { ConditionalFooter } from '@/components/ConditionalFooter'
 import { UpdateChecker } from '@/components/UpdateChecker'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -114,6 +115,9 @@ export default async function RootLayout({
   return (
     <html lang="en" className="h-full light" suppressHydrationWarning>
       <head>
+        {/* Runs before any app code/fetch: ensures the csrf_token cookie + attaches the
+            X-CSRF-Token header to same-origin /api/ mutating requests. See CsrfBootstrap. */}
+        <CsrfBootstrap />
         <meta charSet="utf-8" />
         <meta name="color-scheme" content="light only" />
         <meta name="msvalidate.01" content="4AE02DCF3B27464702CC151D52D82EC7" />
