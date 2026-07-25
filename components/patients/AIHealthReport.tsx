@@ -11,7 +11,7 @@ import {
   FamilyHistoryEntry,
   Appointment,
 } from '@/types/medical'
-import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon, PlusIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon, PlusIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { auth } from '@/lib/firebase'
@@ -22,7 +22,7 @@ import ImageLightbox from '@/components/ui/ImageLightbox'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
-import { addManualShoppingItem, getInventoryItems, getAllShoppingItems } from '@/lib/shopping-operations'
+import { addManualShoppingItem, getInventoryItems, getAllShoppingItems, findExistingIngredientByName, removeFromShoppingList } from '@/lib/shopping-operations'
 
 // Normalize a shopping-item string for set membership / matching.
 const normalizeItem = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -162,6 +162,36 @@ export function AIHealthReport({
       toast.success(`Added "${clean}" to shopping list`)
     } catch {
       toast.error('Failed to add item to shopping list')
+    } finally {
+      setAddingItem(null)
+    }
+  }
+
+  // Symmetric undo: if you can add it, you can take it back off the list. Finds the
+  // list row by name and removes it (removeFromShoppingList → needed:false, audited).
+  const handleRemoveShoppingItem = async (text: string) => {
+    const clean = text.trim()
+    const norm = normalizeItem(text)
+    if (!user?.uid) return
+    setAddingItem(norm)
+    try {
+      const existing = await findExistingIngredientByName(user.uid, clean)
+      if (existing?.id) {
+        await removeFromShoppingList(existing.id, user.uid, 'changed_mind')
+      }
+      setAddedItems(prev => {
+        const next = new Set(prev)
+        next.delete(norm)
+        return next
+      })
+      setOnListItems(prev => {
+        const next = new Set(prev)
+        next.delete(norm)
+        return next
+      })
+      toast.success(`Removed "${clean}" from shopping list`)
+    } catch {
+      toast.error('Failed to remove item')
     } finally {
       setAddingItem(null)
     }
@@ -602,9 +632,18 @@ export function AIHealthReport({
                         </span>
                       )}
                       {added || onList ? (
-                        <span className="flex-shrink-0 inline-flex items-center justify-center gap-1 min-h-[44px] px-3 text-sm font-semibold text-green-700">
-                          <CheckCircleIcon className="w-5 h-5" /> {added ? 'Added' : 'On list'}
-                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveShoppingItem(label)}
+                          disabled={addingItem === norm}
+                          className="flex-shrink-0 inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold text-green-700 bg-green-50 hover:bg-red-50 hover:text-red-700 active:bg-red-100 disabled:opacity-60 transition-colors"
+                          aria-label={`Remove ${label} from shopping list`}
+                          title="Tap to remove from shopping list"
+                        >
+                          <CheckCircleIcon className="w-5 h-5" />
+                          <span>{added ? 'Added' : 'On list'}</span>
+                          <XMarkIcon className="w-4 h-4 opacity-70" />
+                        </button>
                       ) : (
                         <button
                           type="button"
