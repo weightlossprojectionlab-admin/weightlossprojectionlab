@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import { ConditionalProviders } from '@/components/ConditionalProviders'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { CsrfBootstrap } from '@/components/CsrfBootstrap'
+import { HomeAuthRedirect } from '@/components/HomeAuthRedirect'
 import { ConditionalFooter } from '@/components/ConditionalFooter'
 import { UpdateChecker } from '@/components/UpdateChecker'
 import { SpeedInsights } from '@vercel/speed-insights/next'
@@ -118,6 +119,9 @@ export default async function RootLayout({
         {/* Runs before any app code/fetch: ensures the csrf_token cookie + attaches the
             X-CSRF-Token header to same-origin /api/ mutating requests. See CsrfBootstrap. */}
         <CsrfBootstrap />
+        {/* On `/` only: forward already-logged-in users into the app before paint, so the
+            static marketing homepage isn't shown to returning users. See HomeAuthRedirect. */}
+        <HomeAuthRedirect />
         <meta charSet="utf-8" />
         <meta name="color-scheme" content="light only" />
         <meta name="msvalidate.01" content="4AE02DCF3B27464702CC151D52D82EC7" />
