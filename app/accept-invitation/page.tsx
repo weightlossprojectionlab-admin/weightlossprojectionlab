@@ -164,8 +164,30 @@ function AcceptInvitationContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
+        {/* A signed-in user who landed on a dead/invalid invite (revoked, expired, already
+            handled) shouldn't be parked on a code-entry form — they're already in the app.
+            Show the reason + a way forward instead. Anonymous visitors still get the form so
+            they can retry / sign in. */}
+        {error && user && !invitation && (
+          <div className="bg-card rounded-lg border-2 border-border p-8 mb-6 text-center">
+            <div className="w-16 h-16 bg-error-light rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">This invitation isn&apos;t available</h2>
+            <p className="text-muted-foreground mb-6">{error}</p>
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+            >
+              Go to Dashboard
+            </button>
+          </div>
+        )}
+
         {/* Invite Code Entry */}
-        {!invitation && (
+        {!invitation && !(error && user) && (
           <div className="bg-card rounded-lg border-2 border-border p-8 mb-6">
             <div className="text-center mb-6">
               <div className="w-20 h-20 bg-primary-light rounded-full flex items-center justify-center mx-auto mb-4">

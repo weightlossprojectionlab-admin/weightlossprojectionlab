@@ -37,6 +37,24 @@ export async function GET(request: NextRequest) {
     const invitationDoc = invitationsSnapshot.docs[0]
     const invitationData = invitationDoc.data()
 
+    // Never expose a DEAD invitation's details (recipient email, shared patient IDs,
+    // permission set, inviter) to an unauthenticated caller holding the code. A
+    // revoked/accepted/declined or expired invite returns a minimal error with NO payload.
+    // This also protects the onboarding auto-accept path (app/onboarding), which proceeds
+    // solely on response.ok — a dead invite must read as not-ok, not as a valid 200.
+    const rawExpiresAt =
+      invitationData.expiresAt?.toDate?.() ??
+      (invitationData.expiresAt ? new Date(invitationData.expiresAt) : null)
+    const isExpired =
+      rawExpiresAt instanceof Date && !isNaN(rawExpiresAt.getTime()) && Date.now() > rawExpiresAt.getTime()
+
+    if (invitationData.status !== 'pending') {
+      return NextResponse.json({ error: 'This invitation is no longer available.' }, { status: 410 })
+    }
+    if (isExpired) {
+      return NextResponse.json({ error: 'This invitation has expired.' }, { status: 410 })
+    }
+
     // Convert Firestore timestamps to ISO strings for JSON serialization
     const invitation = {
       id: invitationDoc.id,
