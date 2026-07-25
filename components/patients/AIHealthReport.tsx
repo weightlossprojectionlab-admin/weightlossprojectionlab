@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState, useCallback, useMemo, useEffect, createContext, useContext } from 'react'
 import { doc, onSnapshot } from 'firebase/firestore'
@@ -30,8 +30,8 @@ import { useShopping } from '@/hooks/useShopping'
 const normalizeItem = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
 // Best-effort inventory match. Exact normalized match first, then a CONSERVATIVE
-// whole-word match (inventory name â‰¥4 chars appearing as a word in the report item).
-// Deliberately strict â€” a missed match (no chip) is fine; a false "in stock" is not.
+// whole-word match (inventory name ≥4 chars appearing as a word in the report item).
+// Deliberately strict — a missed match (no chip) is fine; a false "in stock" is not.
 const matchStock = (
   norm: string,
   invMap: Map<string, 'in_stock' | 'low'>
@@ -49,7 +49,7 @@ const matchStock = (
 // Live interactivity for the report markdown, delivered via context so the (memoized)
 // ReactMarkdown tree is built ONCE and never remounts when the shopping list changes.
 // Previously the `components` object was rebuilt inline every render, giving every custom
-// renderer a fresh function identity â€” so an add/remove remounted the ENTIRE report, its
+// renderer a fresh function identity — so an add/remove remounted the ENTIRE report, its
 // scroll container collapsed to 0 height mid-swap, and the view snapped to the top. Now
 // only the small ReportListItem consumers below re-render; the report keeps its scroll.
 interface ReportInteractivity {
@@ -66,7 +66,7 @@ interface ReportInteractivity {
 const ReportInteractivityContext = createContext<ReportInteractivity | null>(null)
 
 // Custom <li> renderer. Reads live state from context (NOT a render-closure) so its function
-// identity is stable across renders â€” that stability is what keeps react-markdown from
+// identity is stable across renders — that stability is what keeps react-markdown from
 // remounting the report on every list change.
 function ReportListItem({ node, children, ...props }: any) {
   const ctx = useContext(ReportInteractivityContext)
@@ -94,7 +94,7 @@ function ReportListItem({ node, children, ...props }: any) {
     return (
       // Mobile-first, fat-thumb: {...props} FIRST so react-markdown's task-list className
       // can't clobber our flex layout. Name left (wraps, never truncates); chip + a solid
-      // â‰¥44px action aligned right so every row's button lines up. my-2 spacing cuts mis-taps.
+      // ≥44px action aligned right so every row's button lines up. my-2 spacing cuts mis-taps.
       <li {...props} className="flex items-center gap-2 my-2 list-none -ml-6 text-foreground">
         <span className="flex-1 min-w-0 leading-snug">{label}</span>
         {stock && (
@@ -112,7 +112,7 @@ function ReportListItem({ node, children, ...props }: any) {
             title="Tap to remove from shopping list"
           >
             <CheckCircleIcon className="w-5 h-5" />
-            <span>{busy ? 'Removingâ€¦' : 'On list'}</span>
+            <span>{busy ? 'Removing…' : 'On list'}</span>
             {!busy && <XMarkIcon className="w-4 h-4 opacity-70" />}
           </button>
         ) : (
@@ -123,7 +123,7 @@ function ReportListItem({ node, children, ...props }: any) {
             className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 active:bg-purple-800 disabled:opacity-60 transition-colors"
             aria-label={`Add ${label} to shopping list`}
           >
-            <PlusIcon className="w-5 h-5" /> {busy ? 'Addingâ€¦' : 'Add'}
+            <PlusIcon className="w-5 h-5" /> {busy ? 'Adding…' : 'Add'}
           </button>
         )}
       </li>
@@ -166,7 +166,7 @@ interface AIHealthReportProps {
   todayMeals: any[]
   weightData: any[]
   stepsData: any[]
-  // Phase Bâ€“E entities â€” wired in 2026-05-10 to close the gap
+  // Phase B–E entities — wired in 2026-05-10 to close the gap
   // where the report ignored everything from the medical-binder
   // gap close (immunizations, equipment, family history, visits).
   immunizations?: Immunization[]
@@ -197,7 +197,7 @@ export function AIHealthReport({
 
   // --- Actionable Shopping & Supply items (scoped strictly to that section) ---
   // The LIVE shopping list (useShopping below) is the single source of truth for on-list
-  // state â€” no local optimistic mirror to drift. Firestore latency-compensation flips the
+  // state — no local optimistic mirror to drift. Firestore latency-compensation flips the
   // button on this device instantly, and the onSnapshot propagates to the owner + every
   // caregiver. `busyItems` only debounces an in-flight add/remove per normalized item.
   const [busyItems, setBusyItems] = useState<Set<string>>(new Set())
@@ -212,7 +212,7 @@ export function AIHealthReport({
   }
 
   // Live shopping list (Firestore onSnapshot) scoped to the patient's ACCOUNT HOLDER
-  // (patient.userId), NOT the viewing user â€” so the owner AND all their caregivers share
+  // (patient.userId), NOT the viewing user — so the owner AND all their caregivers share
   // ONE list per patient. Rules permit this via isHouseholdMember(householdId). On-list +
   // inventory are derived from this single live source.
   const { items: shoppingItems } = useShopping(patient.userId)
@@ -339,7 +339,7 @@ export function AIHealthReport({
 
   // Renderer map: STABLE identity (deps are only the stable setLightboxImage setter) so the
   // report DOM is built once. All live state reaches the rows via ReportInteractivityContext,
-  // not this closure â€” so a shopping add/remove updates only the row, never the whole report.
+  // not this closure — so a shopping add/remove updates only the row, never the whole report.
   const markdownComponents = useMemo(() => ({
     table: ({ node, ...props }: any) => (
       <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600 my-4" {...props} />
@@ -424,7 +424,7 @@ export function AIHealthReport({
   }
 
   // Build the report DOM ONCE per report string. Because markdownComponents is stable, this
-  // element is stable too, so react-markdown never re-parses or remounts on a list change â€”
+  // element is stable too, so react-markdown never re-parses or remounts on a list change —
   // context alone propagates the update to the rows.
   const markdown = useMemo(
     () => (report ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{report}</ReactMarkdown> : null),
@@ -455,7 +455,7 @@ export function AIHealthReport({
           todayMeals,
           weightData: weightData.slice(0, 30),
           stepsData: stepsData.slice(0, 30),
-          // Phase Bâ€“E â€” full lists; small enough that slicing isn't needed.
+          // Phase B–E — full lists; small enough that slicing isn't needed.
           immunizations,
           equipment,
           familyHistory,
@@ -626,7 +626,7 @@ export function AIHealthReport({
 
     // Convert checkboxes
     html = html.replace(/- \[ \] (.+)/g, '<div class="checkbox-item"><div class="checkbox"></div><span>$1</span></div>')
-    html = html.replace(/- \[x\] (.+)/g, '<div class="checkbox-item"><div class="checkbox">âœ“</div><span>$1</span></div>')
+    html = html.replace(/- \[x\] (.+)/g, '<div class="checkbox-item"><div class="checkbox">✓</div><span>$1</span></div>')
 
     // Convert unordered lists (but not checkboxes)
     html = html.replace(/^- (?!\[)(.+)$/gm, '<li>$1</li>')
@@ -684,7 +684,7 @@ export function AIHealthReport({
       <UpgradePrompt
         feature="health-reports"
         featureName="Unlock AI Health Reports"
-        icon="ðŸ¥"
+        icon="🏥"
         message="Get comprehensive health analysis and insights. Available on Single Plus or higher plans."
         suggestedPlan="single_plus"
         size="lg"
@@ -755,12 +755,12 @@ export function AIHealthReport({
             Click the button above to generate a comprehensive health summary analyzing:
           </p>
           <ul className="text-sm text-muted-foreground space-y-1 text-left max-w-md mx-auto">
-            <li>âœ“ Vital signs and health metrics</li>
-            <li>âœ“ Weight trends and progress</li>
-            <li>âœ“ Nutrition and meal patterns</li>
-            <li>âœ“ Activity and step tracking</li>
-            <li>âœ“ Current medications</li>
-            <li>âœ“ Medical documents and history</li>
+            <li>✓ Vital signs and health metrics</li>
+            <li>✓ Weight trends and progress</li>
+            <li>✓ Nutrition and meal patterns</li>
+            <li>✓ Activity and step tracking</li>
+            <li>✓ Current medications</li>
+            <li>✓ Medical documents and history</li>
           </ul>
         </div>
       )}
@@ -799,7 +799,7 @@ export function AIHealthReport({
       {report && (
         <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            <strong>âš ï¸ Important:</strong> This automated summary is for informational purposes only and should not replace professional medical advice.
+            <strong>⚠️ Important:</strong> This automated summary is for informational purposes only and should not replace professional medical advice.
             Always consult with qualified healthcare providers for medical decisions.
           </p>
         </div>
