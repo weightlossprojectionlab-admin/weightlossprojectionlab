@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import {
   PatientProfile,
   PatientMedication,
@@ -22,7 +22,8 @@ import ImageLightbox from '@/components/ui/ImageLightbox'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
-import { addManualShoppingItem, getInventoryItems, getAllShoppingItems, findExistingIngredientByName, removeFromShoppingList } from '@/lib/shopping-operations'
+import { addManualShoppingItem, removeFromShoppingList } from '@/lib/shopping-operations'
+import { useShopping } from '@/hooks/useShopping'
 
 // Normalize a shopping-item string for set membership / matching.
 const normalizeItem = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
@@ -83,9 +84,34 @@ export function AIHealthReport({
 
   // --- Actionable Shopping & Supply items (scoped strictly to that section) ---
   const [addedItems, setAddedItems] = useState<Set<string>>(new Set())
-  const [onListItems, setOnListItems] = useState<Set<string>>(new Set())
   const [addingItem, setAddingItem] = useState<string | null>(null)
-  const [inventory, setInventory] = useState<Map<string, 'in_stock' | 'low'>>(new Map())
+
+  // Live shopping list via Firestore onSnapshot — add/remove now reflect across devices.
+  // (The prior one-time getDocs read served a stale local cache on the other device even
+  // after refresh.) On-list + inventory are DERIVED from this single live source.
+  const { items: shoppingItems } = useShopping()
+
+  const onListItems = useMemo(() => {
+    const set = new Set<string>()
+    for (const it of shoppingItems) {
+      if (!it.needed) continue
+      const name = normalizeItem(it.manualIngredientName || it.productName || '')
+      if (name) set.add(name)
+    }
+    return set
+  }, [shoppingItems])
+
+  const inventory = useMemo(() => {
+    const map = new Map<string, 'in_stock' | 'low'>()
+    for (const it of shoppingItems) {
+      if (it.needed) continue // needed==false = on-hand inventory
+      const name = normalizeItem(it.manualIngredientName || it.productName || '')
+      if (!name) continue
+      const low = typeof it.lowStockThreshold === 'number' && it.quantity <= it.lowStockThreshold
+      map.set(name, low ? 'low' : 'in_stock')
+    }
+    return map
+  }, [shoppingItems])
 
   // Deterministic parse of the report string → the set of item texts that live under
   // the "Shopping & Supply Lists" heading (until the next heading). No reliance on
@@ -108,44 +134,6 @@ export function AIHealthReport({
     }
     return set
   }, [report])
-
-  // Best-effort, non-blocking: fetch inventory (on-hand) + current list once per report.
-  // Cancellation guard so a mid-fetch unmount never sets state. Any failure → no chips,
-  // report unaffected.
-  useEffect(() => {
-    if (!report || !user?.uid || shoppingItemTexts.size === 0) return
-    let cancelled = false
-    ;(async () => {
-      try {
-        const [inv, existing] = await Promise.all([
-          getInventoryItems(user.uid).catch(() => [] as any[]),
-          getAllShoppingItems(user.uid).catch(() => [] as any[]),
-        ])
-        if (cancelled) return
-        const invMap = new Map<string, 'in_stock' | 'low'>()
-        for (const it of inv) {
-          const name = normalizeItem(it.manualIngredientName || it.productName || '')
-          if (!name) continue
-          const low = typeof it.lowStockThreshold === 'number' && it.quantity <= it.lowStockThreshold
-          invMap.set(name, low ? 'low' : 'in_stock')
-        }
-        const onList = new Set<string>()
-        for (const it of existing) {
-          const name = normalizeItem(it.manualIngredientName || it.productName || '')
-          if (name) onList.add(name)
-        }
-        if (!cancelled) {
-          setInventory(invMap)
-          setOnListItems(onList)
-        }
-      } catch {
-        /* best-effort — leave chips empty */
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [report, user?.uid, shoppingItemTexts])
 
   const handleAddShoppingItem = async (text: string) => {
     const clean = text.trim()
@@ -175,16 +163,15 @@ export function AIHealthReport({
     if (!user?.uid) return
     setAddingItem(norm)
     try {
-      const existing = await findExistingIngredientByName(user.uid, clean)
-      if (existing?.id) {
-        await removeFromShoppingList(existing.id, user.uid, 'changed_mind')
+      // Locate the row in the LIVE list (no extra query); the onSnapshot then drops it
+      // from onListItems across devices.
+      const target = shoppingItems.find(
+        (it) => it.needed && normalizeItem(it.manualIngredientName || it.productName || '') === norm
+      )
+      if (target?.id) {
+        await removeFromShoppingList(target.id, user.uid, 'changed_mind')
       }
       setAddedItems(prev => {
-        const next = new Set(prev)
-        next.delete(norm)
-        return next
-      })
-      setOnListItems(prev => {
         const next = new Set(prev)
         next.delete(norm)
         return next
