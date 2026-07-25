@@ -27,6 +27,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         hasUser: !!authUser,
         uid: authUser?.uid
       })
+      // Mirror auth state into a plain localStorage flag so the static marketing
+      // homepage (which loads no Firebase, see ConditionalProviders) can decide,
+      // before paint, whether to forward a returning user into the app. This is our
+      // own flag — NOT Firebase's internal `firebase:authUser:*` keys — so it can't
+      // break on an SDK change, and it self-heals: sign-out and token expiry/revocation
+      // both fire this listener with null, clearing the flag. See components/HomeAuthRedirect.
+      try {
+        if (authUser) {
+          localStorage.setItem('wpl_logged_in', '1')
+        } else {
+          localStorage.removeItem('wpl_logged_in')
+        }
+      } catch {
+        /* localStorage unavailable (Safari private mode) — homepage simply won't auto-forward */
+      }
       setUser(authUser)
       setLoading(false)
     })
