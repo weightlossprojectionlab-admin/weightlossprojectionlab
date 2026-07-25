@@ -8,9 +8,17 @@
  * launch dumps them on marketing until they click through to /auth. This script runs
  * synchronously at parse time and, ON `/` ONLY, redirects when our auth flag is present.
  *
- * The flag (`wpl_logged_in`) is our own — written/cleared by contexts/AuthContext's
- * onAuthStateChange listener — NOT Firebase's internal `firebase:authUser:*` keys. That
- * decouples us from SDK internals and self-heals on sign-out / token expiry.
+ * Detection uses two signals, both in localStorage (no Firebase loaded on `/`):
+ *   1. `wpl_logged_in` — our own flag, written/cleared by contexts/AuthContext's
+ *      onAuthStateChange listener. Robust to Firebase SDK changes and self-heals on
+ *      sign-out / token expiry. BUT it's only written on pages that mount AuthProvider —
+ *      never on `/` itself — so it can miss a pre-existing session that hasn't passed
+ *      through an authed page since the flag shipped.
+ *   2. `firebase:authUser:*` — Firebase's own persisted-session key (browserLocalPersistence
+ *      writes it to localStorage). Present immediately for ANY logged-in user, so it covers
+ *      the bootstrapping gap above. Used only as a fallback; Firebase also removes it on
+ *      sign-out / invalid refresh token, so it self-heals too.
+ * Redirect if EITHER is present.
  *
  * We forward to /auth (not a hardcoded /dashboard) so its determineUserDestination handles
  * every case (onboarding, caregiver-only, expired subscription). /auth shows a spinner while
@@ -25,7 +33,11 @@
 const HOME_AUTH_REDIRECT = `(function(){
   try {
     if (location.pathname !== '/') return;
-    if (localStorage.getItem('wpl_logged_in') === '1') location.replace('/auth');
+    if (localStorage.getItem('wpl_logged_in') === '1') { location.replace('/auth'); return; }
+    for (var i = 0; i < localStorage.length; i++) {
+      var k = localStorage.key(i);
+      if (k && k.indexOf('firebase:authUser:') === 0 && localStorage.getItem(k)) { location.replace('/auth'); return; }
+    }
   } catch (e) {}
 })();`
 
