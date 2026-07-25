@@ -1893,21 +1893,20 @@ export async function addRecipeIngredientsToShoppingList(
   let linkedCount = 0
 
   if (memberId) {
-    // Member-specific shopping list
-    const { addToMemberShoppingList } = await import('@/lib/member-shopping-operations')
+    // Member-scoped: add to that person's list in the single source (memberId set). No
+    // cross-member dedup — an item can be needed for one person independent of another.
     for (const ingredient of ingredients) {
-      await addToMemberShoppingList(householdId, memberId, {
-        productName: ingredient,
-        category: 'other',
+      await addManualShoppingItem(householdId, ingredient, {
+        recipeId,
         quantity: 1,
         priority: 'medium',
-        recipeIds: [recipeId],
-        source: 'recipe',
+        householdId,
+        memberId,
       })
       newCount++
     }
   } else {
-    // Household shopping list with dedup/linking
+    // Household-general: dedup/link against existing needed rows.
     for (const ingredient of ingredients) {
       const existingItem = await findExistingIngredientByName(householdId, ingredient)
       if (existingItem) {

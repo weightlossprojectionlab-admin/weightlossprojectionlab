@@ -18,7 +18,6 @@ import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useShopping } from '@/hooks/useShopping'
-import { useMemberShoppingList } from '@/hooks/useMemberShoppingList'
 import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { simplifyProduct } from '@/lib/openfoodfacts-api'
@@ -76,23 +75,20 @@ function ShoppingListContent() {
   // Undefined until members loads (the hook falls back to the viewer's uid, then re-subscribes).
   const memberOwnerId = memberId ? members[memberId]?.userId : undefined
 
-  // Member-specific hook (kept for the household-inventory context used lower in the page).
-  const memberShoppingData = useMemberShoppingList({
-    householdId: memberOwnerId || userId,
-    memberId: memberId || userId,
-    autoFetch: !!memberId
-  })
-
   // Household hook — the single source. Scoped to the patient's OWNER when viewing a member,
   // otherwise the viewer's own household.
   const householdShoppingData = useShopping(memberOwnerId)
+
+  // On-hand inventory derived from the single source (replaces the member hook's
+  // householdInventory). Household-wide / memberId-agnostic — the shared-inventory model.
+  const householdInventory = householdShoppingData.items.filter((it) => !it.needed)
 
   // Choose which data source based on memberId presence
   // Single-source: when scoped to a patient (memberId), read the UNIFIED shopping_items store
   // (the household hook) filtered to that patient's rows — the same store + memberId the health
   // report writes to, so the two views stay in sync. Inventory/household methods pass through
   // and operate on shopping_items by id, so they work on member rows too. Non-member view is
-  // the plain household list. (member_shopping_lists is being retired; see P4.)
+  // the plain household list. (member_shopping_lists has been retired — single source.)
   const shoppingData = memberId ? {
     ...householdShoppingData,
     neededItems: householdShoppingData.neededItems.filter((it: any) => it.memberId === memberId),
@@ -369,8 +365,11 @@ function ShoppingListContent() {
           onConfirm: async (qty, nameOverride) => {
             const finalName = (nameOverride || '').trim()
             if (!finalName) return
-            await addManualShoppingItem(userId, finalName, {
-              householdId: userId,
+            // Single source: patient's owner bucket + memberId when scoped to a member.
+            const bucket = memberOwnerId || userId
+            await addManualShoppingItem(bucket, finalName, {
+              householdId: bucket,
+              memberId: memberId || undefined,
               quantity: qty,
               barcode,
             })
@@ -468,7 +467,7 @@ function ShoppingListContent() {
         // means "I want to buy this," not "I already bought it."
         // Inventory writes happen only on the inventory page or when an
         // existing on-list item is checked off via re-scan above.
-        const inventoryMatch = memberShoppingData.householdInventory.find(
+        const inventoryMatch = householdInventory.find(
           (it) => it.inStock && it.barcode === barcode,
         ) ?? null
         openAddSheet({
@@ -477,11 +476,26 @@ function ShoppingListContent() {
           imageUrl: response.product?.image_url || inventoryMatch?.imageUrl || undefined,
           inventoryMatch,
           onConfirm: async (qty) => {
-            await addItem(response.product!, {
-              inStock: false,
-              needed: true,
-              quantity: qty,
-            })
+            if (memberId) {
+              // Scoped to a patient: add to their list (memberId set). addOrUpdateShoppingItem's
+              // own `memberId` means "who added" (attribution), so we don't route through it here.
+              const bucket = memberOwnerId || userId
+              await addManualShoppingItem(bucket, product.name, {
+                householdId: bucket,
+                memberId,
+                quantity: qty,
+                barcode,
+                imageUrl: response.product?.image_url || undefined,
+                brand: response.product?.brands || undefined,
+              })
+              await refresh()
+            } else {
+              await addItem(response.product!, {
+                inStock: false,
+                needed: true,
+                quantity: qty,
+              })
+            }
             toast.success(
               qty > 1
                 ? `Added ${qty} × ${product.name} to shopping list`
@@ -873,7 +887,7 @@ function ShoppingListContent() {
                   // handles the no-match case by rendering "Not in your
                   // kitchen yet."
                   const lcName = productName.toLowerCase().trim()
-                  const inventory = memberShoppingData.householdInventory.filter(
+                  const inventory = householdInventory.filter(
                     (it) => it.inStock,
                   )
                   const exact =
@@ -896,22 +910,15 @@ function ShoppingListContent() {
                     imageUrl: fuzzy?.imageUrl || undefined,
                     inventoryMatch: fuzzy,
                     onConfirm: async (qty) => {
-                      if (memberId) {
-                        const category = detectCategory({ product_name: productName })
-                        await memberShoppingData.addItem({
-                          productName,
-                          category,
-                          quantity: qty,
-                          source: 'manual' as any,
-                          reason: 'Health suggestion',
-                        })
-                      } else {
-                        await addManualShoppingItem(userId, productName, {
-                          householdId: userId,
-                          quantity: qty,
-                        })
-                        await refresh()
-                      }
+                      // Single source: household bucket + optional memberId (patient scope).
+                      const bucket = memberOwnerId || userId
+                      await addManualShoppingItem(bucket, productName, {
+                        householdId: bucket,
+                        memberId: memberId || undefined,
+                        quantity: qty,
+                        category: detectCategory({ product_name: productName }),
+                      })
+                      await refresh()
                     },
                   })
                 }}

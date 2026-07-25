@@ -581,35 +581,9 @@ service cloud.firestore {
       // MEMBER SHOPPING LISTS (FAMILY PLANS)
       // ============================================
 
-      // Member shopping lists - Per-member shopping needs within household
-      match /member_shopping_lists/{memberId} {
-        // Helper to check if requester can access this member's list
-        function canAccessMemberList() {
-          return isOwner(userId) || // Account owner can access all
-                 request.auth.uid == memberId; // Member can access their own list
-        }
-
-        // Read: Account owner or the member themselves
-        allow read: if canAccessMemberList();
-
-        // Items subcollection
-        match /items/{itemId} {
-          // Read: Account owner or the member themselves
-          allow read: if canAccessMemberList();
-
-          // Create: Account owner or the member themselves
-          allow create: if canAccessMemberList() &&
-                          request.resource.data.memberId == memberId &&
-                          request.resource.data.householdId == userId;
-
-          // Update: Account owner or the member themselves
-          allow update: if canAccessMemberList() &&
-                          resource.data.memberId == memberId;
-
-          // Delete: Account owner or the member themselves
-          allow delete: if canAccessMemberList();
-        }
-      }
+      // (member_shopping_lists retired 2026-07 — shopping is unified into the top-level
+      // shopping_items collection with a memberId field. See the /shopping_items rule, which
+      // governs member-scoped rows via isHouseholdMember(householdId).)
     }
 
     // ============================================
