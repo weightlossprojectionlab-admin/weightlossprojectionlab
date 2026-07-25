@@ -11,6 +11,7 @@ import {
 } from '@/lib/health-summary-generator'
 import { formatHumanAgeDisplay, getHumanLifeStage } from '@/lib/life-stage-utils'
 import { calculateBMI, getHealthRiskProfile } from '@/lib/health-calculations'
+import { adminDb } from '@/lib/firebase-admin'
 
 /**
  * POST /api/patients/[patientId]/ai-health-report
@@ -50,11 +51,37 @@ export async function POST(
 
     logger.info('[Health Report] Generating rule-based report', { patientId, patientName: patient.name, patientType: patient.type })
 
+    // Fetch vitals SERVER-SIDE (admin SDK) instead of trusting the client payload. The report
+    // is rule-based, and its Medical Supplies list is derived entirely from vitals types
+    // (blood_pressure / blood_sugar / temperature). The payload varied by ACCOUNT: a caregiver
+    // whose page hadn't loaded vitals sent an empty array → only the 3 baseline supplies,
+    // while the owner sent full vitals → the complete list. Reading the owner's patient
+    // subcollection makes every generation identical and complete regardless of who triggers
+    // it. Falls back to the client-provided vitals on any read error, so it's never worse.
+    let vitalsForReport = vitals
+    try {
+      const ownerUserId: string | undefined = patient?.userId
+      if (ownerUserId) {
+        const vitalsSnap = await adminDb
+          .collection('users').doc(ownerUserId)
+          .collection('patients').doc(patientId)
+          .collection('vitals')
+          .orderBy('recordedAt', 'desc')
+          .limit(100)
+          .get()
+        if (!vitalsSnap.empty) {
+          vitalsForReport = vitalsSnap.docs.map((d) => ({ id: d.id, ...d.data() }))
+        }
+      }
+    } catch (vErr) {
+      logger.error('[Health Report] Server-side vitals fetch failed; using client payload', vErr as Error)
+    }
+
     // Build input for health summary generator
     const summaryInput: HealthSummaryInput = {
       patient,
       medications,
-      vitals,
+      vitals: vitalsForReport,
       documents,
       weightData,
       stepsData,
@@ -100,10 +127,31 @@ export async function POST(
       reportLength: reportText.length
     })
 
+    // Persist ONE canonical report per patient, scoped to the account holder's household
+    // (householdId = owner uid, i.e. patient.userId) so the owner AND every caregiver read
+    // the SAME summary live via onSnapshot. Written server-side with the admin SDK → clients
+    // only need READ access (no forged reports), and a single generation serves everyone
+    // (halving the scarce daily generation budget vs each person generating their own).
+    const generatedAt = new Date().toISOString()
+    try {
+      await adminDb.collection('ai_health_reports').doc(patientId).set({
+        patientId,
+        householdId: patient.userId,
+        report: reportText,
+        generatedAt,
+        generatedByUid: accessInfo.userId,
+        method: 'rule-based',
+      })
+    } catch (persistErr) {
+      // Non-fatal: the generating device still gets the report in the response below; only
+      // cross-device/cross-caregiver live-sync is lost for this one generation.
+      logger.error('[Health Report] Failed to persist shared report', persistErr as Error)
+    }
+
     return NextResponse.json({
       success: true,
       report: reportText,
-      generatedAt: new Date().toISOString(),
+      generatedAt,
       metadata: {
         method: 'rule-based',
         patientType: patient.type,

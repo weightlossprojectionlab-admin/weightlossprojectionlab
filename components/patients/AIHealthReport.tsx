@@ -1,6 +1,7 @@
-'use client'
+﻿'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect, createContext, useContext } from 'react'
+import { doc, onSnapshot } from 'firebase/firestore'
 import {
   PatientProfile,
   PatientMedication,
@@ -14,7 +15,7 @@ import {
 import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon, PlusIcon, CheckCircleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
-import { auth } from '@/lib/firebase'
+import { auth, db } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -22,15 +23,15 @@ import ImageLightbox from '@/components/ui/ImageLightbox'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
-import { addManualShoppingItem, removeFromShoppingList } from '@/lib/shopping-operations'
+import { addManualShoppingItem, deleteShoppingItem } from '@/lib/shopping-operations'
 import { useShopping } from '@/hooks/useShopping'
 
 // Normalize a shopping-item string for set membership / matching.
 const normalizeItem = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
 // Best-effort inventory match. Exact normalized match first, then a CONSERVATIVE
-// whole-word match (inventory name ≥4 chars appearing as a word in the report item).
-// Deliberately strict — a missed match (no chip) is fine; a false "in stock" is not.
+// whole-word match (inventory name â‰¥4 chars appearing as a word in the report item).
+// Deliberately strict â€” a missed match (no chip) is fine; a false "in stock" is not.
 const matchStock = (
   norm: string,
   invMap: Map<string, 'in_stock' | 'low'>
@@ -45,6 +46,118 @@ const matchStock = (
   return undefined
 }
 
+// Live interactivity for the report markdown, delivered via context so the (memoized)
+// ReactMarkdown tree is built ONCE and never remounts when the shopping list changes.
+// Previously the `components` object was rebuilt inline every render, giving every custom
+// renderer a fresh function identity â€” so an add/remove remounted the ENTIRE report, its
+// scroll container collapsed to 0 height mid-swap, and the view snapped to the top. Now
+// only the small ReportListItem consumers below re-render; the report keeps its scroll.
+interface ReportInteractivity {
+  shoppingItemTexts: Set<string>
+  onListItems: Set<string>
+  inventory: Map<string, 'in_stock' | 'low'>
+  busyItems: Set<string>
+  onAdd: (label: string) => void
+  onRemove: (label: string) => void
+  checkedItems: Set<string>
+  onToggleChecked: (key: string) => void
+}
+
+const ReportInteractivityContext = createContext<ReportInteractivity | null>(null)
+
+// Custom <li> renderer. Reads live state from context (NOT a render-closure) so its function
+// identity is stable across renders â€” that stability is what keeps react-markdown from
+// remounting the report on every list change.
+function ReportListItem({ node, children, ...props }: any) {
+  const ctx = useContext(ReportInteractivityContext)
+  const childrenArray = Array.isArray(children) ? children : [children]
+  const firstChild = childrenArray[0]
+
+  // remark-gfm renders `- [ ]` as a task-list item whose first child is a checkbox <input>
+  // ELEMENT (not the string "[ ] text"). Derive the label for BOTH shapes.
+  const isCheckboxEl = (c: any) =>
+    !!c && typeof c === 'object' && (c.props?.type === 'checkbox' || c.type === 'input')
+  const taskLabel = childrenArray.some(isCheckboxEl)
+    ? childrenArray.filter((c: any) => !isCheckboxEl(c)).map((c: any) => (typeof c === 'string' ? c : '')).join('').trim()
+    : typeof firstChild === 'string' && /^\[[ xX]\]/.test(firstChild)
+      ? (firstChild.replace(/^\[[ xX]\]\s*/, '') + childrenArray.slice(1).map((c: any) => (typeof c === 'string' ? c : '')).join('')).trim()
+      : ''
+
+  // Actionable Shopping & Supply row: item text [stock chip] [Add / On list].
+  // Scoped by shoppingItemTexts so ONLY that section becomes interactive.
+  if (ctx && taskLabel && ctx.shoppingItemTexts.has(normalizeItem(taskLabel))) {
+    const label = taskLabel
+    const norm = normalizeItem(label)
+    const onList = ctx.onListItems.has(norm)
+    const busy = ctx.busyItems.has(norm)
+    const stock = matchStock(norm, ctx.inventory)
+    return (
+      // Mobile-first, fat-thumb: {...props} FIRST so react-markdown's task-list className
+      // can't clobber our flex layout. Name left (wraps, never truncates); chip + a solid
+      // â‰¥44px action aligned right so every row's button lines up. my-2 spacing cuts mis-taps.
+      <li {...props} className="flex items-center gap-2 my-2 list-none -ml-6 text-foreground">
+        <span className="flex-1 min-w-0 leading-snug">{label}</span>
+        {stock && (
+          <span className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-semibold ${stock === 'low' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+            {stock === 'low' ? 'Low' : 'In stock'}
+          </span>
+        )}
+        {onList ? (
+          <button
+            type="button"
+            onClick={() => ctx.onRemove(label)}
+            disabled={busy}
+            className="flex-shrink-0 inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold text-green-700 bg-green-50 hover:bg-red-50 hover:text-red-700 active:bg-red-100 disabled:opacity-60 transition-colors"
+            aria-label={`Remove ${label} from shopping list`}
+            title="Tap to remove from shopping list"
+          >
+            <CheckCircleIcon className="w-5 h-5" />
+            <span>{busy ? 'Removingâ€¦' : 'On list'}</span>
+            {!busy && <XMarkIcon className="w-4 h-4 opacity-70" />}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => ctx.onAdd(label)}
+            disabled={busy}
+            className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 active:bg-purple-800 disabled:opacity-60 transition-colors"
+            aria-label={`Add ${label} to shopping list`}
+          >
+            <PlusIcon className="w-5 h-5" /> {busy ? 'Addingâ€¦' : 'Add'}
+          </button>
+        )}
+      </li>
+    )
+  }
+
+  // Visual-only markdown checkbox (any other task-list item).
+  if (typeof firstChild === 'string') {
+    const checkboxMatch = firstChild.match(/^\[([ x])\]\s*(.*)/)
+    if (checkboxMatch) {
+      const isChecked = checkboxMatch[1] === 'x'
+      const text = checkboxMatch[2]
+      const itemKey = text.substring(0, 50) // Use first 50 chars as key
+      const localChecked = (ctx?.checkedItems.has(itemKey) ?? false) || isChecked
+      return (
+        <li className="flex items-start gap-2 text-foreground" {...props}>
+          <input
+            type="checkbox"
+            checked={localChecked}
+            onChange={() => ctx?.onToggleChecked(itemKey)}
+            className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
+          />
+          <span className={localChecked ? 'line-through text-muted-foreground' : ''}>
+            {text}
+            {childrenArray.slice(1)}
+          </span>
+        </li>
+      )
+    }
+  }
+
+  return <li className="text-foreground" {...props}>{children}</li>
+}
+
 interface AIHealthReportProps {
   patient: PatientProfile
   medications: PatientMedication[]
@@ -53,7 +166,7 @@ interface AIHealthReportProps {
   todayMeals: any[]
   weightData: any[]
   stepsData: any[]
-  // Phase B–E entities — wired in 2026-05-10 to close the gap
+  // Phase Bâ€“E entities â€” wired in 2026-05-10 to close the gap
   // where the report ignored everything from the medical-binder
   // gap close (immunizations, equipment, family history, visits).
   immunizations?: Immunization[]
@@ -83,13 +196,26 @@ export function AIHealthReport({
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
 
   // --- Actionable Shopping & Supply items (scoped strictly to that section) ---
-  const [addedItems, setAddedItems] = useState<Set<string>>(new Set())
-  const [addingItem, setAddingItem] = useState<string | null>(null)
+  // The LIVE shopping list (useShopping below) is the single source of truth for on-list
+  // state â€” no local optimistic mirror to drift. Firestore latency-compensation flips the
+  // button on this device instantly, and the onSnapshot propagates to the owner + every
+  // caregiver. `busyItems` only debounces an in-flight add/remove per normalized item.
+  const [busyItems, setBusyItems] = useState<Set<string>>(new Set())
+  const setBusy = (norm: string, on: boolean) => {
+    setBusyItems((prev) => {
+      if (on === prev.has(norm)) return prev
+      const next = new Set(prev)
+      if (on) next.add(norm)
+      else next.delete(norm)
+      return next
+    })
+  }
 
-  // Live shopping list via Firestore onSnapshot — add/remove now reflect across devices.
-  // (The prior one-time getDocs read served a stale local cache on the other device even
-  // after refresh.) On-list + inventory are DERIVED from this single live source.
-  const { items: shoppingItems } = useShopping()
+  // Live shopping list (Firestore onSnapshot) scoped to the patient's ACCOUNT HOLDER
+  // (patient.userId), NOT the viewing user â€” so the owner AND all their caregivers share
+  // ONE list per patient. Rules permit this via isHouseholdMember(householdId). On-list +
+  // inventory are derived from this single live source.
+  const { items: shoppingItems } = useShopping(patient.userId)
 
   const onListItems = useMemo(() => {
     const set = new Set<string>()
@@ -113,10 +239,10 @@ export function AIHealthReport({
     return map
   }, [shoppingItems])
 
-  // Deterministic parse of the report string → the set of item texts that live under
-  // the "Shopping & Supply Lists" heading (until the next heading). No reliance on
-  // ReactMarkdown traversal order; the bold sub-labels aren't headings so both the
-  // grocery + medical groups are included.
+  // Deterministic parse of the report string → the set of item texts that live under the
+  // "Shopping & Supply Lists" heading (until the next heading). Both the Grocery Items and
+  // Medical Supplies sub-groups are actionable. The bold sub-labels aren't markdown headings,
+  // so they don't end the section — all task items in it become interactive.
   const shoppingItemTexts = useMemo(() => {
     const set = new Set<string>()
     if (!report) return set
@@ -135,56 +261,175 @@ export function AIHealthReport({
     return set
   }, [report])
 
+  // No toasts on add/remove: the button flipping Add → "On list" (live, via onSnapshot) IS
+  // the feedback, and on failure the button simply stays put. Errors are logged for triage.
   const handleAddShoppingItem = async (text: string) => {
     const clean = text.trim()
     const norm = normalizeItem(text)
-    if (!user?.uid) {
-      toast.error('Sign in to add items to your shopping list')
-      return
-    }
-    setAddingItem(norm)
+    if (!user?.uid) return
+    // Guard: already on the live list, or an add/remove is already in flight for it.
+    if (onListItems.has(norm) || busyItems.has(norm)) return
+    setBusy(norm, true)
     try {
       // Verbatim free-text add — no canonical match needed, so no misclassification.
-      // householdId MUST be set: useShopping subscribes on `householdId == userId`
-      // (single-user owner), so an item without it would be invisible to the live list.
-      await addManualShoppingItem(user.uid, clean, { quantity: 1, householdId: user.uid })
-      setAddedItems(prev => new Set(prev).add(norm))
-      toast.success(`Added "${clean}" to shopping list`)
-    } catch {
-      toast.error('Failed to add item to shopping list')
+      // Bucket = the patient's account holder (userId + householdId = patient.userId) so the
+      // row is shared across owner + caregivers and matches useShopping's householdId query.
+      await addManualShoppingItem(patient.userId, clean, { quantity: 1, householdId: patient.userId })
+    } catch (err) {
+      logger.error('[AI Health Report] Failed to add shopping item', err as Error)
     } finally {
-      setAddingItem(null)
+      setBusy(norm, false)
     }
   }
 
-  // Symmetric undo: if you can add it, you can take it back off the list. Finds the
-  // list row by name and removes it (removeFromShoppingList → needed:false, audited).
+  // Symmetric undo: if you can add it, you can take it back off. Deletes EVERY live row
+  // that matches — so duplicate docs from two devices adding at once clear in one tap.
   const handleRemoveShoppingItem = async (text: string) => {
-    const clean = text.trim()
     const norm = normalizeItem(text)
-    if (!user?.uid) return
-    setAddingItem(norm)
+    if (!user?.uid || busyItems.has(norm)) return
+    // Snapshot the matching rows NOW so a concurrent onSnapshot can't shift the id set
+    // mid-delete. Nothing to do if it isn't actually on the list.
+    const targets = shoppingItems.filter(
+      (it) => it.needed && normalizeItem(it.manualIngredientName || it.productName || '') === norm
+    )
+    if (targets.length === 0) return
+    setBusy(norm, true)
     try {
-      // Locate the row in the LIVE list (no extra query); the onSnapshot then drops it
-      // from onListItems across devices.
-      const target = shoppingItems.find(
-        (it) => it.needed && normalizeItem(it.manualIngredientName || it.productName || '') === norm
-      )
-      if (target?.id) {
-        await removeFromShoppingList(target.id, user.uid, 'changed_mind')
-      }
-      setAddedItems(prev => {
-        const next = new Set(prev)
-        next.delete(norm)
-        return next
-      })
-      toast.success(`Removed "${clean}" from shopping list`)
-    } catch {
-      toast.error('Failed to remove item')
+      // DELETE (not removeFromShoppingList → needed:false, which parks it in inventory and
+      // makes a removed item wrongly read "In stock"). onSnapshot drops it across devices.
+      await Promise.all(targets.map((t) => deleteShoppingItem(t.id)))
+    } catch (err) {
+      logger.error('[AI Health Report] Failed to remove shopping item', err as Error)
     } finally {
-      setAddingItem(null)
+      setBusy(norm, false)
     }
   }
+
+  const toggleChecked = useCallback((itemKey: string) => {
+    setCheckedItems((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemKey)) next.delete(itemKey)
+      else next.add(itemKey)
+      return next
+    })
+  }, [])
+
+  // Live-sync the ONE canonical report per patient. The route persists it (keyed by
+  // patient.id, scoped to the owner household) after each generation, so the owner AND
+  // every caregiver load the same summary on mount and see regenerations in real time —
+  // no more per-device divergence, and a caregiver doesn't burn a generation to view it.
+  useEffect(() => {
+    if (!patient.id) return
+    const unsub = onSnapshot(
+      doc(db, 'ai_health_reports', patient.id),
+      (snap) => {
+        const data = snap.data()
+        if (data?.report) {
+          setReport(data.report as string)
+          setLastGenerated(data.generatedAt ? new Date(data.generatedAt as string) : new Date())
+        }
+      },
+      (err) => {
+        // Non-fatal: the report just isn't pre-loaded; the user can still Generate.
+        logger.error('[AI Health Report] report subscription error', err as Error)
+      }
+    )
+    return () => unsub()
+  }, [patient.id])
+
+  // Renderer map: STABLE identity (deps are only the stable setLightboxImage setter) so the
+  // report DOM is built once. All live state reaches the rows via ReportInteractivityContext,
+  // not this closure â€” so a shopping add/remove updates only the row, never the whole report.
+  const markdownComponents = useMemo(() => ({
+    table: ({ node, ...props }: any) => (
+      <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600 my-4" {...props} />
+    ),
+    thead: ({ node, ...props }: any) => (
+      <thead className="bg-gray-50 dark:bg-gray-700" {...props} />
+    ),
+    th: ({ node, ...props }: any) => (
+      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider" {...props} />
+    ),
+    td: ({ node, ...props }: any) => (
+      <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap" {...props} />
+    ),
+    tr: ({ node, ...props }: any) => (
+      <tr className="border-b border-gray-200 dark:border-gray-700" {...props} />
+    ),
+    h1: ({ node, ...props }: any) => (
+      <h1 className="text-3xl font-bold mt-6 mb-4 text-foreground" {...props} />
+    ),
+    h2: ({ node, ...props }: any) => (
+      <h2 className="text-2xl font-bold mt-6 mb-3 text-foreground border-b border-gray-300 dark:border-gray-600 pb-2" {...props} />
+    ),
+    h3: ({ node, ...props }: any) => (
+      <h3 className="text-xl font-semibold mt-4 mb-2 text-foreground" {...props} />
+    ),
+    p: ({ node, children, ...props }: any) => {
+      // Render as div when it wraps block elements (e.g. image divs) to avoid invalid <p><div>.
+      const hasBlockChild = Array.isArray(children) && children.some(
+        (child: any) => child?.type === 'div' || (child?.props?.node?.tagName === 'img')
+      )
+      if (hasBlockChild) {
+        return <div className="my-3 text-foreground leading-relaxed" {...props}>{children}</div>
+      }
+      return <p className="my-3 text-foreground leading-relaxed" {...props}>{children}</p>
+    },
+    ul: ({ node, ...props }: any) => (
+      <ul className="my-3 ml-6 list-disc text-foreground space-y-1" {...props} />
+    ),
+    ol: ({ node, ...props }: any) => (
+      <ol className="my-3 ml-6 list-decimal text-foreground space-y-1" {...props} />
+    ),
+    li: ReportListItem,
+    hr: ({ node, ...props }: any) => (
+      <hr className="my-6 border-gray-300 dark:border-gray-600" {...props} />
+    ),
+    strong: ({ node, ...props }: any) => (
+      <strong className="font-semibold text-foreground" {...props} />
+    ),
+    img: ({ node, src, alt, ...props }: any) => {
+      const imageUrl = typeof src === 'string' ? src : ''
+      return (
+        <span className="inline-block my-4 relative group">
+          <img
+            src={imageUrl}
+            alt={alt || 'Image'}
+            className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={() => setLightboxImage({ url: imageUrl, alt: alt || 'Image' })}
+            {...props}
+          />
+          <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full p-2 inline-block">
+            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+            </svg>
+          </span>
+        </span>
+      )
+    },
+  }), [setLightboxImage])
+
+  // Live values handed to the (stable) renderers via context. A new object each render is
+  // fine and intended: it re-renders ONLY the ReportListItem consumers, while the memoized
+  // markdown element below keeps the report tree mounted (no scroll jump).
+  const reportInteractivity: ReportInteractivity = {
+    shoppingItemTexts,
+    onListItems,
+    inventory,
+    busyItems,
+    onAdd: handleAddShoppingItem,
+    onRemove: handleRemoveShoppingItem,
+    checkedItems,
+    onToggleChecked: toggleChecked,
+  }
+
+  // Build the report DOM ONCE per report string. Because markdownComponents is stable, this
+  // element is stable too, so react-markdown never re-parses or remounts on a list change â€”
+  // context alone propagates the update to the rows.
+  const markdown = useMemo(
+    () => (report ? <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{report}</ReactMarkdown> : null),
+    [report, markdownComponents]
+  )
 
   const generateReport = async () => {
     try {
@@ -210,7 +455,7 @@ export function AIHealthReport({
           todayMeals,
           weightData: weightData.slice(0, 30),
           stepsData: stepsData.slice(0, 30),
-          // Phase B–E — full lists; small enough that slicing isn't needed.
+          // Phase Bâ€“E â€” full lists; small enough that slicing isn't needed.
           immunizations,
           equipment,
           familyHistory,
@@ -381,7 +626,7 @@ export function AIHealthReport({
 
     // Convert checkboxes
     html = html.replace(/- \[ \] (.+)/g, '<div class="checkbox-item"><div class="checkbox"></div><span>$1</span></div>')
-    html = html.replace(/- \[x\] (.+)/g, '<div class="checkbox-item"><div class="checkbox">✓</div><span>$1</span></div>')
+    html = html.replace(/- \[x\] (.+)/g, '<div class="checkbox-item"><div class="checkbox">âœ“</div><span>$1</span></div>')
 
     // Convert unordered lists (but not checkboxes)
     html = html.replace(/^- (?!\[)(.+)$/gm, '<li>$1</li>')
@@ -439,7 +684,7 @@ export function AIHealthReport({
       <UpgradePrompt
         feature="health-reports"
         featureName="Unlock AI Health Reports"
-        icon="🏥"
+        icon="ðŸ¥"
         message="Get comprehensive health analysis and insights. Available on Single Plus or higher plans."
         suggestedPlan="single_plus"
         size="lg"
@@ -510,12 +755,12 @@ export function AIHealthReport({
             Click the button above to generate a comprehensive health summary analyzing:
           </p>
           <ul className="text-sm text-muted-foreground space-y-1 text-left max-w-md mx-auto">
-            <li>✓ Vital signs and health metrics</li>
-            <li>✓ Weight trends and progress</li>
-            <li>✓ Nutrition and meal patterns</li>
-            <li>✓ Activity and step tracking</li>
-            <li>✓ Current medications</li>
-            <li>✓ Medical documents and history</li>
+            <li>âœ“ Vital signs and health metrics</li>
+            <li>âœ“ Weight trends and progress</li>
+            <li>âœ“ Nutrition and meal patterns</li>
+            <li>âœ“ Activity and step tracking</li>
+            <li>âœ“ Current medications</li>
+            <li>âœ“ Medical documents and history</li>
           </ul>
         </div>
       )}
@@ -537,185 +782,9 @@ export function AIHealthReport({
 
       {report && !generating && (
         <div className="bg-white dark:bg-gray-800 rounded-lg p-6 prose prose-sm dark:prose-invert max-w-none max-h-[600px] overflow-y-auto">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              table: ({ node, ...props }) => (
-                <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-600 my-4" {...props} />
-              ),
-              thead: ({ node, ...props }) => (
-                <thead className="bg-gray-50 dark:bg-gray-700" {...props} />
-              ),
-              th: ({ node, ...props }) => (
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-900 dark:text-gray-100 uppercase tracking-wider" {...props} />
-              ),
-              td: ({ node, ...props }) => (
-                <td className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap" {...props} />
-              ),
-              tr: ({ node, ...props }) => (
-                <tr className="border-b border-gray-200 dark:border-gray-700" {...props} />
-              ),
-              h1: ({ node, ...props }) => (
-                <h1 className="text-3xl font-bold mt-6 mb-4 text-foreground" {...props} />
-              ),
-              h2: ({ node, ...props }) => (
-                <h2 className="text-2xl font-bold mt-6 mb-3 text-foreground border-b border-gray-300 dark:border-gray-600 pb-2" {...props} />
-              ),
-              h3: ({ node, ...props }) => (
-                <h3 className="text-xl font-semibold mt-4 mb-2 text-foreground" {...props} />
-              ),
-              p: ({ node, children, ...props }) => {
-                // Check if children contain block elements (like divs from images)
-                const hasBlockChild = Array.isArray(children) && children.some(
-                  (child: any) => child?.type === 'div' || (child?.props?.node?.tagName === 'img')
-                )
-
-                // If contains block elements, render as div instead of p
-                if (hasBlockChild) {
-                  return <div className="my-3 text-foreground leading-relaxed" {...props}>{children}</div>
-                }
-
-                return <p className="my-3 text-foreground leading-relaxed" {...props}>{children}</p>
-              },
-              ul: ({ node, ...props }) => (
-                <ul className="my-3 ml-6 list-disc text-foreground space-y-1" {...props} />
-              ),
-              ol: ({ node, ...props }) => (
-                <ol className="my-3 ml-6 list-decimal text-foreground space-y-1" {...props} />
-              ),
-              li: ({ node, children, ...props }) => {
-                // Check if this is a checkbox list item (task list)
-                const childrenArray = Array.isArray(children) ? children : [children]
-                const firstChild = childrenArray[0]
-
-                // remark-gfm renders `- [ ]` as a task-list item whose first child is a
-                // checkbox <input> ELEMENT (not the string "[ ] text"). Derive the label
-                // for BOTH shapes so Shopping & Supply items can become actionable.
-                const isCheckboxEl = (c: any) =>
-                  !!c && typeof c === 'object' && (c.props?.type === 'checkbox' || c.type === 'input')
-                const taskLabel = childrenArray.some(isCheckboxEl)
-                  ? childrenArray.filter((c: any) => !isCheckboxEl(c)).map((c: any) => (typeof c === 'string' ? c : '')).join('').trim()
-                  : typeof firstChild === 'string' && /^\[[ xX]\]/.test(firstChild)
-                    ? (firstChild.replace(/^\[[ xX]\]\s*/, '') + childrenArray.slice(1).map((c: any) => (typeof c === 'string' ? c : '')).join('')).trim()
-                    : ''
-
-                // Actionable Shopping & Supply row: [stock chip] item text [+ Add].
-                // Scoped by shoppingItemTexts so ONLY that section becomes interactive.
-                if (taskLabel && shoppingItemTexts.has(normalizeItem(taskLabel))) {
-                  const label = taskLabel
-                  const norm = normalizeItem(label)
-                  const added = addedItems.has(norm)
-                  const onList = !added && onListItems.has(norm)
-                  const stock = matchStock(norm, inventory)
-                  return (
-                    // Mobile-first, fat-thumb: {...props} FIRST so react-markdown's task-list
-                    // className can't clobber our flex layout. Name left (wraps, never
-                    // truncates — caregivers must read the full item); chip + a solid ≥44px
-                    // Add button aligned right so every row's action lines up in a column.
-                    // Extra vertical spacing (my-2) reduces mis-taps between rows.
-                    <li {...props} className="flex items-center gap-2 my-2 list-none -ml-6 text-foreground">
-                      <span className="flex-1 min-w-0 leading-snug">{label}</span>
-                      {stock && (
-                        <span className={`flex-shrink-0 px-2 py-1 rounded-md text-xs font-semibold ${stock === 'low' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
-                          {stock === 'low' ? 'Low' : 'In stock'}
-                        </span>
-                      )}
-                      {added || onList ? (
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveShoppingItem(label)}
-                          disabled={addingItem === norm}
-                          className="flex-shrink-0 inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-lg text-sm font-semibold text-green-700 bg-green-50 hover:bg-red-50 hover:text-red-700 active:bg-red-100 disabled:opacity-60 transition-colors"
-                          aria-label={`Remove ${label} from shopping list`}
-                          title="Tap to remove from shopping list"
-                        >
-                          <CheckCircleIcon className="w-5 h-5" />
-                          <span>{added ? 'Added' : 'On list'}</span>
-                          <XMarkIcon className="w-4 h-4 opacity-70" />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleAddShoppingItem(label)}
-                          disabled={addingItem === norm}
-                          className="flex-shrink-0 inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-lg text-sm font-semibold text-white bg-purple-600 hover:bg-purple-700 active:bg-purple-800 disabled:opacity-60 transition-colors"
-                          aria-label={`Add ${label} to shopping list`}
-                        >
-                          <PlusIcon className="w-5 h-5" /> {addingItem === norm ? 'Adding…' : 'Add'}
-                        </button>
-                      )}
-                    </li>
-                  )
-                }
-
-                // Check for markdown task list syntax: "[ ]" or "[x]"
-                if (typeof firstChild === 'string') {
-                  const checkboxMatch = firstChild.match(/^\[([ x])\]\s*(.*)/)
-                  if (checkboxMatch) {
-                    const isChecked = checkboxMatch[1] === 'x'
-                    const text = checkboxMatch[2]
-                    const itemKey = text.substring(0, 50) // Use first 50 chars as key
-
-                    const localChecked = checkedItems.has(itemKey) || isChecked
-
-                    return (
-                      <li className="flex items-start gap-2 text-foreground" {...props}>
-                        <input
-                          type="checkbox"
-                          checked={localChecked}
-                          onChange={() => {
-                            setCheckedItems(prev => {
-                              const next = new Set(prev)
-                              if (next.has(itemKey)) {
-                                next.delete(itemKey)
-                              } else {
-                                next.add(itemKey)
-                              }
-                              return next
-                            })
-                          }}
-                          className="mt-1 w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500 cursor-pointer"
-                        />
-                        <span className={localChecked ? 'line-through text-muted-foreground' : ''}>
-                          {text}
-                          {childrenArray.slice(1)}
-                        </span>
-                      </li>
-                    )
-                  }
-                }
-
-                return <li className="text-foreground" {...props}>{children}</li>
-              },
-              hr: ({ node, ...props }) => (
-                <hr className="my-6 border-gray-300 dark:border-gray-600" {...props} />
-              ),
-              strong: ({ node, ...props }) => (
-                <strong className="font-semibold text-foreground" {...props} />
-              ),
-              img: ({ node, src, alt, ...props }) => {
-                const imageUrl = typeof src === 'string' ? src : ''
-                return (
-                  <span className="inline-block my-4 relative group">
-                    <img
-                      src={imageUrl}
-                      alt={alt || 'Image'}
-                      className="max-w-full h-auto rounded-lg border border-gray-300 dark:border-gray-600 cursor-pointer hover:opacity-90 transition-opacity"
-                      onClick={() => setLightboxImage({ url: imageUrl, alt: alt || 'Image' })}
-                      {...props}
-                    />
-                    <span className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity bg-black/50 rounded-full p-2 inline-block">
-                      <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
-                      </svg>
-                    </span>
-                  </span>
-                )
-              },
-            }}
-          >
-            {report}
-          </ReactMarkdown>
+          <ReportInteractivityContext.Provider value={reportInteractivity}>
+            {markdown}
+          </ReportInteractivityContext.Provider>
         </div>
       )}
 
@@ -730,7 +799,7 @@ export function AIHealthReport({
       {report && (
         <div className="mt-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            <strong>⚠️ Important:</strong> This automated summary is for informational purposes only and should not replace professional medical advice.
+            <strong>âš ï¸ Important:</strong> This automated summary is for informational purposes only and should not replace professional medical advice.
             Always consult with qualified healthcare providers for medical decisions.
           </p>
         </div>

@@ -1192,6 +1192,18 @@ service cloud.firestore {
                        isHouseholdMember(resource.data.userId));
     }
 
+    // AI health reports - ONE canonical rule-based summary per patient (doc id == patientId),
+    // scoped to the account holder's household (householdId == owner uid). Written ONLY
+    // server-side via the admin SDK (which bypasses these rules), so clients are read-only:
+    // the owner and any caregiver in the household can read it live; nobody can forge one.
+    match /ai_health_reports/{reportId} {
+      allow read: if isAuthenticated() &&
+                     resource != null &&
+                     resource.data.householdId != null &&
+                     isHouseholdMember(resource.data.householdId);
+      allow write: if false;
+    }
+
     // Inventory actions - Audit trail for inventory changes (discard, consume, etc.)
     match /inventory_actions/{actionId} {
       // Read: Any authenticated user can read their own actions
