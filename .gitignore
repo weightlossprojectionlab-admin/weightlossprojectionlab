@@ -92,3 +92,35 @@ Thumbs.db
 .env.local
 *.env
 .env.local.custom-domain
+
+# --- Personal dev tooling + local test fixtures (machine-local, not shared) ---
+# Exact paths only: the repo already tracks other percy/receipt scripts, so
+# broad *percy*/*receipt* globs would collide with tracked files.
+# Dev / seed / admin scripts
+/scripts/_cleanup-orphan-demo.ts
+/scripts/_whoami.ts
+/scripts/check-percy.ts
+/scripts/clear-percy-data.ts
+/scripts/delete-account.ts
+/scripts/make-liquor-receipt.ts
+/scripts/make-shoprite-receipt.ts
+/scripts/receipts-to-pdf.ts
+/scripts/seed-percy-full-platform.ts
+# Percy-account lifecycle e2e
+/e2e/platform-flow-percy.spec.ts
+/e2e/platform-lifecycle-percy.spec.ts
+# Test receipt fixtures — must NOT be served from public/ in production
+/public/acme-receipt-205.pdf
+/public/costco-receipt-839.html
+/public/costco-receipt-839.pdf
+/public/costco.png
+/public/liquor-receipt-789.html
+/public/liquor-receipt-789.pdf
+/public/shoprite-receipt-1687.html
+/public/shoprite-receipt-1687.pdf
+/public/sprouts-receipt-379.pdf
+/public/sprouts-receipt-38.pdf
+/public/sprouts-receipt-584.pdf
+/public/target-receipt-bounty.pdf
+# Machine-local Claude Code settings (untracked below)
+/.claude/settings.local.json
