@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import {
   PatientProfile,
   PatientMedication,
@@ -11,7 +11,7 @@ import {
   FamilyHistoryEntry,
   Appointment,
 } from '@/types/medical'
-import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon } from '@heroicons/react/24/outline'
+import { SparklesIcon, ArrowPathIcon, PrinterIcon, ClipboardDocumentIcon, PlusIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import { logger } from '@/lib/logger'
 import toast from 'react-hot-toast'
 import { auth } from '@/lib/firebase'
@@ -22,6 +22,27 @@ import ImageLightbox from '@/components/ui/ImageLightbox'
 import { useAuth } from '@/hooks/useAuth'
 import { canAccessFeature } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
+import { addManualShoppingItem, getInventoryItems, getAllShoppingItems } from '@/lib/shopping-operations'
+
+// Normalize a shopping-item string for set membership / matching.
+const normalizeItem = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
+
+// Best-effort inventory match. Exact normalized match first, then a CONSERVATIVE
+// whole-word match (inventory name ≥4 chars appearing as a word in the report item).
+// Deliberately strict — a missed match (no chip) is fine; a false "in stock" is not.
+const matchStock = (
+  norm: string,
+  invMap: Map<string, 'in_stock' | 'low'>
+): 'in_stock' | 'low' | undefined => {
+  const exact = invMap.get(norm)
+  if (exact) return exact
+  for (const [name, status] of invMap) {
+    if (name.length < 4) continue
+    const re = new RegExp(`\\b${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`)
+    if (re.test(norm)) return status
+  }
+  return undefined
+}
 
 interface AIHealthReportProps {
   patient: PatientProfile
@@ -59,6 +80,92 @@ export function AIHealthReport({
   const [lastGenerated, setLastGenerated] = useState<Date | null>(null)
   const [lightboxImage, setLightboxImage] = useState<{ url: string; alt: string } | null>(null)
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+
+  // --- Actionable Shopping & Supply items (scoped strictly to that section) ---
+  const [addedItems, setAddedItems] = useState<Set<string>>(new Set())
+  const [onListItems, setOnListItems] = useState<Set<string>>(new Set())
+  const [addingItem, setAddingItem] = useState<string | null>(null)
+  const [inventory, setInventory] = useState<Map<string, 'in_stock' | 'low'>>(new Map())
+
+  // Deterministic parse of the report string → the set of item texts that live under
+  // the "Shopping & Supply Lists" heading (until the next heading). No reliance on
+  // ReactMarkdown traversal order; the bold sub-labels aren't headings so both the
+  // grocery + medical groups are included.
+  const shoppingItemTexts = useMemo(() => {
+    const set = new Set<string>()
+    if (!report) return set
+    let inSection = false
+    for (const raw of report.split('\n')) {
+      const heading = raw.match(/^#{1,6}\s+(.*)$/)
+      if (heading) {
+        inSection = /shopping\s*&?\s*supply/i.test(heading[1])
+        continue
+      }
+      if (inSection) {
+        const item = raw.match(/^\s*[-*]\s*\[[ xX]\]\s*(.+?)\s*$/)
+        if (item) set.add(normalizeItem(item[1]))
+      }
+    }
+    return set
+  }, [report])
+
+  // Best-effort, non-blocking: fetch inventory (on-hand) + current list once per report.
+  // Cancellation guard so a mid-fetch unmount never sets state. Any failure → no chips,
+  // report unaffected.
+  useEffect(() => {
+    if (!report || !user?.uid || shoppingItemTexts.size === 0) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const [inv, existing] = await Promise.all([
+          getInventoryItems(user.uid).catch(() => [] as any[]),
+          getAllShoppingItems(user.uid).catch(() => [] as any[]),
+        ])
+        if (cancelled) return
+        const invMap = new Map<string, 'in_stock' | 'low'>()
+        for (const it of inv) {
+          const name = normalizeItem(it.manualIngredientName || it.productName || '')
+          if (!name) continue
+          const low = typeof it.lowStockThreshold === 'number' && it.quantity <= it.lowStockThreshold
+          invMap.set(name, low ? 'low' : 'in_stock')
+        }
+        const onList = new Set<string>()
+        for (const it of existing) {
+          const name = normalizeItem(it.manualIngredientName || it.productName || '')
+          if (name) onList.add(name)
+        }
+        if (!cancelled) {
+          setInventory(invMap)
+          setOnListItems(onList)
+        }
+      } catch {
+        /* best-effort — leave chips empty */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [report, user?.uid, shoppingItemTexts])
+
+  const handleAddShoppingItem = async (text: string) => {
+    const clean = text.trim()
+    const norm = normalizeItem(text)
+    if (!user?.uid) {
+      toast.error('Sign in to add items to your shopping list')
+      return
+    }
+    setAddingItem(norm)
+    try {
+      // Verbatim free-text add — no canonical match needed, so no misclassification.
+      await addManualShoppingItem(user.uid, clean, { quantity: 1 })
+      setAddedItems(prev => new Set(prev).add(norm))
+      toast.success(`Added "${clean}" to shopping list`)
+    } catch {
+      toast.error('Failed to add item to shopping list')
+    } finally {
+      setAddingItem(null)
+    }
+  }
 
   const generateReport = async () => {
     try {
@@ -468,6 +575,43 @@ export function AIHealthReport({
                   if (checkboxMatch) {
                     const isChecked = checkboxMatch[1] === 'x'
                     const text = checkboxMatch[2]
+
+                    // Actionable Shopping & Supply row: [stock chip] item text [+ Add].
+                    // Scoped by shoppingItemTexts so ONLY that section becomes interactive;
+                    // every other checkbox section keeps the plain tick-off behavior below.
+                    if (shoppingItemTexts.has(normalizeItem(text))) {
+                      const norm = normalizeItem(text)
+                      const clean = text.trim()
+                      const added = addedItems.has(norm)
+                      const onList = !added && onListItems.has(norm)
+                      const stock = matchStock(norm, inventory)
+                      return (
+                        <li className="flex items-center gap-2 my-1.5 list-none -ml-6 text-foreground" {...props}>
+                          {stock && (
+                            <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-semibold ${stock === 'low' ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'}`}>
+                              {stock === 'low' ? 'Low' : 'In stock'}
+                            </span>
+                          )}
+                          <span className="flex-1">{clean}{childrenArray.slice(1)}</span>
+                          {added || onList ? (
+                            <span className="flex-shrink-0 inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                              <CheckCircleIcon className="w-4 h-4" /> {added ? 'Added' : 'On list'}
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleAddShoppingItem(text)}
+                              disabled={addingItem === norm}
+                              className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 disabled:opacity-60 transition-colors"
+                              aria-label={`Add ${clean} to shopping list`}
+                            >
+                              <PlusIcon className="w-4 h-4" /> {addingItem === norm ? 'Adding…' : 'Add'}
+                            </button>
+                          )}
+                        </li>
+                      )
+                    }
+
                     const itemKey = text.substring(0, 50) // Use first 50 chars as key
 
                     const localChecked = checkedItems.has(itemKey) || isChecked
