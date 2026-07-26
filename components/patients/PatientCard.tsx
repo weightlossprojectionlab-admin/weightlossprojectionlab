@@ -7,7 +7,7 @@
 
 'use client'
 
-import { PatientProfile, WeightLog } from '@/types/medical'
+import { PatientProfile, WeightLog, FamilyMemberPermissions } from '@/types/medical'
 import Link from 'next/link'
 import { UserIcon, CalendarIcon, HeartIcon, BellAlertIcon, ArrowRightIcon, ClipboardDocumentListIcon } from '@heroicons/react/24/outline'
 import { getRoleLabel } from '@/lib/family-roles'
@@ -36,6 +36,21 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
   // Check if this is a caregiver access patient (not owned)
   const isCaregiverAccess = (patient as any)._source === 'caregiver'
   const caregiverRole = (patient as any)._caregiverRole || 'caregiver' // Get the caregiver's role
+
+  // Caregiver access is scoped by the permissions the owner granted (attached
+  // as _permissions by /api/patients). Own patients carry no _permissions →
+  // full access. We reflect these in the UI so a caregiver only sees actions
+  // they can actually perform; the server (checkPatientAccess) enforces the same.
+  const perms = (patient as any)._permissions as Partial<FamilyMemberPermissions> | undefined
+  const canLogVitals = !isCaregiverAccess || !!perms?.logVitals
+  const hasAnyWriteAccess =
+    !isCaregiverAccess ||
+    !!(perms && (
+      perms.logVitals || perms.editMedications || perms.editAppointments ||
+      perms.scheduleAppointments || perms.uploadDocuments || perms.deleteAppointments ||
+      perms.deleteDocuments || perms.editPatientProfile
+    ))
+  const isViewOnlyCaregiver = isCaregiverAccess && !hasAnyWriteAccess
 
   // State for tracking overdue actions
   const [overdueActions, setOverdueActions] = useState<string[]>([])
@@ -621,8 +636,20 @@ export function PatientCard({ patient, showActions = false, onEdit, onDelete, mo
             either way (opens the AI-guided quick-log modal); the
             color + label give caregivers an at-a-glance read on
             who needs attention. */}
-        <div className="grid grid-cols-2 gap-2">
-          {onQuickLogVitals && (
+        {/* View-only caregivers see the member's records but can't change
+            anything — say so plainly instead of showing actions that fail. */}
+        {isViewOnlyCaregiver && (
+          <div className="mb-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            <span>View only — you can see this member's records but not make changes.</span>
+          </div>
+        )}
+
+        <div className={`grid gap-2 ${onQuickLogVitals && canLogVitals ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {onQuickLogVitals && canLogVitals && (
             <button
               onClick={(e) => {
                 e.preventDefault()
