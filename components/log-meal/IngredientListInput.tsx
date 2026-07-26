@@ -16,8 +16,10 @@
  */
 
 import { useState } from 'react'
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, XMarkIcon, MicrophoneIcon } from '@heroicons/react/24/outline'
 import { parseIngredientList, type ParsedIngredient } from '@/lib/ingredient-parse'
+import { useSpeechDictation } from '@/hooks/useSpeechDictation'
+import DictationModal from '@/components/ui/DictationModal'
 
 interface IngredientListInputProps {
   value: ParsedIngredient[]
@@ -26,6 +28,12 @@ interface IngredientListInputProps {
 
 export default function IngredientListInput({ value, onChange }: IngredientListInputProps) {
   const [draft, setDraft] = useState('')
+  const [dictationOpen, setDictationOpen] = useState(false)
+
+  // The mic opens a guided dictation modal (live transcript + coaching +
+  // clear/redo/undo). We only need feature-detection here to decide whether to
+  // show the mic trigger — the modal owns the actual speech session.
+  const { isSupported: micSupported } = useSpeechDictation()
 
   const commitDraft = () => {
     const parsed = parseIngredientList(draft)
@@ -73,6 +81,16 @@ export default function IngredientListInput({ value, onChange }: IngredientListI
           inputMode="text"
           autoComplete="off"
         />
+        {micSupported && (
+          <button
+            type="button"
+            onClick={() => setDictationOpen(true)}
+            aria-label="Dictate ingredients"
+            className="shrink-0 inline-flex items-center justify-center w-12 min-h-[48px] rounded-lg border border-border text-muted-foreground hover:bg-muted active:scale-[0.97] transition-transform"
+          >
+            <MicrophoneIcon className="w-5 h-5" aria-hidden="true" />
+          </button>
+        )}
         <button
           type="button"
           onClick={commitDraft}
@@ -87,7 +105,9 @@ export default function IngredientListInput({ value, onChange }: IngredientListI
 
       {/* Helper line */}
       <p className="text-xs text-muted-foreground">
-        Add what you remember — even without amounts. Tap an item to edit it.
+        {micSupported
+          ? 'Type, paste, or tap the mic to speak. Tap an item to edit it.'
+          : 'Add what you remember — even without amounts. Tap an item to edit it.'}
       </p>
 
       {/* Parsed ingredient rows */}
@@ -128,6 +148,18 @@ export default function IngredientListInput({ value, onChange }: IngredientListI
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Guided voice capture — Done parses each spoken segment into a row. */}
+      {micSupported && (
+        <DictationModal
+          isOpen={dictationOpen}
+          onClose={() => setDictationOpen(false)}
+          onComplete={(segments) => {
+            const parsed = segments.flatMap(parseIngredientList)
+            if (parsed.length) onChange([...value, ...parsed])
+          }}
+        />
       )}
     </div>
   )
