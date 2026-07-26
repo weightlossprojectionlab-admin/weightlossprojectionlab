@@ -92,10 +92,15 @@ function AcceptInvitationContent() {
   const handleAccept = async () => {
     if (!invitation) return
 
-    // If user is not authenticated, save invitation code and redirect to signup
+    // If user is not authenticated, save invitation code + the invited email and
+    // redirect to signup. Accept requires the signed-up email to match the
+    // invitation, so signup prefills/locks the invited email — otherwise a
+    // mismatched email would 403 at the very end.
     if (!user) {
-      // Store invitation code in localStorage for after signup
       localStorage.setItem('pendingInvitationCode', inviteCode)
+      if (invitation.recipientEmail) {
+        localStorage.setItem('pendingInvitationEmail', invitation.recipientEmail)
+      }
       router.push('/auth?invitation=true')
       return
     }

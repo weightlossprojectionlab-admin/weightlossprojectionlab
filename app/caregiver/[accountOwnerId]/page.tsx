@@ -12,7 +12,7 @@ import { useState, useEffect, use } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { db } from '@/lib/firebase'
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { doc, getDoc, getDocFromServer, collection, query, where, getDocs } from 'firebase/firestore'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useHouseholdDuties } from '@/hooks/useHouseholdDuties'
@@ -372,9 +372,28 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
       try {
         setLoading(true)
 
-        // Get user's profile to check caregiverOf and onboarding status
-        const userDoc = await getDoc(doc(db, 'users', user.uid))
-        const userData = userDoc.data()
+        // Get user's profile to check caregiverOf and onboarding status.
+        //
+        // A brand-new invitee lands here the instant they accept, while the
+        // `caregiverOf` grant the accept route just wrote may still be
+        // propagating — and a cached client read can miss it entirely. Read
+        // fresh from the SERVER and retry briefly so a not-yet-visible grant
+        // isn't mistaken for "no access". Getting this wrong used to bounce the
+        // user to /dashboard, which paywalls a subscription-less caregiver
+        // straight to /pricing (the "accepted the invite, then saw pricing" bug).
+        let userData: Record<string, unknown> | undefined
+        let context: CaregiverContext | undefined
+        for (let attempt = 0; attempt < 4; attempt++) {
+          const userDoc = await getDocFromServer(doc(db, 'users', user.uid))
+          userData = userDoc.data()
+          if (userData) {
+            const caregiverContexts = (userData.caregiverOf as CaregiverContext[]) || []
+            context = caregiverContexts.find((ctx) => ctx.accountOwnerId === accountOwnerId)
+            if (context) break
+          }
+          // Brief backoff for the accept write to land before the next read.
+          if (attempt < 3) await new Promise((r) => setTimeout(r, 600))
+        }
 
         if (!userData) {
           // AuthGuard already guarantees the user is signed in, so a missing
@@ -388,18 +407,16 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
         }
 
         // Check if user has completed their own onboarding
-        const hasCompletedOnboarding = userData.profile?.onboardingCompleted || false
-        setHasOwnAccount(hasCompletedOnboarding)
-
-        // Find the caregiver context for this account owner
-        const caregiverContexts = userData.caregiverOf || []
-        const context = caregiverContexts.find(
-          (ctx: CaregiverContext) => ctx.accountOwnerId === accountOwnerId
-        )
+        const profile = userData.profile as { onboardingCompleted?: boolean } | undefined
+        setHasOwnAccount(profile?.onboardingCompleted || false)
 
         if (!context) {
-          console.error('Caregiver context not found for this account owner')
-          router.push('/dashboard')
+          // Grant still not visible after retries. Do NOT redirect to /dashboard:
+          // a caregiver-only invitee has no subscription there and gets
+          // paywalled to /pricing. Stop and fall through to the graceful
+          // "setting up access" state (with a refresh) instead.
+          console.error('Caregiver context not found for this account owner', accountOwnerId)
+          setLoading(false)
           return
         }
 
@@ -477,10 +494,25 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
   }
 
   if (!caregiverContext) {
+    // Reached only when the caregiver grant still isn't visible after retries
+    // (usually a just-accepted invite still propagating). Never a paywall —
+    // offer a refresh, not /pricing.
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <p className="text-error-dark">Access denied</p>
+      <div className="min-h-screen flex items-center justify-center bg-background px-6">
+        <div className="text-center max-w-sm">
+          <p className="text-lg font-semibold text-foreground mb-2">
+            Setting up your caregiver access
+          </p>
+          <p className="text-muted-foreground mb-6">
+            If you just accepted an invitation, this can take a moment to activate.
+            Refresh to try again.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 rounded-lg bg-primary text-white font-medium"
+          >
+            Refresh
+          </button>
         </div>
       </div>
     )
