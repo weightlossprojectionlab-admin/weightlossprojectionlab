@@ -155,4 +155,159 @@ test.describe('Meal log features @meal-features', () => {
       await Promise.all(created.docs.map((d) => d.ref.delete().catch(() => {})))
     }
   })
+
+  test('shows a patient-personalized calories line from age/height/weight', async ({
+    page,
+    ownerUserId,
+    patientId,
+    firestore,
+  }) => {
+    const pRef = firestore
+      .collection('users').doc(ownerUserId)
+      .collection('patients').doc(patientId)
+    const original = (await pRef.get()).data() || {}
+
+    // Ensure the profile has the identity fields TDEE needs.
+    await pRef.set(
+      {
+        dateOfBirth: '1985-06-15T00:00:00.000Z',
+        gender: 'male',
+        height: 70, // inches
+        currentWeight: 175, // lbs
+        weightUnit: 'lbs',
+        activityLevel: 'moderate',
+      },
+      { merge: true },
+    )
+
+    try {
+      await page.goto(`/log-meal?patientId=${patientId}`, { waitUntil: 'domcontentloaded' })
+      await page
+        .getByRole('button', { name: 'Enter meal details manually' })
+        .click({ timeout: 90_000 })
+      await page.getByPlaceholder('e.g., Chicken and rice').fill(`E2E personalize ${Date.now()}`)
+      await page.getByPlaceholder('e.g., 450').fill('400')
+
+      // The personalization line is derived from the patient's TDEE.
+      await expect(page.getByText(/of their daily calories/i)).toBeVisible({ timeout: 15_000 })
+    } finally {
+      await pRef.set(original) // full restore of the shared test patient
+    }
+  })
+
+  test('estimate macros fills calories + macros (endpoint mocked)', async ({ page, patientId }) => {
+    // Mock the Gemini-backed endpoint so this is deterministic.
+    await page.route('**/api/meals/estimate-nutrition', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: {
+            calories: 420,
+            protein: 30,
+            carbs: 40,
+            fat: 12,
+            confidence: 'high',
+            note: 'test estimate',
+          },
+        }),
+      }),
+    )
+
+    await page.goto(`/log-meal?patientId=${patientId}`, { waitUntil: 'domcontentloaded' })
+    await page.getByRole('button', { name: 'Enter meal details manually' }).click({ timeout: 90_000 })
+    await page.getByPlaceholder('e.g., Chicken and rice').fill(`E2E estimate ${Date.now()}`)
+
+    // Add an ingredient so the Estimate button appears.
+    await page.getByRole('button', { name: /add ingredients/i }).click()
+    await page.getByPlaceholder(/2 eggs, 1 tbsp butter/i).fill('2 eggs')
+    await page.getByRole('button', { name: 'Add ingredient', exact: true }).click()
+
+    await page.getByRole('button', { name: /estimate from ingredients/i }).click()
+
+    await expect(page.getByPlaceholder('e.g., 450')).toHaveValue('420', { timeout: 15_000 })
+    await expect(page.getByText(/high confidence/i)).toBeVisible()
+  })
+
+  test('save as meal creates a reusable meal and disables to block duplicates', async ({
+    page,
+    ownerUserId,
+    patientId,
+    firestore,
+  }) => {
+    const mealName = `E2E save-as-meal ${Date.now()}`
+    const templates = firestore
+      .collection('users').doc(ownerUserId)
+      .collection('mealTemplates')
+
+    try {
+      await page.goto(`/log-meal?patientId=${patientId}`, { waitUntil: 'domcontentloaded' })
+      await page
+        .getByRole('button', { name: 'Enter meal details manually' })
+        .click({ timeout: 90_000 })
+      await page.getByPlaceholder('e.g., Chicken and rice').fill(mealName)
+      await page.getByRole('button', { name: /add ingredients/i }).click()
+      await page.getByPlaceholder(/2 eggs, 1 tbsp butter/i).fill('2 eggs')
+      await page.getByRole('button', { name: 'Add ingredient', exact: true }).click()
+
+      await page.getByRole('button', { name: /save as meal/i }).click()
+
+      await expect
+        .poll(async () => (await templates.where('name', '==', mealName).get()).size, {
+          timeout: 20_000,
+          message: 'a saved meal (template) should be created',
+        })
+        .toBeGreaterThan(0)
+
+      // Double-submit guard: the button flips to "Saved" and disables.
+      const saved = page.getByRole('button', { name: /saved to your meals/i })
+      await expect(saved).toBeVisible()
+      await expect(saved).toBeDisabled()
+    } finally {
+      const created = await templates.where('name', '==', mealName).get()
+      await Promise.all(created.docs.map((d) => d.ref.delete().catch(() => {})))
+    }
+  })
+
+  test('manual entry persists the ingredient breakdown', async ({
+    page,
+    ownerUserId,
+    patientId,
+    firestore,
+  }) => {
+    const mealName = `E2E ingredients ${Date.now()}`
+    const mealsCol = firestore
+      .collection('users').doc(ownerUserId)
+      .collection('patients').doc(patientId)
+      .collection('meal-logs')
+
+    try {
+      await page.goto(`/log-meal?patientId=${patientId}`, { waitUntil: 'domcontentloaded' })
+      await page
+        .getByRole('button', { name: 'Enter meal details manually' })
+        .click({ timeout: 90_000 })
+      await page.getByPlaceholder('e.g., Chicken and rice').fill(mealName)
+      await page.getByRole('button', { name: /add ingredients/i }).click()
+      await page.getByPlaceholder(/2 eggs, 1 tbsp butter/i).fill('2 eggs, 1 cup rice')
+      await page.getByRole('button', { name: 'Add ingredient', exact: true }).click()
+      await expect(page.getByText('2 eggs', { exact: true })).toBeVisible()
+
+      await page.getByRole('button', { name: /save meal/i }).click()
+
+      // Ingredients persist as foodItems on the patient meal-log.
+      await expect
+        .poll(
+          async () => {
+            const snap = await mealsCol.where('description', '==', mealName).get()
+            return (snap.docs[0]?.data()?.foodItems || []).join('|')
+          },
+          { timeout: 20_000, message: 'ingredients should persist as foodItems' },
+        )
+        .toContain('2 eggs')
+    } finally {
+      const created = await mealsCol.where('description', '==', mealName).get()
+      await Promise.all(created.docs.map((d) => d.ref.delete().catch(() => {})))
+    }
+  })
 })
