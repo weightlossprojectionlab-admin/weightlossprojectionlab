@@ -2507,7 +2507,7 @@ function LogMealContent() {
                   loadingLabel="Looking up..."
                 />
                 <MethodTile
-                  icon="🍲"
+                  icon="📖"
                   label="Saved meals"
                   ariaLabel="Use a saved meal"
                   locked={logMealLock.isLocked}
