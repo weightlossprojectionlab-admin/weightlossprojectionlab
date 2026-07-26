@@ -331,8 +331,9 @@ function LogMealContent() {
   const { confirm, ConfirmDialog } = useConfirm()
 
   // Use real-time listener for meal logs with filters
-  const { mealLogs: mealHistory, loading: loadingHistory, error: historyError} = useMealLogsRealtime({
+  const { mealLogs: mealHistory, loading: loadingHistory, error: historyError } = useMealLogsRealtime({
     patientId: patientIdParam,
+    patientOwnerId: patientProfile?.userId, // owner uid → direct real-time read of the patient's meals
     limitCount: 30,
     mealType: filterMealType !== 'all' ? filterMealType : undefined
   })
@@ -1142,35 +1143,58 @@ function LogMealContent() {
         ...(ing.unit ? { unit: ing.unit } : {}),
       }))
 
-      // Create manual entry meal log with nutrition data
-      const response = await mealLogOperations.createMealLog({
-        mealType: selectedMealType,
-        title: sanitizedMealName, // Set meal title for duplicate detection
-        photoUrl,
-        loggedAt: new Date().toISOString(),
-        notes: sanitizedNotes || undefined,
-        totalCalories: calories,
-        macros: {
-          protein,
-          carbs,
-          fat
-        },
-        manualEntries: [{
-          food: sanitizedMealName,
+      // Route the write by scope. When logging for a family member, save to
+      // THEIR meal logs (what the Recent meals list reads) — mirroring the AI/
+      // photo path. Without this branch the meal lands in the caregiver's own
+      // logs and never appears in the patient's list.
+      if (patientIdParam) {
+        await medicalOperations.mealLogs.logMeal(patientIdParam, {
+          mealType: selectedMealType,
+          title: sanitizedMealName,
+          description: sanitizedMealName,
+          // The patient MealLog schema has no sourceRefs; the ingredient
+          // breakdown lives in foodItems (fall back to the meal name).
+          foodItems:
+            cookedIngredients.length > 0
+              ? manualIngredients.map((i) => i.ingredientText)
+              : [sanitizedMealName],
+          photoUrl: photoUrl || undefined,
           calories,
           protein,
           carbs,
           fat,
-          quantity: '1 serving'
-        }],
-        // Only tag source/ingredients when the user actually added a breakdown,
-        // so plain quick-logs are unchanged.
-        ...(cookedIngredients.length > 0
-          ? { source: 'manual' as const, sourceRefs: { cookedIngredients } }
-          : {}),
-      })
+          totalCalories: calories,
+          macros: { protein, carbs, fat },
+          notes: sanitizedNotes || undefined,
+          loggedAt: new Date().toISOString(),
+          consumedAt: new Date().toISOString(),
+          manualEntries: [
+            { food: sanitizedMealName, calories, protein, carbs, fat, quantity: '1 serving' },
+          ],
+          aiAnalyzed: false,
+          tags: [],
+        })
+      } else {
+        await mealLogOperations.createMealLog({
+          mealType: selectedMealType,
+          title: sanitizedMealName, // Set meal title for duplicate detection
+          photoUrl,
+          loggedAt: new Date().toISOString(),
+          notes: sanitizedNotes || undefined,
+          totalCalories: calories,
+          macros: { protein, carbs, fat },
+          manualEntries: [
+            { food: sanitizedMealName, calories, protein, carbs, fat, quantity: '1 serving' },
+          ],
+          // Only tag source/ingredients when the user actually added a breakdown,
+          // so plain quick-logs are unchanged.
+          ...(cookedIngredients.length > 0
+            ? { source: 'manual' as const, sourceRefs: { cookedIngredients } }
+            : {}),
+        })
+      }
 
-      logger.debug('✅ Manual entry saved:', response.data)
+      logger.debug('✅ Manual entry saved')
 
       if (photoUrl) {
         toast.success('Meal logged successfully!')
@@ -1179,6 +1203,9 @@ function LogMealContent() {
       } else {
         toast.success('Meal logged successfully!')
       }
+
+      // The Recent meals list is a live Firestore listener now (both scopes),
+      // so the just-saved meal appears on its own — no manual refresh needed.
 
       // Check mission progress
       if (checkProgress) {
@@ -2179,7 +2206,7 @@ function LogMealContent() {
             still trigger it, and so the existing manual / template
             / barcode paths keep working when fromRecipe is false. */}
         <div className={`card${fromRecipe ? ' hidden' : ''}`}>
-          <h2 className="mb-4">Log Your Meal</h2>
+          <h2 className="mb-4">Log your meal</h2>
 
             {!capturedImage && !showManualEntry && (
               // Quick-Actions-style tile grid: square icon tiles (2-up on mobile, 4-up on sm+).
@@ -2194,12 +2221,12 @@ function LogMealContent() {
                     className={`${TILE_BASE} ${TILE_PRIMARY}`}
                   >
                     <LockClosedIcon className="w-8 h-8" />
-                    <span className={TILE_LABEL}>Paused — Take Photo</span>
+                    <span className={TILE_LABEL}>Paused — take photo</span>
                   </button>
                 ) : (
                   <label className={`${TILE_BASE} ${TILE_PRIMARY} cursor-pointer`}>
                     <span className="text-5xl" aria-hidden="true">📸</span>
-                    <span className={TILE_LABEL}>Take Photo</span>
+                    <span className={TILE_LABEL}>Take photo</span>
                     <input
                       ref={photoInputRef}
                       type="file"
@@ -2213,10 +2240,10 @@ function LogMealContent() {
 
                 <MethodTile
                   icon="🔍"
-                  label="Scan Barcode"
+                  label="Scan barcode"
                   ariaLabel="Scan barcode"
                   locked={logMealLock.isLocked}
-                  lockedLabel="Paused — Scan"
+                  lockedLabel="Paused — scan"
                   onLockedClick={logMealLock.onLockedClick}
                   onClick={() => setShowBarcodeScanner(true)}
                   loading={loadingBarcode}
@@ -2224,19 +2251,19 @@ function LogMealContent() {
                 />
                 <MethodTile
                   icon="⭐"
-                  label="Use Template"
+                  label="Use template"
                   ariaLabel="Use saved meal template"
                   locked={logMealLock.isLocked}
-                  lockedLabel="Paused — Template"
+                  lockedLabel="Paused — template"
                   onLockedClick={logMealLock.onLockedClick}
                   onClick={() => setShowTemplates(!showTemplates)}
                 />
                 <MethodTile
                   icon="✏️"
-                  label="Enter Manually"
+                  label="Enter manually"
                   ariaLabel="Enter meal details manually"
                   locked={logMealLock.isLocked}
-                  lockedLabel="Paused — Manual"
+                  lockedLabel="Paused — manual"
                   onLockedClick={logMealLock.onLockedClick}
                   onClick={() => setShowManualEntry(true)}
                 />
@@ -2287,7 +2314,7 @@ function LogMealContent() {
               <div className="space-y-4 mt-4">
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1">
-                    📝 Quick Manual Entry
+                    📝 Quick manual entry
                   </p>
                   <p className="text-xs text-yellow-700 dark:text-yellow-300">
                     Want instant nutrition analysis? Upgrade to use WPL-powered photo analysis!
@@ -2297,7 +2324,7 @@ function LogMealContent() {
                 {/* Optional Photo Upload */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Meal Photo <span className="text-muted-foreground font-normal">(recommended)</span>
+                    Meal photo <span className="text-muted-foreground font-normal">(recommended)</span>
                   </label>
                   {!manualEntryImage ? (
                     <label className="flex items-center justify-center w-full px-4 py-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors">
@@ -2339,10 +2366,10 @@ function LogMealContent() {
                   )}
                 </div>
 
-                {/* Meal Name */}
+                {/* Meal name */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Meal Name *
+                    Meal name *
                   </label>
                   <input
                     type="text"
@@ -2358,7 +2385,7 @@ function LogMealContent() {
                 {/* Meal Type Dropdown */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Meal Type *
+                    Meal type *
                   </label>
                   <select
                     value={selectedMealType}
@@ -2491,7 +2518,7 @@ function LogMealContent() {
                         <span>Saving...</span>
                       </span>
                     ) : (
-                      '💾 Save Meal'
+                      '💾 Save meal'
                     )}
                   </button>
                   <button
@@ -2623,7 +2650,7 @@ function LogMealContent() {
             </div>
 
             <div className="space-y-4">
-              {/* Detected Meal Type - Editable */}
+              {/* Detected meal type - Editable */}
               <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-4 border border-indigo-100">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
@@ -2631,7 +2658,7 @@ function LogMealContent() {
                       {mealTypes.find(t => t.id === selectedMealType)?.emoji || '🍽️'}
                     </span>
                     <div>
-                      <p className="text-xs text-muted-foreground">Detected Meal Type</p>
+                      <p className="text-xs text-muted-foreground">Detected meal type</p>
                       <p className="text-lg font-semibold text-foreground capitalize">{selectedMealType}</p>
                     </div>
                   </div>
@@ -2912,7 +2939,7 @@ function LogMealContent() {
                         <span>{uploadProgress || 'Saving...'}</span>
                       </span>
                     ) : (
-                      '✓ Save Meal'
+                      '✓ Save meal'
                     )}
                   </button>
                   <label className={`btn btn-secondary cursor-pointer ${saving ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -3003,7 +3030,7 @@ function LogMealContent() {
         {/* Meal History */}
         <div className="bg-card rounded-lg p-6 shadow-sm">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-medium text-foreground">Recent Meals</h2>
+            <h2 className="text-lg font-medium text-foreground">Recent meals</h2>
             {mealHistory.length > 0 && !multiSelectMode && (
               <div className="flex items-center gap-2 relative">
                 <button
@@ -3061,14 +3088,14 @@ function LogMealContent() {
                       onClick={selectAllMeals}
                       className={HISTORY_CHIP_MUTED}
                     >
-                      Select All
+                      Select all
                     </button>
                   ) : (
                     <button
                       onClick={deselectAllMeals}
                       className={HISTORY_CHIP_MUTED}
                     >
-                      Deselect All
+                      Deselect all
                     </button>
                   )}
                 </div>
@@ -3348,7 +3375,7 @@ function LogMealContent() {
                           />
                         </div>
                         <div>
-                          <label className="block text-xs font-medium text-foreground mb-2">Meal Type</label>
+                          <label className="block text-xs font-medium text-foreground mb-2">Meal type</label>
                           <div className="grid grid-cols-4 gap-2">
                             {mealTypes.map((type) => (
                               <button
