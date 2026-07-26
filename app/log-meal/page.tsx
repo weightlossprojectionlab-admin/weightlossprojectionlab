@@ -400,6 +400,13 @@ function LogMealContent() {
       })
     : mealHistory
 
+  // Manual entry is valid to save once the one required field — a meal name of
+  // at least 2 chars — is present (mirrors the server-side check in
+  // saveManualEntry). Everything else (calories, macros, ingredients) is
+  // optional and never blocks Save. Defined once so the button's disabled state
+  // and the inline hint can't drift apart.
+  const isManualEntryValid = manualEntryForm.mealName.trim().length >= 2
+
   // Calculate today's totals using UTC to avoid timezone issues
   const todaysMeals = mealHistory.filter(meal => {
     const mealDate = new Date(meal.loggedAt)
@@ -2290,16 +2297,19 @@ function LogMealContent() {
                 {/* Optional Photo Upload */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
-                    Meal Photo (Optional)
+                    Meal Photo <span className="text-muted-foreground font-normal">(recommended)</span>
                   </label>
                   {!manualEntryImage ? (
-                    <label className="flex items-center justify-center w-full px-4 py-3 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors">
+                    <label className="flex items-center justify-center w-full px-4 py-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors">
                       <div className="text-center">
                         <svg className="mx-auto h-8 w-8 text-muted-foreground mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                         </svg>
                         <p className="text-sm text-muted-foreground">
                           Click to upload a photo
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          📷 Helps you remember this meal if you fill in the details later
                         </p>
                       </div>
                       <input
@@ -2468,10 +2478,11 @@ function LogMealContent() {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex space-x-3">
+                <div>
+                  <div className="flex space-x-3">
                   <button
                     onClick={saveManualEntry}
-                    disabled={saving}
+                    disabled={saving || !isManualEntryValid}
                     className="flex-1 btn btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {saving ? (
@@ -2509,6 +2520,12 @@ function LogMealContent() {
                   >
                     Cancel
                   </button>
+                  </div>
+                  {!isManualEntryValid && !saving && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Enter a meal name to save.
+                    </p>
+                  )}
                 </div>
               </div>
             )}
