@@ -83,6 +83,48 @@ const detectMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' =>
   return 'snack'
 }
 
+/**
+ * Best-effort per-item foods (with quantities) for a meal card, from the most
+ * structured source available:
+ *   1. sourceRefs.cookedIngredients — quantity already in ingredientText
+ *   2. aiAnalysis.foodItems — { name, portion }
+ *   3. description "name (portion), name (portion)" — parsed (commas inside
+ *      parentheses are not split points)
+ *   4. foodItems strings — name only
+ */
+function getMealFoods(meal: any): Array<{ name: string; detail?: string }> {
+  const cooked = meal?.sourceRefs?.cookedIngredients
+  if (Array.isArray(cooked) && cooked.length > 0) {
+    return cooked.map((c: any) => ({ name: c.ingredientText })).filter((f: any) => f.name)
+  }
+  const aiFoods = meal?.aiAnalysis?.foodItems
+  if (Array.isArray(aiFoods) && aiFoods.length > 0) {
+    return aiFoods.map((f: any) => ({ name: f.name, detail: f.portion || undefined })).filter((f: any) => f.name)
+  }
+  const desc: string = meal?.description || ''
+  if (desc && /\([^)]*\)/.test(desc)) {
+    return desc
+      .split(/,\s*(?![^(]*\))/)
+      .map((part) => {
+        const m = part.match(/^(.*?)\s*\(([^)]*)\)\s*$/)
+        return m ? { name: m[1].trim(), detail: m[2].trim() || undefined } : { name: part.trim() }
+      })
+      .filter((f) => f.name)
+  }
+  const items = meal?.foodItems
+  if (Array.isArray(items) && items.length > 0) return items.map((f: string) => ({ name: f }))
+  return []
+}
+
+/** A concise card title: strip "(portion)" fragments from a "name (portion), …"
+ *  description (the portions live in the foods breakdown instead). Leaves
+ *  plain names/user titles untouched. */
+function getMealTitle(meal: any, foodsHavePortions: boolean): string {
+  const desc: string = meal?.description || meal?.title || ''
+  if (foodsHavePortions && desc) return desc.replace(/\s*\([^)]*\)/g, '').replace(/\s+,/g, ',').trim()
+  return desc
+}
+
 // Helper function to detect meal type using personalized schedule
 const detectMealTypeWithSchedule = (mealSchedule?: {
   breakfastTime: string
@@ -947,7 +989,9 @@ function LogMealContent() {
         return
       }
 
-      // Enable manual entry mode
+      // Enable manual entry mode (create — clear any edit state).
+      setEditingMealId(null)
+      setEditingPhotoUrl(null)
       setShowManualEntry(true)
 
       // Pre-fill the simplified manual entry form with product data
@@ -2255,7 +2299,12 @@ function LogMealContent() {
                   locked={logMealLock.isLocked}
                   lockedLabel="Paused — manual"
                   onLockedClick={logMealLock.onLockedClick}
-                  onClick={() => setShowManualEntry(true)}
+                  onClick={() => {
+                    // Fresh create — clear any leftover edit state.
+                    setEditingMealId(null)
+                    setEditingPhotoUrl(null)
+                    setShowManualEntry(true)
+                  }}
                 />
               </div>
             )}
@@ -3221,7 +3270,9 @@ function LogMealContent() {
                 const mealTypeEmoji = mealTypes.find(t => t.id === meal.mealType)?.emoji || '🍽️'
                 const isExpanded = expandedMealId === meal.id
                 const isDeleting = deletingMealId === meal.id
-                const isEditing = editingMealId === meal.id
+                const mealFoods = getMealFoods(meal)
+                const mealFoodsHavePortions = mealFoods.some((f) => f.detail)
+                const mealTitle = getMealTitle(meal, mealFoodsHavePortions)
                 const mealDate = new Date(meal.loggedAt)
                 // Use consistent UTC-based date comparison
                 const today = new Date()
@@ -3278,8 +3329,8 @@ function LogMealContent() {
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          {meal.description && (
-                            <div className="font-semibold text-foreground mb-1">{meal.description}</div>
+                          {mealTitle && (
+                            <div className="font-semibold text-foreground mb-1">{mealTitle}</div>
                           )}
                           <div className="flex items-center space-x-2 mb-1">
                             <span className="text-xl">{mealTypeEmoji}</span>
@@ -3307,7 +3358,7 @@ function LogMealContent() {
                               e.stopPropagation()
                               shareMealHandler(meal)
                             }}
-                            disabled={isDeleting || isEditing || sharingMealId === meal.id}
+                            disabled={isDeleting || sharingMealId === meal.id}
                             className="text-success hover:text-success-dark disabled:opacity-50 flex items-center justify-center min-w-[24px]"
                             aria-label="Share meal"
                             title="Share to social media"
@@ -3325,7 +3376,7 @@ function LogMealContent() {
                               e.stopPropagation()
                               startEditingMeal(meal)
                             }}
-                            disabled={isDeleting || isEditing || sharingMealId === meal.id}
+                            disabled={isDeleting || sharingMealId === meal.id}
                             className="text-accent hover:text-accent-dark disabled:opacity-50"
                             aria-label="Edit meal"
                           >
@@ -3336,7 +3387,7 @@ function LogMealContent() {
                               e.stopPropagation()
                               deleteMeal(meal.id, meal.mealType)
                             }}
-                            disabled={isDeleting || isEditing || sharingMealId === meal.id}
+                            disabled={isDeleting || sharingMealId === meal.id}
                             className="text-error hover:text-error-dark disabled:opacity-50 flex items-center justify-center min-w-[24px]"
                             aria-label="Delete meal"
                           >
@@ -3349,7 +3400,6 @@ function LogMealContent() {
                           <button
                             onClick={() => setExpandedMealId(isExpanded ? null : meal.id)}
                             className="text-muted-foreground hover:text-muted-foreground"
-                            disabled={isEditing}
                           >
                             {isExpanded ? '▲' : '▼'}
                           </button>
@@ -3357,16 +3407,21 @@ function LogMealContent() {
                       )}
                     </div>
 
-                    {isExpanded && !isEditing && (
+                    {isExpanded && (
                       <div className="mt-4 pt-4 border-t border-border space-y-3">
                         {/* additionalPhotos section removed - MealLog type only supports single photoUrl */}
 
-                        {meal.foodItems && meal.foodItems.length > 0 && (
+                        {mealFoods.length > 0 && (
                           <div>
                             <h4 className="text-xs font-medium text-foreground mb-1">Foods</h4>
                             <ul className="text-xs text-muted-foreground space-y-1">
-                              {meal.foodItems.map((item: string, idx: number) => (
-                                <li key={idx}>• {item}</li>
+                              {mealFoods.map((food, idx) => (
+                                <li key={idx}>
+                                  • {food.name}
+                                  {food.detail && (
+                                    <span className="text-muted-foreground/70"> — {food.detail}</span>
+                                  )}
+                                </li>
                               ))}
                             </ul>
                           </div>
