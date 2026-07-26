@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, createContext, useContext } from 'react'
-import { doc, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot } from 'firebase/firestore'
 import {
   PatientProfile,
   PatientMedication,
@@ -21,7 +21,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ImageLightbox from '@/components/ui/ImageLightbox'
 import { useAuth } from '@/hooks/useAuth'
-import { canAccessFeature } from '@/lib/feature-gates'
+import { canAccessFeature, subscriptionAllowsFeature } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 import { addManualShoppingItem, deleteShoppingItem } from '@/lib/shopping-operations'
 import { useShopping } from '@/hooks/useShopping'
@@ -719,11 +719,49 @@ export function AIHealthReport({
     })
   }, [report])
 
-  // Feature gate check
-  const hasAccess = canAccessFeature(user as any, 'health-reports')
+  // Feature gate check.
+  //
+  // AI Health Reports are a feature of NINA's plan — the account OWNER's — not
+  // the person viewing. For a caregiver (viewer !== patient owner), access
+  // rides on the owner's subscription, and we NEVER show them a subscription
+  // upgrade CTA: they can't buy someone else's plan. Owners viewing their own
+  // members keep the normal upgrade prompt.
+  const isCaregiverView = !!user && patient.userId !== user.uid
 
-  // Show upgrade prompt if no access
+  // Owner's plan access, resolved for the caregiver case. null = still loading.
+  const [ownerHasAccess, setOwnerHasAccess] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (!isCaregiverView) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', patient.userId))
+        const ownerSub = (snap.data()?.subscription as any) ?? null
+        if (!cancelled) setOwnerHasAccess(subscriptionAllowsFeature(ownerSub, 'health-reports'))
+      } catch {
+        if (!cancelled) setOwnerHasAccess(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isCaregiverView, patient.userId])
+
+  const hasAccess = isCaregiverView
+    ? ownerHasAccess === true
+    : canAccessFeature(user as any, 'health-reports')
+
   if (!hasAccess) {
+    // Caregiver: no upgrade CTA — a neutral note (or nothing while we check).
+    if (isCaregiverView) {
+      if (ownerHasAccess === null) return null
+      return (
+        <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+          AI Health Reports aren&apos;t included on this family&apos;s plan.
+        </div>
+      )
+    }
+    // Owner: normal upgrade prompt.
     return (
       <UpgradePrompt
         feature="health-reports"
