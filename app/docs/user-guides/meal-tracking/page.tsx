@@ -97,6 +97,61 @@ export default function MealTrackingGuidePage() {
         </ul>
       </div>
 
+      <h3>Speak your ingredients</h3>
+      <p>On a phone and most browsers, you can add ingredients by voice instead of typing.</p>
+      <ol>
+        <li>Open <strong>＋ Add ingredients</strong> and tap the <strong>🎤 microphone</strong></li>
+        <li>
+          Tap the mic to start, then say your ingredients — <strong>pause between each one</strong>{' '}
+          for the cleanest result
+        </li>
+        <li>Speak in a quiet spot so background noise isn't picked up</li>
+        <li>
+          Use <strong>Undo</strong>, <strong>Clear</strong>, or <strong>Redo</strong> to fix
+          mistakes, then tap <strong>Done</strong>
+        </li>
+      </ol>
+
+      <h3>Estimate the calories and macros</h3>
+      <p>Once you've added ingredients, WPL can estimate the nutrition for you.</p>
+      <ol>
+        <li>Tap <strong>✨ Estimate from ingredients</strong> (below Macros)</li>
+        <li>The calories and macros fill in, with a note on how confident the estimate is</li>
+        <li>
+          <strong>Always review and edit.</strong> It's an estimate, not an exact measurement —
+          especially when amounts are missing
+        </li>
+      </ol>
+
+      <h3>Personalized to each family member</h3>
+      <p>
+        When you log for a family member and we know their age, height, and weight, you'll see a
+        short line showing how the meal fits their day — for example,{' '}
+        <em>"about 18% of their daily calories."</em> It's a quick gut-check, not medical advice.
+      </p>
+
+      <h3>Save a meal to reuse it</h3>
+      <p>Meals you eat often can be saved and re-logged in one tap.</p>
+      <ol>
+        <li>Fill in a meal (name, ingredients, and macros if you have them)</li>
+        <li>Tap <strong>📋 Save as meal</strong></li>
+        <li>
+          Later, tap the <strong>📖 Saved meals</strong> tile, find it, and tap{' '}
+          <strong>Log this meal</strong>
+        </li>
+      </ol>
+
+      <h3>Edit or fix a meal</h3>
+      <p>Made a mistake, or want to fill in details later? Every meal can be edited.</p>
+      <ol>
+        <li>Find the meal under <strong>Recent meals</strong> and tap the <strong>✏️ pencil</strong></li>
+        <li>
+          It opens in the same form, already filled in — change anything (including the photo and
+          ingredients) and tap <strong>Update meal</strong>
+        </li>
+        <li>Editing keeps the meal's original date — it won't jump to today</li>
+      </ol>
+
       <h3>3. Offline mode</h3>
       <p>
         No internet? No problem! WPL works offline and will automatically sync your meals when

@@ -254,7 +254,7 @@ function MethodTile({
   loading,
   loadingLabel,
 }: {
-  icon: string
+  icon: React.ReactNode // emoji string or an SVG element
   label: string
   ariaLabel: string
   locked: boolean
@@ -284,7 +284,11 @@ function MethodTile({
         </>
       ) : (
         <>
-          <span className="text-5xl" aria-hidden="true">{icon}</span>
+          {typeof icon === 'string' ? (
+            <span className="text-5xl" aria-hidden="true">{icon}</span>
+          ) : (
+            icon
+          )}
           <span className={TILE_LABEL}>{label}</span>
         </>
       )}
@@ -2496,7 +2500,23 @@ function LogMealContent() {
                 )}
 
                 <MethodTile
-                  icon="🔍"
+                  icon={
+                    <svg
+                      className="w-12 h-12 text-foreground"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="5" width="1.2" height="14" />
+                      <rect x="5.5" y="5" width="2" height="14" />
+                      <rect x="8.7" y="5" width="1" height="14" />
+                      <rect x="10.6" y="5" width="1.6" height="14" />
+                      <rect x="13.2" y="5" width="1" height="14" />
+                      <rect x="15.2" y="5" width="2.2" height="14" />
+                      <rect x="18.4" y="5" width="1" height="14" />
+                      <rect x="20.2" y="5" width="1.6" height="14" />
+                    </svg>
+                  }
                   label="Scan barcode"
                   ariaLabel="Scan barcode"
                   locked={logMealLock.isLocked}
