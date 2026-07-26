@@ -132,9 +132,10 @@ export const MacroTargetsSchema = z.object({
 export const UserGoalsSchema = z.object({
   targetWeight: z.number().positive(),
   startWeight: z.number().positive(),
-  weeklyWeightLossGoal: z.number().min(0.5).max(2),
+  weeklyWeightLossGoal: z.number().min(0).max(2), // 0 = maintain (no pace)
   targetDate: z.string().datetime().optional(),
   primaryGoal: z.enum(['lose-weight', 'maintain-weight', 'gain-muscle', 'improve-health']),
+  goalDirection: z.enum(['lose', 'maintain', 'gain']).optional(),
   dailyCalorieGoal: z.number().min(1000).max(5000),
   dailySteps: z.number().min(1000).max(50000),
   macroTargets: MacroTargetsSchema,
