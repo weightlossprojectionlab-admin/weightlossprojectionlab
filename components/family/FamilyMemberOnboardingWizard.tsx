@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
-import { doc, setDoc, Timestamp, collection } from 'firebase/firestore'
+import { doc, getDoc, setDoc, Timestamp, collection } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
 import toast from 'react-hot-toast'
 import type { PersonOnboardingAnswers, PersonRole, AutomationLevelExtended } from '@/types'
@@ -536,10 +536,16 @@ interface FamilyMemberOnboardingWizardProps {
    *  onboarding to deep-link into the pet path after the user said
    *  yes to has_pets — see app/onboarding/page.tsx completion routing. */
   initialMemberType?: 'human' | 'pet' | 'newborn'
+  /** When set, the wizard COMPLETES an existing member instead of creating a new one: it loads
+   *  the patient, skips the identity steps to the vitals (height & weight) step, and MERGES the
+   *  collected health data onto the existing doc. Drives the "Complete Onboarding" banner CTA so
+   *  an incomplete member gets the same guided flow — not a dead-end profile page. */
+  existingPatientId?: string
 }
 
 export default function FamilyMemberOnboardingWizard({
   initialMemberType,
+  existingPatientId,
 }: FamilyMemberOnboardingWizardProps = {}) {
   const { user } = useAuth()
   const router = useRouter()
@@ -587,6 +593,48 @@ export default function FamilyMemberOnboardingWizard({
     kangarooCare: false,
   })
 
+  // Complete-existing-member mode: load the patient once and pre-fill identity (type/name/DOB/
+  // gender) so the wizard can skip straight to the health (vitals) step. Missing height/weight is
+  // exactly what this flow collects.
+  const [existingLoaded, setExistingLoaded] = useState(false)
+  useEffect(() => {
+    if (!existingPatientId || !user || existingLoaded) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid, 'patients', existingPatientId))
+        if (cancelled || !snap.exists()) return
+        const p: any = snap.data()
+        setData((prev) => ({
+          ...prev,
+          memberType: p.type === 'pet' ? 'pet' : 'human',
+          name: p.name ?? prev.name,
+          dateOfBirth: p.dateOfBirth ?? prev.dateOfBirth,
+          gender: p.gender ?? prev.gender,
+          relationship: p.relationship ?? prev.relationship,
+          bloodType: p.bloodType ?? prev.bloodType,
+          currentWeight: p.currentWeight != null ? String(p.currentWeight) : prev.currentWeight,
+          activityLevel: p.activityLevel ?? prev.activityLevel,
+          ...(p.height != null
+            ? p.heightUnit === 'metric'
+              ? { heightUnit: 'metric' as const, heightCm: String(p.height) }
+              : {
+                  heightUnit: 'imperial' as const,
+                  heightFeet: String(Math.floor(p.height / 12)),
+                  heightInches: String(p.height % 12),
+                }
+            : {}),
+        }))
+        setExistingLoaded(true)
+      } catch {
+        // Non-fatal: fall back to a fresh wizard.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [existingPatientId, user, existingLoaded])
+
   const isPet = data.memberType === 'pet' || data.relationship === 'Pet'
   // Newborn detection now derives from DOB age, not a separate type
   // button. Newborn is a *life stage* of a human, not a parallel
@@ -630,6 +678,15 @@ export default function FamilyMemberOnboardingWizard({
   const WIZARD_STEPS = getWizardSteps(isPet, isNewborn, hasSelectedType)
   const currentStepData = WIZARD_STEPS[currentStep]
   const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100
+
+  // Complete-existing-member mode: once identity is loaded, skip the identity steps straight to
+  // the vitals (height & weight) step — that's the missing data we're here to collect.
+  useEffect(() => {
+    if (!existingPatientId || !existingLoaded) return
+    const vitalsIdx = WIZARD_STEPS.findIndex((s) => s.id === 'vitals')
+    if (vitalsIdx > 0 && currentStep === 0) setCurrentStep(vitalsIdx)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [existingLoaded, existingPatientId])
 
   // Calculate suggested conditions at component level (not in render function)
   // Using useMemo to prevent unnecessary recalculations
@@ -835,7 +892,11 @@ export default function FamilyMemberOnboardingWizard({
 
     try {
       // Create patient document
-      const patientRef = doc(collection(db, 'users', user.uid, 'patients'))
+      // Complete-existing-member mode writes to the existing doc (merged below); create mode
+      // mints a new one. patientRef.id equals existingPatientId in the former case.
+      const patientRef = existingPatientId
+        ? doc(db, 'users', user.uid, 'patients', existingPatientId)
+        : doc(collection(db, 'users', user.uid, 'patients'))
       const patientId = patientRef.id
 
       // Calculate age from DOB
@@ -868,9 +929,10 @@ export default function FamilyMemberOnboardingWizard({
         isMinor: isMinor,
         lifeStage: lifeStage,
         type: isPet ? 'pet' : 'human',
-        createdAt: Timestamp.now(),
         updatedAt: Timestamp.now(),
       }
+      // Only stamp createdAt when creating; a merge write must not clobber the original.
+      if (!existingPatientId) patientData.createdAt = Timestamp.now()
 
       // Relationship default at create-time. Pet → 'pet'. Newborn →
       // 'child' (newborns ARE children to the account owner). Adult
@@ -1045,11 +1107,17 @@ export default function FamilyMemberOnboardingWizard({
         patientData.foodAllergies = data.foodAllergies
       }
 
-      // Save patient profile
-      await setDoc(patientRef, patientData)
-
-      toast.success(`${data.name} has been added!`)
-      router.push('/patients')
+      // Save patient profile. Complete-existing-member mode MERGES so untouched fields (and the
+      // original createdAt) survive; create mode writes the full doc.
+      if (existingPatientId) {
+        await setDoc(patientRef, patientData, { merge: true })
+        toast.success(`${data.name}'s health profile is complete!`)
+        router.push(`/patients/${patientId}`)
+      } else {
+        await setDoc(patientRef, patientData)
+        toast.success(`${data.name} has been added!`)
+        router.push('/patients')
+      }
     } catch (error) {
       console.error('Error creating family member:', error)
       toast.error('Failed to create family member. Please try again.')
@@ -2604,7 +2672,9 @@ export default function FamilyMemberOnboardingWizard({
                 disabled={isSubmitting}
                 className="flex-1 px-6 py-3 rounded-xl font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-colors disabled:opacity-50"
               >
-                {isSubmitting ? 'Creating...' : 'Create Family Member'}
+                {isSubmitting
+                  ? (existingPatientId ? 'Saving...' : 'Creating...')
+                  : (existingPatientId ? 'Complete Profile' : 'Create Family Member')}
               </button>
             ) : (
               <button

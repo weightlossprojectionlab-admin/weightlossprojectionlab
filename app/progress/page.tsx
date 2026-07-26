@@ -943,10 +943,10 @@ function ProgressContent() {
                 </p>
                 <div className="flex gap-3">
                   <Link
-                    href={`/patients/${selectedPatientId}`}
+                    href={`/patients/new?patientId=${selectedPatientId}`}
                     className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
                   >
-                    View {patientProfile.name}'s Profile
+                    Complete {patientProfile.name}'s Profile
                   </Link>
                   <button
                     onClick={() => {

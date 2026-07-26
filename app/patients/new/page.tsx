@@ -26,15 +26,28 @@ function NewPatientContent() {
     typeParam === 'pet' || typeParam === 'human' || typeParam === 'newborn'
       ? typeParam
       : undefined
+  // ?patientId=<id> → complete an EXISTING member's health profile (guided flow from the
+  // "Needs to Complete Onboarding" banner) rather than creating a new one.
+  const existingPatientId = searchParams.get('patientId') || undefined
+
+  const wizard = (
+    <FamilyMemberOnboardingWizard
+      initialMemberType={initialMemberType}
+      existingPatientId={existingPatientId}
+    />
+  )
 
   return (
     <AuthGuard>
-      <FeatureGate
-        feature="multiple-patients"
-        featureName="Family Member Management"
-      >
-        <FamilyMemberOnboardingWizard initialMemberType={initialMemberType} />
-      </FeatureGate>
+      {existingPatientId ? (
+        // Completing an existing member is not adding a new patient — skip the multiple-patients
+        // cap gate (the member already exists).
+        wizard
+      ) : (
+        <FeatureGate feature="multiple-patients" featureName="Family Member Management">
+          {wizard}
+        </FeatureGate>
+      )}
     </AuthGuard>
   )
 }
