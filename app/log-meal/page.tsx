@@ -9,6 +9,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
+import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import { mealLogOperations, useMealLogsRealtime, mealTemplateOperations, cookingSessionOperations, userProfileOperations } from '@/lib/firebase-operations'
 import { uploadMealPhoto } from '@/lib/storage-upload'
 import { useConfirm } from '@/hooks/useConfirm'
@@ -33,6 +34,8 @@ import { Suspense } from 'react'
 import { logger } from '@/lib/logger'
 import { medicalOperations } from '@/lib/medical-operations'
 import { EaterMultiSelect, type EaterSelection } from '@/components/log-meal/EaterMultiSelect'
+import IngredientListInput from '@/components/log-meal/IngredientListInput'
+import type { ParsedIngredient } from '@/lib/ingredient-parse'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel } from '@/lib/messaging/terminology'
@@ -75,7 +78,8 @@ const detectMealTypeFromTime = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' =>
 
   if (hour >= 5 && hour < 11) return 'breakfast'
   if (hour >= 11 && hour < 15) return 'lunch'
-  if (hour >= 15 && hour < 21) return 'dinner'
+  // Dinner runs until 11pm so a late evening meal isn't demoted to "snack".
+  if (hour >= 15 && hour < 23) return 'dinner'
   return 'snack'
 }
 
@@ -127,6 +131,71 @@ const detectMealTypeWithSchedule = (mealSchedule?: {
   }
   // Between lunch and dinner
   return 'dinner'
+}
+
+// Mobile-first, fat-finger tile styling for the log-meal entry methods (mirrors the patient
+// Quick Actions look). Shared constants + a MethodTile so the four tiles stay DRY + consistent.
+const TILE_BASE =
+  'aspect-square min-h-[128px] p-4 rounded-xl transition-transform active:scale-[0.97] flex flex-col items-center justify-center gap-2.5 text-center select-none'
+const TILE_PRIMARY = 'bg-primary text-white hover:bg-primary/90'
+const TILE_MUTED = 'bg-muted hover:bg-muted/80 text-foreground'
+const TILE_LABEL = 'text-sm font-semibold leading-tight'
+
+// Fat-finger toolbar chip for the Recent Meals actions (Export / Select / bulk-edit). ≥44px tap
+// target with icon + label — replaces the old tiny text links. Shared so every chip matches.
+const HISTORY_CHIP =
+  'inline-flex items-center justify-center gap-1.5 min-h-[44px] px-4 rounded-lg text-sm font-medium transition-transform active:scale-[0.97] disabled:opacity-60'
+const HISTORY_CHIP_MUTED = `${HISTORY_CHIP} bg-muted hover:bg-muted/80 text-foreground`
+
+/** One log-method tile (Scan / Template / Manual). Take Photo stays a <label> for its file input
+ *  but reuses the same TILE_* classes. Handlers unchanged — look/layout only. */
+function MethodTile({
+  icon,
+  label,
+  ariaLabel,
+  locked,
+  lockedLabel,
+  onLockedClick,
+  onClick,
+  loading,
+  loadingLabel,
+}: {
+  icon: string
+  label: string
+  ariaLabel: string
+  locked: boolean
+  lockedLabel: string
+  onLockedClick: () => void
+  onClick: () => void
+  loading?: boolean
+  loadingLabel?: string
+}) {
+  return (
+    <button
+      type="button"
+      onClick={locked ? onLockedClick : onClick}
+      disabled={!!loading && !locked}
+      aria-label={locked ? lockedLabel : ariaLabel}
+      className={`${TILE_BASE} ${TILE_MUTED} disabled:opacity-60`}
+    >
+      {locked ? (
+        <>
+          <LockClosedIcon className="w-8 h-8" />
+          <span className={TILE_LABEL}>{lockedLabel}</span>
+        </>
+      ) : loading ? (
+        <>
+          <Spinner size="sm" />
+          <span className={TILE_LABEL}>{loadingLabel}</span>
+        </>
+      ) : (
+        <>
+          <span className="text-5xl" aria-hidden="true">{icon}</span>
+          <span className={TILE_LABEL}>{label}</span>
+        </>
+      )}
+    </button>
+  )
 }
 
 function LogMealContent() {
@@ -248,6 +317,10 @@ function LogMealContent() {
     carbs: '',
     fat: ''
   })
+  // Optional ingredient breakdown for a manual entry — captured now, macros
+  // (or a saved recipe) can come later. Persisted to sourceRefs.cookedIngredients.
+  const [manualIngredients, setManualIngredients] = useState<ParsedIngredient[]>([])
+  const [showIngredientBreakdown, setShowIngredientBreakdown] = useState(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileReaderRef = useRef<FileReader | null>(null)
@@ -1054,6 +1127,14 @@ function LogMealContent() {
       const carbs = parseInt(manualEntryForm.carbs) || 0
       const fat = parseInt(manualEntryForm.fat) || 0
 
+      // Optional ingredient breakdown → structured snapshot on the meal log.
+      // ingredientText is required; quantity/unit are included only when parsed.
+      const cookedIngredients = manualIngredients.map((ing) => ({
+        ingredientText: ing.ingredientText,
+        ...(ing.quantity != null ? { quantity: ing.quantity } : {}),
+        ...(ing.unit ? { unit: ing.unit } : {}),
+      }))
+
       // Create manual entry meal log with nutrition data
       const response = await mealLogOperations.createMealLog({
         mealType: selectedMealType,
@@ -1074,7 +1155,12 @@ function LogMealContent() {
           carbs,
           fat,
           quantity: '1 serving'
-        }]
+        }],
+        // Only tag source/ingredients when the user actually added a breakdown,
+        // so plain quick-logs are unchanged.
+        ...(cookedIngredients.length > 0
+          ? { source: 'manual' as const, sourceRefs: { cookedIngredients } }
+          : {}),
       })
 
       logger.debug('✅ Manual entry saved:', response.data)
@@ -1102,6 +1188,8 @@ function LogMealContent() {
         carbs: '',
         fat: ''
       })
+      setManualIngredients([])
+      setShowIngredientBreakdown(false)
 
       // Clean up image state
       if (manualEntryImageUrlRef.current) {
@@ -2084,22 +2172,27 @@ function LogMealContent() {
             still trigger it, and so the existing manual / template
             / barcode paths keep working when fromRecipe is false. */}
         <div className={`card${fromRecipe ? ' hidden' : ''}`}>
-          <h2 className="mb-4">Take Photo</h2>
+          <h2 className="mb-4">Log Your Meal</h2>
 
             {!capturedImage && !showManualEntry && (
-              <div className="space-y-4">
+              // Quick-Actions-style tile grid: square icon tiles (2-up on mobile, 4-up on sm+).
+              // Same handlers / file input / locked + loading states as before — look only.
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {/* Take Photo — primary tile; stays a <label> so the hidden file input opens the
+                    camera. Reuses the same TILE_* classes as MethodTile. */}
                 {aiMealRecognitionLock.isLocked ? (
                   <button
                     type="button"
                     onClick={aiMealRecognitionLock.onLockedClick}
-                    className="btn btn-primary w-full inline-flex items-center justify-center gap-2"
+                    className={`${TILE_BASE} ${TILE_PRIMARY}`}
                   >
-                    <LockClosedIcon className="w-4 h-4" />
-                    Paused — Take Photo
+                    <LockClosedIcon className="w-8 h-8" />
+                    <span className={TILE_LABEL}>Paused — Take Photo</span>
                   </button>
                 ) : (
-                  <label className="btn btn-primary w-full cursor-pointer">
-                    📸 Take Photo
+                  <label className={`${TILE_BASE} ${TILE_PRIMARY} cursor-pointer`}>
+                    <span className="text-5xl" aria-hidden="true">📸</span>
+                    <span className={TILE_LABEL}>Take Photo</span>
                     <input
                       ref={photoInputRef}
                       type="file"
@@ -2110,54 +2203,36 @@ function LogMealContent() {
                     />
                   </label>
                 )}
-                <button
-                  onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowBarcodeScanner(true)}
-                  className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
-                  disabled={loadingBarcode && !logMealLock.isLocked}
-                  aria-label={logMealLock.isLocked ? 'Paused — Scan Barcode' : 'Scan barcode'}
-                >
-                  {logMealLock.isLocked ? (
-                    <>
-                      <LockClosedIcon className="w-4 h-4" />
-                      Paused — Scan Barcode
-                    </>
-                  ) : loadingBarcode ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Spinner size="sm" />
-                      Looking up product...
-                    </span>
-                  ) : (
-                    '🔍 Scan Barcode'
-                  )}
-                </button>
-                <button
-                  onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowTemplates(!showTemplates)}
-                  className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
-                  aria-label={logMealLock.isLocked ? 'Paused — Use Saved Template' : 'Use saved meal template'}
-                >
-                  {logMealLock.isLocked ? (
-                    <>
-                      <LockClosedIcon className="w-4 h-4" />
-                      Paused — Use Saved Template
-                    </>
-                  ) : (
-                    <>⭐ Use Saved Template</>
-                  )}
-                </button>
-                <button
-                  onClick={logMealLock.isLocked ? logMealLock.onLockedClick : () => setShowManualEntry(true)}
-                  className="btn btn-secondary w-full inline-flex items-center justify-center gap-2"
-                  aria-label={logMealLock.isLocked ? 'Paused — Enter Manually' : 'Enter meal details manually'}
-                >
-                  {logMealLock.isLocked ? (
-                    <>
-                      <LockClosedIcon className="w-4 h-4" />
-                      Paused — Enter Manually
-                    </>
-                  ) : (
-                    <>✏️ Enter Manually</>
-                  )}
-                </button>
+
+                <MethodTile
+                  icon="🔍"
+                  label="Scan Barcode"
+                  ariaLabel="Scan barcode"
+                  locked={logMealLock.isLocked}
+                  lockedLabel="Paused — Scan"
+                  onLockedClick={logMealLock.onLockedClick}
+                  onClick={() => setShowBarcodeScanner(true)}
+                  loading={loadingBarcode}
+                  loadingLabel="Looking up..."
+                />
+                <MethodTile
+                  icon="⭐"
+                  label="Use Template"
+                  ariaLabel="Use saved meal template"
+                  locked={logMealLock.isLocked}
+                  lockedLabel="Paused — Template"
+                  onLockedClick={logMealLock.onLockedClick}
+                  onClick={() => setShowTemplates(!showTemplates)}
+                />
+                <MethodTile
+                  icon="✏️"
+                  label="Enter Manually"
+                  ariaLabel="Enter meal details manually"
+                  locked={logMealLock.isLocked}
+                  lockedLabel="Paused — Manual"
+                  onLockedClick={logMealLock.onLockedClick}
+                  onClick={() => setShowManualEntry(true)}
+                />
               </div>
             )}
 
@@ -2342,6 +2417,41 @@ function LogMealContent() {
                   </div>
                 </div>
 
+                {/* Ingredients breakdown (optional, collapsed) — capture what
+                    they recall now; macros / save-as-recipe can follow later. */}
+                <div className="border border-border rounded-lg overflow-hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowIngredientBreakdown((v) => !v)}
+                    aria-expanded={showIngredientBreakdown}
+                    className="w-full flex items-center justify-between gap-2 min-h-[48px] px-3 text-left bg-muted/40 hover:bg-muted/60 transition-colors"
+                  >
+                    <span className="text-sm font-medium text-foreground">
+                      ＋ Add ingredients{' '}
+                      <span className="text-muted-foreground font-normal">(optional)</span>
+                      {manualIngredients.length > 0 && (
+                        <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 rounded-full bg-primary/10 text-primary text-xs font-semibold">
+                          {manualIngredients.length}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronDownIcon
+                      className={`w-5 h-5 shrink-0 text-muted-foreground transition-transform ${
+                        showIngredientBreakdown ? 'rotate-180' : ''
+                      }`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                  {showIngredientBreakdown && (
+                    <div className="px-3 pb-3 pt-3">
+                      <IngredientListInput
+                        value={manualIngredients}
+                        onChange={setManualIngredients}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-2">
@@ -2384,6 +2494,8 @@ function LogMealContent() {
                         carbs: '',
                         fat: ''
                       })
+                      setManualIngredients([])
+                      setShowIngredientBreakdown(false)
                       // Clean up image state
                       if (manualEntryImageUrlRef.current) {
                         URL.revokeObjectURL(manualEntryImageUrlRef.current)
@@ -2876,12 +2988,13 @@ function LogMealContent() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium text-foreground">Recent Meals</h2>
             {mealHistory.length > 0 && !multiSelectMode && (
-              <div className="flex items-center space-x-2 relative">
+              <div className="flex items-center gap-2 relative">
                 <button
                   onClick={() => setShowExportMenu(!showExportMenu)}
-                  className="text-sm text-primary hover:text-primary-hover"
+                  className={HISTORY_CHIP_MUTED}
+                  aria-label="Export meals"
                 >
-                  📥 Export
+                  <span aria-hidden="true">📥</span> Export
                 </button>
 
                 {showExportMenu && (
@@ -2890,18 +3003,18 @@ function LogMealContent() {
                       className="fixed inset-0 z-10"
                       onClick={() => setShowExportMenu(false)}
                     />
-                    <div className="absolute right-0 top-8 z-20 bg-card border border-border rounded-lg shadow-lg py-2 min-w-[120px]">
+                    <div className="absolute right-0 top-full mt-2 z-20 bg-card border border-border rounded-lg shadow-lg py-1.5 min-w-[160px]">
                       <button
                         onClick={handleExportCSV}
-                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
+                        className="w-full flex items-center gap-2 text-left px-4 min-h-[44px] text-sm text-foreground hover:bg-muted"
                       >
-                        📄 CSV
+                        <span aria-hidden="true">📄</span> CSV
                       </button>
                       <button
                         onClick={handleExportPDF}
-                        className="w-full text-left px-4 py-2 text-sm text-foreground hover:bg-muted"
+                        className="w-full flex items-center gap-2 text-left px-4 min-h-[44px] text-sm text-foreground hover:bg-muted"
                       >
-                        📑 PDF
+                        <span aria-hidden="true">📑</span> PDF
                       </button>
                     </div>
                   </>
@@ -2909,9 +3022,10 @@ function LogMealContent() {
 
                 <button
                   onClick={() => setMultiSelectMode(true)}
-                  className="text-sm text-primary hover:text-primary-hover"
+                  className={HISTORY_CHIP_MUTED}
+                  aria-label="Select meals"
                 >
-                  Select
+                  <span aria-hidden="true">☑️</span> Select
                 </button>
               </div>
             )}
@@ -2920,32 +3034,32 @@ function LogMealContent() {
           {/* Multi-select actions */}
           {multiSelectMode && (
             <div className="mb-4 p-3 bg-primary-light dark:bg-purple-900/20 rounded-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-3">
                   <span className="text-sm font-medium text-foreground">
                     {selectedMealIds.size} selected
                   </span>
                   {selectedMealIds.size < filteredMeals.length ? (
                     <button
                       onClick={selectAllMeals}
-                      className="text-xs text-primary hover:text-primary-hover"
+                      className={HISTORY_CHIP_MUTED}
                     >
                       Select All
                     </button>
                   ) : (
                     <button
                       onClick={deselectAllMeals}
-                      className="text-xs text-primary hover:text-primary-hover"
+                      className={HISTORY_CHIP_MUTED}
                     >
                       Deselect All
                     </button>
                   )}
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center gap-2">
                   {selectedMealIds.size > 0 && (
                     <button
                       onClick={deleteSelectedMeals}
-                      className="text-sm bg-error text-white px-3 py-1 rounded hover:bg-error-dark"
+                      className={`${HISTORY_CHIP} bg-error text-white hover:bg-error-dark`}
                     >
                       Delete ({selectedMealIds.size})
                     </button>
@@ -2955,7 +3069,7 @@ function LogMealContent() {
                       setMultiSelectMode(false)
                       setSelectedMealIds(new Set())
                     }}
-                    className="text-sm bg-muted text-foreground px-3 py-1 rounded hover:bg-gray-300"
+                    className={HISTORY_CHIP_MUTED}
                   >
                     Cancel
                   </button>
