@@ -126,25 +126,22 @@ function AcceptInvitationContent() {
       })
       toast.success('Invitation accepted!')
 
-      // Check if user has their own account (onboarding completed)
-      const userProfileResponse = await fetch('/api/users/profile')
-      const userProfile = userProfileResponse.ok ? await userProfileResponse.json() : null
-
-      const hasOwnAccount = userProfile?.data?.profile?.onboardingCompleted === true
-
-      // Redirect based on account status.
+      // Land on the caregiver surface for the owner they just agreed to help —
+      // ALWAYS, regardless of whether this user also has their own account.
       //
-      // Use a FULL page load (window.location), not router.push: accepting an
-      // invitation just changed this user's role/permissions server-side. A
-      // hard navigation guarantees the destination loads with fresh code AND a
-      // fresh users-doc read (the just-written caregiverOf grant) — a
-      // client-side push would keep the stale in-memory bundle and a cached
-      // profile, which is exactly what stranded fresh invitees on /pricing.
-      const destination = hasOwnAccount
-        ? '/family/dashboard'
-        : `/caregiver/${invitation.invitedByUserId}`
+      // Accepting a caregiver invitation is a caregiving action, and
+      // /caregiver/{owner} is a subscription-free zone (it gates on the OWNER's
+      // plan, never the caller's). Routing a dual-role user to their own
+      // /family/dashboard instead dropped an owner-caregiver with an expired
+      // personal plan onto their own paywalled surface → /pricing. Dual-role
+      // users can still reach their own hub via the AccountSwitcher.
+      //
+      // Use a FULL page load (window.location), not router.push: the accept
+      // just changed this user's role server-side, so a hard navigation
+      // guarantees fresh code AND a fresh users-doc read (the just-written
+      // caregiverOf grant) rather than a stale in-memory bundle.
       setTimeout(() => {
-        window.location.assign(destination)
+        window.location.assign(`/caregiver/${invitation.invitedByUserId}`)
       }, 800)
     } catch (err: any) {
       toast.error(err.message || 'Failed to accept invitation')

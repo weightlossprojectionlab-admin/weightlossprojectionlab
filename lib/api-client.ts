@@ -12,7 +12,7 @@ import { z } from 'zod'
 import { getAuth } from 'firebase/auth'
 import { ErrorHandler } from './utils/error-handler'
 import { getCSRFToken } from './csrf'
-import { requireWriteAccess } from './access-guards'
+import { requireWriteAccess, isSubscriptionExemptWrite } from './access-guards'
 
 // ============================================
 // TYPES
@@ -155,7 +155,7 @@ class ApiClient {
     // subscription is read-only, requireWriteAccess fires the toast
     // + /pricing redirect AND throws WriteLockedError so the caller
     // can short-circuit if it wants.
-    if (method.toUpperCase() !== 'GET') {
+    if (method.toUpperCase() !== 'GET' && !isSubscriptionExemptWrite(endpoint)) {
       await requireWriteAccess()
     }
 

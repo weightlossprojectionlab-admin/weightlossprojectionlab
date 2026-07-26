@@ -123,6 +123,26 @@ export async function requireWriteAccess(): Promise<void> {
 }
 
 /**
+ * True for write endpoints that must NEVER be subscription-gated on the
+ * client, because they are account-relationship operations — not
+ * subscription-gated data writes on the caller's own account.
+ *
+ * Accepting/declining a family invitation is the canonical case: the accept
+ * route creates a caregiver relationship and has no server-side subscription
+ * check. Gating it on the CALLER's own plan paywalled an owner-caregiver with
+ * an expired personal subscription before they could ever join someone else's
+ * household — the whole point of being a caregiver is to work under the
+ * OWNER's plan, which the server (owner-subscription-guard) enforces on the
+ * actual data writes that follow.
+ *
+ * Matched on the api-client endpoint path (baseUrl-relative) OR a full
+ * request URL, so both client choke points can share one predicate.
+ */
+export function isSubscriptionExemptWrite(endpointOrUrl: string): boolean {
+  return /\/invitations\/[^/]+\/(accept|decline)(\?|$)/.test(endpointOrUrl)
+}
+
+/**
  * Sync variant for code paths that already have the subscription
  * in scope (e.g., a component that called useSubscription and is
  * passing the value to an operation). Avoids the cache lookup.
