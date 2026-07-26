@@ -53,14 +53,49 @@ export default function MealTrackingGuidePage() {
       </div>
 
       <h3>2. Quick Log (No Photo)</h3>
-      <p>For times when you can't take a photo:</p>
+      <p>For times when you can't take a photo, you can type the details yourself:</p>
       <ol>
         <li>Go to <strong>Log Meal</strong></li>
-        <li>Select meal type</li>
-        <li>Skip photo by clicking <strong>Log without photo</strong></li>
-        <li>Manually enter meal details</li>
-        <li>Save</li>
+        <li>Tap <strong>Enter Manually</strong></li>
+        <li>Type a <strong>meal name</strong> (this is the only thing you must fill in)</li>
+        <li>
+          Check the <strong>meal type</strong> — it's already set based on the time of day, but
+          you can change it
+        </li>
+        <li>If you know them, add <strong>calories</strong> and <strong>macros</strong> (all optional)</li>
+        <li>Add a photo or notes if you'd like (optional)</li>
+        <li>Tap <strong>Save Meal</strong></li>
       </ol>
+
+      <h3>Add an Ingredients Breakdown (Optional)</h3>
+      <p>
+        Don't know the calories or macros? That's okay. You can list the ingredients you
+        remember instead — even without amounts — and finish the rest later.
+      </p>
+      <ol>
+        <li>In the manual entry form, tap <strong>＋ Add ingredients</strong> (just above Notes)</li>
+        <li>
+          Type or paste your ingredients on one line, separated by commas — for example:{' '}
+          <em>2 eggs, 1 tbsp butter, 1/2 cup oats</em>
+        </li>
+        <li>Tap <strong>＋ Add</strong> (or press Enter). Each ingredient becomes its own row</li>
+        <li>Tap any row to fix it, or tap the <strong>✕</strong> to remove it</li>
+        <li>Tap <strong>Save Meal</strong> when you're done</li>
+      </ol>
+
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-6 my-6 rounded-r-lg">
+        <p className="font-semibold text-blue-900 mb-2">💡 Why add ingredients?</p>
+        <ul className="text-blue-800 space-y-1 m-0">
+          <li>Amounts are optional — add whatever you can remember</li>
+          <li>
+            Your ingredients are saved with the meal, so you can come back and add the amounts or
+            macros whenever you have a minute
+          </li>
+          <li>
+            It's a great way to keep a record of a new meal you tried and want to remember
+          </li>
+        </ul>
+      </div>
 
       <h3>3. Offline Mode</h3>
       <p>
