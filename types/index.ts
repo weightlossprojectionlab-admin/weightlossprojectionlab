@@ -537,6 +537,7 @@ export interface MealTemplate {
   calories: number
   macros: MacroNutrients
   notes?: string
+  photoUrl?: string
   usageCount: number
   lastUsed?: Date
   createdAt: Date

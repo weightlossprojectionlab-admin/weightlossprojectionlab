@@ -63,9 +63,11 @@ export async function POST(request: NextRequest) {
     const userId = decodedToken.uid
 
     const body = await request.json()
-    const { name, mealType, foodItems, calories, macros, notes } = body
+    const { name, mealType, foodItems, calories, macros, notes, photoUrl } = body
 
-    if (!name || !mealType || !foodItems || !calories || !macros) {
+    // calories may legitimately be 0 (meal saved before macros were estimated),
+    // so check for null/undefined rather than falsiness.
+    if (!name || !mealType || !foodItems || calories == null || !macros) {
       return NextResponse.json(
         { error: 'Missing required fields: name, mealType, foodItems, calories, macros' },
         { status: 400 }
@@ -93,6 +95,7 @@ export async function POST(request: NextRequest) {
       createdAt: Timestamp.now()
     }
     if (notes) templateData.notes = notes
+    if (photoUrl) templateData.photoUrl = photoUrl
 
     const templateRef = await adminDb
       .collection('users')

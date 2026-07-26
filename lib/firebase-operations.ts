@@ -394,6 +394,7 @@ export const mealTemplateOperations = {
       fiber: number
     }
     notes?: string
+    photoUrl?: string
   }) {
     return makeAuthenticatedRequest('/api/meal-templates', {
       method: 'POST',
