@@ -3,7 +3,7 @@
 import { logger } from '@/lib/logger'
 import { auth, db } from './firebase'
 import { getCSRFToken } from '@/lib/csrf'
-import { requireWriteAccess } from '@/lib/access-guards'
+import { requireWriteAccess, isSubscriptionExemptWrite } from '@/lib/access-guards'
 import {
   collection,
   doc,
@@ -66,7 +66,7 @@ const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) 
   // subscription is read-only, requireWriteAccess fires the toast +
   // /pricing redirect AND throws WriteLockedError.
   const method = (options.method || 'GET').toUpperCase()
-  if (method !== 'GET') {
+  if (method !== 'GET' && !isSubscriptionExemptWrite(url)) {
     await requireWriteAccess()
   }
 
