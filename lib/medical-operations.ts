@@ -480,6 +480,25 @@ export const familyOperations = {
   },
 
   /**
+   * Delete a terminal-state invitation (sender only). Server enforces that
+   * only revoked/declined/expired invitations can be deleted.
+   */
+  async deleteInvitation(invitationId: string): Promise<void> {
+    try {
+      logger.info('[MedicalOps] Deleting invitation', { invitationId })
+
+      await makeAuthenticatedRequest<void>(`/invitations/${invitationId}`, {
+        method: 'DELETE'
+      })
+
+      logger.info('[MedicalOps] Invitation deleted successfully', { invitationId })
+    } catch (error) {
+      logger.error('[MedicalOps] Error deleting invitation', error as Error, { invitationId })
+      throw error
+    }
+  },
+
+  /**
    * Get family members for a specific patient
    * @param includeAll - If true, returns ALL family members in account (for driver assignment)
    *                     If false, returns only family members with access to this patient (for medical records)

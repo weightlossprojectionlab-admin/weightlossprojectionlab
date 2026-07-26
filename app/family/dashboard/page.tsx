@@ -41,7 +41,7 @@ export default function FamilyDashboardPage() {
 function FamilyDashboardContent() {
   const { user } = useAuth()
   const { familyMembers, loading: familyLoading, transferOwnership } = useFamilyRoles()
-  const { sentInvitations, receivedInvitations, loading: invitationsLoading, acceptInvitation, declineInvitation, revokeInvitation, resendInvitation } = useInvitations()
+  const { sentInvitations, receivedInvitations, loading: invitationsLoading, acceptInvitation, declineInvitation, revokeInvitation, resendInvitation, deleteInvitation } = useInvitations()
   const { patients, loading: patientsLoading } = usePatients()
   const { households, loading: householdsLoading } = useHouseholds()
 
@@ -81,6 +81,32 @@ function FamilyDashboardContent() {
   const activeMembers = useMemo(() => {
     return familyMembers.filter(m => m.status === 'accepted')
   }, [familyMembers])
+
+  // A sent invitation is "dead" (safe to delete) once it's revoked, declined,
+  // or a pending invite that has passed its expiry. Accepted invites are kept
+  // as the record of granted access. Mirrors the server-side deletable rule.
+  const isDeadInvitation = (inv: FamilyInvitation) =>
+    inv.status === 'revoked' ||
+    inv.status === 'declined' ||
+    inv.status === 'expired' ||
+    (inv.status === 'pending' && !!inv.expiresAt && new Date(inv.expiresAt).getTime() < Date.now())
+
+  const deadSentInvitations = useMemo(
+    () => sentInvitations.filter(isDeadInvitation),
+    [sentInvitations]
+  )
+
+  const handleClearDeadInvitations = async () => {
+    // deleteInvitation shows its own error toast; keep going so one failure
+    // doesn't strand the rest.
+    for (const inv of deadSentInvitations) {
+      try {
+        await deleteInvitation(inv.id)
+      } catch {
+        /* already surfaced by the hook */
+      }
+    }
+  }
 
   const loading = familyLoading || invitationsLoading || patientsLoading || householdsLoading
 
@@ -303,9 +329,19 @@ function FamilyDashboardContent() {
 
                 {/* Sent Invitations Section */}
                 <section>
-                  <h2 className="text-xl font-semibold text-foreground mb-4">
-                    Sent Invitations ({sentInvitations.length})
-                  </h2>
+                  <div className="flex items-center justify-between gap-3 mb-4">
+                    <h2 className="text-xl font-semibold text-foreground">
+                      Sent Invitations ({sentInvitations.length})
+                    </h2>
+                    {deadSentInvitations.length > 0 && (
+                      <button
+                        onClick={handleClearDeadInvitations}
+                        className="text-sm text-muted-foreground hover:text-error transition-colors"
+                      >
+                        Clear expired & revoked ({deadSentInvitations.length})
+                      </button>
+                    )}
+                  </div>
                   {sentInvitations.length === 0 ? (
                     <div className="bg-card rounded-lg border-2 border-border p-6 text-center">
                       <p className="text-muted-foreground mb-4">
@@ -327,6 +363,7 @@ function FamilyDashboardContent() {
                           type="sent"
                           onRevoke={() => revokeInvitation(invitation.id)}
                           onResend={() => resendInvitation(invitation.id)}
+                          onDelete={() => deleteInvitation(invitation.id)}
                           getStatusColor={getStatusColor}
                           formatDate={formatDate}
                         />
@@ -681,6 +718,7 @@ interface InvitationCardProps {
   onDecline?: () => void
   onRevoke?: () => void
   onResend?: () => void
+  onDelete?: () => void
   getStatusColor: (status: string) => string
   formatDate: (date?: string) => string
 }
@@ -692,10 +730,25 @@ function InvitationCard({
   onDecline,
   onRevoke,
   onResend,
+  onDelete,
   getStatusColor,
   formatDate
 }: InvitationCardProps) {
   const permissionCount = Object.values(invitation.permissions).filter(Boolean).length
+
+  // A pending invite past its expiry is effectively expired even though the
+  // stored status still reads 'pending'.
+  const isExpired = invitation.expiresAt
+    ? new Date(invitation.expiresAt).getTime() < Date.now()
+    : false
+  const isActivePending = invitation.status === 'pending' && !isExpired
+  const isDead =
+    invitation.status === 'revoked' ||
+    invitation.status === 'declined' ||
+    invitation.status === 'expired' ||
+    (invitation.status === 'pending' && isExpired)
+  const statusLabel =
+    invitation.status === 'pending' && isExpired ? 'expired' : invitation.status
 
   return (
     <div className="bg-card rounded-lg border-2 border-border p-6">
@@ -708,8 +761,8 @@ function InvitationCard({
             {type === 'sent' ? `Sent by you` : `From ${invitation.invitedByName}`}
           </p>
         </div>
-        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(invitation.status)}`}>
-          {invitation.status.charAt(0).toUpperCase() + invitation.status.slice(1)}
+        <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(statusLabel)}`}>
+          {statusLabel.charAt(0).toUpperCase() + statusLabel.slice(1)}
         </span>
       </div>
 
@@ -762,7 +815,7 @@ function InvitationCard({
 
       {/* Actions */}
       <div className="flex items-center gap-2 pt-4 border-t border-border">
-        {invitation.status === 'pending' && type === 'received' && (
+        {isActivePending && type === 'received' && (
           <>
             <button
               onClick={onAccept}
@@ -778,7 +831,7 @@ function InvitationCard({
             </button>
           </>
         )}
-        {invitation.status === 'pending' && type === 'sent' && (
+        {isActivePending && type === 'sent' && (
           <>
             <button
               onClick={onResend}
@@ -794,9 +847,33 @@ function InvitationCard({
             </button>
           </>
         )}
-        {invitation.status !== 'pending' && (
+
+        {/* Dead sent invites: let the sender re-send an expired one and/or
+            remove the row entirely. */}
+        {isDead && type === 'sent' && (
+          <>
+            {invitation.status === 'pending' && isExpired && (
+              <button
+                onClick={onResend}
+                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
+              >
+                Resend Email
+              </button>
+            )}
+            <button
+              onClick={onDelete}
+              className="px-4 py-2 text-error hover:bg-error-light dark:hover:bg-red-900/20 rounded-lg transition-colors text-sm font-medium"
+            >
+              Delete
+            </button>
+          </>
+        )}
+
+        {/* Terminal states kept for the record (accepted), or the recipient's
+            read-only view of a dead invite. */}
+        {(invitation.status === 'accepted' || (isDead && type === 'received')) && (
           <div className="text-sm text-muted-foreground italic">
-            This invitation has been {invitation.status}
+            This invitation has been {statusLabel}
             {invitation.acceptedAt && ` on ${formatDate(invitation.acceptedAt)}`}
           </div>
         )}

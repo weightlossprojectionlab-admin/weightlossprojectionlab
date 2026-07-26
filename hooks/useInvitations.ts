@@ -21,6 +21,7 @@ interface UseInvitationsReturn {
   declineInvitation: (invitationId: string) => Promise<void>
   revokeInvitation: (invitationId: string) => Promise<void>
   resendInvitation: (invitationId: string) => Promise<void>
+  deleteInvitation: (invitationId: string) => Promise<void>
 }
 
 export function useInvitations(autoFetch = true): UseInvitationsReturn {
@@ -186,6 +187,28 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
     []
   )
 
+  const deleteInvitation = useCallback(
+    async (invitationId: string): Promise<void> => {
+      // Snapshot for revert; optimistically drop the row.
+      let previous: FamilyInvitation[] = []
+      setSentInvitations(prev => {
+        previous = prev
+        return prev.filter(inv => inv.id !== invitationId)
+      })
+
+      try {
+        await medicalOperations.family.deleteInvitation(invitationId)
+        toast.success('Invitation removed')
+      } catch (err: any) {
+        setSentInvitations(previous) // revert
+        const errorMsg = err.message || 'Failed to remove invitation'
+        toast.error(errorMsg)
+        throw err
+      }
+    },
+    []
+  )
+
   return {
     sentInvitations,
     receivedInvitations,
@@ -196,6 +219,7 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
     acceptInvitation,
     declineInvitation,
     revokeInvitation,
-    resendInvitation
+    resendInvitation,
+    deleteInvitation
   }
 }
