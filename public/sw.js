@@ -1,5 +1,5 @@
 // Service Worker for offline support with auto-update detection
-const VERSION = '8'; // Increment this to force update
+const VERSION = '9'; // Increment this to force update
 const CACHE_NAME = `wlpl-v${VERSION}`;
 const PHOTO_CACHE_NAME = 'wlpl-photos-v1';
 const MEDICAL_CACHE_NAME = 'wlpl-medical-v1';
