@@ -15,34 +15,34 @@ export default function MealTrackingGuidePage() {
       appRoute="/log-meal"
     >
       <div className="bg-blue-50 border-l-4 border-blue-500 p-6 mb-8 rounded-r-lg">
-        <p className="font-semibold text-blue-900 mb-2">💡 Pro Tip</p>
+        <p className="font-semibold text-blue-900 mb-2">💡 Pro tip</p>
         <p className="text-blue-800 m-0">
           For best results, take photos in good lighting and capture the entire meal. Our AI
           works best when it can clearly see all components of your dish.
         </p>
       </div>
 
-      <h2 id="getting-started">Getting Started</h2>
+      <h2 id="getting-started">Getting started</h2>
       <p>
         Meal tracking in WPL is designed to be quick and intuitive. Whether you're logging
         breakfast, lunch, dinner, or a snack, the process takes just seconds.
       </p>
 
-      <h2 id="methods">Three Ways to Track Meals</h2>
+      <h2 id="methods">Three ways to track meals</h2>
 
-      <h3>1. Photo Logging (Recommended)</h3>
+      <h3>1. Photo logging (recommended)</h3>
       <ol>
-        <li>Navigate to the <strong>Log Meal</strong> page from the main menu</li>
+        <li>Navigate to the <strong>Log meal</strong> page from the main menu</li>
         <li>Select your meal type (Breakfast, Lunch, Dinner, or Snack)</li>
         <li>Take a photo of your meal or upload from gallery</li>
         <li>Wait 2-3 seconds while our AI analyzes the meal</li>
         <li>Review the AI's nutritional analysis</li>
         <li>Add optional notes (allergies, portions, feelings)</li>
-        <li>Tap <strong>Save Meal</strong></li>
+        <li>Tap <strong>Save meal</strong></li>
       </ol>
 
       <div className="bg-gray-100 p-4 rounded-lg my-6">
-        <p className="text-sm text-gray-700 font-medium mb-2">What the AI Detects:</p>
+        <p className="text-sm text-gray-700 font-medium mb-2">What the AI detects:</p>
         <ul className="text-sm text-gray-600 space-y-1 m-0">
           <li>✓ Food items and ingredients</li>
           <li>✓ Estimated calories</li>
@@ -52,11 +52,11 @@ export default function MealTrackingGuidePage() {
         </ul>
       </div>
 
-      <h3>2. Quick Log (No Photo)</h3>
+      <h3>2. Quick log (no photo)</h3>
       <p>For times when you can't take a photo, you can type the details yourself:</p>
       <ol>
-        <li>Go to <strong>Log Meal</strong></li>
-        <li>Tap <strong>Enter Manually</strong></li>
+        <li>Go to <strong>Log meal</strong></li>
+        <li>Tap <strong>Enter manually</strong></li>
         <li>Type a <strong>meal name</strong> (this is the only thing you must fill in)</li>
         <li>
           Check the <strong>meal type</strong> — it's already set based on the time of day, but
@@ -64,10 +64,10 @@ export default function MealTrackingGuidePage() {
         </li>
         <li>If you know them, add <strong>calories</strong> and <strong>macros</strong> (all optional)</li>
         <li>Add a photo or notes if you'd like (optional)</li>
-        <li>Tap <strong>Save Meal</strong></li>
+        <li>Tap <strong>Save meal</strong></li>
       </ol>
 
-      <h3>Add an Ingredients Breakdown (Optional)</h3>
+      <h3>Add an ingredients breakdown (optional)</h3>
       <p>
         Don't know the calories or macros? That's okay. You can list the ingredients you
         remember instead — even without amounts — and finish the rest later.
@@ -80,7 +80,7 @@ export default function MealTrackingGuidePage() {
         </li>
         <li>Tap <strong>＋ Add</strong> (or press Enter). Each ingredient becomes its own row</li>
         <li>Tap any row to fix it, or tap the <strong>✕</strong> to remove it</li>
-        <li>Tap <strong>Save Meal</strong> when you're done</li>
+        <li>Tap <strong>Save meal</strong> when you're done</li>
       </ol>
 
       <div className="bg-blue-50 border-l-4 border-blue-500 p-6 my-6 rounded-r-lg">
@@ -97,7 +97,7 @@ export default function MealTrackingGuidePage() {
         </ul>
       </div>
 
-      <h3>3. Offline Mode</h3>
+      <h3>3. Offline mode</h3>
       <p>
         No internet? No problem! WPL works offline and will automatically sync your meals when
         you reconnect.
@@ -109,7 +109,7 @@ export default function MealTrackingGuidePage() {
         <li>You'll see a success notification once synced</li>
       </ol>
 
-      <h2 id="ai-analysis">Understanding AI Analysis</h2>
+      <h2 id="ai-analysis">Understanding AI analysis</h2>
       <p>
         Our AI uses advanced computer vision to analyze your meal photos. Here's what each
         metric means:
@@ -128,13 +128,13 @@ export default function MealTrackingGuidePage() {
         <li><strong>Fats:</strong> Important for hormone production and nutrient absorption</li>
       </ul>
 
-      <h3>Confidence Score</h3>
+      <h3>Confidence score</h3>
       <p>
         Each analysis includes a confidence percentage. Higher confidence (80%+) means the AI
         is very certain about its analysis.
       </p>
 
-      <h2 id="best-practices">Best Practices</h2>
+      <h2 id="best-practices">Best practices</h2>
 
       <div className="space-y-4">
         <div className="border-l-4 border-green-500 pl-4">
@@ -159,7 +159,7 @@ export default function MealTrackingGuidePage() {
         </div>
       </div>
 
-      <h2 id="caregiver">Logging for Family Members</h2>
+      <h2 id="caregiver">Logging for family members</h2>
       <p>Caregivers can log meals on behalf of family members or patients:</p>
       <ol>
         <li>Switch to the patient's profile using the account switcher</li>
@@ -168,7 +168,7 @@ export default function MealTrackingGuidePage() {
         <li>Both you and the patient can view the meal history</li>
       </ol>
 
-      <h2 id="viewing-history">Viewing Meal History</h2>
+      <h2 id="viewing-history">Viewing meal history</h2>
       <p>Access your complete meal history from the dashboard:</p>
       <ul>
         <li><strong>Timeline view:</strong> See all meals chronologically</li>
@@ -202,13 +202,13 @@ export default function MealTrackingGuidePage() {
         <li>Contact support if issues persist</li>
       </ul>
 
-      <h2 id="next-steps">Next Steps</h2>
+      <h2 id="next-steps">Next steps</h2>
       <div className="grid md:grid-cols-2 gap-4 not-prose">
         <Link
           href="/docs/user-guides/weight-logging"
           className="block p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
         >
-          <h3 className="font-semibold text-gray-900 mb-2">Weight Logging →</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">Weight logging →</h3>
           <p className="text-sm text-gray-600">
             Learn how to track weight changes alongside your meals
           </p>
@@ -217,7 +217,7 @@ export default function MealTrackingGuidePage() {
           href="/docs/user-guides/progress-tracking"
           className="block p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
         >
-          <h3 className="font-semibold text-gray-900 mb-2">Progress Tracking →</h3>
+          <h3 className="font-semibold text-gray-900 mb-2">Progress tracking →</h3>
           <p className="text-sm text-gray-600">
             View charts and analytics of your health journey
           </p>
