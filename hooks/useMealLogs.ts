@@ -94,8 +94,11 @@ export function useMealLogsRealtime(params?: {
           let logs = snapshot.docs.map((doc) => {
             const data = doc.data() as Record<string, any>
             return {
-              id: doc.id,
               ...data,
+              // doc.id must win over any stored `id` field (seeded/imported meals
+              // often carry one) — otherwise edit/delete target a wrong id and
+              // 404 with "Meal log not found".
+              id: doc.id,
               // Normalize API structure (totalCalories, macros.*) to the UI
               // shape (calories, protein, …); tolerate either on both paths.
               calories: data.totalCalories ?? data.calories ?? 0,

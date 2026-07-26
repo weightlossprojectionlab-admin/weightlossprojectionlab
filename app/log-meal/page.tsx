@@ -35,7 +35,7 @@ import { logger } from '@/lib/logger'
 import { medicalOperations } from '@/lib/medical-operations'
 import { EaterMultiSelect, type EaterSelection } from '@/components/log-meal/EaterMultiSelect'
 import IngredientListInput from '@/components/log-meal/IngredientListInput'
-import type { ParsedIngredient } from '@/lib/ingredient-parse'
+import { parseIngredientList, type ParsedIngredient } from '@/lib/ingredient-parse'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel } from '@/lib/messaging/terminology'
@@ -271,17 +271,14 @@ function LogMealContent() {
   const [deletingMealId, setDeletingMealId] = useState<string | null>(null)
   const [aiSuggestedMealType, setAiSuggestedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack' | null>(null)
   const [showMealTypeSuggestion, setShowMealTypeSuggestion] = useState(false)
+  // Editing a meal reuses the manual entry form (single source). editingMealId
+  // set = the form is in "update" mode; editingPhotoUrl preserves the meal's
+  // existing photo on save unless a new one is uploaded.
   const [editingMealId, setEditingMealId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<{
-    description: string
-    mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack'
-    notes: string
-  }>({ description: '', mealType: 'breakfast', notes: '' })
+  const [editingPhotoUrl, setEditingPhotoUrl] = useState<string | null>(null)
   const [filterMealType, setFilterMealType] = useState<'all' | 'breakfast' | 'lunch' | 'dinner' | 'snack'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [mealTemplates, setMealTemplates] = useState<MealTemplate[]>([])
-  const [duplicateMeal, setDuplicateMeal] = useState<{ id: string; description: string; mealType: string } | null>(null)
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false)
   const [loadingTemplates, setLoadingTemplates] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [showSaveTemplate, setShowSaveTemplate] = useState(false)
@@ -297,7 +294,6 @@ function LogMealContent() {
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [deletingTemplateId, setDeletingTemplateId] = useState<string | null>(null)
   const [usingTemplateId, setUsingTemplateId] = useState<string | null>(null)
-  const [updatingMealId, setUpdatingMealId] = useState<string | null>(null)
   const [showManualEntry, setShowManualEntry] = useState(false)
   const [showBarcodeScanner, setShowBarcodeScanner] = useState(false)
   const [loadingBarcode, setLoadingBarcode] = useState(false)
@@ -339,52 +335,12 @@ function LogMealContent() {
   })
 
   // Check if a meal of this type already exists today
-  const checkForDuplicateMeal = (mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack') => {
-    // Snacks are unlimited
-    if (mealType === 'snack') return null
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
-
-    const existingMeal = mealHistory?.find(meal => {
-      const mealDate = new Date(meal.loggedAt)
-      return meal.mealType === mealType &&
-             mealDate >= today &&
-             mealDate < tomorrow
-    })
-
-    return existingMeal || null
-  }
-
   // Weekly missions for progress tracking
   const { checkProgress } = useMissions(auth.currentUser?.uid)
 
   // PHASE 2: Get user's meal logging preferences
   const userPrefs = useUserPreferences()
   const photoInputRef = useRef<HTMLInputElement>(null)
-
-  // Check for duplicate meal on page load
-  useEffect(() => {
-    if (!loadingHistory && mealHistory) {
-      const existingMeal = checkForDuplicateMeal(selectedMealType)
-      if (existingMeal) {
-        // Get meal description from title field or first food item
-        const mealDescription = existingMeal.description ||
-                               existingMeal.foodItems?.[0] ||
-                               'Untitled meal'
-
-        setDuplicateMeal({
-          id: existingMeal.id,
-          description: mealDescription,
-          mealType: selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1)
-        })
-        setShowDuplicateModal(true)
-      }
-    }
-  }, [loadingHistory, mealHistory, selectedMealType])
 
   // Client-side filtering for search query (includes description, food items, and notes)
   const filteredMeals = searchQuery
@@ -1143,22 +1099,50 @@ function LogMealContent() {
         ...(ing.unit ? { unit: ing.unit } : {}),
       }))
 
-      // Route the write by scope. When logging for a family member, save to
-      // THEIR meal logs (what the Recent meals list reads) — mirroring the AI/
-      // photo path. Without this branch the meal lands in the caregiver's own
-      // logs and never appears in the patient's list.
-      if (patientIdParam) {
+      // Ingredient texts for the patient schema (foodItems), falling back to the
+      // meal name. On update, preserve the existing photo unless a new one was
+      // uploaded.
+      const ingredientTexts =
+        cookedIngredients.length > 0 ? manualIngredients.map((i) => i.ingredientText) : [sanitizedMealName]
+      const photoForSave = photoUrl || editingPhotoUrl || undefined
+
+      // Route by MODE (update vs create) then SCOPE (family member vs self).
+      // Family-member writes go to the patient's meal-logs (what the Recent
+      // meals list reads); self writes go to the user's own mealLogs.
+      if (editingMealId) {
+        if (patientIdParam) {
+          await medicalOperations.mealLogs.updateMealLog(patientIdParam, editingMealId, {
+            mealType: selectedMealType,
+            description: sanitizedMealName,
+            foodItems: ingredientTexts,
+            calories,
+            protein,
+            carbs,
+            fat,
+            notes: sanitizedNotes || undefined,
+            ...(photoForSave ? { photoUrl: photoForSave } : {}),
+          })
+        } else {
+          // Self update route reads title + manualEntries (it recomputes
+          // totals). Note: self ingredient edits aren't persisted by that route.
+          await mealLogOperations.updateMealLog(editingMealId, {
+            mealType: selectedMealType,
+            title: sanitizedMealName,
+            notes: sanitizedNotes || undefined,
+            manualEntries: [
+              { food: sanitizedMealName, calories, quantity: '1 serving', protein, carbs, fat },
+            ],
+          })
+        }
+      } else if (patientIdParam) {
         await medicalOperations.mealLogs.logMeal(patientIdParam, {
           mealType: selectedMealType,
           title: sanitizedMealName,
           description: sanitizedMealName,
           // The patient MealLog schema has no sourceRefs; the ingredient
-          // breakdown lives in foodItems (fall back to the meal name).
-          foodItems:
-            cookedIngredients.length > 0
-              ? manualIngredients.map((i) => i.ingredientText)
-              : [sanitizedMealName],
-          photoUrl: photoUrl || undefined,
+          // breakdown lives in foodItems.
+          foodItems: ingredientTexts,
+          photoUrl: photoForSave,
           calories,
           protein,
           carbs,
@@ -1194,9 +1178,11 @@ function LogMealContent() {
         })
       }
 
-      logger.debug('✅ Manual entry saved')
+      logger.debug(editingMealId ? '✅ Manual entry updated' : '✅ Manual entry saved')
 
-      if (photoUrl) {
+      if (editingMealId) {
+        toast.success('Meal updated!')
+      } else if (photoUrl) {
         toast.success('Meal logged successfully!')
       } else if (manualEntryImage) {
         toast.success('Meal logged (image upload failed - please deploy Firebase Storage rules)')
@@ -1214,6 +1200,8 @@ function LogMealContent() {
 
       // Reset form and image
       setShowManualEntry(false)
+      setEditingMealId(null)
+      setEditingPhotoUrl(null)
       setManualEntryForm({
         mealName: '',
         notes: '',
@@ -1748,38 +1736,40 @@ function LogMealContent() {
     }
   }
 
+  // Edit reuses the manual entry form (single source). Hydrate it from the meal
+  // and open it in update mode. Ingredients live in sourceRefs.cookedIngredients
+  // (self) or foodItems (patient); either is parsed back into editable rows.
   const startEditingMeal = (meal: any) => {
-    setEditingMealId(meal.id)
-    setEditForm({
-      description: meal.description || '',
-      mealType: meal.mealType,
-      notes: meal.notes || ''
-    })
-  }
-
-  const cancelEditing = () => {
-    setEditingMealId(null)
-    setEditForm({ description: '', mealType: 'breakfast', notes: '' })
-  }
-
-  const saveEditedMeal = async (mealId: string) => {
-    setUpdatingMealId(mealId)
-    try {
-      await mealLogOperations.updateMealLog(mealId, {
-        description: editForm.description || undefined,
-        mealType: editForm.mealType,
-        notes: editForm.notes || undefined
-      })
-      toast.success('Meal updated successfully!')
-      setEditingMealId(null)
-      setEditForm({ description: '', mealType: 'breakfast', notes: '' })
-      // No need to refresh - real-time listener will update automatically
-    } catch (error) {
-      logger.error('Failed to update meal:', error as Error)
-      toast.error(`Failed to update meal: ${error instanceof Error ? error.message : 'Unknown error'}`)
-    } finally {
-      setUpdatingMealId(null)
+    const numOrEmpty = (v: unknown) => (v != null && v !== '' ? String(v) : '')
+    // Start clean: drop any staged image from a prior session so it isn't
+    // re-uploaded on Update. The meal's existing photo is preserved via
+    // editingPhotoUrl; only a NEW upload in this session sets manualEntryImage.
+    if (manualEntryImageUrlRef.current) {
+      URL.revokeObjectURL(manualEntryImageUrlRef.current)
+      manualEntryImageUrlRef.current = null
     }
+    setManualEntryImage(null)
+    setManualEntryImageUrl(null)
+    setEditingMealId(meal.id)
+    setEditingPhotoUrl(meal.photoUrl || null)
+    setSelectedMealType(meal.mealType || 'snack')
+    setManualEntryForm({
+      mealName: meal.title || meal.description || '',
+      notes: meal.notes || '',
+      calories: numOrEmpty(meal.totalCalories ?? meal.calories),
+      protein: numOrEmpty(meal.protein ?? meal.macros?.protein),
+      carbs: numOrEmpty(meal.carbs ?? meal.macros?.carbs),
+      fat: numOrEmpty(meal.fat ?? meal.macros?.fat),
+    })
+    const ingredientTexts: string[] =
+      meal.sourceRefs?.cookedIngredients?.map((c: any) => c.ingredientText) ||
+      (Array.isArray(meal.foodItems) ? meal.foodItems : [])
+    const parsed = ingredientTexts.flatMap((t: string) => parseIngredientList(t))
+    setManualIngredients(parsed)
+    setShowIngredientBreakdown(parsed.length > 0)
+    setShowManualEntry(true)
+    setExpandedMealId(null)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const deleteMeal = async (mealId: string, mealType: string) => {
@@ -2314,10 +2304,12 @@ function LogMealContent() {
               <div className="space-y-4 mt-4">
                 <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200 font-medium mb-1">
-                    📝 Quick manual entry
+                    {editingMealId ? '✏️ Edit meal' : '📝 Quick manual entry'}
                   </p>
                   <p className="text-xs text-yellow-700 dark:text-yellow-300">
-                    Want instant nutrition analysis? Upgrade to use WPL-powered photo analysis!
+                    {editingMealId
+                      ? 'Update the details below, then save your changes.'
+                      : 'Want instant nutrition analysis? Upgrade to use WPL-powered photo analysis!'}
                   </p>
                 </div>
 
@@ -2517,6 +2509,8 @@ function LogMealContent() {
                         <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
                         <span>Saving...</span>
                       </span>
+                    ) : editingMealId ? (
+                      '💾 Update meal'
                     ) : (
                       '💾 Save meal'
                     )}
@@ -2524,6 +2518,8 @@ function LogMealContent() {
                   <button
                     onClick={() => {
                       setShowManualEntry(false)
+                      setEditingMealId(null)
+                      setEditingPhotoUrl(null)
                       setManualEntryForm({
                         mealName: '',
                         notes: '',
@@ -3361,69 +3357,6 @@ function LogMealContent() {
                       )}
                     </div>
 
-                    {/* Edit Form */}
-                    {isEditing && (
-                      <div className="mt-4 pt-4 border-t border-border space-y-3">
-                        <div>
-                          <label className="block text-xs font-medium text-foreground mb-1">Description (Optional)</label>
-                          <input
-                            type="text"
-                            value={editForm.description}
-                            onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                            placeholder="e.g., Chicken Rice Bowl"
-                            className="w-full px-3 py-2 border border-border rounded text-sm"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-foreground mb-2">Meal type</label>
-                          <div className="grid grid-cols-4 gap-2">
-                            {mealTypes.map((type) => (
-                              <button
-                                key={type.id}
-                                onClick={() => setEditForm({ ...editForm, mealType: type.id })}
-                                className={`p-2 rounded border text-xs ${
-                                  editForm.mealType === type.id
-                                    ? 'border-primary bg-primary-light dark:bg-purple-900/20 text-primary-hover'
-                                    : 'border-border hover:border-border'
-                                }`}
-                              >
-                                <div className="flex flex-col items-center space-y-1">
-                                  <span className="text-lg">{type.emoji}</span>
-                                  <span className="text-xs">{type.label}</span>
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-foreground mb-1">Notes (Optional)</label>
-                          <textarea
-                            value={editForm.notes}
-                            onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
-                            className="w-full px-3 py-2 border border-border rounded text-sm"
-                            rows={2}
-                            placeholder="Add notes about this meal..."
-                          />
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => saveEditedMeal(meal.id)}
-                            disabled={updatingMealId === meal.id}
-                            className={`flex-1 bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover inline-flex items-center justify-center space-x-2 ${updatingMealId === meal.id ? 'cursor-wait opacity-60' : ''}`}
-                          >
-                            {updatingMealId === meal.id && <Spinner size="sm" />}
-                            <span>{updatingMealId === meal.id ? 'Saving...' : 'Save Changes'}</span>
-                          </button>
-                          <button
-                            onClick={cancelEditing}
-                            className="flex-1 bg-muted text-foreground px-3 py-2 rounded text-sm hover:bg-gray-300"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
                     {isExpanded && !isEditing && (
                       <div className="mt-4 pt-4 border-t border-border space-y-3">
                         {/* additionalPhotos section removed - MealLog type only supports single photoUrl */}
@@ -3644,91 +3577,6 @@ function LogMealContent() {
         onClose={() => setShowBarcodeScanner(false)}
       />
 
-      {/* Duplicate Meal Modal */}
-      {showDuplicateModal && duplicateMeal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-background rounded-lg shadow-xl max-w-md w-full p-6">
-            <h3 className="text-xl font-semibold text-foreground dark:text-white mb-4">
-              {duplicateMeal.mealType} Already Logged
-            </h3>
-            <p className="text-muted-foreground mb-4">
-              You've already logged <span className="font-semibold">{duplicateMeal.description}</span> as your {duplicateMeal.mealType.toLowerCase()} today.
-            </p>
-            <p className="text-sm text-muted-foreground dark:text-muted-foreground mb-6">
-              You can only log one {duplicateMeal.mealType.toLowerCase()} per day. Choose an option below:
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={async () => {
-                  // Delete existing meal and allow new entry
-                  try {
-                    if (patientIdParam) {
-                      await medicalOperations.mealLogs.deleteMealLog(patientIdParam, duplicateMeal.id)
-                    } else {
-                      await mealLogOperations.deleteMealLog(duplicateMeal.id)
-                    }
-                    toast.success('Previous meal deleted. You can now log a new one.')
-                    setShowDuplicateModal(false)
-                    setDuplicateMeal(null)
-                  } catch (error) {
-                    toast.error('Failed to delete existing meal')
-                  }
-                }}
-                className="btn btn-primary w-full"
-              >
-                🔄 Replace Existing Meal
-              </button>
-              <button
-                onClick={() => {
-                  // Navigate to edit the existing meal
-                  setExpandedMealId(duplicateMeal.id)
-                  setShowDuplicateModal(false)
-                  setDuplicateMeal(null)
-                  // Scroll to the meal
-                  setTimeout(() => {
-                    document.getElementById(`meal-${duplicateMeal.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                  }, 100)
-                  toast('Scroll down to edit your existing meal')
-                }}
-                className="btn btn-secondary w-full"
-              >
-                ✏️ Edit Existing Meal
-              </button>
-              <button
-                onClick={() => {
-                  // Change to snack (always allowed)
-                  setSelectedMealType('snack')
-                  setShowDuplicateModal(false)
-                  setDuplicateMeal(null)
-                  toast.success('Changed to Snack - you can log unlimited snacks')
-                }}
-                className="btn btn-secondary w-full"
-              >
-                🍎 Log as Snack Instead
-              </button>
-              <button
-                onClick={() => {
-                  // Dismiss modal and allow logging anyway
-                  setShowDuplicateModal(false)
-                  setDuplicateMeal(null)
-                }}
-                className="btn btn-ghost w-full"
-              >
-                Continue Anyway
-              </button>
-              <button
-                onClick={() => {
-                  // Go back to dashboard
-                  window.location.href = '/dashboard'
-                }}
-                className="btn btn-outline w-full text-sm"
-              >
-                ← Back to Dashboard
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Subscription Paywall Modal */}
       {showSubscriptionPaywall && (

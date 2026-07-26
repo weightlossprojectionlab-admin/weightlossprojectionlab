@@ -311,6 +311,7 @@ export const mealLogOperations = {
 
   // Update meal log
   async updateMealLog(mealLogId: string, data: {
+    title?: string
     description?: string
     mealType?: 'breakfast' | 'lunch' | 'dinner' | 'snack'
     notes?: string
@@ -319,6 +320,9 @@ export const mealLogOperations = {
       food: string
       calories: number
       quantity: string
+      protein?: number
+      carbs?: number
+      fat?: number
     }>
   }) {
     return makeAuthenticatedRequest(`/api/meal-logs/${mealLogId}`, {

@@ -1245,6 +1245,30 @@ export const mealLogOperations = {
   },
 
   /**
+   * Update a meal log for a patient (PUT — merges provided fields).
+   */
+  async updateMealLog(
+    patientId: string,
+    logId: string,
+    data: Partial<Omit<MealLog, 'id' | 'patientId' | 'userId' | 'loggedBy'>>,
+  ): Promise<MealLog> {
+    try {
+      logger.debug('[MedicalOps] Updating meal log', { patientId, logId })
+
+      const mealLog = await makeAuthenticatedRequest<MealLog>(
+        `/patients/${patientId}/meal-logs/${logId}`,
+        { method: 'PUT', body: JSON.stringify(data) },
+      )
+
+      logger.info('[MedicalOps] Meal log updated successfully', { patientId, logId })
+      return mealLog
+    } catch (error) {
+      logger.error('[MedicalOps] Error updating meal log', error as Error, { patientId, logId })
+      throw error
+    }
+  },
+
+  /**
    * Delete a meal log for a patient
    */
   async deleteMealLog(patientId: string, logId: string): Promise<void> {
