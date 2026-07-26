@@ -16,6 +16,7 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import OwnerOnlyGuard from '@/components/auth/OwnerOnlyGuard'
 import { usePatientLimit } from '@/hooks/usePatientLimit'
 import { useSubscription } from '@/hooks/useSubscription'
+import { canWrite } from '@/lib/feature-access'
 import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
@@ -106,8 +107,19 @@ function PatientsContent() {
   const addButtonText = getAddButtonText(userProfile as any)
   const terminology = getTrackingTerminology(userProfile as any)
 
+  // Caregiver-only fallback. When the user's OWN subscription has ended but
+  // they still have caregiver access to other households, hide their own
+  // (frozen) members and show ONLY the people they can still help. Caregiver
+  // access runs under the OTHER owner's active plan, so adding entries there
+  // isn't paused — this surfaces exactly what still works and drops the
+  // paywalled own-account noise. Reactivating brings their own members back.
+  const subscriptionEnded = !!subscription && !canWrite(subscription)
+  const caregiverPatients = safePatients.filter(p => (p as any)._source === 'caregiver')
+  const caregiverOnlyMode = subscriptionEnded && caregiverPatients.length > 0
+  const visiblePatients = caregiverOnlyMode ? caregiverPatients : safePatients
+
   // Account selection mode for card display (informational only, doesn't change UI)
-  const isAccountSelectionMode = safePatients.length >= 2
+  const isAccountSelectionMode = visiblePatients.length >= 2
 
   // Household scoping. Only relevant with 2+ households. When scoped,
   // show members whose householdId matches the active household; "All
@@ -116,8 +128,8 @@ function PatientsContent() {
   const multiHousehold = households.length >= 2
   const householdScoped =
     multiHousehold && activeHousehold && !viewAllHouseholds
-      ? safePatients.filter(p => p.householdId === activeHousehold.id)
-      : safePatients
+      ? visiblePatients.filter(p => p.householdId === activeHousehold.id)
+      : visiblePatients
 
   // Type filter applies on top of the household scope. Counts shown on
   // the type chips reflect the current household scope, not the global
@@ -133,7 +145,9 @@ function PatientsContent() {
         title={pageTitle}
         subtitle={pageSubtitle}
         actions={
-          canAdd ? (
+          // Caregiver-only mode: their own plan is dead and adding to it is
+          // moot — no add/upgrade CTA here.
+          caregiverOnlyMode ? undefined : canAdd ? (
             addPatientLock.isLocked ? (
               <button
                 type="button"
@@ -181,8 +195,24 @@ function PatientsContent() {
           <DashboardSelectorCompact />
         </div>
 
-        {/* Member Limit Indicator */}
-        {subscription && (
+        {/* Caregiver-only mode explainer — why their own members aren't here. */}
+        {caregiverOnlyMode && (
+          <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 p-4">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <span className="font-medium">Your subscription has ended,</span> so your own
+              members are paused. These are the family members you help as a caregiver.{' '}
+              <Link href="/pricing" className="font-medium underline hover:no-underline">
+                Reactivate
+              </Link>{' '}
+              to bring your own members back.
+            </p>
+          </div>
+        )}
+
+        {/* Member Limit Indicator — hidden in caregiver-only mode: the own
+            plan's seat count is irrelevant when we're showing only the people
+            they help under someone else's plan. */}
+        {subscription && !caregiverOnlyMode && (
           <div className="mb-6 bg-card rounded-lg shadow-sm border border-border p-4">
             <div className="flex items-center gap-3 mb-2">
               <p className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -230,7 +260,7 @@ function PatientsContent() {
                   : 'bg-card text-foreground hover:bg-muted'
               }`}
             >
-              {activeHousehold.name} ({safePatients.filter(p => p.householdId === activeHousehold.id).length})
+              {activeHousehold.name} ({visiblePatients.filter(p => p.householdId === activeHousehold.id).length})
             </button>
             <button
               onClick={() => setViewAllHouseholds(true)}
@@ -240,7 +270,7 @@ function PatientsContent() {
                   : 'bg-card text-foreground hover:bg-muted'
               }`}
             >
-              All households ({safePatients.length})
+              All households ({visiblePatients.length})
             </button>
           </div>
         )}
