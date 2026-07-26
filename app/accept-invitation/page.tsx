@@ -132,16 +132,20 @@ function AcceptInvitationContent() {
 
       const hasOwnAccount = userProfile?.data?.profile?.onboardingCompleted === true
 
-      // Redirect based on account status
+      // Redirect based on account status.
+      //
+      // Use a FULL page load (window.location), not router.push: accepting an
+      // invitation just changed this user's role/permissions server-side. A
+      // hard navigation guarantees the destination loads with fresh code AND a
+      // fresh users-doc read (the just-written caregiverOf grant) — a
+      // client-side push would keep the stale in-memory bundle and a cached
+      // profile, which is exactly what stranded fresh invitees on /pricing.
+      const destination = hasOwnAccount
+        ? '/family/dashboard'
+        : `/caregiver/${invitation.invitedByUserId}`
       setTimeout(() => {
-        if (hasOwnAccount) {
-          // User has their own account - redirect to family dashboard (can switch contexts)
-          router.push('/family/dashboard')
-        } else {
-          // User is caregiver-only - redirect to caregiver-only dashboard
-          router.push(`/caregiver/${invitation.invitedByUserId}`)
-        }
-      }, 1000)
+        window.location.assign(destination)
+      }, 800)
     } catch (err: any) {
       toast.error(err.message || 'Failed to accept invitation')
       setError(err.message || 'Failed to accept invitation')
