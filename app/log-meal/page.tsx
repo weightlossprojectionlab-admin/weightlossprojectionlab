@@ -36,6 +36,8 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { EaterMultiSelect, type EaterSelection } from '@/components/log-meal/EaterMultiSelect'
 import IngredientListInput from '@/components/log-meal/IngredientListInput'
 import { parseIngredientList, type ParsedIngredient } from '@/lib/ingredient-parse'
+import { calculateBMR, calculateTDEE, type ActivityLevel } from '@/lib/health-calculations'
+import { useSelectedPatient } from '@/hooks/useSelectedPatient'
 import { useUserPreferences } from '@/hooks/useUserPreferences'
 import { BRAND_TERMS } from '@/lib/messaging/brand-terms'
 import { getProductLabel } from '@/lib/messaging/terminology'
@@ -123,6 +125,56 @@ function getMealTitle(meal: any, foodsHavePortions: boolean): string {
   const desc: string = meal?.description || meal?.title || ''
   if (foodsHavePortions && desc) return desc.replace(/\s*\([^)]*\)/g, '').replace(/\s+,/g, ',').trim()
   return desc
+}
+
+// PatientProfile.activityLevel uses a shorter vocabulary than the TDEE
+// calculator's ActivityLevel — map between them.
+const ACTIVITY_TO_TDEE: Record<string, ActivityLevel> = {
+  sedentary: 'sedentary',
+  light: 'lightly-active',
+  moderate: 'moderately-active',
+  active: 'very-active',
+  'very-active': 'extremely-active',
+}
+
+/** Estimated daily calories (TDEE) for a patient from age/height/weight/sex —
+ *  the "takes the patient into account" input. Null when identity fields are
+ *  missing. Uses Mifflin-St Jeor via lib/health-calculations. */
+function computePatientTDEE(p: any): number | null {
+  const dob = p?.dateOfBirth
+  const weight = p?.currentWeight
+  const height = p?.height
+  if (!dob || !weight || !height) return null
+  const age = Math.floor((Date.now() - new Date(dob).getTime()) / (365.25 * 24 * 3600 * 1000))
+  if (!age || age <= 0 || age > 120) return null
+  try {
+    const bmr = calculateBMR({
+      weight,
+      height,
+      age,
+      gender: p?.gender || 'prefer-not-to-say',
+      units: p?.weightUnit === 'kg' ? 'metric' : 'imperial',
+    })
+    return calculateTDEE(bmr, ACTIVITY_TO_TDEE[p?.activityLevel] || 'moderately-active')
+  } catch {
+    return null
+  }
+}
+
+/** Rough share of daily calories a meal type represents. */
+const MEAL_CALORIE_SHARE: Record<'breakfast' | 'lunch' | 'dinner' | 'snack', number> = {
+  breakfast: 0.25,
+  lunch: 0.3,
+  dinner: 0.35,
+  snack: 0.1,
+}
+
+/** Friendly serving count (nearest 0.5). */
+function formatServings(n: number): string {
+  const r = Math.round(n * 2) / 2
+  if (r <= 0.5) return 'about half a serving'
+  if (r === 1) return 'about 1 serving'
+  return `about ${r} servings`
 }
 
 // Helper function to detect meal type using personalized schedule
@@ -242,7 +294,11 @@ function MethodTile({
 
 function LogMealContent() {
   const searchParams = useSearchParams()
-  const patientIdParam = searchParams.get('patientId')
+  const { selectedPatient } = useSelectedPatient()
+  // Scope by the URL ?patientId, else fall back to the active patient from the
+  // account switcher (single source). Keeps Log Meal on the same person the rest
+  // of the app is on, even when a nav link drops the query param.
+  const patientIdParam = searchParams.get('patientId') || selectedPatient?.id || null
 
   // Feature-access gates — terminated subscribers can view but not log.
   // The saveMeal button + AI photo capture both gate on these.
@@ -359,6 +415,10 @@ function LogMealContent() {
   // (or a saved recipe) can come later. Persisted to sourceRefs.cookedIngredients.
   const [manualIngredients, setManualIngredients] = useState<ParsedIngredient[]>([])
   const [showIngredientBreakdown, setShowIngredientBreakdown] = useState(false)
+  // "Estimate macros" (Gemini) — fills calories/macros from the ingredient list.
+  const [estimatingMacros, setEstimatingMacros] = useState(false)
+  const [macroEstimateNote, setMacroEstimateNote] = useState<string | null>(null)
+  const [savingMealTemplate, setSavingMealTemplate] = useState(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileReaderRef = useRef<FileReader | null>(null)
@@ -405,6 +465,19 @@ function LogMealContent() {
   // optional and never blocks Save. Defined once so the button's disabled state
   // and the inline hint can't drift apart.
   const isManualEntryValid = manualEntryForm.mealName.trim().length >= 2
+
+  // Patient-personalized context for the current manual meal: how this meal's
+  // calories relate to the patient's estimated daily needs (from age/height/
+  // weight). Null unless we have both the meal's calories and the patient's
+  // identity fields.
+  const manualCalories = parseInt(manualEntryForm.calories) || 0
+  const patientTDEE = patientProfile ? computePatientTDEE(patientProfile) : null
+  const mealPctOfDay =
+    patientTDEE && manualCalories > 0 ? Math.round((manualCalories / patientTDEE) * 100) : null
+  const mealServingsForPatient =
+    patientTDEE && manualCalories > 0
+      ? (patientTDEE * MEAL_CALORIE_SHARE[selectedMealType]) / manualCalories
+      : null
 
   // Calculate today's totals using UTC to avoid timezone issues
   const todaysMeals = mealHistory.filter(meal => {
@@ -1093,6 +1166,96 @@ function LogMealContent() {
     }
   }
 
+  // Estimate calories + macros from the current ingredient list (Gemini) and
+  // fill the form fields. Opt-in; always editable afterward.
+  const handleEstimateMacros = async () => {
+    if (manualIngredients.length === 0) {
+      toast.error('Add some ingredients first')
+      return
+    }
+    setEstimatingMacros(true)
+    try {
+      const token = await auth.currentUser?.getIdToken()
+      const res = await fetch('/api/meals/estimate-nutrition', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          ingredients: manualIngredients.map((i) => i.ingredientText),
+          mealType: selectedMealType,
+          mealName: manualEntryForm.mealName || undefined,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json?.error || 'Could not estimate macros')
+
+      const d = json.data
+      setManualEntryForm((f) => ({
+        ...f,
+        calories: String(d.calories),
+        protein: String(d.protein),
+        carbs: String(d.carbs),
+        fat: String(d.fat),
+      }))
+      setMacroEstimateNote(
+        `Estimated (${d.confidence} confidence)${d.note ? ` — ${d.note}` : ''}. Please review and edit.`,
+      )
+      toast.success('Macros estimated — review and adjust as needed')
+    } catch (e) {
+      logger.error('Estimate macros failed:', e as Error)
+      toast.error(e instanceof Error ? e.message : 'Could not estimate macros')
+    } finally {
+      setEstimatingMacros(false)
+    }
+  }
+
+  // Save the current manual meal as a reusable template (personal, user-scoped).
+  // Distinct from the AI-only saveAsTemplate — works from the manual form's data.
+  const handleSaveMealAsTemplate = async () => {
+    const name = manualEntryForm.mealName.trim()
+    if (name.length < 2) {
+      toast.error('Add a meal name first')
+      return
+    }
+    setSavingMealTemplate(true)
+    try {
+      // Attach a photo: an existing one (editing), or upload a freshly-picked
+      // image so a new meal's photo makes it into the saved meal too.
+      let templatePhotoUrl = editingPhotoUrl || undefined
+      if (!templatePhotoUrl && manualEntryImage) {
+        try {
+          templatePhotoUrl = await uploadMealPhoto(manualEntryImage)
+        } catch {
+          /* non-blocking — save the meal without a photo */
+        }
+      }
+
+      await mealTemplateOperations.createMealTemplate({
+        name,
+        mealType: selectedMealType,
+        foodItems:
+          manualIngredients.length > 0 ? manualIngredients.map((i) => i.ingredientText) : [name],
+        calories: parseInt(manualEntryForm.calories) || 0,
+        macros: {
+          protein: parseInt(manualEntryForm.protein) || 0,
+          carbs: parseInt(manualEntryForm.carbs) || 0,
+          fat: parseInt(manualEntryForm.fat) || 0,
+          fiber: 0,
+        },
+        notes: manualEntryForm.notes || undefined,
+        photoUrl: templatePhotoUrl,
+      })
+      toast.success('Saved to your meals — reuse it anytime')
+      loadMealTemplates()
+    } catch (error) {
+      logger.error('Failed to save meal template:', error as Error)
+      toast.error(
+        `Failed to save template: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    } finally {
+      setSavingMealTemplate(false)
+    }
+  }
+
   const saveManualEntry = async () => {
     // Sanitize and validate inputs
     const sanitizedMealName = sanitizeInput(manualEntryForm.mealName, MAX_MEAL_NAME_LENGTH)
@@ -1256,6 +1419,7 @@ function LogMealContent() {
       })
       setManualIngredients([])
       setShowIngredientBreakdown(false)
+      setMacroEstimateNote(null)
 
       // Clean up image state
       if (manualEntryImageUrlRef.current) {
@@ -1811,6 +1975,7 @@ function LogMealContent() {
     const parsed = ingredientTexts.flatMap((t: string) => parseIngredientList(t))
     setManualIngredients(parsed)
     setShowIngredientBreakdown(parsed.length > 0)
+    setMacroEstimateNote(null)
     setShowManualEntry(true)
     setExpandedMealId(null)
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1915,26 +2080,64 @@ function LogMealContent() {
   const applyTemplate = async (template: MealTemplate) => {
     setUsingTemplateId(template.id)
     try {
-      // Record template usage
       await mealTemplateOperations.recordTemplateUsage(template.id)
 
-      // Create meal log from template
-      await mealLogOperations.createMealLog({
-        mealType: template.mealType,
-        aiAnalysis: {
-          foodItems: template.foodItems as any,
-          totalCalories: template.calories,
-          totalMacros: template.macros,
-          confidence: 100,
-          isMockData: true
-        },
-        notes: template.notes,
-        loggedAt: new Date().toISOString()
-      })
+      // Log the saved meal as a proper manual entry (NOT via aiAnalysis — its
+      // foodItems are strings, which the aiAnalysis schema rejects). Tolerate
+      // both string and legacy object foodItems, route by scope, carry the photo.
+      const foodStrings = (template.foodItems || []).map((fi: any) =>
+        typeof fi === 'string' ? fi : fi?.name || String(fi),
+      )
+      const cals = template.calories || 0
+      const p = template.macros?.protein || 0
+      const c = template.macros?.carbs || 0
+      const f = template.macros?.fat || 0
+      const now = new Date().toISOString()
+      const manualEntries = [
+        { food: template.name, calories: cals, quantity: '1 serving', protein: p, carbs: c, fat: f },
+      ]
+
+      if (patientIdParam) {
+        await medicalOperations.mealLogs.logMeal(patientIdParam, {
+          mealType: template.mealType,
+          title: template.name,
+          description: template.name,
+          foodItems: foodStrings.length ? foodStrings : [template.name],
+          calories: cals,
+          protein: p,
+          carbs: c,
+          fat: f,
+          totalCalories: cals,
+          macros: { protein: p, carbs: c, fat: f },
+          notes: template.notes || undefined,
+          loggedAt: now,
+          consumedAt: now,
+          manualEntries,
+          aiAnalyzed: false,
+          tags: [],
+          ...(template.photoUrl ? { photoUrl: template.photoUrl } : {}),
+        })
+      } else {
+        await mealLogOperations.createMealLog({
+          mealType: template.mealType,
+          title: template.name,
+          loggedAt: now,
+          notes: template.notes || undefined,
+          totalCalories: cals,
+          macros: { protein: p, carbs: c, fat: f },
+          manualEntries,
+          ...(template.photoUrl ? { photoUrl: template.photoUrl } : {}),
+          ...(foodStrings.length
+            ? {
+                source: 'manual' as const,
+                sourceRefs: { cookedIngredients: foodStrings.map((t) => ({ ingredientText: t })) },
+              }
+            : {}),
+        })
+      }
 
       toast.success(`Logged ${template.name}!`)
       setShowTemplates(false)
-      // Refresh templates to update usage count
       loadMealTemplates()
     } catch (error) {
       logger.error('Failed to use template:', error as Error)
@@ -2284,11 +2487,11 @@ function LogMealContent() {
                   loadingLabel="Looking up..."
                 />
                 <MethodTile
-                  icon="⭐"
-                  label="Use template"
-                  ariaLabel="Use saved meal template"
+                  icon="🍲"
+                  label="Saved meals"
+                  ariaLabel="Use a saved meal"
                   locked={logMealLock.isLocked}
-                  lockedLabel="Paused — template"
+                  lockedLabel="Paused — saved"
                   onLockedClick={logMealLock.onLockedClick}
                   onClick={() => setShowTemplates(!showTemplates)}
                 />
@@ -2367,7 +2570,7 @@ function LogMealContent() {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Meal photo <span className="text-muted-foreground font-normal">(recommended)</span>
                   </label>
-                  {!manualEntryImage ? (
+                  {!manualEntryImage && !editingPhotoUrl ? (
                     <label className="flex items-center justify-center w-full px-4 py-4 border-2 border-dashed border-border rounded-lg cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors">
                       <div className="text-center">
                         <svg className="mx-auto h-8 w-8 text-muted-foreground mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2389,13 +2592,28 @@ function LogMealContent() {
                     </label>
                   ) : (
                     <div className="relative rounded-lg border border-border">
+                      {/* Shows a newly-picked image, or the meal's existing photo
+                          when editing (editingPhotoUrl). */}
                       <img
-                        src={manualEntryImageUrl || manualEntryImage}
-                        alt="Manual entry meal"
+                        src={manualEntryImageUrl || manualEntryImage || editingPhotoUrl || ''}
+                        alt="Meal"
                         className="w-full h-48 object-cover rounded-lg"
                       />
+                      {/* Replace: an overlay label opens the file picker. */}
+                      <label className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full cursor-pointer hover:bg-black/70 transition-colors">
+                        Replace photo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleManualEntryImageUpload}
+                          className="hidden"
+                        />
+                      </label>
                       <button
-                        onClick={removeManualEntryImage}
+                        onClick={() => {
+                          removeManualEntryImage()
+                          setEditingPhotoUrl(null)
+                        }}
                         className="absolute top-2 right-2 bg-error text-white rounded-full p-2 hover:bg-error-dark transition-colors shadow-lg z-10"
                         aria-label="Remove image"
                       >
@@ -2495,6 +2713,29 @@ function LogMealContent() {
                   </div>
                 </div>
 
+                {/* Estimate macros from the ingredient list (opt-in, editable). */}
+                {manualIngredients.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleEstimateMacros}
+                      disabled={estimatingMacros}
+                      className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-primary/10 text-primary font-medium hover:bg-primary/15 active:scale-[0.98] transition disabled:opacity-60"
+                    >
+                      {estimatingMacros ? (
+                        <>
+                          <Spinner size="sm" /> Estimating…
+                        </>
+                      ) : (
+                        <>✨ Estimate from ingredients</>
+                      )}
+                    </button>
+                    {macroEstimateNote && (
+                      <p className="mt-1.5 text-xs text-muted-foreground">{macroEstimateNote}</p>
+                    )}
+                  </div>
+                )}
+
                 {/* Ingredients breakdown (optional, collapsed) — capture what
                     they recall now; macros / save-as-recipe can follow later. */}
                 <div className="border border-border rounded-lg overflow-hidden">
@@ -2545,6 +2786,43 @@ function LogMealContent() {
                   />
                 </div>
 
+                {/* Patient personalization + save-as-template.
+                    TDEE (from age/height/weight) frames this meal against the
+                    patient's day; the meal can be saved as a reusable template. */}
+                {(mealPctOfDay != null || manualIngredients.length > 0) && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2.5">
+                    {mealPctOfDay != null && (
+                      <p className="text-sm text-foreground">
+                        <span aria-hidden="true">📊</span> For{' '}
+                        <span className="font-medium">{patientProfile?.name || 'this person'}</span>
+                        {patientTDEE ? ` (~${patientTDEE.toLocaleString()} cal/day)` : ''}: this meal is
+                        about <span className="font-semibold">{mealPctOfDay}%</span> of their daily
+                        calories
+                        {mealServingsForPatient != null && (
+                          <> — {formatServings(mealServingsForPatient)} for a {selectedMealType}</>
+                        )}
+                        .
+                      </p>
+                    )}
+                    {manualIngredients.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleSaveMealAsTemplate}
+                        disabled={savingMealTemplate || !isManualEntryValid}
+                        className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-medium active:scale-[0.98] transition disabled:opacity-60"
+                      >
+                        {savingMealTemplate ? (
+                          <>
+                            <Spinner size="sm" /> Saving…
+                          </>
+                        ) : (
+                          <>📋 Save as meal</>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {/* Action Buttons */}
                 <div>
                   <div className="flex space-x-3">
@@ -2579,6 +2857,7 @@ function LogMealContent() {
                       })
                       setManualIngredients([])
                       setShowIngredientBreakdown(false)
+                      setMacroEstimateNote(null)
                       // Clean up image state
                       if (manualEntryImageUrlRef.current) {
                         URL.revokeObjectURL(manualEntryImageUrlRef.current)
@@ -2607,7 +2886,7 @@ function LogMealContent() {
         {showTemplates && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium text-foreground">Meal Templates</h2>
+              <h2 className="text-lg font-medium text-foreground">Saved meals</h2>
               <button
                 onClick={() => setShowTemplates(false)}
                 className="text-muted-foreground hover:text-muted-foreground"
@@ -2637,20 +2916,29 @@ function LogMealContent() {
                       className="border border-border rounded-lg p-4 hover:border-primary transition-colors"
                     >
                       <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-1">
-                            <span className="text-lg">{mealTypeEmoji}</span>
-                            <span className="font-medium text-foreground">{template.name}</span>
-                          </div>
-                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                            <span>{template.calories} cal</span>
-                            <span>P: {template.macros?.protein ?? 0}g</span>
-                            <span>C: {template.macros?.carbs ?? 0}g</span>
-                            <span>F: {template.macros?.fat ?? 0}g</span>
-                          </div>
-                          {template.usageCount > 0 && (
-                            <p className="text-xs text-muted-foreground mt-1">Used {template.usageCount} time{template.usageCount !== 1 ? 's' : ''}</p>
+                        <div className="flex items-start gap-3 flex-1 min-w-0">
+                          {template.photoUrl && (
+                            <img
+                              src={template.photoUrl}
+                              alt=""
+                              className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
+                            />
                           )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center space-x-2 mb-1">
+                              <span className="text-lg">{mealTypeEmoji}</span>
+                              <span className="font-medium text-foreground">{template.name}</span>
+                            </div>
+                            <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                              <span>{template.calories} cal</span>
+                              <span>P: {template.macros?.protein ?? 0}g</span>
+                              <span>C: {template.macros?.carbs ?? 0}g</span>
+                              <span>F: {template.macros?.fat ?? 0}g</span>
+                            </div>
+                            {template.usageCount > 0 && (
+                              <p className="text-xs text-muted-foreground mt-1">Used {template.usageCount} time{template.usageCount !== 1 ? 's' : ''}</p>
+                            )}
+                          </div>
                         </div>
                         <button
                           onClick={() => deleteTemplate(template.id, template.name)}
@@ -2663,7 +2951,10 @@ function LogMealContent() {
                       </div>
                       <div className="mb-2">
                         <p className="text-xs text-muted-foreground">
-                          {template.foodItems.join(', ')}
+                          {(template.foodItems || [])
+                            .map((fi: any) => (typeof fi === 'string' ? fi : fi?.name || ''))
+                            .filter(Boolean)
+                            .join(', ')}
                         </p>
                       </div>
                       <button
@@ -2672,7 +2963,7 @@ function LogMealContent() {
                         className={`w-full bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover inline-flex items-center justify-center space-x-2 ${usingTemplateId === template.id ? 'cursor-wait opacity-60' : ''}`}
                       >
                         {usingTemplateId === template.id && <Spinner size="sm" />}
-                        <span>{usingTemplateId === template.id ? 'Loading...' : 'Use This Template'}</span>
+                        <span>{usingTemplateId === template.id ? 'Loading...' : 'Log this meal'}</span>
                       </button>
                     </div>
                   )
@@ -3025,7 +3316,7 @@ function LogMealContent() {
                         className={`flex-1 bg-primary text-white px-3 py-2 rounded text-sm hover:bg-primary-hover inline-flex items-center justify-center space-x-2 ${savingTemplate ? 'cursor-wait opacity-60' : ''}`}
                       >
                         {savingTemplate && <Spinner size="sm" />}
-                        <span>{savingTemplate ? 'Saving...' : 'Save Template'}</span>
+                        <span>{savingTemplate ? 'Saving...' : 'Save as meal'}</span>
                       </button>
                       <button
                         onClick={() => {
