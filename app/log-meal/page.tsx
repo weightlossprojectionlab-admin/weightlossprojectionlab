@@ -419,6 +419,9 @@ function LogMealContent() {
   const [estimatingMacros, setEstimatingMacros] = useState(false)
   const [macroEstimateNote, setMacroEstimateNote] = useState<string | null>(null)
   const [savingMealTemplate, setSavingMealTemplate] = useState(false)
+  // True after a successful "Save as meal" — keeps the button disabled so the
+  // same meal can't be saved twice. Reset when the meal is edited (effect below).
+  const [mealSavedAsMeal, setMealSavedAsMeal] = useState(false)
 
   const abortControllerRef = useRef<AbortController | null>(null)
   const fileReaderRef = useRef<FileReader | null>(null)
@@ -465,6 +468,19 @@ function LogMealContent() {
   // optional and never blocks Save. Defined once so the button's disabled state
   // and the inline hint can't drift apart.
   const isManualEntryValid = manualEntryForm.mealName.trim().length >= 2
+
+  // Editing the meal (name, macros, or ingredients) re-enables "Save as meal"
+  // so an updated version can be saved; otherwise it stays disabled after a save.
+  useEffect(() => {
+    setMealSavedAsMeal(false)
+  }, [
+    manualEntryForm.mealName,
+    manualEntryForm.calories,
+    manualEntryForm.protein,
+    manualEntryForm.carbs,
+    manualEntryForm.fat,
+    manualIngredients,
+  ])
 
   // Patient-personalized context for the current manual meal: how this meal's
   // calories relate to the patient's estimated daily needs (from age/height/
@@ -1211,6 +1227,7 @@ function LogMealContent() {
   // Save the current manual meal as a reusable template (personal, user-scoped).
   // Distinct from the AI-only saveAsTemplate — works from the manual form's data.
   const handleSaveMealAsTemplate = async () => {
+    if (savingMealTemplate || mealSavedAsMeal) return // guard double-save
     const name = manualEntryForm.mealName.trim()
     if (name.length < 2) {
       toast.error('Add a meal name first')
@@ -1245,6 +1262,7 @@ function LogMealContent() {
         photoUrl: templatePhotoUrl,
       })
       toast.success('Saved to your meals — reuse it anytime')
+      setMealSavedAsMeal(true)
       loadMealTemplates()
     } catch (error) {
       logger.error('Failed to save meal template:', error as Error)
@@ -1257,6 +1275,7 @@ function LogMealContent() {
   }
 
   const saveManualEntry = async () => {
+    if (saving) return // guard double-submit
     // Sanitize and validate inputs
     const sanitizedMealName = sanitizeInput(manualEntryForm.mealName, MAX_MEAL_NAME_LENGTH)
     const sanitizedNotes = sanitizeInput(manualEntryForm.notes, MAX_NOTES_LENGTH)
@@ -2078,6 +2097,7 @@ function LogMealContent() {
   }
 
   const applyTemplate = async (template: MealTemplate) => {
+    if (usingTemplateId) return // guard rapid double-log
     setUsingTemplateId(template.id)
     try {
       await mealTemplateOperations.recordTemplateUsage(template.id)
@@ -2808,13 +2828,15 @@ function LogMealContent() {
                       <button
                         type="button"
                         onClick={handleSaveMealAsTemplate}
-                        disabled={savingMealTemplate || !isManualEntryValid}
+                        disabled={savingMealTemplate || mealSavedAsMeal || !isManualEntryValid}
                         className="inline-flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-muted hover:bg-muted/80 text-foreground font-medium active:scale-[0.98] transition disabled:opacity-60"
                       >
                         {savingMealTemplate ? (
                           <>
                             <Spinner size="sm" /> Saving…
                           </>
+                        ) : mealSavedAsMeal ? (
+                          <>✓ Saved to your meals</>
                         ) : (
                           <>📋 Save as meal</>
                         )}
