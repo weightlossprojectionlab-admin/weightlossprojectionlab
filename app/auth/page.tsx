@@ -43,6 +43,19 @@ function AuthContent() {
     }
   }, [refCode])
   const [email, setEmail] = useState('')
+  // In an invitation flow, prefill + lock the email to the address the invite
+  // was sent to — accept requires an exact match, so letting them type a
+  // different email would 403 at the very end.
+  const [invitedEmail, setInvitedEmail] = useState<string | null>(null)
+  useEffect(() => {
+    if (isInvitationFlow && typeof window !== 'undefined') {
+      const e = localStorage.getItem('pendingInvitationEmail')
+      if (e) {
+        setInvitedEmail(e)
+        setEmail(e)
+      }
+    }
+  }, [isInvitationFlow])
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
@@ -595,10 +608,16 @@ function AuthContent() {
                   setSuggestedAuthMethod(null)
                   setError('')
                 }}
-                className="form-input"
+                readOnly={!!invitedEmail}
+                className={`form-input ${invitedEmail ? 'bg-muted cursor-not-allowed' : ''}`}
                 placeholder="Email address"
                 aria-label="Email address"
               />
+              {invitedEmail && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Use this email — your invitation was sent here.
+                </p>
+              )}
             </div>
 
             <div>

@@ -878,6 +878,7 @@ function OnboardingContent() {
             const acceptResponse = await fetch(`/api/invitations/${invitation.id}/accept`, { method: 'POST' })
             if (acceptResponse.ok) {
               localStorage.removeItem('pendingInvitationCode')
+              localStorage.removeItem('pendingInvitationEmail')
               setAcceptedInvitation(invitation)
               toast.success('Invitation accepted! Photos uploaded.')
             }
