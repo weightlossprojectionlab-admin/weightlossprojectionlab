@@ -3,6 +3,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { MealLog } from '@/types/medical'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { errorResponse } from '@/lib/api-response'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 
 /**
  * GET /api/patients/[patientId]/meal-logs
@@ -138,6 +139,18 @@ export async function POST(
       .doc(patientId)
       .collection('meal-logs')
       .add(mealLog)
+
+    // Let the rest of the care team know a meal was logged.
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'meal_logged',
+      title: 'Meal logged',
+      action: `logged ${body.mealType}`,
+      actionUrl: `/patients/${patientId}?tab=meals`,
+      metadata: { mealLogId: docRef.id, mealType: body.mealType },
+    })
 
     return NextResponse.json({
       success: true,

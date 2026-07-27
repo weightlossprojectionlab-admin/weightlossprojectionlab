@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         medication_added: { email: true, push: true, inApp: true },
         medication_updated: { email: true, push: true, inApp: true },
         medication_deleted: { email: true, push: true, inApp: true },
+        medication_dose_logged: { email: false, push: false, inApp: true },
         vital_logged: { email: true, push: false, inApp: true },
         meal_logged: { email: false, push: false, inApp: true },
         weight_logged: { email: true, push: false, inApp: true },

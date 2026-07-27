@@ -17,6 +17,10 @@ export type NotificationType =
   | 'medication_added'
   | 'medication_updated'
   | 'medication_deleted'
+  // A caregiver logged a dose as GIVEN (log-dose). Fans out to the care team
+  // (owner + other caregivers) so "who gave the 6pm dose" is visible and
+  // double-dosing is avoided.
+  | 'medication_dose_logged'
   | 'vital_logged'
   | 'meal_logged'
   | 'weight_logged'
@@ -408,6 +412,7 @@ export interface NotificationPreferences {
   medication_added: NotificationChannelPreferences
   medication_updated: NotificationChannelPreferences
   medication_deleted: NotificationChannelPreferences
+  medication_dose_logged: NotificationChannelPreferences
 
   // Health tracking notifications
   vital_logged: NotificationChannelPreferences
@@ -487,6 +492,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   medication_added: { email: true, push: true, inApp: true },
   medication_updated: { email: true, push: true, inApp: true },
   medication_deleted: { email: true, push: true, inApp: true },
+  // Dose-given fans out to the care team on the bell; email/push off by default
+  // since doses are frequent (opt in via preferences to avoid noise).
+  medication_dose_logged: { email: false, push: false, inApp: true },
   vital_logged: { email: false, push: true, inApp: true },
   meal_logged: { email: false, push: false, inApp: true },
   weight_logged: { email: false, push: true, inApp: true },

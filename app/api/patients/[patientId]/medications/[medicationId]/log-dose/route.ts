@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
 import { dosesPerDayFor, describeDosage, type DosageSource } from '@/lib/medication-dosage'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 
 /**
  * POST /api/patients/[patientId]/medications/[medicationId]/log-dose
@@ -106,6 +107,20 @@ export async function POST(
       medicationId,
       quantityRemaining,
       adherenceRate
+    })
+
+    // Notify the rest of the care team (owner + other caregivers) that a dose
+    // was given — "who gave the 6pm dose" — so nobody double-doses.
+    const medName = medication.name || 'a medication'
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'medication_dose_logged',
+      title: 'Dose given',
+      action: `gave a dose of ${medName}`,
+      actionUrl: `/patients/${patientId}?tab=medications`,
+      metadata: { medicationId, medicationName: medName },
     })
 
     return NextResponse.json(updatedMedication)
