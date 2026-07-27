@@ -4,7 +4,7 @@ import { removeUndefinedValues } from '@/lib/firestore-helpers'
 import { assertPatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
 import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import type { PatientDocument } from '@/types/medical'
-import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 import { processDocumentOCR } from '@/lib/document-ocr-pipeline'
 import { logger } from '@/lib/logger'
 
@@ -119,38 +119,23 @@ export async function POST(
       .collection('documents')
       .add(document)
 
-    // Trigger notification to family members
-    try {
-      // Get user info for notification
-      const userDoc = await adminDb.collection('users').doc(userId).get()
-      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
-
-      await sendNotificationToFamilyMembers({
-        userId: '', // Will be overridden for each recipient
-        patientId,
-        type: 'document_uploaded',
-        priority: 'normal',
-        title: 'Document Uploaded',
-        message: `${userName} uploaded a new document`,
-        excludeUserId: userId,
-        metadata: {
-          documentId: docRef.id,
-          documentName: body.name || body.fileName || 'Document',
-          documentCategory: body.category || 'other',
-          patientName: patientDoc.data()?.name || 'Patient',
-          fileType: body.fileType || 'other',
-          fileSize: body.fileSize,
-          actionBy: userName,
-          actionByUserId: userId
-        }
-      })
-    } catch (notificationError) {
-      // Log error but don't fail the main operation
-      logger.error('[Documents API] Error sending notification', notificationError as Error, {
-        patientId,
-        documentId: docRef.id
-      })
-    }
+    // Notify the care team a document was uploaded.
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'document_uploaded',
+      title: 'Document uploaded',
+      action: `uploaded ${body.name || body.fileName || 'a document'}`,
+      actionUrl: `/patients/${patientId}?tab=documents`,
+      metadata: {
+        documentId: docRef.id,
+        documentName: body.name || body.fileName || 'Document',
+        documentCategory: body.category || 'other',
+        fileType: body.fileType || 'other',
+        fileSize: body.fileSize,
+      },
+    })
 
     // Auto-trigger OCR pipeline (fire-and-forget — don't block upload response)
     if (document.fileType === 'image' || document.originalUrl) {

@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger'
 import { adminDb } from '@/lib/firebase-admin'
 import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { Timestamp } from 'firebase-admin/firestore'
-import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 
 /**
  * GET /api/patients/[patientId]/health-reports
@@ -312,39 +312,21 @@ export async function POST(
         reportDate: dateToUse
       })
 
-      // Trigger notification to family members for regenerated report
-      try {
-        await sendNotificationToFamilyMembers({
-          userId: '', // Will be overridden for each recipient
-          patientId,
-          type: 'health_report_generated',
-          priority: 'normal',
-          title: 'Health Report Regenerated',
-          message: `${userName} regenerated a health report`,
-          excludeUserId: userId,
-          metadata: {
-            reportId: existingReportDoc.id,
-            generatedBy: userName,
-            generatedByUserId: userId,
-            patientName: patient.name,
-            reportType: 'custom',
-            dateRange: {
-              start: dateToUse,
-              end: dateToUse
-            },
-            includesVitals: true,
-            includesMeals: true,
-            includesWeight: true,
-            includesMedications: true
-          }
-        })
-      } catch (notificationError) {
-        // Log error but don't fail the main operation
-        logger.error('[Health Reports] Error sending notification for regenerated report', notificationError as Error, {
-          patientId,
-          reportId: existingReportDoc.id
-        })
-      }
+      // Notify the care team the report was regenerated.
+      await notifyCareTeamOfEvent({
+        patientId,
+        ownerUserId,
+        actorUserId: userId,
+        type: 'health_report_generated',
+        title: 'Health report regenerated',
+        action: 'regenerated a health report',
+        actionUrl: `/patients/${patientId}`,
+        metadata: {
+          reportId: existingReportDoc.id,
+          reportType: 'custom',
+          dateRange: { start: dateToUse, end: dateToUse },
+        },
+      })
     } else if (existingReportsSnap.empty) {
       // Create new report
       const reportRef = await adminDb.collection('healthReports').add({
@@ -396,39 +378,21 @@ export async function POST(
         reportDate: dateToUse
       })
 
-      // Trigger notification to family members for new report
-      try {
-        await sendNotificationToFamilyMembers({
-          userId: '', // Will be overridden for each recipient
-          patientId,
-          type: 'health_report_generated',
-          priority: 'normal',
-          title: 'Health Report Generated',
-          message: `${userName} generated a new health report`,
-          excludeUserId: userId,
-          metadata: {
-            reportId: reportRef.id,
-            generatedBy: userName,
-            generatedByUserId: userId,
-            patientName: patient.name,
-            reportType: 'custom',
-            dateRange: {
-              start: dateToUse,
-              end: dateToUse
-            },
-            includesVitals: true,
-            includesMeals: true,
-            includesWeight: true,
-            includesMedications: true
-          }
-        })
-      } catch (notificationError) {
-        // Log error but don't fail the main operation
-        logger.error('[Health Reports] Error sending notification for new report', notificationError as Error, {
-          patientId,
-          reportId: reportRef.id
-        })
-      }
+      // Notify the care team the report was generated.
+      await notifyCareTeamOfEvent({
+        patientId,
+        ownerUserId,
+        actorUserId: userId,
+        type: 'health_report_generated',
+        title: 'Health report generated',
+        action: 'generated a health report',
+        actionUrl: `/patients/${patientId}`,
+        metadata: {
+          reportId: reportRef.id,
+          reportType: 'custom',
+          dateRange: { start: dateToUse, end: dateToUse },
+        },
+      })
     } else {
       // Report exists but regenerate is false
       const existingReportDoc = existingReportsSnap.docs[0]

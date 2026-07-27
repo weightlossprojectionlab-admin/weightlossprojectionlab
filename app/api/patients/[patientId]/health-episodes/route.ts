@@ -10,7 +10,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { errorResponse } from '@/lib/api-response'
-import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 import type { HealthEpisode, EpisodeType, EpisodeSensitivity } from '@/types/health-episodes'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -173,43 +173,30 @@ export async function POST(
       }
     }
 
-    // Notify all family members about the health event
-    try {
-      const userDoc = await adminDb.collection('users').doc(userId).get()
-      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'A family member'
-      const patientDoc = await adminDb.collection('users').doc(ownerUserId).collection('patients').doc(patientId).get()
-      const patientName = patientDoc.data()?.name || 'Patient'
-
-      // Higher priority for injuries and abuse concerns
-      const priority = (['injury', 'abuse_concern'] as EpisodeType[]).includes(type)
-        ? 'high' as const
-        : 'normal' as const
-
-      await sendNotificationToFamilyMembers({
-        userId: '',
-        patientId,
-        type: 'episode_created',
-        priority,
-        title: sensitivity === 'sensitive' ? 'Sensitive Health Event Created' : `Health Event: ${title}`,
-        message: 'A new health event has been created',
-        excludeUserId: userId,
-        actionUrl: `/patients/${patientId}`,
-        metadata: {
-          episodeId,
-          episodeType: type,
-          title: sensitivity === 'sensitive' ? 'Sensitive Event' : title,
-          patientName,
-          status: 'onset',
-          sensitivity,
-          startDate,
-          description: sensitivity === 'sensitive' ? undefined : description,
-          actionBy: userName,
-          actionByUserId: userId
-        }
-      })
-    } catch (notifError) {
-      logger.error('[API health-episodes POST] Notification error (non-blocking)', notifError as Error)
-    }
+    // Notify the care team about the new health event. Higher priority for
+    // injuries and abuse concerns; sensitive events omit the description.
+    const episodePriority = (['injury', 'abuse_concern'] as EpisodeType[]).includes(type)
+      ? 'high' as const
+      : 'normal' as const
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'episode_created',
+      priority: episodePriority,
+      title: sensitivity === 'sensitive' ? 'Sensitive health event' : 'Health event created',
+      action: sensitivity === 'sensitive' ? 'logged a sensitive health event' : `logged a health event: ${title}`,
+      actionUrl: `/patients/${patientId}`,
+      metadata: {
+        episodeId,
+        episodeType: type,
+        title: sensitivity === 'sensitive' ? 'Sensitive Event' : title,
+        status: 'onset',
+        sensitivity,
+        startDate,
+        ...(sensitivity === 'sensitive' ? {} : { description }),
+      },
+    })
 
     return NextResponse.json({ success: true, episode: { id: episodeId, ...episode } }, { status: 201 })
 
