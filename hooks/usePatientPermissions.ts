@@ -9,7 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { adminDb } from '@/lib/firebase-admin'
+import { auth as firebaseAuth } from '@/lib/firebase'
 import type { FamilyMemberPermissions, UserRole } from '@/types/medical'
 
 interface PatientPermissionsResult {
@@ -57,6 +57,8 @@ export function usePatientPermissions(patientId: string | undefined): PatientPer
   const [permissions, setPermissions] = useState<FamilyMemberPermissions | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+
     async function checkPermissions() {
       if (!user || !patientId) {
         setLoading(false)
@@ -66,48 +68,39 @@ export function usePatientPermissions(patientId: string | undefined): PatientPer
       try {
         setLoading(true)
 
-        // Check if user is the patient owner (stored in client-side Firestore)
-        // Note: This is a simplified check - server-side RBAC is the source of truth
-        const { getFirestore } = await import('firebase/firestore')
-        const { collection, query, where, getDocs, doc, getDoc } = await import('firebase/firestore')
-        const db = getFirestore()
+        // Read the caller's effective role + permissions from the SERVER RBAC —
+        // the same grant the write routes enforce with. The old client query
+        // read users/{caller}/familyMembers, but the owner edits permissions on
+        // users/{owner}/familyMembers, so a caregiver's UI never saw the grant.
+        const token = await firebaseAuth.currentUser?.getIdToken()
+        const res = await fetch(`/api/patients/${patientId}/access`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        if (cancelled) return
 
-        // Check if patient exists under user's collection
-        const patientRef = doc(db, 'users', user.uid, 'patients', patientId)
-        const patientDoc = await getDoc(patientRef)
-
-        if (patientDoc.exists()) {
-          // User is the owner
-          setRole('owner')
-          setPermissions(null) // Owners have all permissions
+        if (!res.ok) {
+          setRole(null)
+          setPermissions(null)
           setLoading(false)
           return
         }
 
-        // Check if user is a family member with access
-        const familyMembersRef = collection(db, 'users', user.uid, 'familyMembers')
-        const familyQuery = query(
-          familyMembersRef,
-          where('patientsAccess', 'array-contains', patientId),
-          where('status', '==', 'accepted')
-        )
+        const data = await res.json()
+        if (cancelled) return
 
-        const familySnapshot = await getDocs(familyQuery)
-
-        if (!familySnapshot.empty) {
-          const familyMemberDoc = familySnapshot.docs[0]
-          const familyMemberData = familyMemberDoc.data()
-
-          setRole('family')
-          setPermissions(familyMemberData.permissions as FamilyMemberPermissions || DEFAULT_PERMISSIONS)
-        } else {
-          // No access
+        if (!data.authorized) {
           setRole(null)
           setPermissions(null)
+        } else if (data.isOwner) {
+          setRole('owner')
+          setPermissions(null) // owners have all permissions implicitly
+        } else {
+          setRole((data.role as UserRole) ?? 'family')
+          setPermissions((data.permissions as FamilyMemberPermissions) ?? DEFAULT_PERMISSIONS)
         }
-
         setLoading(false)
       } catch (error) {
+        if (cancelled) return
         console.error('Error checking patient permissions:', error)
         setRole(null)
         setPermissions(null)
@@ -116,6 +109,9 @@ export function usePatientPermissions(patientId: string | undefined): PatientPer
     }
 
     checkPermissions()
+    return () => {
+      cancelled = true
+    }
   }, [user, patientId])
 
   const isOwner = role === 'owner'

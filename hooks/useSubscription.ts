@@ -25,8 +25,8 @@ import { useAuth } from './useAuth'
 import { useActiveAccount } from '@/contexts/AccountContext'
 import { UserSubscription } from '@/types'
 import { getUserSubscription, isAdmin, setCachedSubscription } from '@/lib/feature-gates'
-import { db } from '@/lib/firebase'
-import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore'
+import { db, auth } from '@/lib/firebase'
+import { doc, onSnapshot } from 'firebase/firestore'
 
 function convertTimestamps(sub: UserSubscription): UserSubscription {
   return {
@@ -93,40 +93,34 @@ export function useSubscription() {
       setCachedSubscription(null, { isMirrored: true })
     }
 
-    // Owner-doc listener for family-member trickle-down. Set up
-    // when the caller has no subscription of their own but is a
-    // caregiver of another account. Cleared when the caller has
-    // their own sub.
-    let unsubscribeOwner: Unsubscribe | null = null
-    const detachOwner = () => {
-      if (unsubscribeOwner) {
-        unsubscribeOwner()
-        unsubscribeOwner = null
+    // Mirror the OWNER's plan for a caregiver. Firestore rules block a
+    // caregiver from reading another user's doc via the client SDK (the old
+    // onSnapshot mirror silently permission-failed), so we fetch the owner's
+    // plan from a server endpoint that verifies caregiver access with the admin
+    // SDK. One-shot per account/mount — the owner's plan is stable within a
+    // session. isMirrored=true → the write-lock UX gives an informational
+    // toast, never a /pricing redirect the caregiver couldn't act on anyway.
+    let cancelled = false
+    const mirrorOwnerPlan = async (ownerUserId: string) => {
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        const res = await fetch(`/api/owners/${ownerUserId}/plan`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        if (cancelled || !res.ok) return
+        const ownerSub = (await res.json())?.subscription as UserSubscription | undefined
+        if (cancelled) return
+        const converted = ownerSub ? convertTimestamps(ownerSub) : null
+        setSubscription(converted)
+        setCachedSubscription(converted, { isMirrored: true })
+      } catch (error) {
+        if (!cancelled) console.error('[useSubscription] owner plan fetch error:', error)
       }
     }
 
-    const attachOwnerListener = (ownerUserId: string) => {
-      detachOwner()
-      const ownerRef = doc(db, 'users', ownerUserId)
-      unsubscribeOwner = onSnapshot(ownerRef, (snap) => {
-        if (!snap.exists()) return
-        const ownerSub = snap.data()?.subscription as UserSubscription | undefined
-        if (!ownerSub) return
-        const converted = convertTimestamps(ownerSub)
-        setSubscription(converted)
-        // isMirrored=true so the write-lock UX knows this caller
-        // can't reactivate — they'll get an informational toast
-        // instead of a /pricing redirect.
-        setCachedSubscription(converted, { isMirrored: true })
-      }, (error) => {
-        console.error('[useSubscription] Owner listener error:', error)
-      })
-    }
-
-    // Acting inside another account (caregiver context): mirror THAT owner's
-    // plan directly. The caller's own doc doesn't govern here.
+    // Acting inside another account (caregiver context): mirror THAT owner's plan.
     if (targetAccountId) {
-      attachOwnerListener(targetAccountId)
+      mirrorOwnerPlan(targetAccountId)
     }
 
     // Real-time listener on the caller's user doc. If they have
@@ -144,26 +138,23 @@ export function useSubscription() {
       const ownSub = userData?.subscription as UserSubscription | undefined
 
       if (ownSub) {
-        // Caller has their own subscription — use it, drop any
-        // owner listener we may have set up earlier. isMirrored=
-        // false because this caller IS the owner: they're allowed
-        // to reactivate and the lock UX redirects them to /pricing.
-        detachOwner()
+        // Caller has their own subscription — use it. isMirrored=false because
+        // this caller IS the owner: they can reactivate and the lock UX
+        // redirects them to /pricing.
         const converted = convertTimestamps(ownSub)
         setSubscription(converted)
         setCachedSubscription(converted, { isMirrored: false })
         return
       }
 
-      // No own subscription. If caller is a caregiver of another
-      // account, mirror the owner's subscription state.
+      // No own subscription. If caller is a caregiver of another account (their
+      // AccountSwitcher "own" context is a pure caregiver), mirror the owner's
+      // plan via the server endpoint.
       const caregiverOf: Array<{ accountOwnerId?: string }> =
         Array.isArray(userData?.caregiverOf) ? userData.caregiverOf : []
       const ownerUserId = caregiverOf[0]?.accountOwnerId
       if (ownerUserId) {
-        attachOwnerListener(ownerUserId)
-      } else {
-        detachOwner()
+        mirrorOwnerPlan(ownerUserId)
       }
     }, (error) => {
       console.error('[useSubscription] Firestore listener error:', error)
@@ -186,8 +177,8 @@ export function useSubscription() {
 
     return () => {
       // Cleanup
+      cancelled = true
       unsubscribeFirestore()
-      detachOwner()
       // Remove simulation listener
       window.removeEventListener('subscription-simulation-changed', handleSimulationChange)
     }
