@@ -168,17 +168,20 @@ async function fillAdultBasicInfo(page: Page, p: AdultPersona) {
 }
 
 async function fillAdultVitals(page: Page, p: AdultPersona) {
+  // Step 2 heading is now "Height & weight" (was "Current weight") — the step
+  // re-added height, so both height AND weight are required to advance.
   await expect(
-    page.getByRole('heading', { name: 'Current weight', level: 2 }),
+    page.getByRole('heading', { name: 'Height & weight', level: 2 }),
   ).toBeVisible({ timeout: 30_000 })
 
   // Step 2 of 4 on the wizard (added food_allergies step 2026-05-23).
   await expect(page.getByText(/^Step 2 of 4$/)).toBeVisible()
 
-  // Slim vitals step: only currentWeight is collected at the wizard.
-  // Height, activity level, primaryMotivation, target weight all moved
-  // to the patient detail page Info tab (PatientFieldEditor) — edited
-  // post-onboarding when the caregiver has time to fill them in.
+  // Imperial is the default. Height (feet/inches) is required for the step to
+  // proceed; only currentWeight is asserted downstream. Placeholders: feet=5,
+  // inches=8, weight=150 (lbs) — all rendered by VitalsFormSection.
+  await page.getByPlaceholder('5', { exact: true }).fill('5')
+  await page.getByPlaceholder('8', { exact: true }).fill('6')
   await page.getByPlaceholder('150', { exact: true }).fill(p.weightLbs)
 
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
