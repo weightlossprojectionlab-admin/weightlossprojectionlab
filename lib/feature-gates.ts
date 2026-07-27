@@ -247,8 +247,20 @@ export function isCachedSubscriptionMirrored(): boolean {
  */
 export function canAccessFeature(user: User | null, feature: string): boolean {
   if (!user) return false
+  return subscriptionAllowsFeature(getUserSubscription(user), feature)
+}
 
-  const subscription = getUserSubscription(user)
+/**
+ * Plan-level feature check against a SPECIFIC subscription — no user object,
+ * no admin bypass, no global cache. Use when you must evaluate a plan other
+ * than the current viewer's, e.g. a caregiver checking the patient OWNER's
+ * plan (feature access rides on the owner's subscription, never the
+ * caregiver's). canAccessFeature() delegates here for the viewer's own plan.
+ */
+export function subscriptionAllowsFeature(
+  subscription: UserSubscription | null,
+  feature: string
+): boolean {
   if (!subscription) return false
 
   // Grandfathered users get full access to their plan's features forever
