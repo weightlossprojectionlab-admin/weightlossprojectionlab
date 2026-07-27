@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { usePatients } from '@/hooks/usePatients'
 import { useHousehold } from '@/contexts/HouseholdContext'
 import { PatientCard } from '@/components/patients/PatientCard'
+import { InvitationInbox } from '@/components/family/InvitationInbox'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
@@ -190,6 +191,12 @@ function PatientsContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
+        {/* Pending invitations / new-patient assignments to act on in-app.
+            Self-hides when the inbox is empty. */}
+        <div className="mb-6">
+          <InvitationInbox />
+        </div>
+
         {/* Family Admin Dashboard Link - Always show for consistency across same plan */}
         <div className="mb-6">
           <DashboardSelectorCompact />

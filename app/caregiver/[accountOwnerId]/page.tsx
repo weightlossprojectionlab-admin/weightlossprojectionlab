@@ -15,6 +15,7 @@ import { db } from '@/lib/firebase'
 import { doc, getDoc, getDocFromServer, collection, query, where, getDocs } from 'firebase/firestore'
 import AuthGuard from '@/components/auth/AuthGuard'
 import { PageHeader } from '@/components/ui/PageHeader'
+import { InvitationInbox } from '@/components/family/InvitationInbox'
 import { useHouseholdDuties } from '@/hooks/useHouseholdDuties'
 import { calculateAge } from '@/lib/date-utils'
 import { isFeatureEnabled } from '@/lib/featureFlags'
@@ -154,6 +155,10 @@ function MyDutiesSection({ householdId, caregiverUserId }: MyDutiesSectionProps)
 
   return (
     <div className="space-y-4">
+      {/* Pending invitations / new-patient assignments the caregiver can act on
+          in-app — no email round-trip. Renders nothing when the inbox is empty. */}
+      <InvitationInbox />
+
       {/* Stats summary */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
