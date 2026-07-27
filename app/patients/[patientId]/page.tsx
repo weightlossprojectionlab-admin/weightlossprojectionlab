@@ -12,6 +12,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useVitals } from '@/hooks/useVitals'
+import { useAccount } from '@/contexts/AccountContext'
 import { usePatientPermissions } from '@/hooks/usePatientPermissions'
 import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
@@ -356,6 +357,20 @@ function PatientDetailContent() {
     canDeleteDocuments,
     loading: permissionsLoading
   } = usePatientPermissions(patientId)
+
+  // Publish the ACTIVE ACCOUNT = this patient's owner, so subscription/feature
+  // gates resolve the OWNER's plan (the "one account, many seats" rule) rather
+  // than the viewing caregiver's. Mark resolving until the owner is known, to
+  // avoid a flash of the viewer's plan/paywall before it loads.
+  const { setActiveAccount } = useAccount()
+  useEffect(() => {
+    if (patient?.userId) {
+      setActiveAccount(patient.userId, false)
+    } else {
+      setActiveAccount(null, true)
+    }
+    return () => setActiveAccount(null, false)
+  }, [patient?.userId, setActiveAccount])
 
   const { familyMembers, loading: familyMembersLoading, updateMemberPermissions, removeMember } = useFamilyMembers({
     patientId
