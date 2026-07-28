@@ -43,6 +43,7 @@ function MedicalContent() {
       <PageHeader
         title="Medical"
         subtitle="Manage appointments, providers, and clinical records"
+        helpRoute="/docs/user-guides/medical"
       />
 
       <main className="container mx-auto px-4 py-8">

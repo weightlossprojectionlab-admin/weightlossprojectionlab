@@ -22,6 +22,7 @@ import {
   DownloadIcon,
   BellIcon,
   ArchiveBoxIcon,
+  CalendarIcon,
 } from '@/components/docs/DocIcons'
 
 export const metadata: Metadata = {
@@ -128,6 +129,13 @@ export default function UserGuidesPage() {
                 title="Household Duties"
                 description="Manage and assign household tasks like laundry, shopping, and cleaning"
                 accentColor="yellow"
+              />
+              <DocCard
+                href="/docs/user-guides/medical"
+                icon={<CalendarIcon />}
+                title="Medical Hub"
+                description="Schedule appointments, manage providers, view the calendar, and import records"
+                accentColor="blue"
               />
             </div>
           </section>
