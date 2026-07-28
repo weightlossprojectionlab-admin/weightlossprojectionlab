@@ -248,7 +248,7 @@ export function OrderReceiptDetail({ receiptId, inventory, onClose }: OrderRecei
         <button
           type="button"
           onClick={onClose}
-          className="mt-3 text-xs text-destructive hover:underline"
+          className="page-back-button mt-3"
         >
           ← Back to feed
         </button>

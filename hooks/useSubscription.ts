@@ -22,10 +22,11 @@
 import { useState, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
 import { useAuth } from './useAuth'
+import { useActiveAccount } from '@/contexts/AccountContext'
 import { UserSubscription } from '@/types'
 import { getUserSubscription, isAdmin, setCachedSubscription } from '@/lib/feature-gates'
-import { db } from '@/lib/firebase'
-import { doc, onSnapshot, type Unsubscribe } from 'firebase/firestore'
+import { db, auth } from '@/lib/firebase'
+import { doc, onSnapshot } from 'firebase/firestore'
 
 function convertTimestamps(sub: UserSubscription): UserSubscription {
   return {
@@ -48,14 +49,17 @@ export function useSubscription() {
   const [loading, setLoading] = useState(true)
   const [isAdminUser, setIsAdminUser] = useState(false)
 
-  // Active caregiver context, derived from the URL exactly like the
-  // AccountSwitcher does (components/ui/AccountSwitcher.tsx step 5). When the
-  // user is on the /caregiver/{ownerId} surface they are ACTING AS a caregiver
-  // for that owner, so the effective subscription is the OWNER's plan — not
-  // their own. This is what makes the caregiver surface a subscription-free
-  // zone even for a dual-role user whose personal plan is expired.
+  // The account (workspace) whose plan governs the current view. "One account,
+  // many seats": a seat's capabilities derive from the ACTIVE account's plan,
+  // never the caller's own. Primary source is AccountContext (published by the
+  // patient/caregiver surfaces); we also fall back to the /caregiver/{ownerId}
+  // route so surfaces not yet publishing context still mirror the owner.
+  const { activeAccountId, isResolvingAccount } = useActiveAccount()
   const pathname = usePathname()
-  const caregiverOwnerId = pathname?.match(/^\/caregiver\/([^/]+)/)?.[1] ?? null
+  const routeCaregiverOwnerId = pathname?.match(/^\/caregiver\/([^/]+)/)?.[1] ?? null
+  const rawTarget = activeAccountId ?? routeCaregiverOwnerId
+  // A target equal to the viewer is just their own personal workspace.
+  const targetAccountId = rawTarget && rawTarget !== user?.uid ? rawTarget : null
 
   useEffect(() => {
     if (!user) {
@@ -66,47 +70,79 @@ export function useSubscription() {
       return
     }
 
-    // Get effective subscription (with admin override and dev simulation)
-    const effectiveSubscription = getUserSubscription(user as any)
-    setSubscription(effectiveSubscription)
     setIsAdminUser(isAdmin(user as any))
-    setLoading(false)
-    // Only seat the caller's OWN plan into the write-gate cache when we're NOT
-    // on a caregiver surface. On /caregiver/{owner} we must gate on the owner's
-    // plan (seated below by the owner listener), so seating the caller's own
-    // (possibly expired) plan here would briefly flash a paywall.
-    if (!caregiverOwnerId) {
-      setCachedSubscription(effectiveSubscription)
+
+    // Super-admins bypass subscriptions entirely: FULL_ACCESS everywhere,
+    // regardless of any (possibly expired or test-mode) stored subscription.
+    // Short-circuit BEFORE the account mirror and the user-doc listener, which
+    // would otherwise overwrite the bypass with the stored plan (that's why an
+    // admin with an expired stored sub still saw the "subscription ended" banner).
+    if (isAdmin(user as any)) {
+      // Admins: FULL_ACCESS by default, or the SIMULATED plan in dev (the
+      // simulator wins inside getUserSubscription). Keep reacting to simulation
+      // changes so the SubscriptionSimulator works for admins; skip the user-doc
+      // listener / owner mirror, which would clobber this with the stored plan.
+      const applyAdmin = () => {
+        const eff = getUserSubscription(user as any)
+        setSubscription(eff)
+        setCachedSubscription(eff)
+      }
+      applyAdmin()
+      setLoading(false)
+      const onSim = () => applyAdmin()
+      window.addEventListener('subscription-simulation-changed', onSim)
+      return () => window.removeEventListener('subscription-simulation-changed', onSim)
     }
 
-    // Owner-doc listener for family-member trickle-down. Set up
-    // when the caller has no subscription of their own but is a
-    // caregiver of another account. Cleared when the caller has
-    // their own sub.
-    let unsubscribeOwner: Unsubscribe | null = null
-    const detachOwner = () => {
-      if (unsubscribeOwner) {
-        unsubscribeOwner()
-        unsubscribeOwner = null
+    // While the active account is still resolving (e.g. /patients/[id] hasn't
+    // loaded the patient's owner yet), hold — do NOT seat the viewer's personal
+    // plan, which would flash the wrong plan/paywall before the owner's loads.
+    if (isResolvingAccount) {
+      setLoading(true)
+      return
+    }
+
+    setLoading(false)
+    if (!targetAccountId) {
+      // Personal / own workspace: seat the caller's own plan.
+      const effectiveSubscription = getUserSubscription(user as any)
+      setSubscription(effectiveSubscription)
+      setCachedSubscription(effectiveSubscription)
+    } else {
+      // Acting inside another account: clear the cache SYNCHRONOUSLY before the
+      // owner listener attaches, so no stale plan from the prior account bleeds
+      // across a switch. The owner listener (below) seats the mirrored plan.
+      setCachedSubscription(null, { isMirrored: true })
+    }
+
+    // Mirror the OWNER's plan for a caregiver. Firestore rules block a
+    // caregiver from reading another user's doc via the client SDK (the old
+    // onSnapshot mirror silently permission-failed), so we fetch the owner's
+    // plan from a server endpoint that verifies caregiver access with the admin
+    // SDK. One-shot per account/mount — the owner's plan is stable within a
+    // session. isMirrored=true → the write-lock UX gives an informational
+    // toast, never a /pricing redirect the caregiver couldn't act on anyway.
+    let cancelled = false
+    const mirrorOwnerPlan = async (ownerUserId: string) => {
+      try {
+        const token = await auth.currentUser?.getIdToken()
+        const res = await fetch(`/api/owners/${ownerUserId}/plan`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        if (cancelled || !res.ok) return
+        const ownerSub = (await res.json())?.subscription as UserSubscription | undefined
+        if (cancelled) return
+        const converted = ownerSub ? convertTimestamps(ownerSub) : null
+        setSubscription(converted)
+        setCachedSubscription(converted, { isMirrored: true })
+      } catch (error) {
+        if (!cancelled) console.error('[useSubscription] owner plan fetch error:', error)
       }
     }
 
-    const attachOwnerListener = (ownerUserId: string) => {
-      detachOwner()
-      const ownerRef = doc(db, 'users', ownerUserId)
-      unsubscribeOwner = onSnapshot(ownerRef, (snap) => {
-        if (!snap.exists()) return
-        const ownerSub = snap.data()?.subscription as UserSubscription | undefined
-        if (!ownerSub) return
-        const converted = convertTimestamps(ownerSub)
-        setSubscription(converted)
-        // isMirrored=true so the write-lock UX knows this caller
-        // can't reactivate — they'll get an informational toast
-        // instead of a /pricing redirect.
-        setCachedSubscription(converted, { isMirrored: true })
-      }, (error) => {
-        console.error('[useSubscription] Owner listener error:', error)
-      })
+    // Acting inside another account (caregiver context): mirror THAT owner's plan.
+    if (targetAccountId) {
+      mirrorOwnerPlan(targetAccountId)
     }
 
     // Real-time listener on the caller's user doc. If they have
@@ -117,38 +153,30 @@ export function useSubscription() {
       if (!docSnapshot.exists()) return
       const userData = docSnapshot.data()
 
-      // Caregiver surface: always mirror the OWNER's plan, regardless of
-      // whether this caller has their own subscription. The write-gate then
-      // checks the owner's plan and handleWriteLocked takes the mirrored
-      // branch (informational toast, never a /pricing redirect).
-      if (caregiverOwnerId) {
-        attachOwnerListener(caregiverOwnerId)
-        return
-      }
+      // Acting inside another account → its plan is already mirrored above; the
+      // caller's own doc doesn't govern the current view.
+      if (targetAccountId) return
 
       const ownSub = userData?.subscription as UserSubscription | undefined
 
       if (ownSub) {
-        // Caller has their own subscription — use it, drop any
-        // owner listener we may have set up earlier. isMirrored=
-        // false because this caller IS the owner: they're allowed
-        // to reactivate and the lock UX redirects them to /pricing.
-        detachOwner()
+        // Caller has their own subscription — use it. isMirrored=false because
+        // this caller IS the owner: they can reactivate and the lock UX
+        // redirects them to /pricing.
         const converted = convertTimestamps(ownSub)
         setSubscription(converted)
         setCachedSubscription(converted, { isMirrored: false })
         return
       }
 
-      // No own subscription. If caller is a caregiver of another
-      // account, mirror the owner's subscription state.
+      // No own subscription. If caller is a caregiver of another account (their
+      // AccountSwitcher "own" context is a pure caregiver), mirror the owner's
+      // plan via the server endpoint.
       const caregiverOf: Array<{ accountOwnerId?: string }> =
         Array.isArray(userData?.caregiverOf) ? userData.caregiverOf : []
       const ownerUserId = caregiverOf[0]?.accountOwnerId
       if (ownerUserId) {
-        attachOwnerListener(ownerUserId)
-      } else {
-        detachOwner()
+        mirrorOwnerPlan(ownerUserId)
       }
     }, (error) => {
       console.error('[useSubscription] Firestore listener error:', error)
@@ -160,8 +188,8 @@ export function useSubscription() {
       const updated = getUserSubscription(user as any)
       // Updated from simulation
       setSubscription(updated)
-      // Don't overwrite the owner's mirrored plan while on a caregiver surface.
-      if (!caregiverOwnerId) {
+      // Don't overwrite the owner's mirrored plan while acting in their account.
+      if (!targetAccountId) {
         setCachedSubscription(updated)
       }
     }
@@ -171,16 +199,19 @@ export function useSubscription() {
 
     return () => {
       // Cleanup
+      cancelled = true
       unsubscribeFirestore()
-      detachOwner()
       // Remove simulation listener
       window.removeEventListener('subscription-simulation-changed', handleSimulationChange)
     }
-  }, [user, caregiverOwnerId])
+  }, [user, targetAccountId, isResolvingAccount])
 
   return {
     subscription,
     loading,
+    // True while the active account's plan is still resolving. Gate consumers
+    // can render a pending state instead of the viewer's personal plan.
+    isResolving: loading || isResolvingAccount,
     isAdmin: isAdminUser,
     hasSubscription: subscription !== null,
     plan: subscription?.plan || null,

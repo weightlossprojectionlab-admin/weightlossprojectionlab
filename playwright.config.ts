@@ -111,6 +111,7 @@ export default defineConfig({
         /\.multirole\.spec\.ts$/,
         /\.single\.spec\.ts$/,
         /\.franchise\.spec\.ts$/,
+        /\.percyricemusic\.spec\.ts$/,
       ],
     },
     {
@@ -174,6 +175,29 @@ export default defineConfig({
       },
       dependencies: ['setup', 'setup-caregiver'],
       testMatch: /\.multirole\.spec\.ts$/,
+    },
+    {
+      // One-off live demo: percyricemusic (Google-only, no password) signs in
+      // manually via Google in a HEADED window; storage saved to
+      // percyricemusic.json. Reused until it goes stale (like auth.setup.ts).
+      name: 'setup-percyricemusic',
+      testMatch: /auth-percyricemusic\.setup\.ts/,
+      use: { headless: false },
+    },
+    {
+      // Headed so the run is watchable; slowMo paces the clicks. percyricemusic
+      // is the invited caregiver; the owner side (weightlossprojectionlab)
+      // attaches user.json in-test to show the notification bell.
+      name: 'chromium-percyricemusic',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/percyricemusic.json',
+        headless: false,
+        launchOptions: { slowMo: 250 },
+        viewport: { width: 960, height: 940 },
+      },
+      dependencies: ['setup-percyricemusic'],
+      testMatch: /\.percyricemusic\.spec\.ts$/,
     },
   ],
 })

@@ -12,6 +12,7 @@ import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import { patientProfileSchema } from '@/lib/validations/medical'
 import { assertPatientAccess, authorizePatientAccess, type AssertPatientAccessResult } from '@/lib/rbac-middleware'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { PatientProfile, AuthorizationResult } from '@/types/medical'
@@ -252,6 +253,26 @@ export async function PUT(
     })
 
     logger.info('[API /patients/[id] PUT] Patient updated successfully', { userId, ownerUserId, patientId })
+
+    // Notify the care team of the profile edit — ONLY if the account opted in
+    // (notifyOnProfileEdits), since routine field edits would be noisy.
+    try {
+      const prefs = await adminDb.collection('notification_preferences').doc(ownerUserId).get()
+      if (prefs.data()?.notifyOnProfileEdits === true) {
+        await notifyCareTeamOfEvent({
+          patientId,
+          ownerUserId,
+          actorUserId: userId,
+          type: 'patient_profile_updated',
+          title: 'Profile updated',
+          action: 'updated the profile',
+          actionUrl: `/patients/${patientId}?tab=info`,
+          metadata: { updatedFields: Object.keys(updateData) },
+        })
+      }
+    } catch (notifyErr) {
+      logger.error('[API /patients/[id] PUT] profile-edit notify failed', notifyErr as Error, { patientId })
+    }
 
     // Return the merged patient data
     return NextResponse.json({

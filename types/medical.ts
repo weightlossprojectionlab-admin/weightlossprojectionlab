@@ -1067,10 +1067,20 @@ export interface FamilyInvitation {
   createdAt: string // ISO 8601
   expiresAt: string // ISO 8601 (default 7 days)
   status: InvitationStatus
+  // How the invite reaches the recipient. 'in_app' = the recipient is ALREADY
+  // an accepted caregiver of this owner, so a new-patient assignment lands in
+  // their in-app invitation inbox (no email re-onboarding). Defaults to 'email'
+  // for first-contact invites.
+  deliveryMethod?: 'email' | 'in_app'
   acceptedBy?: string // userId
   acceptedAt?: string // ISO 8601
   emailSentAt?: string // ISO 8601
   reminderSentAt?: string // ISO 8601
+  // Display-only, populated by GET /api/invitations for the inbox card (NOT
+  // persisted): names of the people this invite covers + the inviter's email,
+  // so the recipient can decide who they'd be helping and who's asking.
+  patientNames?: string[]
+  invitedByEmail?: string
 }
 
 // ==================== EXTERNAL CAREGIVERS ====================

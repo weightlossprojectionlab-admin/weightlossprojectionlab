@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import type { PatientMedication, MedicationImage, MedicationAuditLog, MedicationFieldChange } from '@/types/medical'
-import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 
 /**
  * PATCH /api/patients/[patientId]/medications/[medicationId]
@@ -170,42 +170,17 @@ export async function PATCH(
 
     logger.info('[Medications API] Medication updated', { patientId, medicationId })
 
-    // Trigger notification to family members
-    try {
-      // Get patient and user info for notification
-      const patientRef = adminDb
-        .collection('users')
-        .doc(ownerUserId)
-        .collection('patients')
-        .doc(patientId)
-      const patientSnapshot = await patientRef.get()
-      const userDoc = await adminDb.collection('users').doc(userId).get()
-      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
-
-      await sendNotificationToFamilyMembers({
-        userId: '', // Will be overridden for each recipient
-        patientId,
-        type: 'medication_updated',
-        priority: 'normal',
-        title: 'Medication Updated',
-        message: `${userName} updated medication information`,
-        excludeUserId: userId,
-        metadata: {
-          medicationId: medicationId,
-          actionBy: userName,
-          actionByUserId: userId,
-          patientName: patientSnapshot.data()?.name || 'Patient',
-          medicationName: medication.name,
-          strength: medication.strength
-        }
-      })
-    } catch (notificationError) {
-      // Log error but don't fail the main operation
-      logger.error('[Medications API] Error sending notification', notificationError as Error, {
-        patientId,
-        medicationId
-      })
-    }
+    // Notify the care team a medication was updated.
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'medication_updated',
+      title: 'Medication updated',
+      action: `updated ${medication.name || 'a medication'}`,
+      actionUrl: `/patients/${patientId}?tab=medications`,
+      metadata: { medicationId, medicationName: medication.name, strength: medication.strength },
+    })
 
     return NextResponse.json({ success: true, data: medication })
   } catch (error) {
@@ -270,41 +245,17 @@ export async function DELETE(
       medicationName: medicationData?.name
     })
 
-    // Trigger notification to family members
-    try {
-      // Get patient and user info for notification
-      const patientRef = adminDb
-        .collection('users')
-        .doc(ownerUserId)
-        .collection('patients')
-        .doc(patientId)
-      const patientSnapshot = await patientRef.get()
-      const userDoc = await adminDb.collection('users').doc(userId).get()
-      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
-
-      await sendNotificationToFamilyMembers({
-        userId: '', // Will be overridden for each recipient
-        patientId,
-        type: 'medication_deleted',
-        priority: 'normal',
-        title: 'Medication Removed',
-        message: `${userName} removed a medication`,
-        excludeUserId: userId,
-        metadata: {
-          medicationId: medicationId,
-          actionBy: userName,
-          actionByUserId: userId,
-          patientName: patientSnapshot.data()?.name || 'Patient',
-          medicationName: medicationData?.name || 'Unknown medication'
-        }
-      })
-    } catch (notificationError) {
-      // Log error but don't fail the main operation
-      logger.error('[Medications API] Error sending notification', notificationError as Error, {
-        patientId,
-        medicationId
-      })
-    }
+    // Notify the care team a medication was removed.
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'medication_deleted',
+      title: 'Medication removed',
+      action: `removed ${medicationData?.name || 'a medication'}`,
+      actionUrl: `/patients/${patientId}?tab=medications`,
+      metadata: { medicationId, medicationName: medicationData?.name || 'Unknown medication' },
+    })
 
     return NextResponse.json({ success: true })
   } catch (error) {

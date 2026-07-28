@@ -60,13 +60,18 @@ export function useInvitations(autoFetch = true): UseInvitationsReturn {
         // Check if result has the additional metadata from API
         const newInvitation = (result as any).data || result
         const emailSent = (result as any).emailSent
+        const deliveredInApp = (result as any).deliveredInApp === true
         const inviteCode = (result as any).inviteCode || newInvitation.inviteCode
 
         // Add to sent invitations
         setSentInvitations(prev => [newInvitation, ...prev])
 
-        // Show appropriate message based on email delivery status
-        if (emailSent === false) {
+        // In-app assignment to an already-accepted caregiver: it lands in their
+        // inbox, no email — so don't treat the (intentional) lack of email as a
+        // delivery failure.
+        if (deliveredInApp) {
+          toast.success(`Added to ${data.recipientEmail}'s invitation inbox`)
+        } else if (emailSent === false) {
           // Copy invite code to clipboard automatically
           navigator.clipboard.writeText(inviteCode)
           toast.error(

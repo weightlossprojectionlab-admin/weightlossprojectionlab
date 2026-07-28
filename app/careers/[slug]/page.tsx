@@ -85,7 +85,7 @@ export default function JobPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
           <Link
             href="/careers"
-            className="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center gap-2"
+            className="page-back-button"
           >
             ← Back to Careers
           </Link>

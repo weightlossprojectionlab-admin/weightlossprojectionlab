@@ -1,10 +1,12 @@
 /**
  * Subscription Simulator - Development Tool
  *
- * Allows developers and admins to simulate different subscription states
- * for testing feature gates, patient limits, and upgrade flows.
+ * Allows developers to simulate different subscription states for testing
+ * feature gates, patient limits, and upgrade flows.
  *
- * Only visible in development mode or for admin users.
+ * DEV-ONLY: never rendered in a production build (not even for admins) — the
+ * simulation is also inert in prod (feature-gates only reads it in dev), so
+ * showing the button there would be a dead, confusing control on the live site.
  */
 
 'use client'
@@ -15,13 +17,15 @@ import { getSimulationPresets, setSimulatedSubscription } from '@/lib/feature-ga
 import { UserSubscription } from '@/types'
 
 export function SubscriptionSimulator() {
-  const { subscription, isAdmin } = useSubscription()
+  const { subscription } = useSubscription()
   const [isOpen, setIsOpen] = useState(false)
   const [selectedPreset, setSelectedPreset] = useState<string>('Real Subscription')
   const [isSimulating, setIsSimulating] = useState(false)
 
-  // Check if we should show the simulator
-  const shouldShow = process.env.NODE_ENV === 'development' || isAdmin
+  // Dev-only: never shown in production (see file header). Regular users never
+  // saw it; admins used to via `|| isAdmin`, but the control is inert in prod,
+  // so it's gated to development entirely.
+  const shouldShow = process.env.NODE_ENV === 'development'
 
   useEffect(() => {
     // Check if there's an active simulation

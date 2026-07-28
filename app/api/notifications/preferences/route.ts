@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
         medication_added: { email: true, push: true, inApp: true },
         medication_updated: { email: true, push: true, inApp: true },
         medication_deleted: { email: true, push: true, inApp: true },
+        medication_dose_logged: { email: false, push: false, inApp: true },
         vital_logged: { email: true, push: false, inApp: true },
         meal_logged: { email: false, push: false, inApp: true },
         weight_logged: { email: true, push: false, inApp: true },
@@ -40,6 +41,7 @@ export async function GET(request: NextRequest) {
         appointment_cancelled: { email: true, push: true, inApp: true },
         appointment_reminder: { email: true, push: true, inApp: true },
         health_report_generated: { email: true, push: true, inApp: true },
+        patient_profile_updated: { email: false, push: false, inApp: true },
         family_member_invited: { email: true, push: false, inApp: true },
         family_member_joined: { email: true, push: true, inApp: true },
         patient_added: { email: true, push: true, inApp: true },
@@ -67,7 +69,8 @@ export async function GET(request: NextRequest) {
           startHour: 22,
           endHour: 7
         },
-        globallyEnabled: true
+        globallyEnabled: true,
+        notifyOnProfileEdits: false
       }
 
       logger.debug('[Notification Preferences API] Returning default preferences', { userId })

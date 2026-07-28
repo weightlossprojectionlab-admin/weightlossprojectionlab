@@ -4,6 +4,7 @@ import { FieldValue, Timestamp } from 'firebase-admin/firestore'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { logger } from '@/lib/logger'
 import { dosesPerDayFor, describeDosage, type DosageSource } from '@/lib/medication-dosage'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 
 /**
  * POST /api/patients/[patientId]/medications/[medicationId]/log-dose
@@ -41,15 +42,6 @@ export async function POST(
     const medication = medicationSnap.data()!
     const now = takenAt ? new Date(takenAt) : new Date()
 
-    // Calculate new quantity remaining (if quantity is tracked)
-    let quantityRemaining = medication.quantityRemaining
-    if (medication.quantity && quantityRemaining !== undefined) {
-      quantityRemaining = Math.max(0, quantityRemaining - 1)
-    } else if (medication.quantity) {
-      // Initialize quantityRemaining if not set
-      quantityRemaining = parseInt(medication.quantity) - 1
-    }
-
     // Log the dose in adherenceLogs subcollection
     await medicationRef.collection('adherenceLogs').add({
       takenAt: Timestamp.fromDate(now),
@@ -68,26 +60,43 @@ export async function POST(
       medication as DosageSource
     )
 
-    // Update medication document
-    const updates: any = {
-      lastTaken: Timestamp.fromDate(now),
-      lastModified: FieldValue.serverTimestamp()
-    }
+    // Update the medication. The quantityRemaining decrement runs inside a
+    // TRANSACTION: multiple caregivers can log a dose on the same account at the
+    // same instant, and a plain read-modify-write loses decrements (each reads N
+    // and writes N-1, so only one of the concurrent doses sticks). The
+    // transaction re-reads and retries under contention, so every dose counts.
+    // adherenceLogs.add above is already an atomic append.
+    let quantityRemaining: number | undefined
+    await adminDb.runTransaction(async (tx) => {
+      const snap = await tx.get(medicationRef)
+      const m = snap.data()
+      if (!m) return
 
-    if (quantityRemaining !== undefined) {
-      updates.quantityRemaining = quantityRemaining
-    }
+      let qr: number | undefined = m.quantityRemaining
+      if (m.quantity && qr !== undefined) {
+        qr = Math.max(0, qr - 1)
+      } else if (m.quantity) {
+        qr = parseInt(m.quantity) - 1
+      }
+      quantityRemaining = qr
 
-    if (adherenceRate !== null) {
-      updates.adherenceRate = adherenceRate
-    } else if (medication.adherenceRate !== undefined) {
-      // The dosage isn't determinable, but a value is stored — it was fabricated by
-      // the old default-to-1 parser. Remove it rather than let a stale wrong number
-      // keep rendering as fact.
-      updates.adherenceRate = FieldValue.delete()
-    }
-
-    await medicationRef.update(updates)
+      const updates: any = {
+        lastTaken: Timestamp.fromDate(now),
+        lastModified: FieldValue.serverTimestamp(),
+      }
+      if (qr !== undefined) {
+        updates.quantityRemaining = qr
+      }
+      if (adherenceRate !== null) {
+        updates.adherenceRate = adherenceRate
+      } else if (m.adherenceRate !== undefined) {
+        // The dosage isn't determinable, but a value is stored — it was fabricated by
+        // the old default-to-1 parser. Remove it rather than let a stale wrong number
+        // keep rendering as fact.
+        updates.adherenceRate = FieldValue.delete()
+      }
+      tx.update(medicationRef, updates)
+    })
 
     // Fetch updated medication
     const updatedSnap = await medicationRef.get()
@@ -106,6 +115,20 @@ export async function POST(
       medicationId,
       quantityRemaining,
       adherenceRate
+    })
+
+    // Notify the rest of the care team (owner + other caregivers) that a dose
+    // was given — "who gave the 6pm dose" — so nobody double-doses.
+    const medName = medication.name || 'a medication'
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'medication_dose_logged',
+      title: 'Dose given',
+      action: `gave a dose of ${medName}`,
+      actionUrl: `/patients/${patientId}?tab=medications`,
+      metadata: { medicationId, medicationName: medName },
     })
 
     return NextResponse.json(updatedMedication)

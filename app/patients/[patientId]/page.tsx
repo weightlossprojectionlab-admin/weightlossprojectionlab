@@ -12,6 +12,7 @@ import { auth, db } from '@/lib/firebase'
 import { collection, onSnapshot, orderBy, query, where } from 'firebase/firestore'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useVitals } from '@/hooks/useVitals'
+import { useAccount } from '@/contexts/AccountContext'
 import { usePatientPermissions } from '@/hooks/usePatientPermissions'
 import { useFamilyMembers } from '@/hooks/useFamilyMembers'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
@@ -356,6 +357,20 @@ function PatientDetailContent() {
     canDeleteDocuments,
     loading: permissionsLoading
   } = usePatientPermissions(patientId)
+
+  // Publish the ACTIVE ACCOUNT = this patient's owner, so subscription/feature
+  // gates resolve the OWNER's plan (the "one account, many seats" rule) rather
+  // than the viewing caregiver's. Mark resolving until the owner is known, to
+  // avoid a flash of the viewer's plan/paywall before it loads.
+  const { setActiveAccount } = useAccount()
+  useEffect(() => {
+    if (patient?.userId) {
+      setActiveAccount(patient.userId, false)
+    } else {
+      setActiveAccount(null, true)
+    }
+    return () => setActiveAccount(null, false)
+  }, [patient?.userId, setActiveAccount])
 
   const { familyMembers, loading: familyMembersLoading, updateMemberPermissions, removeMember } = useFamilyMembers({
     patientId
@@ -1003,11 +1018,13 @@ function PatientDetailContent() {
               ) : (
                 <>
                   {patient.type && `${patient.type} • `}
-                  {/* Unified badge label — gender-aware relationship
-                      for adults, life-stage for minors. Replaces the
-                      lifeStage-or-raw-relationship fallback that lost
-                      the relationship semantic for adults. */}
-                  {getPatientBadgeLabel(patient)}
+                  {/* Unified badge label — gender-aware relationship for adults,
+                      life-stage for minors. For a CAREGIVER, the owner-relative
+                      "self" label ("You") is wrong — this isn't the caregiver's
+                      own record — so show an under-care label instead. */}
+                  {!isOwner && patient.relationship === 'self'
+                    ? 'In your care'
+                    : getPatientBadgeLabel(patient)}
                 </>
               )}
             </span>
@@ -2424,8 +2441,14 @@ function PatientDetailContent() {
                   // household" — breaks for multi-household, hired
                   // caregivers, and self-as-patient cases. See
                   // memory/project_relationship_subject_ambiguity;
-                  // subsumed by the queued family-tree edge schema.
-                  displayLabel={getPatientBadgeLabel(patient)}
+                  // subsumed by the queued family-tree edge schema. For a
+                  // caregiver, "self" would read "You" (wrong subject) — show
+                  // the under-care label instead.
+                  displayLabel={
+                    !isOwner && patient.relationship === 'self'
+                      ? 'In your care'
+                      : getPatientBadgeLabel(patient)
+                  }
                   canEdit={canEditProfile}
                   onUpdated={(v) => setPatient({ ...patient, relationship: v })}
                 />

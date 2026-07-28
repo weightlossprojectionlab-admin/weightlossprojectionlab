@@ -252,7 +252,7 @@ export default function ProductEditPage() {
         <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
           <h3 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Product</h3>
           <p className="text-error-dark dark:text-red-300">{error || 'Product not found'}</p>
-          <Link href="/admin/barcodes" className="text-primary hover:underline mt-4 inline-block">
+          <Link href="/admin/barcodes" className="page-back-button mt-4">
             ← Back to Barcodes
           </Link>
         </div>

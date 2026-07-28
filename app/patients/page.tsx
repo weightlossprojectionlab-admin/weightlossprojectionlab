@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react'
 import { usePatients } from '@/hooks/usePatients'
 import { useHousehold } from '@/contexts/HouseholdContext'
 import { PatientCard } from '@/components/patients/PatientCard'
+import { InvitationInbox } from '@/components/family/InvitationInbox'
 import { PageHeader } from '@/components/ui/PageHeader'
 import { PlusIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
@@ -33,7 +34,6 @@ import {
   getAddButtonText,
   getTrackingTerminology
 } from '@/lib/user-role-helper'
-import { DashboardSelectorCompact } from '@/components/dashboard/DashboardSelector'
 import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
 import VitalsQuickViewModal from '@/components/patients/VitalsQuickViewModal'
 import { useAuth } from '@/hooks/useAuth'
@@ -190,10 +190,12 @@ function PatientsContent() {
       />
 
       <main className="container mx-auto px-4 py-8 max-w-7xl">
-        {/* Family Admin Dashboard Link - Always show for consistency across same plan */}
+        {/* Pending invitations / new-patient assignments to act on in-app.
+            Self-hides when the inbox is empty. */}
         <div className="mb-6">
-          <DashboardSelectorCompact />
+          <InvitationInbox />
         </div>
+
 
         {/* Caregiver-only mode explainer — why their own members aren't here. */}
         {caregiverOnlyMode && (

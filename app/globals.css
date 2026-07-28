@@ -93,11 +93,6 @@
     transition-duration: 200ms;
   }
 
-  /* Prevent transitions on elements that shouldn't animate */
-  *:where(:not(:has(> *))) {
-    transition-property: background-color, border-color, color, fill, stroke;
-  }
-
   /* Prevent horizontal overflow on narrow devices */
   /* Only apply word-break to long text content, not headings or UI elements */
   p, li {
@@ -206,11 +201,12 @@
 }
 
 @layer components {
-  /* High-contrast text utilities for mobile accessibility - LIGHT MODE ONLY */
-  .text-label {
-    @apply text-sm font-bold text-gray-900;
-  }
-
+  /* High-contrast text utilities for mobile accessibility - LIGHT MODE ONLY.
+     NOTE: `.text-label` intentionally lives ONLY in the typography group below
+     (text-sm font-medium leading-none text-foreground) — it used to be
+     redefined here as bold/gray-900, but that copy was always overridden by the
+     later definition, so it was dead. Removed to keep one source of truth. If a
+     bolder high-contrast label is ever needed, add a distinctly named class. */
   .text-label-sm {
     @apply text-xs font-bold text-gray-900;
   }
@@ -238,50 +234,50 @@
 
   .btn-primary {
     @apply bg-primary text-primary-foreground;
-    @apply hover:bg-[hsl(var(--primary-hover))] active:bg-[hsl(var(--primary-dark))];
+    @apply hover:bg-primary-hover active:bg-primary-dark;
     @apply shadow-sm hover:shadow-md active:shadow-sm;
   }
 
   .btn-secondary {
     @apply bg-secondary text-secondary-foreground;
-    @apply hover:bg-[hsl(var(--secondary-hover))] active:bg-[hsl(var(--secondary-dark))];
+    @apply hover:bg-secondary-hover active:bg-secondary-dark;
     @apply shadow-sm hover:shadow-md active:shadow-sm;
   }
 
   .btn-accent {
     @apply bg-accent text-accent-foreground;
-    @apply hover:bg-[hsl(var(--accent-hover))] active:bg-[hsl(var(--accent-dark))];
+    @apply hover:bg-accent-hover active:bg-accent-dark;
     @apply shadow-sm hover:shadow-md active:shadow-sm;
   }
 
   .btn-success {
-    @apply bg-[hsl(var(--success))] text-[hsl(var(--success-foreground))];
-    @apply hover:bg-[hsl(var(--success-dark))] active:bg-[hsl(var(--success-dark))];
+    @apply bg-success text-success-foreground;
+    @apply hover:bg-success-dark active:bg-success-dark;
     @apply shadow-sm hover:shadow-md active:shadow-sm;
   }
 
   .btn-warning {
-    @apply bg-[hsl(var(--warning))] text-[hsl(var(--warning-foreground))];
-    @apply hover:bg-[hsl(var(--warning-dark))] active:bg-[hsl(var(--warning-dark))];
+    @apply bg-warning text-warning-foreground;
+    @apply hover:bg-warning-dark active:bg-warning-dark;
     @apply shadow-sm hover:shadow-md active:shadow-sm;
   }
 
   .btn-error {
-    @apply bg-[hsl(var(--error))] text-[hsl(var(--error-foreground))];
-    @apply hover:bg-[hsl(var(--error-dark))] active:bg-[hsl(var(--error-dark))];
+    @apply bg-error text-error-foreground;
+    @apply hover:bg-error-dark active:bg-error-dark;
     @apply shadow-sm hover:shadow-md active:shadow-sm;
   }
 
   .btn-outline {
     @apply border-2 border-primary bg-transparent text-primary;
     @apply hover:bg-primary hover:text-primary-foreground;
-    @apply active:bg-[hsl(var(--primary-dark))] active:text-primary-foreground;
+    @apply active:bg-primary-dark active:text-primary-foreground;
   }
 
   .btn-ghost {
     @apply bg-transparent text-primary;
-    @apply hover:bg-[hsl(var(--primary-light))];
-    @apply active:bg-[hsl(var(--primary-light))];
+    @apply hover:bg-primary-light;
+    @apply active:bg-primary-light;
   }
 
   /* Mobile-optimized form styles */
@@ -291,7 +287,7 @@
     @apply placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2;
     @apply focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
     @apply min-h-[44px] transition-all duration-200;
-    @apply hover:border-[hsl(var(--primary-hover))] focus:border-primary;
+    @apply hover:border-primary-hover focus:border-primary;
   }
 
   /* Card component styles */
@@ -301,7 +297,7 @@
   }
 
   .progress-bar {
-    @apply w-full bg-[hsl(var(--muted))] rounded-full h-2 overflow-hidden;
+    @apply w-full bg-muted rounded-full h-2 overflow-hidden;
   }
 
   .progress-bar-fill {
@@ -313,11 +309,11 @@
   }
 
   .progress-bar-success {
-    @apply bg-[hsl(var(--success))];
+    @apply bg-success;
   }
 
   .progress-bar-warning {
-    @apply bg-[hsl(var(--warning))];
+    @apply bg-warning;
   }
 
   .progress-bar-accent {
@@ -330,19 +326,19 @@
   }
 
   .notification-success {
-    @apply bg-[hsl(var(--success-light))] border-[hsl(var(--success))] text-[hsl(var(--success-dark))];
+    @apply bg-success-light border-success text-success-dark;
   }
 
   .notification-warning {
-    @apply bg-[hsl(var(--warning-light))] border-[hsl(var(--warning))] text-[hsl(var(--warning-dark))];
+    @apply bg-warning-light border-warning text-warning-dark;
   }
 
   .notification-error {
-    @apply bg-[hsl(var(--error-light))] border-[hsl(var(--error))] text-[hsl(var(--error-dark))];
+    @apply bg-error-light border-error text-error-dark;
   }
 
   .notification-info {
-    @apply bg-[hsl(var(--accent-light))] border-[hsl(var(--accent))] text-[hsl(var(--accent-dark))];
+    @apply bg-accent-light border-accent text-accent-dark;
   }
 
   /* Typography utility classes */
@@ -395,8 +391,11 @@
     @apply text-xl font-semibold text-foreground md:text-2xl;
   }
 
+  /* Back navigation rendered as a real button: bordered pill, ≥44px tap target
+     (WCAG 2.5.5), mobile / fat-finger first. Single source for every page's
+     "← Back" via <PageHeader backHref>. */
   .page-back-button {
-    @apply text-primary hover:text-primary-hover transition-colors;
+    @apply inline-flex items-center gap-1.5 min-h-[44px] px-4 rounded-lg border border-border bg-card text-foreground font-medium hover:bg-muted active:bg-muted/80 transition-colors;
   }
 
   /* Container utilities with safe area support */
@@ -461,15 +460,15 @@
   }
 
   .badge-success {
-    @apply badge bg-[hsl(var(--success-light))] text-[hsl(var(--success-dark))];
+    @apply badge bg-success-light text-success-dark;
   }
 
   .badge-warning {
-    @apply badge bg-[hsl(var(--warning-light))] text-[hsl(var(--warning-dark))];
+    @apply badge bg-warning-light text-warning-dark;
   }
 
   .badge-error {
-    @apply badge bg-[hsl(var(--error-light))] text-[hsl(var(--error-dark))];
+    @apply badge bg-error-light text-error-dark;
   }
 
   .badge-neutral {

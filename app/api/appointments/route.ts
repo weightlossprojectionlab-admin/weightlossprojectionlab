@@ -14,7 +14,7 @@ import { logger } from '@/lib/logger'
 import { errorResponse, unauthorizedResponse, validationError } from '@/lib/api-response'
 import type { Appointment, PatientProfile, Provider } from '@/types/medical'
 import type { NotificationMetadata } from '@/types/notifications'
-import { recordInAppNotification } from '@/lib/notifications/dispatch'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 import { v4 as uuidv4 } from 'uuid'
 
 export async function GET(request: NextRequest) {
@@ -235,36 +235,20 @@ export async function POST(request: NextRequest) {
         metadata.providerName = provider.name
       }
 
-      const title = 'Appointment Scheduled'
-      const message = `${patient.name} has an appointment${provider?.name ? ` with ${provider.name}` : ''} on ${appointmentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} at ${appointmentDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`
-
-      // Use the canonical bell-mirror helper so the doc has the full schema
-      // (archived, pushSent, emailSent, status) — legacy thin docs caused the
-      // /notifications page to render empty even though the bell badge showed
-      // unread counts. Now every appointment-scheduled row matches the page's
-      // archived-filter query.
-      const createNotificationForUser = async (targetUserId: string, userType: string) => {
-        const { id: notificationId } = await recordInAppNotification({
-          userId: targetUserId,
-          patientId: validatedData.patientId,
-          type: 'appointment_scheduled',
-          priority: 'normal',
-          title,
-          message,
-          actionUrl: '/calendar',
-          actionLabel: 'View Calendar',
-          metadata: metadata as NotificationMetadata,
-        })
-        logger.info(`[API /appointments POST] ${userType} notification created`, {
-          notificationId,
-          appointmentId,
-        })
-      }
-
-      await createNotificationForUser(ownerUserId, 'Owner')
-      if (userId !== ownerUserId) {
-        await createNotificationForUser(userId, 'Acting user')
-      }
+      // Fan out to the whole care team (owner + other caregivers), minus the
+      // person who scheduled it. Replaces the prior owner+actor-only notify so
+      // co-caregivers also see new appointments. DRY: shared care-team helper.
+      const apptDate = appointmentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+      await notifyCareTeamOfEvent({
+        patientId: validatedData.patientId,
+        ownerUserId,
+        actorUserId: userId,
+        type: 'appointment_scheduled',
+        title: 'Appointment scheduled',
+        action: `scheduled an appointment${provider?.name ? ` with ${provider.name}` : ''} on ${apptDate}`,
+        actionUrl: '/calendar',
+        metadata: metadata as Record<string, unknown>,
+      })
     } catch (notifError) {
       logger.error('[API /appointments POST] Failed to create notification', notifError as Error)
       // Don't fail the appointment creation if notification fails

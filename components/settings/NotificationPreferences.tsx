@@ -316,6 +316,14 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
     setHasChanges(true)
   }
 
+  const handleToggleProfileEdits = (enabled: boolean) => {
+    setPreferences((prev) => ({
+      ...prev,
+      notifyOnProfileEdits: enabled
+    }))
+    setHasChanges(true)
+  }
+
   const handleToggleChannel = (
     type: NotificationType,
     channel: 'email' | 'push',
@@ -504,6 +512,27 @@ export function NotificationPreferences({ userId }: NotificationPreferencesProps
               </div>
             </div>
           ))}
+
+          {/* Profile-edit notifications (care team) */}
+          <div className="border border-border rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-foreground">Notify on profile edits</h3>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Ring the care team&apos;s bell when someone edits a patient&apos;s profile (Info tab). Off by default to avoid noise from routine edits.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={preferences.notifyOnProfileEdits ?? false}
+                  onChange={(e) => handleToggleProfileEdits(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-muted peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-card after:border-border after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+              </label>
+            </div>
+          </div>
 
           {/* Quiet Hours */}
           <div className="border border-border rounded-lg p-4">

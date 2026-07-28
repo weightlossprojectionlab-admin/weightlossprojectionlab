@@ -17,6 +17,10 @@ export type NotificationType =
   | 'medication_added'
   | 'medication_updated'
   | 'medication_deleted'
+  // A caregiver logged a dose as GIVEN (log-dose). Fans out to the care team
+  // (owner + other caregivers) so "who gave the 6pm dose" is visible and
+  // double-dosing is avoided.
+  | 'medication_dose_logged'
   | 'vital_logged'
   | 'meal_logged'
   | 'weight_logged'
@@ -25,6 +29,10 @@ export type NotificationType =
   | 'appointment_updated'
   | 'appointment_cancelled'
   | 'health_report_generated'
+  // A caregiver edited the patient's profile (Info tab). Off by default —
+  // gated by the owner's `notifyOnProfileEdits` toggle since routine edits
+  // would otherwise be noisy.
+  | 'patient_profile_updated'
   | 'family_member_invited'
   | 'family_member_joined'
   | 'patient_added'
@@ -408,6 +416,7 @@ export interface NotificationPreferences {
   medication_added: NotificationChannelPreferences
   medication_updated: NotificationChannelPreferences
   medication_deleted: NotificationChannelPreferences
+  medication_dose_logged: NotificationChannelPreferences
 
   // Health tracking notifications
   vital_logged: NotificationChannelPreferences
@@ -425,6 +434,7 @@ export interface NotificationPreferences {
 
   // Health report notifications
   health_report_generated: NotificationChannelPreferences
+  patient_profile_updated: NotificationChannelPreferences
 
   // Family notifications
   family_member_invited: NotificationChannelPreferences
@@ -478,6 +488,10 @@ export interface NotificationPreferences {
   // Global settings
   globallyEnabled: boolean
   timezone?: string // IANA timezone (e.g., "America/New_York")
+
+  // Account-level toggle: when true, edits to a patient's profile (Info tab)
+  // notify the care team. Off by default because routine field edits are noisy.
+  notifyOnProfileEdits?: boolean
 }
 
 /**
@@ -487,6 +501,9 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   medication_added: { email: true, push: true, inApp: true },
   medication_updated: { email: true, push: true, inApp: true },
   medication_deleted: { email: true, push: true, inApp: true },
+  // Dose-given fans out to the care team on the bell; email/push off by default
+  // since doses are frequent (opt in via preferences to avoid noise).
+  medication_dose_logged: { email: false, push: false, inApp: true },
   vital_logged: { email: false, push: true, inApp: true },
   meal_logged: { email: false, push: false, inApp: true },
   weight_logged: { email: false, push: true, inApp: true },
@@ -496,6 +513,7 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
   appointment_cancelled: { email: true, push: true, inApp: true },
   appointment_reminder: { email: true, push: true, inApp: true },
   health_report_generated: { email: true, push: true, inApp: true },
+  patient_profile_updated: { email: false, push: false, inApp: true },
   family_member_invited: { email: true, push: false, inApp: true },
   family_member_joined: { email: true, push: true, inApp: true },
   patient_added: { email: true, push: true, inApp: true },
@@ -523,7 +541,8 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
     startHour: 22, // 10 PM
     endHour: 7 // 7 AM
   },
-  globallyEnabled: true
+  globallyEnabled: true,
+  notifyOnProfileEdits: false
 }
 
 // ==================== UTILITY TYPES ====================

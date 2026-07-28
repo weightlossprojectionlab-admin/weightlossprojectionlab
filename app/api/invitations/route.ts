@@ -28,10 +28,13 @@ export async function GET(request: NextRequest) {
     }
     const userId = authResult.userId
 
-    // Get user profile for email
+    // Get user profile for email. Prefer the VERIFIED auth email (always
+    // present) over the users-doc email, which some accounts are missing —
+    // without this, `recipientEmail == ''` matches nothing and the inbox is
+    // silently empty. Mirrors the accept route's same fallback.
     const userDoc = await adminDb.collection('users').doc(userId).get()
     const userData = userDoc.data()
-    const userEmail = userData?.email || ''
+    const userEmail = authResult.email || userData?.email || ''
 
     // Query sent invitations
     const sentSnapshot = await adminDb
@@ -53,10 +56,42 @@ export async function GET(request: NextRequest) {
       .orderBy('createdAt', 'desc')
       .get()
 
-    const receivedInvitations = receivedSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as FamilyInvitation[]
+    // Enrich each received invite with WHO you'd help + WHO is asking, so the
+    // inbox card can show a real decision (names, not just a count). Resolved
+    // server-side with the admin SDK because the recipient has no client read
+    // access to the inviter's patients until they accept. Display-only.
+    const receivedInvitations = await Promise.all(
+      receivedSnapshot.docs.map(async (doc) => {
+        const inv = { id: doc.id, ...doc.data() } as FamilyInvitation
+
+        const patientNames: string[] = []
+        for (const patientId of inv.patientsShared || []) {
+          let patientDoc = await adminDb.collection('patients').doc(patientId).get()
+          if (!patientDoc.exists) {
+            patientDoc = await adminDb
+              .collection('users')
+              .doc(inv.invitedByUserId)
+              .collection('patients')
+              .doc(patientId)
+              .get()
+          }
+          if (patientDoc.exists) {
+            const p = patientDoc.data()
+            patientNames.push(p?.nickname || p?.firstName || p?.name || 'Someone')
+          }
+        }
+
+        let invitedByEmail = ''
+        try {
+          const inviterDoc = await adminDb.collection('users').doc(inv.invitedByUserId).get()
+          invitedByEmail = inviterDoc.data()?.email || ''
+        } catch {
+          // best-effort — the card falls back to the stored invitedByName
+        }
+
+        return { ...inv, patientNames, invitedByEmail } as FamilyInvitation
+      })
+    )
 
     return NextResponse.json({
       success: true,
@@ -208,6 +243,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Is the recipient ALREADY an accepted caregiver of this owner? If so this
+    // is a new-patient assignment, not a first-contact invite — deliver it
+    // in-app (their invitation inbox) instead of re-onboarding them by email.
+    const acceptedMembersSnap = await adminDb
+      .collection('users')
+      .doc(userId)
+      .collection('familyMembers')
+      .where('status', '==', 'accepted')
+      .get()
+    const recipientLower = validatedData.recipientEmail.trim().toLowerCase()
+    const isExistingCaregiver = acceptedMembersSnap.docs.some(
+      (d) => (d.data().email || '').trim().toLowerCase() === recipientLower
+    )
+    const deliveryMethod: 'email' | 'in_app' = isExistingCaregiver ? 'in_app' : 'email'
+
     // Create invitation
     const now = new Date().toISOString()
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
@@ -224,7 +274,8 @@ export async function POST(request: NextRequest) {
       createdAt: now,
       expiresAt,
       status: 'pending',
-      emailSentAt: now // TODO: Integrate email service
+      deliveryMethod,
+      ...(deliveryMethod === 'email' && { emailSentAt: now }) // only email invites get an email timestamp
     }
 
     const invitationRef = await adminDb.collection('familyInvitations').add(invitation)
@@ -257,32 +308,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Send invitation email
+    // Send invitation email — SKIPPED for in-app assignments to an existing
+    // caregiver (it lands in their inbox instead).
     let emailSent = false
     let emailError = null
-    try {
-      await sendFamilyInvitationEmail({
-        recipientEmail: validatedData.recipientEmail,
-        inviterName: userName,
-        inviteCode,
-        patientNames,
-        message: validatedData.message,
-        expiresAt
-      })
-      console.log(`Invitation email sent to ${validatedData.recipientEmail}`)
-      emailSent = true
-    } catch (error: any) {
-      console.error('Failed to send invitation email:', error)
-      emailError = error.message
-      // Don't fail the whole request if email fails - invitation is still created
+    if (deliveryMethod === 'email') {
+      try {
+        await sendFamilyInvitationEmail({
+          recipientEmail: validatedData.recipientEmail,
+          inviterName: userName,
+          inviteCode,
+          patientNames,
+          message: validatedData.message,
+          expiresAt
+        })
+        console.log(`Invitation email sent to ${validatedData.recipientEmail}`)
+        emailSent = true
+      } catch (error: any) {
+        console.error('Failed to send invitation email:', error)
+        emailError = error.message
+        // Don't fail the whole request if email fails - invitation is still created
+      }
     }
 
     return NextResponse.json({
       success: true,
       data: createdInvitation,
-      message: emailSent
-        ? `Invitation sent to ${validatedData.recipientEmail}`
-        : `Invitation created for ${validatedData.recipientEmail}. Share code: ${inviteCode}`,
+      // deliveredInApp lets the client show "added to their inbox" instead of an
+      // email-delivery message (or a false "email failed" warning).
+      deliveredInApp: deliveryMethod === 'in_app',
+      message:
+        deliveryMethod === 'in_app'
+          ? `Added to ${validatedData.recipientEmail}'s invitation inbox`
+          : emailSent
+            ? `Invitation sent to ${validatedData.recipientEmail}`
+            : `Invitation created for ${validatedData.recipientEmail}. Share code: ${inviteCode}`,
       emailSent,
       emailError,
       inviteCode // Include invite code in response for easy sharing

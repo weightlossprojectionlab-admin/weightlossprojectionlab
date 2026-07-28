@@ -5,7 +5,7 @@ import { logger } from '@/lib/logger'
 import { assertPatientAccess } from '@/lib/rbac-middleware'
 import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import type { PatientMedication } from '@/types/medical'
-import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 
 /**
  * GET /api/patients/[patientId]/medications
@@ -149,37 +149,22 @@ export async function POST(
 
     logger.info('[Medications API] Medication added', { patientId, medicationId: medication.id })
 
-    // Trigger notification to family members
-    try {
-      // Get patient name and user name for notification
-      const userDoc = await adminDb.collection('users').doc(userId).get()
-      const userName = userDoc.exists ? userDoc.data()?.name || userDoc.data()?.email : 'Unknown User'
-
-      await sendNotificationToFamilyMembers({
-        userId: '', // Will be overridden for each recipient
-        patientId,
-        type: 'medication_added',
-        priority: 'normal',
-        title: 'New Medication Added',
-        message: `${userName} added a new medication`,
-        excludeUserId: userId,
-        metadata: {
-          medicationId: medicationRef.id,
-          actionBy: userName,
-          actionByUserId: userId,
-          patientName: patientDoc.data()?.name || 'Patient',
-          medicationName: medication.name,
-          strength: medication.strength,
-          prescribedFor: medication.prescribedFor
-        }
-      })
-    } catch (notificationError) {
-      // Log error but don't fail the main operation
-      logger.error('[Medications API] Error sending notification', notificationError as Error, {
-        patientId,
-        medicationId: medication.id
-      })
-    }
+    // Notify the care team a medication was added.
+    await notifyCareTeamOfEvent({
+      patientId,
+      ownerUserId,
+      actorUserId: userId,
+      type: 'medication_added',
+      title: 'Medication added',
+      action: `added ${medication.name || 'a medication'}`,
+      actionUrl: `/patients/${patientId}?tab=medications`,
+      metadata: {
+        medicationId: medicationRef.id,
+        medicationName: medication.name,
+        strength: medication.strength,
+        prescribedFor: medication.prescribedFor,
+      },
+    })
 
     return NextResponse.json({ success: true, data: medication }, { status: 201 })
   } catch (error) {

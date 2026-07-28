@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useMemo, useEffect, createContext, useContext } from 'react'
-import { doc, getDoc, onSnapshot } from 'firebase/firestore'
+import { doc, onSnapshot } from 'firebase/firestore'
 import {
   PatientProfile,
   PatientMedication,
@@ -21,7 +21,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import ImageLightbox from '@/components/ui/ImageLightbox'
 import { useAuth } from '@/hooks/useAuth'
-import { canAccessFeature, subscriptionAllowsFeature } from '@/lib/feature-gates'
+import { canAccessFeature, subscriptionAllowsFeature, isAdmin } from '@/lib/feature-gates'
 import { UpgradePrompt } from '@/components/subscription/UpgradePrompt'
 import { addManualShoppingItem, deleteShoppingItem } from '@/lib/shopping-operations'
 import { useShopping } from '@/hooks/useShopping'
@@ -735,8 +735,13 @@ export function AIHealthReport({
     let cancelled = false
     ;(async () => {
       try {
-        const snap = await getDoc(doc(db, 'users', patient.userId))
-        const ownerSub = (snap.data()?.subscription as any) ?? null
+        // Client Firestore can't read the owner's doc (rules); the plan
+        // endpoint verifies caregiver access with the admin SDK.
+        const token = await auth.currentUser?.getIdToken()
+        const res = await fetch(`/api/owners/${patient.userId}/plan`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        const ownerSub = res.ok ? ((await res.json())?.subscription ?? null) : null
         if (!cancelled) setOwnerHasAccess(subscriptionAllowsFeature(ownerSub, 'health-reports'))
       } catch {
         if (!cancelled) setOwnerHasAccess(false)
@@ -747,8 +752,10 @@ export function AIHealthReport({
     }
   }, [isCaregiverView, patient.userId])
 
+  // A super-admin viewer bypasses subscriptions entirely; otherwise a caregiver
+  // inherits the OWNER's plan, and an owner uses their own.
   const hasAccess = isCaregiverView
-    ? ownerHasAccess === true
+    ? isAdmin(user as any) || ownerHasAccess === true
     : canAccessFeature(user as any, 'health-reports')
 
   if (!hasAccess) {

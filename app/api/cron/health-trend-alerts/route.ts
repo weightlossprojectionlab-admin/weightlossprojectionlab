@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { adminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
-import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { notifyCareTeam } from '@/lib/notify-care-team'
 import { detectVitalTrendGrouped, type TrendPoint, type GroupedTrendFinding } from '@/lib/health-trend-detection'
 import { HUMAN_VITAL_BANDS, BP_BANDS, getHumanVitalBand, vitalLabel } from '@/lib/vital-thresholds'
 import { timeOfDayBucket } from '@/lib/time-of-day'
@@ -198,9 +198,10 @@ export async function GET(request: NextRequest) {
 
             const { title, message } = buildAlert(patientName, label, unit, finding)
             try {
-              await sendNotificationToFamilyMembers({
-                userId: '',
+              // System alert — fan out to the whole care team (no actor to exclude).
+              await notifyCareTeam({
                 patientId,
+                ownerUserId: userId,
                 type: 'health_trend_alert',
                 priority: finding.severity === 'concern' ? 'high' : 'normal',
                 title,

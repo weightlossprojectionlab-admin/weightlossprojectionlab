@@ -155,9 +155,10 @@ export function ProviderCard({
             )}
           </div>
 
-          {/* Patients Served Count */}
+          {/* Patients Served Count — guard against docs missing patientsServed
+              (legacy/partial writes) so the whole card doesn't crash. */}
           <div className="mb-4 text-sm text-muted-foreground">
-            Serving {provider.patientsServed.length} patient{provider.patientsServed.length !== 1 ? 's' : ''}
+            Serving {provider.patientsServed?.length ?? 0} patient{(provider.patientsServed?.length ?? 0) !== 1 ? 's' : ''}
           </div>
         </>
       )}
@@ -168,7 +169,7 @@ export function ProviderCard({
           {onView && (
             <button
               onClick={() => onView(provider)}
-              className="flex-1 px-3 py-2 text-sm bg-primary-light text-primary-dark rounded-lg hover:bg-primary-light dark:hover:bg-purple-900/30 transition-colors"
+              className="flex-1 min-h-[44px] inline-flex items-center justify-center px-3 py-2 text-sm bg-primary-light text-primary-dark rounded-lg hover:bg-primary-light dark:hover:bg-purple-900/30 transition-colors"
             >
               View Details
             </button>
@@ -176,7 +177,7 @@ export function ProviderCard({
           {onEdit && (
             <button
               onClick={() => onEdit(provider)}
-              className="px-3 py-2 text-sm text-foreground hover:bg-muted rounded-lg transition-colors"
+              className="min-h-[44px] inline-flex items-center justify-center px-4 py-2 text-sm text-foreground hover:bg-muted rounded-lg transition-colors"
             >
               Edit
             </button>
@@ -184,7 +185,7 @@ export function ProviderCard({
           {onDelete && (
             <button
               onClick={() => onDelete(provider)}
-              className="px-3 py-2 text-sm text-error hover:bg-error-light dark:hover:bg-red-900/20 rounded-lg transition-colors"
+              className="min-h-[44px] inline-flex items-center justify-center px-4 py-2 text-sm text-error hover:bg-error-light dark:hover:bg-red-900/20 rounded-lg transition-colors"
             >
               Delete
             </button>

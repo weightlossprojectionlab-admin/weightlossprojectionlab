@@ -15,7 +15,7 @@ import { errorResponse, notFoundResponse } from '@/lib/api-response'
 import { medicalApiRateLimit, getRateLimitHeaders, createRateLimitResponse } from '@/lib/utils/rate-limit'
 import type { VitalSign } from '@/types/medical'
 import { v4 as uuidv4 } from 'uuid'
-import { sendNotificationToFamilyMembers } from '@/lib/notification-service'
+import { notifyCareTeam, notifyCareTeamOfEvent } from '@/lib/notify-care-team'
 import { validateVitalDate, isVitalBackdated } from '@/lib/vital-date-validator'
 import { checkDuplicateVital } from '@/lib/services/vital-service'
 
@@ -371,71 +371,66 @@ export async function POST(
         formattedValue = `${newVital.value || 'N/A'}`
       }
 
-      await sendNotificationToFamilyMembers({
-        userId: '', // Will be overridden for each recipient
+      const vitalLabel = newVital.type.replace(/_/g, ' ')
+      const patientDisplayName = patientSnapshot.data()?.name || 'Patient'
+
+      await notifyCareTeamOfEvent({
         patientId,
+        ownerUserId,
+        actorUserId: userId,
         type: 'vital_logged',
-        priority: 'normal',
-        title: 'Vital Sign Logged',
-        message: `${userName} logged vital sign`,
-        excludeUserId: userId,
-        metadata: {
-          vitalId: vitalRef.id,
-          actionBy: userName,
-          actionByUserId: userId,
-          patientName: patientSnapshot.data()?.name || 'Patient',
-          vitalType: newVital.type,
-          value: formattedValue,
-          unit: newVital.unit || ''
-        }
+        title: 'Vital sign logged',
+        action: `logged a ${vitalLabel} reading${formattedValue ? ` (${formattedValue})` : ''}`,
+        actionUrl: `/patients/${patientId}?tab=vitals`,
+        metadata: { vitalId: vitalRef.id, vitalType: newVital.type, value: formattedValue, unit: newVital.unit || '' },
       })
-      // Vital Alert — send urgent notification for abnormal readings
+
+      // Vital Alert — urgent notification for abnormal readings.
       const isAbnormal = detectAbnormalVital(newVital)
       if (isAbnormal) {
-        await sendNotificationToFamilyMembers({
-          userId: '',
+        await notifyCareTeam({
           patientId,
+          ownerUserId,
+          excludeUserId: userId,
           type: 'vital_alert',
           priority: 'urgent',
-          title: `Vital Alert: ${newVital.type.replace(/_/g, ' ')}`,
-          message: 'Abnormal reading detected',
-          excludeUserId: userId,
+          title: `Vital alert: ${vitalLabel}`,
+          message: `${patientDisplayName}'s ${vitalLabel} reading is abnormal${formattedValue ? `: ${formattedValue}` : ''}`,
           actionUrl: `/patients/${patientId}`,
           metadata: {
             vitalId: vitalRef.id,
             actionBy: userName,
             actionByUserId: userId,
-            patientName: patientSnapshot.data()?.name || 'Patient',
+            patientName: patientDisplayName,
             vitalType: newVital.type,
             value: formattedValue,
             unit: newVital.unit || '',
             isAbnormal: true,
-            abnormalReason: isAbnormal
-          }
+            abnormalReason: isAbnormal,
+          },
         })
       }
 
-      // Weight Approval — notify family when entry needs approval
+      // Weight Approval — notify the care team when an entry needs approval.
       if (approvalStatus === 'pending') {
-        await sendNotificationToFamilyMembers({
-          userId: '',
+        await notifyCareTeam({
           patientId,
-          type: 'weight_approval_needed',
-          priority: 'normal',
-          title: 'Weight Entry Needs Approval',
-          message: 'A weight entry requires approval',
+          ownerUserId,
           excludeUserId: userId,
+          type: 'weight_approval_needed',
+          title: 'Weight entry needs approval',
+          message: `${userName} submitted a weight entry that needs approval`,
           actionUrl: `/patients/${patientId}`,
           metadata: {
             vitalId: vitalRef.id,
-            patientName: patientSnapshot.data()?.name || 'Patient',
+            patientName: patientDisplayName,
             weight: typeof newVital.value === 'number' ? newVital.value : 0,
             unit: ((newVital as any).unit || 'lbs') as 'lbs' | 'kg',
             submittedBy: userName,
             submittedByUserId: userId,
             actionBy: userName,
-            actionByUserId: userId
-          }
+            actionByUserId: userId,
+          },
         })
       }
     } catch (notificationError) {

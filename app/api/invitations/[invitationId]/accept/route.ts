@@ -14,7 +14,9 @@ import {
   upsertFamilyMember,
   upsertPatientFamilyMember,
 } from '@/lib/caregiver-relationship'
+import { recordInAppNotification } from '@/lib/notifications/dispatch'
 import type { FamilyInvitation, FamilyMember } from '@/types/medical'
+import type { FamilyMetadata } from '@/types/notifications'
 
 export async function POST(
   request: NextRequest,
@@ -179,6 +181,36 @@ export async function POST(
       acceptedBy: userId,
       acceptedAt
     })
+
+    // Close the loop for the OWNER: ring their notification bell so they know
+    // the caregiver joined, without having to check the sent-invitations list.
+    // Best-effort — a notification failure must not fail the acceptance.
+    try {
+      const role = invitation.familyRole || 'caregiver'
+      await recordInAppNotification({
+        userId: invitation.invitedByUserId,
+        type: 'family_member_joined',
+        priority: 'normal',
+        title: 'Invitation accepted',
+        message: `${userName} accepted your invitation to help as ${role.replace(/_/g, ' ')}.`,
+        actionUrl: '/family/dashboard',
+        actionLabel: 'View',
+        metadata: {
+          familyMemberId,
+          familyMemberName: userName,
+          familyMemberEmail: userEmail,
+          role,
+          patientsShared: invitation.patientsShared,
+          actionBy: userName,
+          actionByUserId: userId,
+        } as FamilyMetadata,
+      })
+    } catch (notifyError) {
+      logger.error('[Invitations] Failed to notify owner of acceptance', notifyError as Error, {
+        ownerUserId: invitation.invitedByUserId,
+        invitationId,
+      })
+    }
 
     // Add or extend caregiver context on the user's profile. Same idempotent
     // semantics as the owner-side upsert — a second invite from the same
