@@ -71,12 +71,12 @@ type Step = 'upload' | 'map' | 'importing' | 'result'
 export default function ImportPage() {
   return (
     <AuthGuard>
-      <ImportContent />
+      <ImportPanel />
     </AuthGuard>
   )
 }
 
-function ImportContent() {
+export function ImportPanel({ showHeader = true }: { showHeader?: boolean }) {
   const router = useRouter()
   const { user } = useAuth()
   const { canImport, reason } = useCanImport()
@@ -248,12 +248,14 @@ function ImportContent() {
   }, [mapping, rowTypeColumn])
 
   return (
-    <div className="min-h-screen bg-background">
-      <PageHeader
-        title="Import"
-        subtitle="Upload a spreadsheet to bring family members and weight history at once"
-        backHref="/patients"
-      />
+    <div className={showHeader ? 'min-h-screen bg-background' : ''}>
+      {showHeader && (
+        <PageHeader
+          title="Import"
+          subtitle="Upload a spreadsheet to bring family members and weight history at once"
+          backHref="/patients"
+        />
+      )}
 
       <main className="container mx-auto px-4 py-8 max-w-3xl">
         {!canImport && reason !== 'loading' && (
