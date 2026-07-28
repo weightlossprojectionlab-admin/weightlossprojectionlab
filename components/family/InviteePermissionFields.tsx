@@ -61,6 +61,8 @@ export function InviteePermissionFields({
   canAssignRoles,
   currentUserRole,
   preSelectedPatient,
+  coveredPatientIds,
+  recognizedName,
   onChange,
 }: {
   invitee: InviteeDraft
@@ -68,8 +70,20 @@ export function InviteePermissionFields({
   canAssignRoles: boolean
   currentUserRole: FamilyRole
   preSelectedPatient: PatientProfile | null
+  /**
+   * Patient ids this invitee's email ALREADY has caregiver access to (from the
+   * owner's own familyMembers grants — never another household's data). Those
+   * rows are marked "Already has access" and can't be re-shared; the inviter
+   * picks only additional patients to extend access. Empty/undefined = a person
+   * we don't recognize, so the normal full checklist shows.
+   */
+  coveredPatientIds?: Set<string>
+  /** Display name of the recognized existing caregiver, for the banner. */
+  recognizedName?: string
   onChange: (patch: Partial<InviteeDraft>) => void
 }) {
+  const isCovered = (pid: string) => coveredPatientIds?.has(pid) ?? false
+  const recognized = (coveredPatientIds?.size ?? 0) > 0
   const active = invitePermissions(invitee)
   const warnings = getSensitivePermissionWarnings(active)
 
@@ -107,6 +121,15 @@ export function InviteePermissionFields({
         <label className="block text-sm font-medium text-foreground mb-2">
           {preSelectedPatient ? 'Sharing access to' : 'Select family members to share *'}
         </label>
+        {recognized && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg border-2 border-primary-light bg-primary-light/40 px-3 py-2">
+            <span className="text-sm text-primary-dark">
+              ✓ <strong>{recognizedName || invitee.email.trim()}</strong> is already a caregiver
+              here. The family members they already cover are marked below — pick additional
+              ones to extend their access.
+            </span>
+          </div>
+        )}
         {preSelectedPatient ? (
           <div className="px-4 py-3 bg-primary-light border-2 border-primary-light rounded-lg">
             <span className="text-primary-dark font-medium">{preSelectedPatient.name}</span>
@@ -114,22 +137,35 @@ export function InviteePermissionFields({
           </div>
         ) : (
           <div className="space-y-2 max-h-40 overflow-y-auto border-2 border-border rounded-lg p-3">
-            {patients.map((p) => (
-              <label
-                key={p.id}
-                className="flex items-center gap-3 p-2 hover:bg-background rounded cursor-pointer"
-              >
-                <input
-                  type="checkbox"
-                  checked={invitee.patientsShared.includes(p.id)}
-                  onChange={() => togglePatient(p.id)}
-                  className="w-4 h-4 text-primary rounded focus:ring-purple-500"
-                />
-                <span className="text-foreground">
-                  {p.name} ({getPatientBadgeLabel(p)})
-                </span>
-              </label>
-            ))}
+            {patients.map((p) => {
+              const covered = isCovered(p.id)
+              return (
+                <label
+                  key={p.id}
+                  className={`flex items-center gap-3 p-2 rounded ${
+                    covered ? 'opacity-60 cursor-not-allowed' : 'hover:bg-background cursor-pointer'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    // Covered patients render checked + disabled: the caregiver
+                    // already has them, so they can't be re-shared (only added).
+                    checked={covered || invitee.patientsShared.includes(p.id)}
+                    disabled={covered}
+                    onChange={() => !covered && togglePatient(p.id)}
+                    className="w-4 h-4 text-primary rounded focus:ring-purple-500 disabled:opacity-60"
+                  />
+                  <span className="text-foreground">
+                    {p.name} ({getPatientBadgeLabel(p)})
+                  </span>
+                  {covered && (
+                    <span className="ml-auto shrink-0 text-xs font-medium text-primary-dark bg-primary-light rounded px-2 py-0.5">
+                      Already has access
+                    </span>
+                  )}
+                </label>
+              )
+            })}
           </div>
         )}
       </div>

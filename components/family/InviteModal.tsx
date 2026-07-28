@@ -14,7 +14,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { usePatients } from '@/hooks/usePatients'
 import { useInvitations } from '@/hooks/useInvitations'
 import { useAuth } from '@/hooks/useAuth'
@@ -75,6 +75,51 @@ export function InviteModal({
   const [loading, setLoading] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
 
+  // Existing caregivers on THIS owner's account (own data only — never another
+  // household's). Used to recognize an invitee who already helps here and mark
+  // the patients they already cover, so we don't redundantly re-share. Loaded
+  // once per open; recognition is an enhancement, so failure is silent.
+  const [caregivers, setCaregivers] = useState<
+    Array<{ email?: string; name?: string; status?: string; patientsAccess?: string[] }>
+  >([])
+  useEffect(() => {
+    if (!isOpen || !user) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const token = await user.getIdToken()
+        const res = await fetch('/api/family/caregivers', {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        const json = await res.json()
+        if (!cancelled && res.ok && Array.isArray(json.caregivers)) setCaregivers(json.caregivers)
+      } catch {
+        // best-effort — the modal works without recognition
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, user])
+
+  // email → { name, patient ids they already have access to }. Accepted grants
+  // only (a pending invite isn't "already a caregiver" — that's handled by the
+  // existingInvitationId path).
+  const coverageByEmail = useMemo(() => {
+    const m = new Map<string, { name?: string; patientIds: Set<string> }>()
+    for (const c of caregivers) {
+      if ((c?.status ?? 'accepted') !== 'accepted') continue
+      const email = (c?.email || '').trim().toLowerCase()
+      if (!email) continue
+      const entry = m.get(email) ?? { name: c?.name, patientIds: new Set<string>() }
+      for (const pid of c?.patientsAccess || []) entry.patientIds.add(pid)
+      if (!entry.name && c?.name) entry.name = c.name
+      m.set(email, entry)
+    }
+    return m
+  }, [caregivers])
+  const coverageFor = (email: string) => coverageByEmail.get(email.trim().toLowerCase())
+
   // Reset to a single fresh row whenever the modal closes.
   useEffect(() => {
     if (!isOpen) {
@@ -112,11 +157,22 @@ export function InviteModal({
   const removeInvitee = (id: string) =>
     setInvitees((prev) => (prev.length > 1 ? prev.filter((i) => i.id !== id) : prev))
 
+  // Patients this row would ACTUALLY grant — excludes any the invitee already
+  // covers, so re-sharing is a no-op we never send.
+  const newlySharedFor = (inv: InviteeDraft): string[] => {
+    const covered = coverageFor(inv.email)?.patientIds
+    return covered ? inv.patientsShared.filter((id) => !covered.has(id)) : inv.patientsShared
+  }
+
   const rowError = (inv: InviteeDraft): string | null => {
     if (!isValidEmail(inv.email)) return 'Enter a valid email'
     if (inv.email.trim().toLowerCase() === myEmail)
       return "You can't invite yourself as your own caregiver"
-    if (inv.patientsShared.length === 0) return 'Select at least one family member'
+    if (newlySharedFor(inv).length === 0) {
+      return (coverageFor(inv.email)?.patientIds.size ?? 0) > 0
+        ? 'This person already has access to the selected members — pick someone new to add'
+        : 'Select at least one family member'
+    }
     return null
   }
 
@@ -124,7 +180,7 @@ export function InviteModal({
     sendInvitation({
       recipientEmail: inv.email.trim(),
       ...(inv.phone.trim() && { recipientPhone: inv.phone.trim() }),
-      patientsShared: inv.patientsShared,
+      patientsShared: newlySharedFor(inv), // only patients they don't already have
       permissions: invitePermissions(inv),
       familyRole: inv.role, // include role so permissions match on acceptance
       ...(inv.message.trim() && { message: inv.message.trim() }),
@@ -340,6 +396,8 @@ export function InviteModal({
                           canAssignRoles={canAssignRoles}
                           currentUserRole={currentUserRole}
                           preSelectedPatient={preSelectedPatient}
+                          coveredPatientIds={coverageFor(inv.email)?.patientIds}
+                          recognizedName={coverageFor(inv.email)?.name}
                           onChange={(patch) => update(inv.id, patch)}
                         />
                       </div>
