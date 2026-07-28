@@ -40,23 +40,37 @@ export function ProvidersPanel() {
     ? addProviderLock.onLockedClick
     : () => router.push('/providers/new')
 
+  // Single source for the add-provider button (label + locked state) so the
+  // header and empty-state CTAs can't drift. `firstTime` only swaps the label.
+  const AddProviderButton = ({ firstTime = false }: { firstTime?: boolean }) => (
+    <button
+      onClick={addProvider}
+      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors inline-flex items-center gap-2"
+    >
+      {addProviderLock.isLocked ? (
+        <>
+          <LockClosedIcon className="w-4 h-4" />
+          Paused — Add Provider
+        </>
+      ) : firstTime ? (
+        'Add Your First Provider'
+      ) : (
+        '+ Add Provider'
+      )}
+    </button>
+  )
+
+  const hasProviders = providers.length > 0
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <button
-          onClick={addProvider}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors inline-flex items-center gap-2"
-        >
-          {addProviderLock.isLocked ? (
-            <>
-              <LockClosedIcon className="w-4 h-4" />
-              Paused — Add Provider
-            </>
-          ) : (
-            '+ Add Provider'
-          )}
-        </button>
-      </div>
+      {/* Header add-button only when providers exist — when the roster is empty
+          the centered empty-state CTA is the single call-to-action (no dupe). */}
+      {hasProviders && (
+        <div className="flex justify-end">
+          <AddProviderButton />
+        </div>
+      )}
 
       {/* Filters */}
       {providerTypes.length > 0 && (
@@ -95,23 +109,13 @@ export function ProvidersPanel() {
       ) : filteredProviders.length === 0 ? (
         <div className="text-center py-12 bg-card rounded-lg border-2 border-border">
           <p className="text-muted-foreground dark:text-muted-foreground mb-4">
-            {filterType === 'all'
-              ? 'No providers added yet'
-              : `No ${filterType.replace('_', ' ')} providers found`}
+            {hasProviders
+              ? `No ${filterType.replace('_', ' ')} providers found`
+              : 'No providers added yet'}
           </p>
-          <button
-            onClick={addProvider}
-            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors inline-flex items-center gap-2"
-          >
-            {addProviderLock.isLocked ? (
-              <>
-                <LockClosedIcon className="w-4 h-4" />
-                Paused — Add Provider
-              </>
-            ) : (
-              'Add Your First Provider'
-            )}
-          </button>
+          {/* Only the truly-empty roster gets a CTA here — a filtered-empty view
+              still has the header "+ Add Provider", so a second button would dupe. */}
+          {!hasProviders && <AddProviderButton firstTime />}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

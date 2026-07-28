@@ -47,7 +47,11 @@ function MedicalContent() {
 
       <main className="container mx-auto px-4 py-8">
         {/* Tabs — touch-friendly (≥44px), keeps you on the page */}
-        <div className="mb-6 flex gap-1 border-b border-border overflow-x-auto" role="tablist">
+        {/* overflow-y-hidden is load-bearing: `overflow-x-auto` alone makes CSS
+            compute overflow-y to `auto` too, and the tabs sit ~1px taller than
+            the row (min-h + -mb-px underline), so the browser drew a phantom
+            vertical scrollbar (the stray ▲▼ arrows). Pin the y-axis shut. */}
+        <div className="mb-6 flex gap-1 border-b border-border overflow-x-auto overflow-y-hidden" role="tablist">
           {TABS.map((t) => (
             <button
               key={t.key}

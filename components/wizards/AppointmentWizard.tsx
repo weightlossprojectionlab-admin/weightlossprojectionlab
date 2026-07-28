@@ -48,6 +48,9 @@ interface AppointmentWizardProps {
     name: string
     email: string
   }>
+  // Patient roster (patient doc-ids) for linking a new provider to "all family
+  // members". Distinct from familyMembers (caregivers) — see ProviderStep.
+  patients?: Array<{ id: string; name: string }>
   onSubmit: (appointmentData: AppointmentData) => Promise<void>
   onProviderAdded?: () => void // Callback to refresh providers list
   /**
@@ -96,6 +99,7 @@ export default function AppointmentWizard({
   familyMember,
   providers,
   familyMembers,
+  patients = [],
   onSubmit,
   onProviderAdded,
   existingAppointments
@@ -205,7 +209,7 @@ export default function AppointmentWizard({
               }))
             }}
             patientId={familyMember.id}
-            familyMembers={familyMembers}
+            patients={patients}
             showAddProviderForm={showAddProviderForm}
             onToggleAddProviderForm={(show) => setShowAddProviderForm(show)}
             onProviderAdded={async () => {
@@ -460,7 +464,7 @@ function ProviderStep({
   selectedProviderId,
   onChange,
   patientId,
-  familyMembers,
+  patients,
   showAddProviderForm,
   onToggleAddProviderForm,
   onProviderAdded
@@ -469,7 +473,10 @@ function ProviderStep({
   selectedProviderId?: string
   onChange: (providerId: string) => void
   patientId: string
-  familyMembers: Array<{ userId: string; name: string; email: string }>
+  // The PATIENT roster (patient doc-ids) — used only to link a newly created
+  // provider to "all family members". NOT the caregiver list: patientsServed
+  // holds patient ids, so linking caregiver uids here was wrong-id pollution.
+  patients: Array<{ id: string; name: string }>
   showAddProviderForm: boolean
   onToggleAddProviderForm: (show: boolean) => void
   onProviderAdded: () => void
@@ -555,10 +562,13 @@ function ProviderStep({
       const result = await response.json()
       console.log('[ProviderStep] Provider created successfully:', result)
 
-      // Step 2: Link provider to patient(s)
+      // Step 2: Link provider to patient(s). patientsServed holds PATIENT
+      // doc-ids, so "all family members" maps the patient roster — never the
+      // caregiver list. Fall back to the current patient if the roster is
+      // unavailable so a link always happens.
       const providerId = result.data.id
-      const patientIdsToLink = linkToAllFamily
-        ? familyMembers.map(fm => fm.userId)
+      const patientIdsToLink = linkToAllFamily && patients.length > 0
+        ? patients.map(p => p.id)
         : [patientId]
 
       console.log('[ProviderStep] Linking provider to patients:', patientIdsToLink)

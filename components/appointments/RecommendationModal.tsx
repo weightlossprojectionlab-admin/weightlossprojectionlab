@@ -154,6 +154,7 @@ export function RecommendationModal({
         name: m.name,
         email: m.email
       }))}
+      patients={patients.map(p => ({ id: p.id, name: p.name }))}
       onSubmit={handleWizardSubmit}
     />
   )

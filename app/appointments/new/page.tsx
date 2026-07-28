@@ -173,6 +173,7 @@ function NewAppointmentContent() {
               name: m.name,
               email: m.email
             }))}
+            patients={patients.map(p => ({ id: p.id, name: p.name }))}
             existingAppointments={appointments.map(a => ({
               dateTime: a.dateTime,
               patientId: a.patientId,
