@@ -205,6 +205,31 @@ export async function POST(request: NextRequest) {
 
     console.log(`Appointment created: ${appointmentId} for patient ${validatedData.patientId}`)
 
+    // Link the provider to this patient so "patients served" reflects real
+    // scheduling. Every scheduling path funnels through this route, so it's the
+    // single source for the linkage — previously ONLY the inline "create new
+    // provider" wizard sub-step linked, leaving any provider that was SELECTED
+    // (not freshly created) stuck at "Serving 0 patients". Idempotent union-add
+    // on the OWNER's provider doc (where providers live for caregiver-scheduled
+    // appointments); best-effort so a link failure never fails the appointment.
+    if (provider && !(provider.patientsServed || []).includes(validatedData.patientId)) {
+      try {
+        await adminDb
+          .collection('users')
+          .doc(ownerUserId)
+          .collection('providers')
+          .doc(validatedData.providerId!)
+          .update({
+            patientsServed: [...(provider.patientsServed || []), validatedData.patientId],
+          })
+      } catch (linkError) {
+        logger.warn('[API /appointments POST] Failed to link provider to patient', {
+          providerId: validatedData.providerId,
+          patientId: validatedData.patientId,
+        })
+      }
+    }
+
     // Create notification for appointment
     try {
       // Get creator's name from Firebase Auth
