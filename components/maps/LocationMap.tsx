@@ -30,6 +30,12 @@ export default function LocationMap({
 }: LocationMapProps) {
   const [showMap, setShowMap] = useState(false)
 
+  // The static-map IMAGE needs an API key; "Get directions" is a plain
+  // google.com/maps deep link that does not. So when no key is configured we
+  // simply hide the map preview and keep directions working — no developer-
+  // facing "key not configured" message leaks to end users.
+  const hasMapKey = Boolean(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY)
+
   const handleGetDirections = () => {
     const url = getDirectionsUrl({
       destination: address,
@@ -59,35 +65,39 @@ export default function LocationMap({
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-2">
-        {!showMap ? (
-          <button
-            onClick={() => setShowMap(true)}
-            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-          >
-            <MapPinIcon className="h-4 w-4" />
-            View Map
-          </button>
-        ) : (
-          <button
-            onClick={() => setShowMap(false)}
-            className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
-          >
-            Hide Map
-          </button>
-        )}
+      {/* Action buttons. "View map" only appears when a maps key is configured
+          (it needs one); "Get directions" is a key-free deep link. */}
+      {(hasMapKey || showDirections) && (
+        <div className="flex gap-2">
+          {hasMapKey &&
+            (!showMap ? (
+              <button
+                onClick={() => setShowMap(true)}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+              >
+                <MapPinIcon className="h-4 w-4" />
+                View map
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowMap(false)}
+                className="flex-1 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium"
+              >
+                Hide map
+              </button>
+            ))}
 
-        {showDirections && (
-          <button
-            onClick={handleGetDirections}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
-          >
-            <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-            Get Directions
-          </button>
-        )}
-      </div>
+          {showDirections && (
+            <button
+              onClick={handleGetDirections}
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center justify-center gap-2"
+            >
+              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              Get directions
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Smart-context map image - only loads when showMap is true */}
       {showMap && mapUrl && (
@@ -98,17 +108,12 @@ export default function LocationMap({
             loading="lazy"
             className="w-full h-auto"
             onError={(e) => {
-              // Handle map load error
+              // If the key exists but the Static Maps API rejects the request,
+              // just hide the broken image rather than showing an error.
               e.currentTarget.style.display = 'none'
               console.error('Failed to load map image')
             }}
           />
-        </div>
-      )}
-
-      {showMap && !mapUrl && (
-        <div className="p-4 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg text-sm text-yellow-800 dark:text-yellow-200">
-          Google Maps API key not configured. Please add NEXT_PUBLIC_GOOGLE_MAPS_API_KEY to your environment variables.
         </div>
       )}
     </div>

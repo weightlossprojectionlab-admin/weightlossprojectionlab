@@ -39,7 +39,7 @@ function NewAppointmentContent() {
   const { user } = useAuth()
   const { patients } = usePatients()
   const { providers } = useProviders()
-  const { createAppointment } = useAppointments()
+  const { appointments, createAppointment } = useAppointments()
 
   const [selectedPatient, setSelectedPatient] = useState<string>('')
   const [showWizard, setShowWizard] = useState(false)
@@ -102,11 +102,13 @@ function NewAppointmentContent() {
 
     const newAppointment = await createAppointment(data as any)
 
+    // Success toast is fired by createAppointment (the single writer, shared by
+    // every caller) — don't double-toast here. Only the driver-specific notice
+    // is page-local.
     if (appointmentData.requiresDriver && driver) {
       toast.success(`Driver request sent to ${driver.name}`)
     }
 
-    toast.success('Appointment scheduled successfully!')
     router.push('/calendar')
   }
 
@@ -170,6 +172,14 @@ function NewAppointmentContent() {
               userId: m.userId,
               name: m.name,
               email: m.email
+            }))}
+            existingAppointments={appointments.map(a => ({
+              dateTime: a.dateTime,
+              patientId: a.patientId,
+              patientName: a.patientName,
+              providerId: a.providerId,
+              providerName: a.providerName,
+              status: a.status
             }))}
             onSubmit={handleWizardSubmit}
           />

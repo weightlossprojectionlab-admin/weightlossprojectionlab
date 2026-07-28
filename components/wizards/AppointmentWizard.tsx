@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Dialog } from '@headlessui/react'
 import {
   XMarkIcon,
@@ -24,6 +24,7 @@ import { getCSRFToken } from '@/lib/csrf'
 import { getAuth } from 'firebase/auth'
 import { PhoneInput } from '@/components/form/PhoneInput'
 import { TimeInput } from '@/components/form/TimeInput'
+import { TimeSlotGrid, to12h, type SlotDatum } from '@/components/appointments/TimeSlotGrid'
 
 interface AppointmentWizardProps {
   isOpen: boolean
@@ -49,6 +50,20 @@ interface AppointmentWizardProps {
   }>
   onSubmit: (appointmentData: AppointmentData) => Promise<void>
   onProviderAdded?: () => void // Callback to refresh providers list
+  /**
+   * Existing appointments used to tier the time slots (collision avoidance +
+   * family coordination). Matched by date against the chosen day; same-patient →
+   * blocked, same-provider → capacity warning, other family member → heads-up.
+   * Optional — omit and every slot is free.
+   */
+  existingAppointments?: Array<{
+    dateTime: string
+    patientId?: string
+    patientName?: string
+    providerId?: string
+    providerName?: string
+    status?: string
+  }>
 }
 
 export interface AppointmentData {
@@ -82,11 +97,15 @@ export default function AppointmentWizard({
   providers,
   familyMembers,
   onSubmit,
-  onProviderAdded
+  onProviderAdded,
+  existingAppointments
 }: AppointmentWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('intro')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showAddProviderForm, setShowAddProviderForm] = useState(false)
+  // Set by DateTimeStep when a same-provider capacity conflict is selected but
+  // not yet acknowledged — gates the footer Next on the date/time step.
+  const [dateTimeBlocked, setDateTimeBlocked] = useState(false)
 
   const [appointmentData, setAppointmentData] = useState<Partial<AppointmentData>>({
     type: 'routine-checkup',
@@ -202,9 +221,13 @@ export default function AppointmentWizard({
         return (
           <DateTimeStep
             dateTime={appointmentData.dateTime}
+            patientId={familyMember.id}
+            selectedProviderId={appointmentData.providerId}
+            existingAppointments={existingAppointments}
             onChange={(dateTime) =>
               setAppointmentData((prev) => ({ ...prev, dateTime }))
             }
+            onBlockedChange={setDateTimeBlocked}
           />
         )
 
@@ -358,7 +381,10 @@ export default function AppointmentWizard({
                 ) : (
                   <button
                     onClick={handleNext}
-                    disabled={currentStep === 'familyConfirmation' && !familyConfirmed}
+                    disabled={
+                      (currentStep === 'familyConfirmation' && !familyConfirmed) ||
+                      (currentStep === 'datetime' && dateTimeBlocked)
+                    }
                     className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
@@ -778,11 +804,30 @@ function ProviderStep({
 
 function DateTimeStep({
   dateTime,
-  onChange
+  patientId,
+  selectedProviderId,
+  existingAppointments,
+  onChange,
+  onBlockedChange
 }: {
   dateTime?: Date
+  patientId: string
+  selectedProviderId?: string
+  existingAppointments?: Array<{
+    dateTime: string
+    patientId?: string
+    patientName?: string
+    providerId?: string
+    providerName?: string
+    status?: string
+  }>
   onChange: (dateTime: Date) => void
+  onBlockedChange?: (blocked: boolean) => void
 }) {
+  // A slot is only occupied by a LIVE commitment. Cancelled / completed /
+  // no-show appointments free their time — otherwise a cancellation would keep
+  // the slot falsely blocked.
+  const isLiveCommitment = (status?: string) => !status || status === 'scheduled' || status === 'confirmed'
   // Helper to get local date string (YYYY-MM-DD) without timezone issues
   const getLocalDateString = (d: Date) => {
     const year = d.getFullYear()
@@ -799,13 +844,69 @@ function DateTimeStep({
       ? dateTime.toTimeString().slice(0, 5)
       : ''
   )
+  // Explicit acknowledgement for a same-provider capacity override.
+  const [ack, setAck] = useState(false)
 
-  const handleUpdate = () => {
-    if (date && time) {
-      const combined = new Date(`${date}T${time}`)
-      onChange(combined)
+  // Per-slot conflict tiers for the selected date. Appointment dateTimes are
+  // stored as local ISO ("YYYY-MM-DDTHH:MM:SS"), so we string-slice date + "HH:MM"
+  // — no timezone parsing. Precedence: same-patient (impossible) > same-provider
+  // (capacity warning) > other family member (heads-up).
+  const slotInfo = useMemo(() => {
+    const map = new Map<string, SlotDatum>()
+    if (!date || !existingAppointments) return map
+    const byTime = new Map<string, typeof existingAppointments>()
+    for (const a of existingAppointments) {
+      if (!a.dateTime || a.dateTime.slice(0, 10) !== date) continue
+      if (!isLiveCommitment(a.status)) continue // cancelled/completed/no-show free the slot
+      const t = a.dateTime.slice(11, 16)
+      if (!byTime.has(t)) byTime.set(t, [])
+      byTime.get(t)!.push(a)
     }
+    for (const [t, appts] of byTime) {
+      const mine = appts.find((a) => a.patientId === patientId)
+      const providerConflict =
+        selectedProviderId ? appts.find((a) => a.providerId === selectedProviderId) : undefined
+      const others = appts.filter((a) => a.patientId !== patientId)
+      if (mine) {
+        map.set(t, {
+          state: 'taken',
+          title: `${mine.patientName || 'This person'} is already booked`,
+        })
+      } else if (providerConflict) {
+        map.set(t, {
+          state: 'provider-conflict',
+          conflict: { providerName: providerConflict.providerName, patientName: providerConflict.patientName },
+          title: `${providerConflict.providerName || 'This provider'} is already booked${providerConflict.patientName ? ` by ${providerConflict.patientName}` : ''}`,
+        })
+      } else if (others.length) {
+        const o = others[0]
+        map.set(t, {
+          state: 'busy-family',
+          note: [o.patientName, o.providerName].filter(Boolean).join(' · ') || undefined,
+          title: `${o.patientName || 'A family member'} has an appointment${o.providerName ? ` (${o.providerName})` : ''}`,
+        })
+      }
+    }
+    return map
+  }, [date, existingAppointments, patientId, selectedProviderId])
+
+  const selectedDatum = time ? slotInfo.get(time) : undefined
+  const providerConflict = selectedDatum?.state === 'provider-conflict'
+
+  // Gate the wizard's Next while a provider-capacity conflict is selected but not
+  // yet acknowledged.
+  useEffect(() => {
+    onBlockedChange?.(providerConflict && !ack)
+    return () => onBlockedChange?.(false)
+  }, [providerConflict, ack, onBlockedChange])
+
+  const emitTime = (v: string) => {
+    setTime(v)
+    setAck(false) // fresh selection must re-acknowledge any conflict
+    if (date && v) onChange(new Date(`${date}T${v}`))
   }
+
+  const selectedLabel = time ? to12h(parseInt(time.slice(0, 2), 10), parseInt(time.slice(3, 5), 10)) : ''
 
   return (
     <div className="space-y-4">
@@ -840,18 +941,43 @@ function DateTimeStep({
             <ClockIcon className="w-4 h-4 inline mr-1" />
             Time
           </label>
-          <TimeInput
-            value={time}
-            onChange={(v) => {
-              setTime(v)
-              if (date && v) {
-                const combined = new Date(`${date}T${v}`)
-                onChange(combined)
-              }
-            }}
-            className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
-          />
-          <p className="text-xs text-muted-foreground mt-1">Appointments are scheduled in 15-minute increments.</p>
+          {date ? (
+            <TimeSlotGrid
+              value={time}
+              onChange={emitTime}
+              slotInfo={slotInfo}
+              startHour={8}
+              endHour={20}
+            />
+          ) : (
+            <p className="text-sm text-muted-foreground py-3">Pick a date first to see available times.</p>
+          )}
+
+          {/* Same-provider capacity override — explicit acknowledgement gate. */}
+          {providerConflict && (
+            <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+              <div className="flex items-center gap-2 font-semibold text-amber-800">
+                <span aria-hidden>⚠️</span> Provider capacity alert
+              </div>
+              <p className="mt-1 text-amber-800">
+                {selectedDatum?.conflict?.providerName || 'This provider'} is already booked at {selectedLabel}
+                {selectedDatum?.conflict?.patientName ? ` by ${selectedDatum.conflict.patientName}` : ''}.
+              </p>
+              <label className="mt-2 flex items-start gap-2 text-amber-900">
+                <input
+                  type="checkbox"
+                  checked={ack}
+                  onChange={(e) => setAck(e.target.checked)}
+                  className="mt-0.5 h-4 w-4"
+                />
+                <span>I confirm this practice can accommodate overlapping appointments</span>
+              </label>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground mt-2">
+            Appointments are in 15-minute slots, 8 AM–8 PM. Amber = another family member is out then; red = already booked.
+          </p>
         </div>
       </div>
     </div>
@@ -1143,12 +1269,13 @@ function TransportationStep({
               Pickup Time
             </label>
             <TimeInput
+              slots
               value={pickupTime ? pickupTime.toTimeString().slice(0, 5) : ''}
               onChange={(v) => {
                 const dateTime = v ? new Date(`1970-01-01T${v}`) : undefined
                 onChange(true, assignedDriverId, dateTime)
               }}
-              className="w-full px-4 py-3 border border-border rounded-lg bg-card text-foreground focus:ring-2 focus:ring-blue-500"
+              className="w-full"
             />
           </div>
         </div>

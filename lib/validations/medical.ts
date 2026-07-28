@@ -523,16 +523,21 @@ export const liveUpdateSchema = z.object({
 })
 
 export const appointmentSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string().uuid(), // server-generated via uuidv4()
   userId: z.string().min(1, 'User ID is required'),
-  patientId: z.string().uuid(),
+  // patientId/providerId are Firestore document IDs (~20-char), NOT UUIDs — a
+  // `.uuid()` here rejected every real appointment ("Invalid appointment data").
+  patientId: z.string().min(1, 'Patient is required'),
   patientName: z.string().min(1),
-  providerId: z.string().uuid().optional(),
+  providerId: z.string().min(1).optional(),
   providerName: z.string().min(1).optional(),
   specialty: z.string().optional(),
 
   // Scheduling
-  dateTime: z.string().datetime().refine(isFifteenMinuteIncrement, 'Appointment time must fall on a 15-minute increment'),
+  // Stored as a LOCAL ISO string (no timezone) by the client to avoid TZ shifts,
+  // so allow local/offset forms — a bare `.datetime()` requires a `Z`/offset and
+  // would reject `2026-07-28T14:30:00`, failing every wizard submit.
+  dateTime: z.string().datetime({ local: true, offset: true }).refine(isFifteenMinuteIncrement, 'Appointment time must fall on a 15-minute increment'),
   endTime: z.string().datetime().optional(),
   duration: z.number().positive().max(480).optional(), // max 8 hours
   type: appointmentTypeSchema,
@@ -564,7 +569,7 @@ export const appointmentSchema = z.object({
   driverDeclinedAt: z.string().datetime().optional(),
   driverDeclineReason: z.string().max(500).optional(),
   driverNotes: z.string().max(500).optional(),
-  pickupTime: z.string().datetime().refine((v) => !v || isFifteenMinuteIncrement(v), 'Pickup time must fall on a 15-minute increment').optional(),
+  pickupTime: z.string().datetime({ local: true, offset: true }).refine((v) => !v || isFifteenMinuteIncrement(v), 'Pickup time must fall on a 15-minute increment').optional(),
   dropoffTime: z.string().datetime().optional(),
 
   // Lifecycle
