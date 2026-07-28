@@ -122,7 +122,7 @@ function PatientDutiesContent() {
             </p>
             <Link
               href="/patients"
-              className="text-primary hover:underline"
+              className="page-back-button"
             >
               ← Back to Patients
             </Link>

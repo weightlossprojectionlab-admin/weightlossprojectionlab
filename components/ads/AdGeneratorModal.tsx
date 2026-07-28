@@ -312,7 +312,7 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
             <div>
               <button
                 onClick={handleBack}
-                className="text-sm text-primary hover:underline mb-2 flex items-center gap-1"
+                className="page-back-button mb-2"
               >
                 ← Back to personas
               </button>
@@ -351,7 +351,7 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
             <div>
               <button
                 onClick={handleBack}
-                className="text-sm text-primary hover:underline mb-2 flex items-center gap-1"
+                className="page-back-button mb-2"
               >
                 ← Back to templates
               </button>
@@ -400,7 +400,7 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
             <div>
               <button
                 onClick={handleBack}
-                className="text-sm text-primary hover:underline mb-2 flex items-center gap-1"
+                className="page-back-button mb-2"
               >
                 ← Back to platforms
               </button>
@@ -560,7 +560,7 @@ export function AdGeneratorModal({ isOpen, onClose }: AdGeneratorModalProps) {
             <div>
               <button
                 onClick={handleBack}
-                className="text-sm text-primary hover:underline mb-2 flex items-center gap-1"
+                className="page-back-button mb-2"
               >
                 ← Back to customize
               </button>

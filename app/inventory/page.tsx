@@ -2558,7 +2558,7 @@ function KitchenInventoryContent() {
                       setSelectedItem(null)
                       setActiveTab('list')
                     }}
-                    className="text-sm text-primary hover:underline font-medium flex-shrink-0"
+                    className="page-back-button flex-shrink-0"
                   >
                     ← Back to list
                   </button>
@@ -3355,7 +3355,7 @@ function KitchenInventoryContent() {
                         setSelectedItem(null)
                         setActiveTab('list')
                       }}
-                      className="text-sm text-primary hover:underline font-medium flex-shrink-0"
+                      className="page-back-button flex-shrink-0"
                     >
                       ← Back to list
                     </button>
@@ -4168,7 +4168,7 @@ function KitchenInventoryContent() {
                       setSelectedItem(null)
                       setActiveTab('list')
                     }}
-                    className="text-sm text-primary hover:underline font-medium flex-shrink-0"
+                    className="page-back-button flex-shrink-0"
                   >
                     ← Back to list
                   </button>

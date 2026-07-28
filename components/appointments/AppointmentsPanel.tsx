@@ -56,19 +56,23 @@ export function AppointmentsPanel() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <button
-          onClick={schedule}
-          className="flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-        >
-          {addAppointmentLock.isLocked ? (
-            <LockClosedIcon className="w-5 h-5" />
-          ) : (
-            <PlusIcon className="w-5 h-5" />
-          )}
-          {addAppointmentLock.isLocked ? 'Paused — Schedule Appointment' : 'Schedule Appointment'}
-        </button>
-      </div>
+      {/* Top "Schedule" only when the list has items — otherwise the empty
+          state's own CTA is the single, non-redundant call to action. */}
+      {visibleAppointments.length > 0 && (
+        <div>
+          <button
+            onClick={schedule}
+            className="flex items-center gap-2 px-4 py-3 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+          >
+            {addAppointmentLock.isLocked ? (
+              <LockClosedIcon className="w-5 h-5" />
+            ) : (
+              <PlusIcon className="w-5 h-5" />
+            )}
+            {addAppointmentLock.isLocked ? 'Paused — Schedule Appointment' : 'Schedule Appointment'}
+          </button>
+        </div>
+      )}
 
       {!loading && hiddenAppointmentsCount > 0 && (
         <div className="px-4 py-3 bg-muted rounded-lg text-sm text-muted-foreground">

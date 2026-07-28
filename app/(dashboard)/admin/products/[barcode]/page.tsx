@@ -153,7 +153,7 @@ export default function ProductDetailPage() {
         <div className="bg-error-light dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
           <h2 className="text-red-900 dark:text-red-200 font-semibold mb-2">Error Loading Product</h2>
           <p className="text-error-dark dark:text-red-300">{error || 'Product not found'}</p>
-          <Link href="/admin/products" className="text-primary hover:underline mt-4 inline-block">
+          <Link href="/admin/products" className="page-back-button mt-4">
             ← Back to Products
           </Link>
         </div>

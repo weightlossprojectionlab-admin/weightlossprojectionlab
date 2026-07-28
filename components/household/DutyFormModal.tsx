@@ -290,7 +290,7 @@ export function DutyFormModal({
             <div>
               <button
                 onClick={() => setStep('category')}
-                className="text-primary hover:underline mb-4 flex items-center gap-1"
+                className="page-back-button mb-4"
               >
                 ← Back to categories
               </button>
@@ -337,7 +337,7 @@ export function DutyFormModal({
               {!duty && (
                 <button
                   onClick={() => setStep(selectedCategory === 'custom' ? 'category' : 'template')}
-                  className="text-primary hover:underline flex items-center gap-1"
+                  className="page-back-button"
                 >
                   ← Back
                 </button>

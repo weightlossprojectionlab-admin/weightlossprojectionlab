@@ -594,7 +594,7 @@ function ProviderStep({
           <h3 className="text-xl font-bold text-foreground">Add New Provider</h3>
           <button
             onClick={() => onToggleAddProviderForm(false)}
-            className="text-muted-foreground hover:text-foreground text-sm"
+            className="page-back-button"
           >
             ← Back to provider list
           </button>

@@ -145,7 +145,7 @@ export default function SubmitOrderPage() {
         <div className="mb-6">
           <Link
             href="/shopping"
-            className="text-primary hover:underline inline-flex items-center gap-2 mb-4"
+            className="page-back-button mb-4"
           >
             ← Back to Shopping List
           </Link>

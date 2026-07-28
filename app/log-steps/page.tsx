@@ -111,7 +111,7 @@ function LogStepsContent() {
           <div className="flex items-center space-x-4">
             <Link
               href="/dashboard"
-              className="text-primary hover:text-primary-hover"
+              className="page-back-button"
               aria-label="Back to dashboard"
             >
               ← Back
