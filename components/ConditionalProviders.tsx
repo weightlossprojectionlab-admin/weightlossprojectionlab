@@ -14,6 +14,7 @@ import { AppMenu } from '@/components/ui/AppMenu'
 import { CsrfInitializer } from '@/components/CsrfInitializer'
 import { GlobalAlertModal } from '@/components/GlobalAlertModal'
 import { InactivityHandler } from '@/components/InactivityHandler'
+import { SubscriptionSimulator } from '@/components/dev/SubscriptionSimulator'
 
 /**
  * Conditionally render providers based on the current route
@@ -54,6 +55,8 @@ export function ConditionalProviders({ children, tenantSlug }: { children: React
                 {children}
               </div>
               <AppMenu />
+              {/* Dev/admin-only floating plan switcher (self-gates via shouldShow). */}
+              <SubscriptionSimulator />
               <Toaster
               position="top-center"
               toastOptions={{

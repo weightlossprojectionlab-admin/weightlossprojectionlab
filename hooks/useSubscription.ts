@@ -72,6 +72,28 @@ export function useSubscription() {
 
     setIsAdminUser(isAdmin(user as any))
 
+    // Super-admins bypass subscriptions entirely: FULL_ACCESS everywhere,
+    // regardless of any (possibly expired or test-mode) stored subscription.
+    // Short-circuit BEFORE the account mirror and the user-doc listener, which
+    // would otherwise overwrite the bypass with the stored plan (that's why an
+    // admin with an expired stored sub still saw the "subscription ended" banner).
+    if (isAdmin(user as any)) {
+      // Admins: FULL_ACCESS by default, or the SIMULATED plan in dev (the
+      // simulator wins inside getUserSubscription). Keep reacting to simulation
+      // changes so the SubscriptionSimulator works for admins; skip the user-doc
+      // listener / owner mirror, which would clobber this with the stored plan.
+      const applyAdmin = () => {
+        const eff = getUserSubscription(user as any)
+        setSubscription(eff)
+        setCachedSubscription(eff)
+      }
+      applyAdmin()
+      setLoading(false)
+      const onSim = () => applyAdmin()
+      window.addEventListener('subscription-simulation-changed', onSim)
+      return () => window.removeEventListener('subscription-simulation-changed', onSim)
+    }
+
     // While the active account is still resolving (e.g. /patients/[id] hasn't
     // loaded the patient's owner yet), hold — do NOT seat the viewer's personal
     // plan, which would flash the wrong plan/paywall before the owner's loads.

@@ -196,17 +196,19 @@ export function getUserSubscription(
 ): UserSubscription | null {
   if (!user) return null
 
-  // 1. Admin bypass — full access for feature-gate callers. Display
+  // 1. Dev-mode simulation takes precedence — even over the admin bypass — so a
+  //    super-admin can test ANY plan locally via the SubscriptionSimulator.
+  //    Clearing the simulation falls through to the admin bypass (full access).
+  if (process.env.NODE_ENV === 'development') {
+    const simulated = getSimulatedSubscription()
+    if (simulated) return simulated
+  }
+
+  // 2. Admin bypass — full access for feature-gate callers. Display
   //    surfaces opt out via `skipAdminBypass: true` so the displayed
   //    plan/cap matches the user's real subscription.
   if (!options?.skipAdminBypass && isSuperAdmin(user.email)) {
     return FULL_ACCESS_SUBSCRIPTION
-  }
-
-  // 2. Dev mode - check for simulated subscription
-  if (process.env.NODE_ENV === 'development') {
-    const simulated = getSimulatedSubscription()
-    if (simulated) return simulated
   }
 
   // 3. Check cached subscription (populated by useSubscription hook)
