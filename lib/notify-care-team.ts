@@ -79,7 +79,7 @@ export async function notifyCareTeam(opts: {
           title: opts.title,
           message: opts.message,
           actionUrl: opts.actionUrl ?? '/notifications',
-          metadata: (opts.metadata ?? {}) as NotificationMetadata,
+          metadata: (opts.metadata ?? {}) as unknown as NotificationMetadata,
         }).catch((e) =>
           logger.error('[notifyCareTeam] recipient write failed', e as Error, { userId, type: opts.type }),
         ),
