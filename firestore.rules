@@ -68,6 +68,19 @@ service cloud.firestore {
              request.auth.token.tenantId in get(/databases/$(database)/documents/users/$(userId)).data.get('managedBy', []);
     }
 
+    // Caregiver access to a SPECIFIC patient's health data. Stricter than the
+    // account-level hasFamilyPermission: also requires the patient to be in the
+    // caregiver's patientsAccess. Explicit userId/patientId params so it works
+    // from BOTH patient-scoped rules (patientId from the path) and owner-scoped
+    // rules (patientId from resource.data). One get() on the caregiver's
+    // familyMembers doc, cached per rule evaluation.
+    function hasFamilyPatientAccess(userId, patientId, permission) {
+      return isAuthenticated() &&
+             exists(/databases/$(database)/documents/users/$(userId)/familyMembers/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(userId)/familyMembers/$(request.auth.uid)).data.permissions[permission] == true &&
+             patientId in get(/databases/$(database)/documents/users/$(userId)/familyMembers/$(request.auth.uid)).data.get('patientsAccess', []);
+    }
+
     // ============================================
     // USERS COLLECTION
     // ============================================
@@ -159,7 +172,10 @@ service cloud.firestore {
 
         // Meal logs subcollection (hyphenated naming)
         match /meal-logs/{logId} {
-          allow read: if isOwner(userId) || isTenantOfUser(userId);
+          // + caregiver with viewVitals for THIS patient (client onSnapshot; see
+          //   useMealLogsRealtime). patientId from the path.
+          allow read: if isOwner(userId) || isTenantOfUser(userId) ||
+                        hasFamilyPatientAccess(userId, patientId, 'viewVitals');
           allow create: if isOwner(userId) &&
                           request.resource.data.patientId == patientId &&
                           request.resource.data.userId == userId;
@@ -494,9 +510,13 @@ service cloud.firestore {
 
       // --- Legacy subcollections (from original rules) ---
 
-      // Weight logs
+      // Weight logs (owner-scoped; each doc carries patientId). Caregivers with
+      // viewVitals for that patient may READ (client onSnapshot on the patient
+      // detail page + progress query `where patientId == X`). Writes stay owner.
       match /weightLogs/{logId} {
-        allow read, write: if isOwner(userId);
+        allow read: if isOwner(userId) ||
+                       hasFamilyPatientAccess(userId, resource.data.patientId, 'viewVitals');
+        allow write: if isOwner(userId);
       }
 
       // Meal logs
