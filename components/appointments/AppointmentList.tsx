@@ -35,9 +35,13 @@ import VisitSummarySheet from './VisitSummarySheet'
 interface AppointmentListProps {
   patientId: string
   onEdit?: (appointment: Appointment) => void
+  /** Whether the viewing seat may delete appointments — permission-scoped so a
+   *  view-only caregiver doesn't see "Delete". Defaults to true for owner /
+   *  existing callers; the patient detail page passes canDeleteAppointments. */
+  canDelete?: boolean
 }
 
-export function AppointmentList({ patientId, onEdit }: AppointmentListProps) {
+export function AppointmentList({ patientId, onEdit, canDelete = true }: AppointmentListProps) {
   const { appointments, loading, deleteAppointment, updateAppointment } = useAppointments({
     patientId,
     autoFetch: true,
@@ -151,13 +155,15 @@ export function AppointmentList({ patientId, onEdit }: AppointmentListProps) {
                             <PencilIcon className="w-4 h-4" />
                           </button>
                         )}
-                        <button
-                          onClick={() => handleDelete(appointment.id)}
-                          className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                          title="Delete"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
+                        {canDelete && (
+                          <button
+                            onClick={() => handleDelete(appointment.id)}
+                            className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                            title="Delete"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -270,13 +276,15 @@ export function AppointmentList({ patientId, onEdit }: AppointmentListProps) {
                           <p className="text-xs text-muted-foreground">{appointment.specialty}</p>
                         )}
                       </div>
-                      <button
-                        onClick={() => handleDelete(appointment.id)}
-                        className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                        title="Delete"
-                      >
-                        <TrashIcon className="w-3 h-3" />
-                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => handleDelete(appointment.id)}
+                          className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                          title="Delete"
+                        >
+                          <TrashIcon className="w-3 h-3" />
+                        </button>
+                      )}
                     </div>
 
                     <div className="space-y-1">

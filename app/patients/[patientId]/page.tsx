@@ -353,6 +353,8 @@ function PatientDetailContent() {
     canViewVitals,
     canEditProfile,
     canEditMedications,
+    canScheduleAppointments,
+    canDeleteAppointments,
     canUploadDocuments,
     canDeleteDocuments,
     loading: permissionsLoading
@@ -1178,8 +1180,10 @@ function PatientDetailContent() {
                     </button>
                   )}
 
-                  {/* Appointments Wizard */}
-                  {visibleTabs.includes('appointments') && (
+                  {/* Appointments Wizard — write action, so gate on the seat's
+                      scheduleAppointments permission (a view-only caregiver
+                      shouldn't see it; server RBAC also blocks the write). */}
+                  {visibleTabs.includes('appointments') && canScheduleAppointments && (
                     <button
                       data-write="true"
                       onClick={() => {
@@ -2326,7 +2330,7 @@ function PatientDetailContent() {
                 <h2 className="text-lg font-bold text-foreground mb-4">
                   {getPatientDisplayName(patient)}'s Appointments
                 </h2>
-                <AppointmentList patientId={patientId} />
+                <AppointmentList patientId={patientId} canDelete={canDeleteAppointments} />
               </div>
             </div>
           )}
