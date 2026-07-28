@@ -99,6 +99,15 @@ export interface PatientProfile {
   gender?: 'male' | 'female' | 'other' | 'prefer-not-to-say'
   emergencyContacts?: EmergencyContact[]
 
+  /** API-transport annotations added by GET /api/patients — NOT stored in
+   *  Firestore. `_source` distinguishes the viewer's OWN patients from ones
+   *  reached via caregiver access; `_permissions` is the caregiver grant for a
+   *  caregiver-access row. Used for viewer-relative rendering (isSelfPatient /
+   *  getPatientBadgeLabel) and permission-scoped UI — replaces the old
+   *  `(patient as any)._source` casts. */
+  _source?: 'owned' | 'caregiver'
+  _permissions?: FamilyMemberPermissions
+
   // Unified Family Member + Caregiver Model
   accountUserId?: string // Firestore Auth UID if they have an account
   accountStatus?: 'owner' | 'member' | 'pending_invite' | 'no_account'

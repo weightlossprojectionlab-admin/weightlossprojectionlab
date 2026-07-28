@@ -10,7 +10,7 @@ import EditMedicationModal from '@/components/health/EditMedicationModal'
 import ConfirmModal from '@/components/ui/ConfirmModal'
 import { medicalOperations } from '@/lib/medical-operations'
 import { PatientProfile, PatientMedication } from '@/types/medical'
-import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
+import { getPatientBadgeLabel, isSelfPatient } from '@/lib/life-stage-utils'
 import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { logger } from '@/lib/logger'
@@ -95,9 +95,10 @@ function MedicationsContent() {
           defaultPatient = data.find(p => p.id === profile.preferences.primaryPatientId)
         }
 
-        // Priority 2: Fall back to "Self" patient
+        // Priority 2: Fall back to the VIEWER's own self patient (not a
+        // caregiver-access patient who is 'self' in their own account).
         if (!defaultPatient) {
-          defaultPatient = data.find(p => p.relationship === 'self')
+          defaultPatient = data.find(p => isSelfPatient(p))
         }
 
         // Priority 3: Use first patient in list

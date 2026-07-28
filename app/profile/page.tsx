@@ -53,7 +53,7 @@ import { getApplicableVitalTypes } from '@/lib/vital-applicability'
 import { getCSRFToken } from '@/lib/csrf'
 import { useFeatureGate } from '@/hooks/useFeatureGate'
 import { useAdminAuth } from '@/hooks/useAdminAuth'
-import { getPatientBadgeLabel, getPatientDisplayName } from '@/lib/life-stage-utils'
+import { getPatientBadgeLabel, getPatientDisplayName, isSelfPatient } from '@/lib/life-stage-utils'
 import { UpgradeRequiredModal } from '@/components/subscription/UpgradeRequiredModal'
 import { FeatureEnabledModal } from '@/components/subscription/FeatureEnabledModal'
 import type { FeaturePreference, SubscriptionPlan } from '@/types'
@@ -127,7 +127,7 @@ function ProfileContent() {
   // which previously was the only way to get currentlyViewingMember
   // to be null).
   const isOwnProfileView =
-    !currentlyViewingMember || currentlyViewingMember.relationship === 'self'
+    !currentlyViewingMember || isSelfPatient(currentlyViewingMember, user?.uid)
 
   // Get the effective patient ID for medications (DRY)
   const effectivePatientId = selectedMemberId || user?.uid || ''
@@ -590,7 +590,7 @@ function ProfileContent() {
                 // form that would otherwise jam "You" into the slot and
                 // produce "You's health information". `relationship: 'self'`
                 // is the canonical self-Patient flag (lib/self-patient.ts).
-                const isSelfMember = currentlyViewingMember?.relationship === 'self'
+                const isSelfMember = isSelfPatient(currentlyViewingMember, user?.uid)
                 return (
                   <>
                     <h1 className="text-xl font-semibold text-foreground">
@@ -632,7 +632,7 @@ function ProfileContent() {
                     : (user?.displayName || 'You')}
                 </h2>
                 <p className="text-description mt-1">
-                  {currentlyViewingMember && currentlyViewingMember.relationship !== 'self'
+                  {currentlyViewingMember && !isSelfPatient(currentlyViewingMember, user?.uid)
                     ? `${getPatientBadgeLabel(currentlyViewingMember)}'s Health Profile`
                     : 'Your Personal Health Profile'
                   }
@@ -644,7 +644,7 @@ function ProfileContent() {
                 gets the "Currently Viewing" header above; no extra chip
                 needed (and "Family Member" badge would be semantically
                 wrong — the user isn't a family member of themselves). */}
-            {currentlyViewingMember && currentlyViewingMember.relationship !== 'self' && (
+            {currentlyViewingMember && !isSelfPatient(currentlyViewingMember, user?.uid) && (
               <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 flex-shrink-0">
                 <span className="px-3 py-1 bg-primary text-primary-foreground text-xs font-bold rounded-full uppercase whitespace-nowrap">
                   Family Member
@@ -676,7 +676,7 @@ function ProfileContent() {
                 // diverged when onboarding captured a different name
                 // than Google provided. The self-Patient is canonical.
                 const hasSelfPatient = familyMembers.some(
-                  (m) => m.relationship === 'self',
+                  (m) => isSelfPatient(m, user?.uid),
                 )
                 return (
                   <select

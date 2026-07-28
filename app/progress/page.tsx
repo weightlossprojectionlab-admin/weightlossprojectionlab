@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { isSelfPatient } from '@/lib/life-stage-utils'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useSubscription } from '@/hooks/useSubscription'
 import { canAccessFeature } from '@/lib/feature-gates'
@@ -842,7 +843,7 @@ function ProgressContent() {
       <PageHeader
         title={
           patientProfile
-            ? patientProfile.relationship === 'self'
+            ? isSelfPatient(patientProfile, user?.uid)
               ? `Your Progress (${patientProfile.name})`
               : `${patientProfile.name}'s Progress`
             : hasNoPatients
@@ -851,7 +852,7 @@ function ProgressContent() {
         }
         subtitle={
           patientProfile
-            ? patientProfile.relationship === 'self'
+            ? isSelfPatient(patientProfile, user?.uid)
               ? 'Your weight loss journey, projected forward from your history'
               : `${patientProfile.name}'s weight loss journey, projected forward from their history`
             : hasNoPatients

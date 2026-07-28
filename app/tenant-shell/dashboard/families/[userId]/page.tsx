@@ -199,7 +199,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
                         {patient.name}
                       </h4>
                       <p className="text-sm text-gray-500 dark:text-gray-400">
-                        {getPatientBadgeLabel(patient) || patient.type}
+                        {/* The tenant admin is never the patient — never render "You". */}
+                        {getPatientBadgeLabel(patient, { isSelf: false }) || patient.type}
                       </p>
                       <span className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
                         patient.type === 'pet'

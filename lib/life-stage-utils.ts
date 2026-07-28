@@ -139,13 +139,41 @@ export function getPatientDisplayName(patient: {
   return trimmed || patient.name || ''
 }
 
-export function getPatientBadgeLabel(patient: {
-  type?: 'human' | 'pet' | null
-  dateOfBirth?: string | null
-  relationship?: string | null
-  gender?: string | null
-  species?: string | null
-}): string {
+/**
+ * A patient is "self" (renders "You") ONLY relative to the viewing seat — the
+ * viewer's own record — never because a record is tagged `relationship: 'self'`
+ * in some other account. A caregiver-access patient who is `self` in their own
+ * account must not read "You" to the caregiver.
+ *
+ * Primary discriminator: `_source` (set by GET /api/patients — 'owned' vs
+ * 'caregiver'). Safety net for single-fetch/cached patients that lack `_source`:
+ * the identity match `patient.userId === viewerUid`.
+ */
+export function isSelfPatient(
+  patient:
+    | { relationship?: string | null; _source?: string | null; userId?: string | null }
+    | null
+    | undefined,
+  viewerUid?: string | null,
+): boolean {
+  if (!patient) return false
+  if (patient._source === 'caregiver') return false
+  if (patient.relationship !== 'self') return false
+  if (viewerUid && patient.userId && patient.userId !== viewerUid) return false
+  return true
+}
+
+export function getPatientBadgeLabel(
+  patient: {
+    type?: 'human' | 'pet' | null
+    dateOfBirth?: string | null
+    relationship?: string | null
+    gender?: string | null
+    species?: string | null
+    _source?: 'owned' | 'caregiver' | string | null
+  },
+  opts?: { isSelf?: boolean },
+): string {
   if (patient.type === 'pet') {
     if (patient.species && patient.species.length > 0) {
       return patient.species.charAt(0).toUpperCase() + patient.species.slice(1)
@@ -165,9 +193,13 @@ export function getPatientBadgeLabel(patient: {
   // Adults / seniors: prefer gender-aware relationship label.
   const isMale = patient.gender === 'male'
   const isFemale = patient.gender === 'female'
+  // "You" is viewer-relative — only the viewer's OWN self. A caregiver-access
+  // patient tagged `self` in their own account falls through to a neutral
+  // life-stage label. Surfaces without a reliable `_source` pass opts.isSelf.
+  const isSelf = opts?.isSelf ?? patient._source !== 'caregiver'
   switch (patient.relationship) {
     case 'self':
-      return 'You'
+      return isSelf ? 'You' : stage.label
     case 'spouse':
       return isMale ? 'Husband' : isFemale ? 'Wife' : 'Spouse'
     case 'parent':

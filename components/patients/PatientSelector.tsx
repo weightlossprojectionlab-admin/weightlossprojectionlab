@@ -6,7 +6,7 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { UserCircleIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { capitalizeName } from '@/lib/utils'
-import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
+import { getPatientBadgeLabel, isSelfPatient } from '@/lib/life-stage-utils'
 import toast from 'react-hot-toast'
 
 interface PatientSelectorProps {
@@ -60,9 +60,10 @@ export function PatientSelector({
           defaultPatient = data.find(p => p.id === userProfile.preferences.primaryPatientId)
         }
 
-        // Priority 2: Fall back to "Self" family member
+        // Priority 2: Fall back to the VIEWER's own self (not a caregiver-access
+        // patient who is 'self' in their own account).
         if (!defaultPatient) {
-          defaultPatient = data.find(p => p.relationship === 'self')
+          defaultPatient = data.find(p => isSelfPatient(p))
         }
 
         // Priority 3: Use first family member in list
