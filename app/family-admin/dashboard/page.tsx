@@ -268,9 +268,10 @@ function FamilyAdminDashboardContent() {
                     <h2 className="text-xl font-bold text-foreground">Family Member Health Snapshots</h2>
                     <Link
                       href="/patients"
-                      className="text-sm text-primary hover:underline"
+                      aria-label="View all family members"
+                      className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 text-sm font-medium text-primary bg-primary/5 border border-primary/30 rounded-lg hover:bg-primary/10 active:bg-primary/20 transition-colors"
                     >
-                      View All →
+                      View all <span aria-hidden>→</span>
                     </Link>
                   </div>
                   {patientSnapshots.length === 0 ? (
@@ -305,9 +306,10 @@ function FamilyAdminDashboardContent() {
                       <h2 className="text-xl font-bold text-foreground">Upcoming Appointments</h2>
                       <Link
                         href="/appointments"
-                        className="text-sm text-primary hover:underline"
+                        aria-label="View all appointments"
+                        className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 text-sm font-medium text-primary bg-primary/5 border border-primary/30 rounded-lg hover:bg-primary/10 active:bg-primary/20 transition-colors"
                       >
-                        View All →
+                        View all <span aria-hidden>→</span>
                       </Link>
                     </div>
                     <div className="space-y-3">

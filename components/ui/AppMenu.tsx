@@ -28,7 +28,6 @@ import {
   UserCircleIcon,
   HeartIcon,
   BeakerIcon,
-  ShieldCheckIcon,
   UserPlusIcon
 } from '@heroicons/react/24/outline'
 import toast from 'react-hot-toast'
@@ -37,6 +36,10 @@ interface MenuItem {
   name: string
   href: string
   icon: React.ComponentType<{ className?: string }>
+  // Extra route prefixes that should light this item as the current section.
+  // e.g. "Family" (/family-admin/dashboard) also owns /patients and its detail
+  // pages, so the menu still shows "you are here" when you drill into a member.
+  activePrefixes?: string[]
 }
 
 interface MenuSection {
@@ -73,11 +76,14 @@ export function AppMenu() {
       title: 'Health',
       items: [
         ...(hasMedicalAccess ? [
-          { name: 'Medical Info', href: '/medical', icon: HeartIcon },
+          { name: 'Medical', href: '/medical', icon: HeartIcon },
         ] : []),
+        // One family destination: the Family hub. The member list lives inside
+        // it (snapshots + "View all"), so a separate "Family Members" entry +
+        // the duplicate banner were removed — one path is easier to train and
+        // avoids the "these two go to the same place" confusion.
         ...(isFamilyPlan ? [
-          { name: 'Family Members', href: '/patients', icon: UserGroupIcon },
-          { name: 'Family Dashboard', href: '/family-admin/dashboard', icon: ShieldCheckIcon },
+          { name: 'Family', href: '/family-admin/dashboard', icon: UserGroupIcon, activePrefixes: ['/family-admin', '/patients'] },
         ] : []),
       ],
     },
@@ -208,13 +214,19 @@ export function AppMenu() {
               </h3>
               <nav className="space-y-1">
                 {section.items.map((item) => {
-                  const isActive = pathname === item.href
+                  // "You are here" when the path is the item's route, a sub-route
+                  // of it, or one of the section's other owned prefixes (e.g.
+                  // Family owns /patients). Marked aria-current so it reads as the
+                  // current page, not just another link to tap.
+                  const matches = (base: string) => pathname === base || pathname.startsWith(base + '/')
+                  const isActive = matches(item.href) || (item.activePrefixes?.some(matches) ?? false)
                   const Icon = item.icon
 
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
+                      aria-current={isActive ? 'page' : undefined}
                       className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                         isActive
                           ? 'bg-primary text-white'

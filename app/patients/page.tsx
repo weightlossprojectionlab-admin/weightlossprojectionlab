@@ -34,7 +34,6 @@ import {
   getAddButtonText,
   getTrackingTerminology
 } from '@/lib/user-role-helper'
-import { DashboardSelectorCompact } from '@/components/dashboard/DashboardSelector'
 import SupervisedVitalsWizard from '@/components/wizards/SupervisedVitalsWizard'
 import VitalsQuickViewModal from '@/components/patients/VitalsQuickViewModal'
 import { useAuth } from '@/hooks/useAuth'
@@ -197,10 +196,6 @@ function PatientsContent() {
           <InvitationInbox />
         </div>
 
-        {/* Family Admin Dashboard Link - Always show for consistency across same plan */}
-        <div className="mb-6">
-          <DashboardSelectorCompact />
-        </div>
 
         {/* Caregiver-only mode explainer — why their own members aren't here. */}
         {caregiverOnlyMode && (

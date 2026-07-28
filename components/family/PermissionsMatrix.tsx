@@ -36,7 +36,7 @@ export function PermissionsMatrix({
 
   // Group permissions by category
   const permissionGroups = {
-    'Medical Info': [
+    'Medical': [
       'viewMedicalRecords',
       'logVitals',
       'viewVitals',
