@@ -8,6 +8,7 @@
 
 import type { Provider } from '@/types/medical'
 import { MapPinIcon, PhoneIcon, EnvelopeIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
+import { capitalizeName, formatPhone } from '@/lib/utils'
 
 interface ProviderCardProps {
   provider: Provider
@@ -66,7 +67,7 @@ export function ProviderCard({
           </div>
           {provider.organization && (
             <p className="text-sm text-muted-foreground mb-1">
-              {provider.organization}
+              {capitalizeName(provider.organization)}
             </p>
           )}
           <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${getProviderTypeColor(provider.type)}`}>
@@ -89,25 +90,34 @@ export function ProviderCard({
         <>
           {/* Contact Info */}
           <div className="space-y-2 mb-4">
-            <div className="flex items-start gap-2 text-sm">
-              <MapPinIcon className="w-4 h-4 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="text-foreground">{provider.address}</p>
-                <p className="text-muted-foreground">
-                  {provider.city}, {provider.state} {provider.zipCode}
-                </p>
+            {/* Only render the location row when there's actual location data —
+                otherwise an empty address left a lonely "," next to the pin. */}
+            {(provider.address || provider.city || provider.state || provider.zipCode) && (
+              <div className="flex items-start gap-2 text-sm">
+                <MapPinIcon className="w-4 h-4 text-muted-foreground mt-0.5" />
+                <div>
+                  {provider.address && <p className="text-foreground">{capitalizeName(provider.address)}</p>}
+                  {(provider.city || provider.state || provider.zipCode) && (
+                    <p className="text-muted-foreground">
+                      {[provider.city ? capitalizeName(provider.city) : '', provider.state].filter(Boolean).join(', ')}
+                      {provider.zipCode ? ` ${provider.zipCode}` : ''}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div className="flex items-center gap-2 text-sm">
-              <PhoneIcon className="w-4 h-4 text-muted-foreground" />
-              <a
-                href={`tel:${provider.phone}`}
-                className="text-primary dark:text-purple-400 hover:underline"
-              >
-                {provider.phone}
-              </a>
-            </div>
+            {provider.phone && (
+              <div className="flex items-center gap-2 text-sm">
+                <PhoneIcon className="w-4 h-4 text-muted-foreground" />
+                <a
+                  href={`tel:${provider.phone}`}
+                  className="text-primary dark:text-purple-400 hover:underline"
+                >
+                  {formatPhone(provider.phone)}
+                </a>
+              </div>
+            )}
 
             {provider.email && (
               <div className="flex items-center gap-2 text-sm">
