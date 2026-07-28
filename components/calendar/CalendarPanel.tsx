@@ -60,14 +60,25 @@ export function CalendarPanel() {
   ]
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
+  // Single source for driver-status → dot color. Used by BOTH the per-
+  // appointment dot and the legend below, so they can't drift. (They used to be
+  // hardcoded separately — which is how a `bg-*-light0` typo, a stray trailing
+  // 0 that resolves to no color, went unnoticed in both.)
   const getDriverStatusColor = (status: string) => {
     switch (status) {
-      case 'accepted': return 'bg-success-light0'
-      case 'pending': return 'bg-warning-light0'
-      case 'declined': return 'bg-error-light0'
+      case 'accepted': return 'bg-success'
+      case 'pending': return 'bg-warning'
+      case 'declined': return 'bg-error'
       default: return 'bg-gray-400'
     }
   }
+
+  const DRIVER_STATUS_LEGEND: Array<{ status: string; label: string }> = [
+    { status: 'accepted', label: 'Accepted' },
+    { status: 'pending', label: 'Pending' },
+    { status: 'declined', label: 'Declined' },
+    { status: 'not-needed', label: 'No driver needed' },
+  ]
 
   const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
@@ -183,22 +194,12 @@ export function CalendarPanel() {
       <div className="mt-6 bg-card rounded-lg shadow-sm p-4">
         <h3 className="text-sm font-semibold text-foreground mb-3">Driver Status Legend</h3>
         <div className="flex flex-wrap gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-success-light0"></span>
-            <span className="text-muted-foreground">Accepted</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-warning-light0"></span>
-            <span className="text-muted-foreground">Pending</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-error-light0"></span>
-            <span className="text-muted-foreground">Declined</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3 h-3 rounded-full bg-gray-400"></span>
-            <span className="text-muted-foreground">No driver needed</span>
-          </div>
+          {DRIVER_STATUS_LEGEND.map(({ status, label }) => (
+            <div key={status} className="flex items-center gap-2">
+              <span className={`w-3 h-3 rounded-full ${getDriverStatusColor(status)}`}></span>
+              <span className="text-muted-foreground">{label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>
