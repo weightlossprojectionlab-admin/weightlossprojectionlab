@@ -1076,18 +1076,31 @@ function ProgressContent() {
                     {(showAllHealthConditions
                       ? activeProfile.profile.healthConditions
                       : activeProfile.profile.healthConditions.slice(0, 3)
-                    ).map((condition: string, idx: number) => (
-                      <button
-                        key={idx}
-                        onClick={() => {
-                          setSelectedCondition(condition)
-                          setShowMedicationModal(true)
-                        }}
-                        className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer active:scale-95 min-h-[44px] flex items-center"
-                      >
-                        {condition}
-                      </button>
-                    ))}
+                    ).map((condition: string, idx: number) =>
+                      // Same self-vs-patient routing as the Add button: a patient's
+                      // condition chip links to their canonical meds surface rather
+                      // than the self-only modal.
+                      selectedPatientId ? (
+                        <Link
+                          key={idx}
+                          href={`/patients/${selectedPatientId}?tab=medications`}
+                          className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer active:scale-95 min-h-[44px] flex items-center"
+                        >
+                          {condition}
+                        </Link>
+                      ) : (
+                        <button
+                          key={idx}
+                          onClick={() => {
+                            setSelectedCondition(condition)
+                            setShowMedicationModal(true)
+                          }}
+                          className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer active:scale-95 min-h-[44px] flex items-center"
+                        >
+                          {condition}
+                        </button>
+                      ),
+                    )}
                     {activeProfile.profile.healthConditions.length > 3 && (
                       <button
                         onClick={() => setShowAllHealthConditions(!showAllHealthConditions)}
@@ -1117,15 +1130,30 @@ function ProgressContent() {
                         View All
                       </Link>
                     )}
-                    <button
-                      onClick={() => {
-                        setSelectedCondition(undefined)
-                        setShowMedicationModal(true)
-                      }}
-                      className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover active:scale-95 transition-transform"
-                    >
-                      {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
-                    </button>
+                    {/* Self view → inline modal (writes the account holder's own
+                        profile.medications array). Patient view → route to the
+                        canonical patient meds surface, which reads/writes the
+                        patient's medications subcollection under editMedications
+                        RBAC. Opening the self-modal for a patient would write the
+                        med onto the caregiver's own record — see save-target bug. */}
+                    {selectedPatientId ? (
+                      <Link
+                        href={`/patients/${selectedPatientId}?tab=medications`}
+                        className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover active:scale-95 transition-transform"
+                      >
+                        {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
+                      </Link>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setSelectedCondition(undefined)
+                          setShowMedicationModal(true)
+                        }}
+                        className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover active:scale-95 transition-transform"
+                      >
+                        {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
+                      </button>
+                    )}
                   </div>
                 </div>
                 {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? (
@@ -1848,7 +1876,7 @@ function ProgressContent() {
           flag but the modal never mounted — the button appeared dead. The save
           handler only needs the signed-in user, so no profile object is
           required. */}
-      {activeProfile && (
+      {!selectedPatientId && activeProfile && (
         <MedicationManagementModal
           isOpen={showMedicationModal}
           onClose={() => {
