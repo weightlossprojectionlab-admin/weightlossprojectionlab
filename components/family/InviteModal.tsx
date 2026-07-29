@@ -157,11 +157,22 @@ export function InviteModal({
   const removeInvitee = (id: string) =>
     setInvitees((prev) => (prev.length > 1 ? prev.filter((i) => i.id !== id) : prev))
 
+  // Patient ids the given email OWNS — you can't share a record back to its
+  // owner (a superset of "already has access").
+  const ownerIdsFor = (email: string): Set<string> => {
+    const e = email.trim().toLowerCase()
+    if (!e) return new Set()
+    return new Set(
+      patients.filter((p) => (p._ownerEmail || '').trim().toLowerCase() === e).map((p) => p.id),
+    )
+  }
+
   // Patients this row would ACTUALLY grant — excludes any the invitee already
-  // covers, so re-sharing is a no-op we never send.
+  // covers OR owns, so we never send a redundant/invalid share.
   const newlySharedFor = (inv: InviteeDraft): string[] => {
     const covered = coverageFor(inv.email)?.patientIds
-    return covered ? inv.patientsShared.filter((id) => !covered.has(id)) : inv.patientsShared
+    const owned = ownerIdsFor(inv.email)
+    return inv.patientsShared.filter((id) => !covered?.has(id) && !owned.has(id))
   }
 
   const rowError = (inv: InviteeDraft): string | null => {
@@ -169,9 +180,10 @@ export function InviteModal({
     if (inv.email.trim().toLowerCase() === myEmail)
       return "You can't invite yourself as your own caregiver"
     if (newlySharedFor(inv).length === 0) {
-      return (coverageFor(inv.email)?.patientIds.size ?? 0) > 0
-        ? 'This person already has access to the selected members — pick someone new to add'
-        : 'Select at least one family member'
+      if (ownerIdsFor(inv.email).size > 0) return "You can't share a member back to its owner"
+      if ((coverageFor(inv.email)?.patientIds.size ?? 0) > 0)
+        return 'This person already has access to the selected members — pick someone new to add'
+      return 'Select at least one family member'
     }
     return null
   }
@@ -398,6 +410,7 @@ export function InviteModal({
                           preSelectedPatient={preSelectedPatient}
                           coveredPatientIds={coverageFor(inv.email)?.patientIds}
                           recognizedName={coverageFor(inv.email)?.name}
+                          ownerPatientIds={ownerIdsFor(inv.email)}
                           onChange={(patch) => update(inv.id, patch)}
                         />
                       </div>

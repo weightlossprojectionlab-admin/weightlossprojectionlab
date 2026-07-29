@@ -63,6 +63,7 @@ export function InviteePermissionFields({
   preSelectedPatient,
   coveredPatientIds,
   recognizedName,
+  ownerPatientIds,
   onChange,
 }: {
   invitee: InviteeDraft
@@ -80,10 +81,18 @@ export function InviteePermissionFields({
   coveredPatientIds?: Set<string>
   /** Display name of the recognized existing caregiver, for the banner. */
   recognizedName?: string
+  /**
+   * Patient ids this invitee's email OWNS — you can't share a record back to its
+   * owner, so these are marked "Owns this record" and locked. Takes precedence
+   * over coveredPatientIds (owning is stronger than caregiving).
+   */
+  ownerPatientIds?: Set<string>
   onChange: (patch: Partial<InviteeDraft>) => void
 }) {
-  const isCovered = (pid: string) => coveredPatientIds?.has(pid) ?? false
+  const isOwnerOf = (pid: string) => ownerPatientIds?.has(pid) ?? false
+  const isCovered = (pid: string) => !isOwnerOf(pid) && (coveredPatientIds?.has(pid) ?? false)
   const recognized = (coveredPatientIds?.size ?? 0) > 0
+  const ownsSome = (ownerPatientIds?.size ?? 0) > 0
   const active = invitePermissions(invitee)
   const warnings = getSensitivePermissionWarnings(active)
 
@@ -121,6 +130,14 @@ export function InviteePermissionFields({
         <label className="block text-sm font-medium text-foreground mb-2">
           {preSelectedPatient ? 'Sharing access to' : 'Select family members to share *'}
         </label>
+        {ownsSome && (
+          <div className="mb-2 flex items-start gap-2 rounded-lg border-2 border-warning bg-warning-light px-3 py-2">
+            <span className="text-sm text-warning-dark">
+              ⚠️ <strong>{invitee.email.trim()}</strong> owns the members marked below — you can't
+              share a record back to its owner. Pick other family members to share.
+            </span>
+          </div>
+        )}
         {recognized && (
           <div className="mb-2 flex items-start gap-2 rounded-lg border-2 border-primary-light bg-primary-light/40 px-3 py-2">
             <span className="text-sm text-primary-dark">
@@ -138,31 +155,37 @@ export function InviteePermissionFields({
         ) : (
           <div className="space-y-2 max-h-40 overflow-y-auto border-2 border-border rounded-lg p-3">
             {patients.map((p) => {
+              const owner = isOwnerOf(p.id)
               const covered = isCovered(p.id)
+              // Both lock the row: owner (can't share back to owner) and covered
+              // (already a caregiver — only extend). Owner wins the badge.
+              const blocked = owner || covered
               return (
                 <label
                   key={p.id}
                   className={`flex items-center gap-3 p-2 rounded ${
-                    covered ? 'opacity-60 cursor-not-allowed' : 'hover:bg-background cursor-pointer'
+                    blocked ? 'opacity-60 cursor-not-allowed' : 'hover:bg-background cursor-pointer'
                   }`}
                 >
                   <input
                     type="checkbox"
-                    // Covered patients render checked + disabled: the caregiver
-                    // already has them, so they can't be re-shared (only added).
-                    checked={covered || invitee.patientsShared.includes(p.id)}
-                    disabled={covered}
-                    onChange={() => !covered && togglePatient(p.id)}
+                    checked={blocked || invitee.patientsShared.includes(p.id)}
+                    disabled={blocked}
+                    onChange={() => !blocked && togglePatient(p.id)}
                     className="w-4 h-4 text-primary rounded focus:ring-purple-500 disabled:opacity-60"
                   />
                   <span className="text-foreground">
                     {p.name} ({getPatientBadgeLabel(p)})
                   </span>
-                  {covered && (
+                  {owner ? (
+                    <span className="ml-auto shrink-0 text-xs font-medium text-warning-dark bg-warning-light rounded px-2 py-0.5">
+                      Owns this record
+                    </span>
+                  ) : covered ? (
                     <span className="ml-auto shrink-0 text-xs font-medium text-primary-dark bg-primary-light rounded px-2 py-0.5">
                       Already has access
                     </span>
-                  )}
+                  ) : null}
                 </label>
               )
             })}

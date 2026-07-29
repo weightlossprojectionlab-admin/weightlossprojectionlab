@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
     const auth = await verifyAuthToken(request.headers.get('Authorization'))
     if (!auth) return unauthorizedResponse()
     const { userId } = auth
+    const viewerEmail = auth.email ?? undefined
 
     logger.debug('[API /patients GET] Fetching patients', { userId })
 
@@ -37,7 +38,8 @@ export async function GET(request: NextRequest) {
     const ownedPatients = ownedSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
-      _source: 'owned' // Mark as owned patient
+      _source: 'owned', // Mark as owned patient
+      _ownerEmail: viewerEmail, // owner is the viewer
     }))
 
     logger.debug('[API /patients GET] Owned patients fetched', { count: ownedPatients.length })
@@ -50,6 +52,9 @@ export async function GET(request: NextRequest) {
       .get()
 
     const caregiverPatients: PatientProfile[] = []
+    // Resolve each owner's email once (a caregiver may reach many patients under
+    // one owner) — lets the invite UI block sharing a patient back to its owner.
+    const ownerEmailCache = new Map<string, string | undefined>()
 
     // For each family member record, fetch patients from patientsAccess
     for (const familyMemberDoc of familyMembersSnapshot.docs) {
@@ -74,6 +79,17 @@ export async function GET(request: NextRequest) {
         patientsAccessCount: patientsAccess.length
       })
 
+      // Resolve the owner's email (cached per owner).
+      if (!ownerEmailCache.has(ownerUserId)) {
+        try {
+          const ownerDoc = await adminDb.collection('users').doc(ownerUserId).get()
+          ownerEmailCache.set(ownerUserId, ownerDoc.data()?.email || undefined)
+        } catch {
+          ownerEmailCache.set(ownerUserId, undefined)
+        }
+      }
+      const ownerEmail = ownerEmailCache.get(ownerUserId)
+
       // Batch-fetch all patients in patientsAccess with getAll()
       if (patientsAccess.length > 0) {
         const patientRefs = patientsAccess.map((patientId: string) =>
@@ -87,7 +103,8 @@ export async function GET(request: NextRequest) {
                 id: patientDoc.id,
                 ...patientDoc.data(),
                 _source: 'caregiver',
-                _permissions: familyMember.permissions
+                _permissions: familyMember.permissions,
+                _ownerEmail: ownerEmail,
               } as any)
             } else {
               logger.warn('[API /patients GET] Patient not found in owner collection', {

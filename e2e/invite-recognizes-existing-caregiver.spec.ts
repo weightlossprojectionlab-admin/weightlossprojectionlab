@@ -96,4 +96,59 @@ test.describe('Invite modal recognizes existing caregiver @invite-recognition', 
       await cleanup()
     }
   })
+
+  test("can't share a member back to its owner", async ({ page, ownerUserId, firestore }) => {
+    const stamp = Date.now()
+    const otherOwner = `e2e_owner_${stamp}`
+    const ownerEmail = `owner.${stamp}@example.com`
+    const ollie = `e2e_ollie_${stamp}`
+    const ollieName = `Ollie ${stamp}`
+
+    // A SEPARATE account that owns a patient, with the fixture user as its
+    // caregiver — so /api/patients returns Ollie as _source:'caregiver' with
+    // _ownerEmail = ownerEmail. Grant doc is keyed by the caregiver's uid and
+    // carries userId == fixture uid so the collectionGroup lookup finds it.
+    const otherOwnerRef = firestore.collection('users').doc(otherOwner)
+    await otherOwnerRef.set({ email: ownerEmail, name: 'Other Owner' }, { merge: true })
+    await otherOwnerRef.collection('patients').doc(ollie).set({
+      name: ollieName, relationship: 'parent', type: 'human',
+      dateOfBirth: '1965-01-01', gender: 'male', userId: otherOwner, status: 'active',
+    })
+    await otherOwnerRef.collection('familyMembers').doc(ownerUserId).set({
+      userId: ownerUserId, status: 'accepted', relationship: 'family',
+      patientsAccess: [ollie],
+      permissions: { viewPatientProfile: true, viewMedicalRecords: true, inviteOthers: true },
+    })
+
+    const cleanup = async () => {
+      await Promise.all([
+        otherOwnerRef.collection('patients').doc(ollie).delete(),
+        otherOwnerRef.collection('familyMembers').doc(ownerUserId).delete(),
+        otherOwnerRef.delete(),
+      ].map((p) => p.catch(() => {})))
+    }
+
+    try {
+      await page.goto('/family', { waitUntil: 'domcontentloaded' })
+      await page.getByRole('button', { name: /Invite Caregiver/i }).first().click()
+      const emailInput = page.getByPlaceholder('family.member@example.com')
+      await expect(emailInput).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByText(ollieName), 'caregiver-accessed patient renders').toBeVisible({ timeout: 30_000 })
+
+      const ollieRow = page.locator('label', { hasText: ollieName })
+
+      // Type the OWNER's email — Ollie must lock as "Owns this record".
+      await emailInput.fill(ownerEmail)
+      await expect(page.getByText(/can't share a record back to its owner/i), 'owner banner shows').toBeVisible({ timeout: 30_000 })
+      await expect(ollieRow.getByText('Owns this record'), 'Ollie marked owned-by-invitee').toBeVisible()
+      await expect(ollieRow.getByRole('checkbox'), "owner's own record is locked").toBeDisabled()
+
+      // A different email → Ollie is shareable again.
+      await emailInput.fill(`someone.${stamp}@example.com`)
+      await expect(page.getByText('Owns this record'), 'non-owner → no owner badge').toHaveCount(0)
+      await expect(ollieRow.getByRole('checkbox'), 'Ollie selectable for a non-owner').toBeEnabled()
+    } finally {
+      await cleanup()
+    }
+  })
 })

@@ -107,6 +107,10 @@ export interface PatientProfile {
    *  `(patient as any)._source` casts. */
   _source?: 'owned' | 'caregiver'
   _permissions?: FamilyMemberPermissions
+  /** Email of this patient's account owner (own account → the viewer's email;
+   *  caregiver-access row → the owner's email). Lets the invite UI block sharing
+   *  a patient back to whoever already owns it. Transport-only, not stored. */
+  _ownerEmail?: string
 
   // Unified Family Member + Caregiver Model
   accountUserId?: string // Firestore Auth UID if they have an account
