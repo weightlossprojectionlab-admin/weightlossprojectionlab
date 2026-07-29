@@ -50,19 +50,33 @@ test.describe('Progress medications route to the patient surface @progress-meds'
       },
       profile: { currentWeight: 200, healthConditions: [] },
     })
+    // A med in the patient's SUBCOLLECTION (where patient meds live) — the
+    // display-read fix must surface this, not the empty profile.medications.
+    const medName = `Lisinopril ${stamp}`
+    await ownerRef.collection('patients').doc(pid).collection('medications').doc(`e2e_med_${stamp}`).set({
+      name: medName, strength: '10mg', patientId: pid, userId: ownerUserId,
+      addedAt: new Date().toISOString(),
+    })
 
     const cleanup = async () => {
+      await ownerRef.collection('patients').doc(pid).collection('medications').doc(`e2e_med_${stamp}`).delete().catch(() => {})
       await ownerRef.collection('patients').doc(pid).delete().catch(() => {})
     }
 
     try {
       await page.goto(`/progress?patientId=${pid}`, { waitUntil: 'domcontentloaded' })
 
+      // Display-read: the patient's subcollection med must render here (was
+      // showing "No medications added yet" because it read profile.medications).
+      await expect(page.getByText(medName), 'patient subcollection med displays').toBeVisible({
+        timeout: 60_000,
+      })
+
       // The medication action for a patient must be an anchor to the canonical
       // meds surface — proves it's no longer the self-writing modal.
       const medLink = page.locator(`a[href="/patients/${pid}?tab=medications"]`)
       await expect(medLink.first(), 'patient med action links to the patient surface').toBeVisible({
-        timeout: 60_000,
+        timeout: 30_000,
       })
 
       // And it genuinely navigates there when clicked. Poll the URL only

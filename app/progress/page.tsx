@@ -112,6 +112,9 @@ function ProgressContent() {
   const patientIdParam = searchParams.get('patientId')
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(patientIdParam)
   const [patientProfile, setPatientProfile] = useState<any>(null)
+  // A patient's meds live in a subcollection, not profile.medications — fetch
+  // them when viewing a family member so the count/list here is accurate.
+  const [patientMedications, setPatientMedications] = useState<any[]>([])
   const [patients, setPatients] = useState<any[]>([])
 
   const [timeRange, setTimeRange] = useState(30) // Days
@@ -189,6 +192,21 @@ function ProgressContent() {
     }
 
     loadPatientProfile()
+  }, [selectedPatientId])
+
+  // Load the selected patient's medications from their subcollection (self view
+  // uses profile.medications instead — see displayMedications).
+  useEffect(() => {
+    if (!selectedPatientId) {
+      setPatientMedications([])
+      return
+    }
+    let cancelled = false
+    medicalOperations.medications
+      .getMedications(selectedPatientId)
+      .then((meds) => { if (!cancelled) setPatientMedications(meds || []) })
+      .catch(() => { if (!cancelled) setPatientMedications([]) })
+    return () => { cancelled = true }
   }, [selectedPatientId])
 
   // Load step tracking status from localStorage
@@ -453,6 +471,12 @@ function ProgressContent() {
 
   // Use patientProfile if viewing a family member, otherwise use current user's profile
   const activeProfile = patientProfile || profile
+  // Medications to display in the Health Profile row: a patient's come from the
+  // fetched subcollection, self's from the profile array. Single source for the
+  // count/list/label below so patient meds no longer render as "none".
+  const displayMedications: any[] = selectedPatientId
+    ? patientMedications
+    : (activeProfile?.profile?.medications || [])
   const targetWeight = activeProfile?.goals?.targetWeight
 
   // Quick-weight-log CTA gating (semantic intent):
@@ -1141,7 +1165,7 @@ function ProgressContent() {
                         href={`/patients/${selectedPatientId}?tab=medications`}
                         className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover active:scale-95 transition-transform"
                       >
-                        {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
+                        {displayMedications.length > 0 ? '⚙️ Manage' : '➕ Add'}
                       </Link>
                     ) : (
                       <button
@@ -1151,20 +1175,20 @@ function ProgressContent() {
                         }}
                         className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover active:scale-95 transition-transform"
                       >
-                        {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
+                        {displayMedications.length > 0 ? '⚙️ Manage' : '➕ Add'}
                       </button>
                     )}
                   </div>
                 </div>
-                {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? (
+                {displayMedications.length > 0 ? (
                   <>
                     <p className="font-bold text-foreground">
-                      {activeProfile.profile.medications.length} Active
+                      {displayMedications.length} Active
                     </p>
                     <div className="mt-1 flex flex-wrap gap-1">
                       {(showAllMedications
-                        ? activeProfile.profile.medications
-                        : activeProfile.profile.medications.slice(0, 2)
+                        ? displayMedications
+                        : displayMedications.slice(0, 2)
                       ).map((med: ScannedMedication, idx: number) => (
                         <span key={idx} className="px-2 py-1 bg-blue-100 dark:bg-blue-900/30 text-secondary-dark text-xs rounded flex items-center gap-1">
                           {med.name}
@@ -1175,14 +1199,14 @@ function ProgressContent() {
                           )}
                         </span>
                       ))}
-                      {activeProfile.profile.medications.length > 2 && (
+                      {displayMedications.length > 2 && (
                         <button
                           onClick={() => setShowAllMedications(!showAllMedications)}
                           className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded hover:bg-gray-200 transition-colors"
                         >
                           {showAllMedications
                             ? 'Show less'
-                            : `+${activeProfile.profile.medications.length - 2} more`}
+                            : `+${displayMedications.length - 2} more`}
                         </button>
                       )}
                     </div>
