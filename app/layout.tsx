@@ -7,6 +7,7 @@ import { HomeAuthRedirect } from '@/components/HomeAuthRedirect'
 import { ConditionalFooter } from '@/components/ConditionalFooter'
 import { UpdateChecker } from '@/components/UpdateChecker'
 import { SpeedInsights } from '@vercel/speed-insights/next'
+import { Analytics } from '@vercel/analytics/next'
 import { JsonLd } from '@/components/seo/JsonLd'
 import { organizationSchema } from '@/lib/json-ld'
 import './globals.css'
@@ -205,6 +206,10 @@ export default async function RootLayout({
           <ConditionalFooter />
         </ConditionalProviders>
         <SpeedInsights />
+        {/* Vercel Web Analytics — visitors, traffic sources/referrers, top pages.
+            Cookieless/privacy-friendly. Data appears in the Vercel dashboard once
+            deployed (Analytics tab must be enabled for the project). */}
+        <Analytics />
       </body>
     </html>
   )
