@@ -645,6 +645,13 @@ function ProgressContent() {
     }
   }, [targetWeightEta, activeProfile, profileCurrentWeight])
 
+  // Single source for the "Jul 28, 2026" projection-date label used by the ETA /
+  // target-date strings below. Kept local rather than lib/date-utils.formatDate
+  // because these are projection Date objects — formatDate's calendar-day parse
+  // would TZ-shift them; this preserves the exact prior toLocaleDateString output.
+  const formatEtaDate = (d: Date | string) =>
+    new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
   // Projection summary pill — the headline answer the page exists to give.
   // Rendered at the TOP of the page (semantic intent: lead with the
   // projection, not bury it below the chart). Trend-based once a measured
@@ -667,17 +674,17 @@ function ProgressContent() {
       {targetWeightEta.status === 'on-pace' && (
         <>
           🟢 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
-          <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+          <strong>{formatEtaDate(targetWeightEta.etaDate)}</strong>{' '}
           (~{targetWeightEta.daysToGoal} day{targetWeightEta.daysToGoal === 1 ? '' : 's'} from today).
         </>
       )}
       {targetWeightEta.status === 'slipping' && (
         <>
           🟡 At this rate you&apos;ll hit {targetWeightEta.target} lbs on{' '}
-          <strong>{targetWeightEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</strong>{' '}
+          <strong>{formatEtaDate(targetWeightEta.etaDate)}</strong>{' '}
           (~{targetWeightEta.daysToGoal} days).{' '}
           {targetWeightEta.targetDate && (
-            <>Goal date was {targetWeightEta.targetDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.</>
+            <>Goal date was {formatEtaDate(targetWeightEta.targetDate)}.</>
           )}
         </>
       )}
@@ -698,7 +705,7 @@ function ProgressContent() {
       📊 At {goalEstimateEta.rate} lb/week, you&apos;re on pace to reach{' '}
       <strong>
         {goalEstimateEta.target} lbs around{' '}
-        {goalEstimateEta.etaDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+        {formatEtaDate(goalEstimateEta.etaDate)}
       </strong>{' '}
       — about {goalEstimateEta.weeks} week{goalEstimateEta.weeks === 1 ? '' : 's'} (
       {goalEstimateEta.lbsToGo.toFixed(1)} lb to go). Log your weight to sharpen this estimate.
@@ -1076,7 +1083,7 @@ function ProgressContent() {
                           setSelectedCondition(condition)
                           setShowMedicationModal(true)
                         }}
-                        className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer active:scale-95 min-h-[44px] sm:min-h-0 sm:py-1 flex items-center"
+                        className="px-3 py-2 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 text-xs rounded hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors cursor-pointer active:scale-95 min-h-[44px] flex items-center"
                       >
                         {condition}
                       </button>
@@ -1084,7 +1091,7 @@ function ProgressContent() {
                     {activeProfile.profile.healthConditions.length > 3 && (
                       <button
                         onClick={() => setShowAllHealthConditions(!showAllHealthConditions)}
-                        className="px-3 py-2 bg-muted text-muted-foreground text-xs rounded hover:bg-gray-200 transition-colors min-h-[44px] sm:min-h-0 sm:py-1 flex items-center"
+                        className="px-3 py-2 bg-muted text-muted-foreground text-xs rounded hover:bg-gray-200 transition-colors min-h-[44px] flex items-center"
                       >
                         {showAllHealthConditions
                           ? 'Show less'
@@ -1100,27 +1107,22 @@ function ProgressContent() {
                 <div className="flex items-center justify-between mb-1">
                   <p className="text-xs text-muted-foreground">
                     Medications
-                    {/* DEBUG */}
-                    {activeProfile.profile?.medications && (
-                      <span className="ml-2 text-primary">({activeProfile.profile.medications.length} total)</span>
-                    )}
                   </p>
                   <div className="flex items-center gap-2">
                     {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 && (
                       <Link
                         href="/medications"
-                        className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-secondary hover:text-blue-700 dark:hover:text-blue-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
+                        className="px-3 py-2 text-sm text-secondary hover:text-blue-700 dark:hover:text-blue-300 font-medium underline min-h-[44px] flex items-center active:scale-95 transition-transform"
                       >
                         View All
                       </Link>
                     )}
                     <button
                       onClick={() => {
-                        console.log('[DEBUG] Profile medications:', activeProfile.profile?.medications)
                         setSelectedCondition(undefined)
                         setShowMedicationModal(true)
                       }}
-                      className="px-3 py-2 sm:px-2 sm:py-1 text-sm sm:text-xs text-primary hover:text-primary-dark dark:text-purple-400 dark:hover:text-purple-300 font-medium underline min-h-[44px] sm:min-h-0 flex items-center active:scale-95 transition-transform"
+                      className="inline-flex items-center gap-1.5 min-h-[44px] px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary-hover active:scale-95 transition-transform"
                     >
                       {activeProfile.profile?.medications && activeProfile.profile.medications.length > 0 ? '⚙️ Manage' : '➕ Add'}
                     </button>
@@ -1462,7 +1464,7 @@ function ProgressContent() {
                 </p>
                 {goalProgress.estimatedCompletionDate && (
                   <p className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">
-                    ~{new Date(goalProgress.estimatedCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    ~{formatEtaDate(goalProgress.estimatedCompletionDate)}
                   </p>
                 )}
               </div>
@@ -1521,7 +1523,7 @@ function ProgressContent() {
                         ? 'text-success-dark dark:text-green-300'
                         : 'text-orange-700 dark:text-orange-300'
                     }`}>
-                      Target date: {new Date(goalProgress.targetCompletionDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                      Target date: {formatEtaDate(goalProgress.targetCompletionDate)}
                     </p>
                   </div>
                 </div>
@@ -1839,15 +1841,21 @@ function ProgressContent() {
         patientId={selectedPatientId || activeProfile?.preferences?.primaryPatientId}
       />
 
-      {/* Medication Management Modal */}
-      {activeProfile?.profile && (
+      {/* Medication Management Modal — gate on activeProfile (matches the Add
+          button's visibility), NOT activeProfile.profile. The profile sub-object
+          can be empty for a patient with no meds yet, and the old
+          `activeProfile?.profile &&` gate meant clicking "+ Add" set the open
+          flag but the modal never mounted — the button appeared dead. The save
+          handler only needs the signed-in user, so no profile object is
+          required. */}
+      {activeProfile && (
         <MedicationManagementModal
           isOpen={showMedicationModal}
           onClose={() => {
             setShowMedicationModal(false)
             setSelectedCondition(undefined)
           }}
-          medications={activeProfile.profile.medications || []}
+          medications={activeProfile.profile?.medications || []}
           onSave={handleSaveMedications}
           prescribedFor={selectedCondition}
         />
