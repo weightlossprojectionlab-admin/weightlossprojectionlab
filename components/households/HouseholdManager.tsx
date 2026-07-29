@@ -117,6 +117,24 @@ export function HouseholdManager() {
     )
   }
 
+  // Single source for the add-household trigger (header + empty-state) so the
+  // two can't drift; `variant` only swaps icon + label.
+  const AddHouseholdButton = ({ variant }: { variant: 'header' | 'empty' }) => (
+    <button
+      onClick={() => setIsFormOpen(true)}
+      className={
+        variant === 'header'
+          ? 'flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium'
+          : 'px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium'
+      }
+    >
+      {variant === 'header' && <PlusIcon className="w-4 h-4" />}
+      {variant === 'header' ? 'Add Household' : 'Create Your First Household'}
+    </button>
+  )
+
+  const hasHouseholds = households.length > 0
+
   return (
     <>
       <div className="bg-card rounded-lg shadow p-6">
@@ -127,16 +145,11 @@ export function HouseholdManager() {
               Manage physical locations where your family members live
             </p>
           </div>
-          <button
-            onClick={() => setIsFormOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors text-sm font-medium"
-          >
-            <PlusIcon className="w-4 h-4" />
-            Add Household
-          </button>
+          {/* Empty state has its own centered CTA — hide the header dupe then. */}
+          {hasHouseholds && <AddHouseholdButton variant="header" />}
         </div>
 
-        {households.length === 0 ? (
+        {!hasHouseholds ? (
           <div className="text-center py-12 border-2 border-dashed border-border rounded-lg">
             <HomeIcon className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
             <p className="text-muted-foreground mb-4">No households created yet</p>
@@ -144,12 +157,7 @@ export function HouseholdManager() {
               Create households to organize family members by where they live.<br />
               Each household has its own kitchen inventory and shopping list.
             </p>
-            <button
-              onClick={() => setIsFormOpen(true)}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-            >
-              Create Your First Household
-            </button>
+            <AddHouseholdButton variant="empty" />
           </div>
         ) : (
           <div className="space-y-3">

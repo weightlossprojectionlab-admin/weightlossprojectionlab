@@ -27,6 +27,12 @@ import AuthGuard from '@/components/auth/AuthGuard'
 import { HandoffNotes } from '@/components/caregiver/HandoffNotes'
 import { ActiveShoppersStrip } from '@/components/family/ActiveShoppersStrip'
 import { ROLE_LABELS } from '@/lib/family-roles'
+import {
+  isInvitationDead,
+  isInvitationExpired,
+  isInvitationActivePending,
+  invitationStatusLabel,
+} from '@/lib/invitation-status'
 import type { FamilyMember, FamilyInvitation } from '@/types/medical'
 import type { CaregiverProfile } from '@/types/caregiver'
 
@@ -82,17 +88,10 @@ function FamilyDashboardContent() {
     return familyMembers.filter(m => m.status === 'accepted')
   }, [familyMembers])
 
-  // A sent invitation is "dead" (safe to delete) once it's revoked, declined,
-  // or a pending invite that has passed its expiry. Accepted invites are kept
-  // as the record of granted access. Mirrors the server-side deletable rule.
-  const isDeadInvitation = (inv: FamilyInvitation) =>
-    inv.status === 'revoked' ||
-    inv.status === 'declined' ||
-    inv.status === 'expired' ||
-    (inv.status === 'pending' && !!inv.expiresAt && new Date(inv.expiresAt).getTime() < Date.now())
-
+  // Dead-invite rule lives in lib/invitation-status (single source; the card
+  // and the server-side deletable check use the same predicate).
   const deadSentInvitations = useMemo(
-    () => sentInvitations.filter(isDeadInvitation),
+    () => sentInvitations.filter(isInvitationDead),
     [sentInvitations]
   )
 
@@ -152,6 +151,21 @@ function FamilyDashboardContent() {
     }
   }
 
+  // Single source for the invite-modal trigger — was copy-pasted at 4 sites.
+  const InviteCaregiverButton = ({ label }: { label: string }) => (
+    <button
+      onClick={() => setShowInviteModal(true)}
+      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
+    >
+      {label}
+    </button>
+  )
+
+  // The empty Caregivers tab already shows a centered "Invite Your First
+  // Caregiver" CTA — suppress the header's duplicate invite button in exactly
+  // that state (mirrors the ProvidersPanel dedup) so there's one call-to-action.
+  const membersEmptyState = !loading && activeTab === 'members' && activeMembers.length === 0
+
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
@@ -159,12 +173,7 @@ function FamilyDashboardContent() {
         subtitle="Manage family members, invitations, and patient access"
         actions={
           <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => setShowInviteModal(true)}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors font-medium"
-            >
-              + Invite Caregiver
-            </button>
+            {!membersEmptyState && <InviteCaregiverButton label="+ Invite Caregiver" />}
             <Link
               href="/family/manage-roles"
               className="px-4 py-2 bg-secondary text-white rounded-lg hover:bg-secondary-dark transition-colors font-medium"
@@ -275,12 +284,7 @@ function FamilyDashboardContent() {
                     <p className="text-muted-foreground mb-4">
                       No caregivers yet
                     </p>
-                    <button
-                      onClick={() => setShowInviteModal(true)}
-                      className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-                    >
-                      Invite Your First Caregiver
-                    </button>
+                    <InviteCaregiverButton label="Invite Your First Caregiver" />
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -347,12 +351,7 @@ function FamilyDashboardContent() {
                       <p className="text-muted-foreground mb-4">
                         No sent invitations yet
                       </p>
-                      <button
-                        onClick={() => setShowInviteModal(true)}
-                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-                      >
-                        Invite Your First Caregiver
-                      </button>
+                      <InviteCaregiverButton label="Send an invitation" />
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -392,12 +391,7 @@ function FamilyDashboardContent() {
                         Create Patient Profile
                       </Link>
                     ) : (
-                      <button
-                        onClick={() => setShowInviteModal(true)}
-                        className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
-                      >
-                        Invite Caregiver
-                      </button>
+                      <InviteCaregiverButton label="Invite Caregiver" />
                     )}
                   </div>
                 ) : (
@@ -736,19 +730,11 @@ function InvitationCard({
 }: InvitationCardProps) {
   const permissionCount = Object.values(invitation.permissions).filter(Boolean).length
 
-  // A pending invite past its expiry is effectively expired even though the
-  // stored status still reads 'pending'.
-  const isExpired = invitation.expiresAt
-    ? new Date(invitation.expiresAt).getTime() < Date.now()
-    : false
-  const isActivePending = invitation.status === 'pending' && !isExpired
-  const isDead =
-    invitation.status === 'revoked' ||
-    invitation.status === 'declined' ||
-    invitation.status === 'expired' ||
-    (invitation.status === 'pending' && isExpired)
-  const statusLabel =
-    invitation.status === 'pending' && isExpired ? 'expired' : invitation.status
+  // Lifecycle derived from the single source (lib/invitation-status).
+  const isExpired = isInvitationExpired(invitation)
+  const isActivePending = isInvitationActivePending(invitation)
+  const isDead = isInvitationDead(invitation)
+  const statusLabel = invitationStatusLabel(invitation)
 
   return (
     <div className="bg-card rounded-lg border-2 border-border p-6">
