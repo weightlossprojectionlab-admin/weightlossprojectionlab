@@ -556,6 +556,7 @@ function CaregiverDashboardContent({ params }: CaregiverDashboardPageProps) {
       <PageHeader
         title={`${caregiverContext.accountOwnerName}'s Care Team`}
         subtitle={`You have ${permissionCount} permissions for ${patients.length} patient${patients.length !== 1 ? 's' : ''}`}
+        helpRoute="/docs/user-guides/caregiver-mode"
       />
 
       <main className="container mx-auto px-4 py-8">

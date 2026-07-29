@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { signOut } from '@/lib/auth'
 import { useAuth } from '@/hooks/useAuth'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { HelpLink } from '@/components/ui/HelpLink'
 import { getAuth, getIdToken } from 'firebase/auth'
 import { useConfirm } from '@/hooks/useConfirm'
 import { useStepTracking, StepTrackingProvider } from '@/components/StepTrackingProvider'
@@ -1724,7 +1725,14 @@ function ProfileContent() {
         {/* Privacy & Data Settings - Only show for own profile */}
         {isOwnProfileView && (
           <div className="bg-card rounded-lg p-6 shadow-sm">
-          <h2 className="text-lg font-medium text-foreground mb-4">Privacy & Data</h2>
+          <div className="flex items-center gap-2 mb-4">
+            <h2 className="text-lg font-medium text-foreground">Privacy & Data</h2>
+            <HelpLink
+              href="/docs/user-guides/data-export"
+              label="Data export help"
+              title="View the data export guide"
+            />
+          </div>
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>

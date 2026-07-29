@@ -23,7 +23,7 @@ export default function NotificationsPage() {
 
       <h2 id="overview">Overview</h2>
       <p>
-        WPL's notification system helps you stay consistent with health tracking and care tasks. Configure what notifications you receive, when, and how (push, email, SMS).
+        WPL's notification system helps you stay consistent with health tracking and care tasks. Configure what notifications you receive, when, and how (push and email).
       </p>
 
       <h2 id="notification-types">Types of Notifications</h2>
@@ -97,14 +97,12 @@ export default function NotificationsPage() {
         <li><strong>Batching Option:</strong> Receive daily digest instead of individual emails</li>
       </ul>
 
-      <h3>SMS (Text Messages)</h3>
-      <p>Critical reminders via text:</p>
-      <ul>
-        <li><strong>High Priority Only:</strong> Medications, appointments</li>
-        <li><strong>Reliable:</strong> Works even when app isn't open</li>
-        <li><strong>Quick:</strong> Short, action-oriented messages</li>
-        <li><strong>Optional:</strong> Opt-in feature (standard SMS rates apply)</li>
-      </ul>
+      <h3>SMS (Text Messages) — coming soon</h3>
+      <p>
+        SMS delivery isn't available yet — it's on the roadmap. For now, use push
+        or email for reminders. When it ships, text messages will be reserved for
+        high-priority items (medications, appointments) as an opt-in feature.
+      </p>
 
       <h2 id="configuring">Configuring Notifications</h2>
 
@@ -113,7 +111,7 @@ export default function NotificationsPage() {
         <li>Navigate to <strong>Settings → Notifications</strong></li>
         <li>See all notification categories</li>
         <li>Toggle each category on/off</li>
-        <li>Choose delivery method (push, email, SMS) per category</li>
+        <li>Choose delivery method (push or email) per category</li>
         <li>Set quiet hours (time when notifications are paused)</li>
         <li>Save preferences</li>
       </ol>
@@ -220,7 +218,7 @@ export default function NotificationsPage() {
             <li>• Don't set too many daily reminders</li>
             <li>• Don't ignore notifications for weeks</li>
             <li>• Don't disable all notifications (defeats the purpose)</li>
-            <li>• Don't use SMS for non-critical reminders (costs money)</li>
+            <li>• Don't route low-priority reminders to push — save it for time-sensitive alerts</li>
           </ul>
         </div>
       </div>
@@ -290,7 +288,6 @@ export default function NotificationsPage() {
         <li>Check if quiet hours are active</li>
         <li>Ensure notification type is enabled</li>
         <li>Check email spam folder (for email notifications)</li>
-        <li>Verify phone number is correct (for SMS)</li>
       </ul>
 
       <h3>Too many notifications</h3>
@@ -307,7 +304,6 @@ export default function NotificationsPage() {
         <li>Check internet connection</li>
         <li>Push notifications require active connection</li>
         <li>Email may be delayed by email provider</li>
-        <li>SMS depends on carrier speed</li>
         <li>Device battery saver mode can delay notifications</li>
       </ul>
 
@@ -393,7 +389,7 @@ export default function NotificationsPage() {
           <div>
             <p className="font-semibold text-gray-900 mb-1">Different Methods for Different Priorities</p>
             <p className="text-sm text-gray-600 m-0">
-              SMS for critical meds, push for daily reminders, email for summaries. Match delivery method to urgency.
+              Push for time-sensitive reminders, email for summaries and detailed updates. Match delivery method to urgency.
             </p>
           </div>
         </div>

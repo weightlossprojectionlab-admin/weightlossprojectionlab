@@ -144,6 +144,7 @@ function PatientsContent() {
       <PageHeader
         title={pageTitle}
         subtitle={pageSubtitle}
+        helpRoute="/docs/user-guides/patient-profiles"
         actions={
           // Caregiver-only mode: their own plan is dead and adding to it is
           // moot — no add/upgrade CTA here.

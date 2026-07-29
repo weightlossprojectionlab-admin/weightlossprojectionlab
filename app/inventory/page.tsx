@@ -2326,6 +2326,7 @@ function KitchenInventoryContent() {
         <PageHeader
           title="Kitchen Inventory"
           subtitle={`${summary.inStockItems} items in stock`}
+          helpRoute="/docs/user-guides/inventory"
         />
 
         <main className="container mx-auto px-4 py-6 max-w-4xl">

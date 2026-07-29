@@ -13,6 +13,7 @@ import { AdminModeToggle } from '@/components/admin/AdminModeToggle'
 import { RecipeMediaUpload } from '@/components/admin/RecipeMediaUpload'
 import { RecipeImageCarousel } from '@/components/RecipeImageCarousel'
 import { SearchInput } from '@/components/ui/SearchInput'
+import { HelpLink } from '@/components/ui/HelpLink'
 import { PencilSquareIcon, VideoCameraIcon, PlusCircleIcon, ShieldCheckIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { RecipeImportModal } from '@/components/admin/RecipeImportModal'
 import { getMemberRecipeSuggestions, type MemberRecipeSuggestion } from '@/lib/member-recipe-engine'
@@ -238,17 +239,11 @@ export default function RecipeIndexPage() {
             <h1 className="text-5xl font-bold text-foreground">
               Healthy Recipe Collection
             </h1>
-            <Link
+            <HelpLink
               href="/docs/user-guides/recipes"
-              className="flex items-center justify-center w-8 h-8 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors flex-shrink-0"
-              aria-label="Help documentation"
               title="View recipes guide"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </Link>
+              className="flex-shrink-0"
+            />
           </div>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Browse 28 delicious, macro-friendly recipes. Track them automatically with our WPL-powered app.
