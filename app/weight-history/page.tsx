@@ -228,12 +228,16 @@ function WeightHistoryContent() {
         <div className="bg-card rounded-lg shadow-sm p-6 border border-border">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-foreground">Weight Entries</h2>
-            <Link
-              href="/log-weight"
-              className="px-4 py-2 bg-primary-light text-primary-dark rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
-            >
-              + Add Entry
-            </Link>
+            {/* When there are no entries the empty-state card below owns the
+                "Log Your First Weight" CTA — hide this header dup then. */}
+            {weightLogs.length > 0 && (
+              <Link
+                href="/log-weight"
+                className="px-4 py-2 bg-primary-light text-primary-dark rounded-lg hover:bg-purple-200 transition-colors text-sm font-medium"
+              >
+                + Add Entry
+              </Link>
+            )}
           </div>
 
           <WeightHistoryTable
