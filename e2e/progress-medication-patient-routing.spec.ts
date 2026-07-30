@@ -39,6 +39,7 @@ test.describe('Progress medications route to the patient surface @progress-meds'
       type: 'human',
       dateOfBirth: '1970-01-01',
       gender: 'male',
+      height: 70, // required — /progress shows a "complete onboarding" gate without it
       userId: ownerUserId,
       status: 'active',
       goals: {
