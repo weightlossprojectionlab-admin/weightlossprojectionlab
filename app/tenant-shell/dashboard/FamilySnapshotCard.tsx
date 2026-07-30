@@ -65,11 +65,11 @@ export default function FamilySnapshotCard({ family, tenantId }: Props) {
           className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${
             active
               ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
-              : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'
+              : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
           }`}
         >
-          <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-gray-400'}`} />
-          {active ? 'Active' : 'Inactive'}
+          <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-amber-500'}`} />
+          {active ? 'Active' : 'Needs attention'}
         </span>
         <span className="text-xs text-gray-500 dark:text-gray-400">
           Joined {formatDate(family.joinedPlatformAt)}

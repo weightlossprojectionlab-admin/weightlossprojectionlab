@@ -62,6 +62,12 @@ export default function ClientRoster({ items }: { items: RosterItem[] }) {
     })
   }, [items, query, status, sort])
 
+  // Triage: clients with no activity in 30+ days need a check-in.
+  const attentionCount = useMemo(
+    () => items.filter(item => !isActive(item.lastActiveAt)).length,
+    [items],
+  )
+
   // No clients at all — the intake empty state (unchanged from before).
   if (items.length === 0) {
     return (
@@ -80,6 +86,24 @@ export default function ClientRoster({ items }: { items: RosterItem[] }) {
 
   return (
     <div className="space-y-4">
+      {/* Attention rollup — the triage queue at a glance: act on the flag,
+          not by reading each card's timestamp. */}
+      {attentionCount > 0 && (
+        <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            <span className="font-semibold">{attentionCount}</span> of {items.length}{' '}
+            {items.length === 1 ? 'client' : 'clients'} need attention — no activity in 30+ days.
+          </p>
+          <button
+            type="button"
+            onClick={() => setStatus('inactive')}
+            className="text-sm font-medium text-amber-800 dark:text-amber-200 underline shrink-0 hover:no-underline"
+          >
+            Show
+          </button>
+        </div>
+      )}
+
       {/* Roster toolbar */}
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
         <input
@@ -98,7 +122,7 @@ export default function ClientRoster({ items }: { items: RosterItem[] }) {
         >
           <option value="all">All statuses</option>
           <option value="active">Active (last 30 days)</option>
-          <option value="inactive">Inactive</option>
+          <option value="inactive">Needs attention</option>
         </select>
         <select
           aria-label="Sort clients"

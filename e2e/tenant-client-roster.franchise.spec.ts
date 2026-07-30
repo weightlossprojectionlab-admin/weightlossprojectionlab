@@ -44,12 +44,18 @@ test.describe('White-label CRM — client roster search filters', () => {
     if (snap.empty) throw new Error(`Tenant "${TENANT_SLUG}" not found`)
     tenantId = snap.docs[0].id
     const now = new Date().toISOString()
-    for (const c of [ALPHA, BRAVO]) {
+    const staleIso = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString()
+    // ALPHA active, BRAVO gone quiet (60d) → BRAVO needs attention (triage).
+    const seed = [
+      { ...ALPHA, lastActiveAt: now },
+      { ...BRAVO, lastActiveAt: staleIso },
+    ]
+    for (const c of seed) {
       await db.collection('users').doc(c.uid).set({
         name: c.name,
         email: c.email,
         managedBy: [tenantId],
-        lastActiveAt: now,
+        lastActiveAt: c.lastActiveAt,
         joinedPlatformAt: now,
         createdAt: now,
         profile: { onboardingCompleted: true },
@@ -68,6 +74,9 @@ test.describe('White-label CRM — client roster search filters', () => {
     // Both seeded clients render in the roster.
     await expect(page.getByText(ALPHA.name)).toBeVisible({ timeout: 90_000 })
     await expect(page.getByText(BRAVO.name)).toBeVisible()
+
+    // Triage rollup — BRAVO is gone-quiet, so the attention banner shows.
+    await expect(page.getByText(/no activity in 30\+ days/)).toBeVisible()
 
     // Search for one — the other must drop out (real client-side filtering).
     await page.getByRole('searchbox', { name: /Search clients/i }).fill(ALPHA.name)
