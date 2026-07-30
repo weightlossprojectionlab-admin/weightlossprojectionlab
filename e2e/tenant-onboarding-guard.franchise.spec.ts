@@ -7,10 +7,13 @@
  * never see the consumer "Who are you setting up for?" archetype flow under the
  * agency's brand.
  *
- * There's deliberately no client-facing gate: agency clients are intaked by
- * their agency (onboardingCompleted=true) and are never routed to /onboarding,
- * so a client has no path to it. This guard covers the one real case — an
- * operator arriving via a stale link.
+ * On a subdomain /onboarding is deterministic and never the consumer archetype
+ * flow: operators/super-admin → /dashboard, managed clients → /patients,
+ * unaffiliated users → signed out to /auth. This spec covers the operator case
+ * (the one exercisable with the franchise storage state). The unaffiliated
+ * sign-out path is logic-level (would need an unaffiliated subdomain session to
+ * e2e); the affiliation routing is what keeps anyone from being stranded in a
+ * consumer-onboarding loop under the brand.
  */
 
 import { test, expect } from '@playwright/test'

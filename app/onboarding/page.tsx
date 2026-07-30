@@ -7,7 +7,7 @@ import { Suspense, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useSubscription } from '@/hooks/useSubscription'
-import { collection, doc, setDoc, Timestamp } from 'firebase/firestore'
+import { collection, doc, getDoc, setDoc, Timestamp } from 'firebase/firestore'
 import { updateProfile } from 'firebase/auth'
 import { db } from '@/lib/firebase'
 import {
@@ -21,6 +21,8 @@ import { medicalOperations } from '@/lib/medical-operations'
 import { getTargetWeightSuggestion, getHealthRiskProfile } from '@/lib/health-calculations'
 import toast from 'react-hot-toast'
 import AuthGuard from '@/components/auth/AuthGuard'
+import { useTenant } from '@/contexts/TenantContext'
+import { signOut } from '@/lib/auth'
 import { FacePhotoCapture } from '@/components/family/FacePhotoCapture'
 import {
   trackOnboardingStarted,
@@ -78,35 +80,64 @@ export default function OnboardingV2Page() {
 }
 
 function OnboardingContent() {
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { subscription } = useSubscription()
+  const { isFranchise, tenantId } = useTenant()
   const router = useRouter()
   const searchParams = useSearchParams()
   const fromInvitation = searchParams.get('from') === 'invitation'
 
-  // A franchise operator (franchise_admin/staff) has no consumer onboarding —
-  // their setup is the tenant-shell dashboard — so if one ever lands here
-  // (e.g. a stale link), send them there. Agency CLIENTS are intaked by their
-  // agency (onboardingCompleted=true) and are never routed to onboarding, so
-  // no client-facing gate is needed. (The auth router encodes the same policy
-  // for router-driven navigations; this enforces it on the onboarding render
-  // path, which is AuthGuard-only and never consults the router.)
+  // Deterministic rule for /onboarding on a TENANT SUBDOMAIN: it is NEVER the
+  // consumer archetype flow. Route by affiliation with THIS tenant, so nobody
+  // is ever stranded in a consumer-onboarding loop under a partner's brand:
+  //   - operator (franchise_admin/staff of this tenant) or super-admin → /dashboard
+  //   - managed client (users/{uid}.managedBy includes this tenant) → /patients
+  //     (their branded home — intaked clients don't self-onboard)
+  //   - unaffiliated (stranger / other-tenant / self-signup orphan) → signed out
+  //     to the sign-in-only /auth (see the /auth signup close). Never the loop.
+  // (On the apex domain isFranchise is false and normal onboarding runs.)
   useEffect(() => {
-    if (!user) return
+    if (!isFranchise) return
+    if (authLoading) return
+    if (!user) {
+      router.replace('/auth')
+      return
+    }
     let cancelled = false
-    user
-      .getIdTokenResult()
-      .then(res => {
-        const role = (res.claims as any)?.tenantRole
-        if (!cancelled && (role === 'franchise_admin' || role === 'franchise_staff')) {
+    ;(async () => {
+      try {
+        const res = await user.getIdTokenResult()
+        const claims = res.claims as any
+        const isSuperAdmin = claims.role === 'admin'
+        const isOperator =
+          (claims.tenantRole === 'franchise_admin' || claims.tenantRole === 'franchise_staff') &&
+          (!tenantId || claims.tenantId === tenantId)
+        if (isSuperAdmin || isOperator) {
           router.replace('/dashboard')
+          return
         }
-      })
-      .catch(() => {})
+        const snap = await getDoc(doc(db, 'users', user.uid))
+        const managedBy: string[] = (snap.data() as any)?.managedBy || []
+        if (tenantId && managedBy.includes(tenantId)) {
+          router.replace('/patients')
+          return
+        }
+        // Unaffiliated with this tenant — they don't belong on this subdomain.
+        if (!cancelled) {
+          await signOut()
+          router.replace('/auth')
+        }
+      } catch {
+        if (!cancelled) {
+          await signOut().catch(() => {})
+          router.replace('/auth')
+        }
+      }
+    })()
     return () => {
       cancelled = true
     }
-  }, [user, router])
+  }, [isFranchise, authLoading, user, tenantId, router])
 
   // Free-plan users can't add additional patients (the wizard at
   // /patients/new is gated behind the 'multiple-patients' feature),
@@ -920,6 +951,21 @@ function OnboardingContent() {
       console.error('Error saving photo data:', error)
       toast.error('Failed to upload photos. Please try again.')
     }
+  }
+
+  // On a tenant subdomain, always render a neutral resolving state — the effect
+  // above routes every case (operator → dashboard, client → patients,
+  // unaffiliated → signed out to /auth), so the consumer archetype flow must
+  // never flash under the partner's brand.
+  if (isFranchise) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Just a moment&hellip;</p>
+        </div>
+      </div>
+    )
   }
 
   if (pendingApproval) {
