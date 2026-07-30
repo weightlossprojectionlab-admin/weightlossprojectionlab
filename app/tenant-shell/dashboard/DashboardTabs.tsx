@@ -30,15 +30,17 @@ const TABS: Tab[] = [
 export default function DashboardTabs() {
   const pathname = usePathname() || ''
 
+  // overflow-x-auto + shrink-0 tabs: on a narrow phone the tab row scrolls
+  // WITHIN the nav instead of widening the whole page (horizontal overflow).
   return (
-    <nav className="border-b border-gray-200 dark:border-gray-700">
+    <nav className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
       <ul className="flex gap-1 -mb-px">
         {TABS.map(tab => {
           const isActive = tab.matchExact
             ? pathname === tab.href
             : pathname.startsWith(tab.href)
           return (
-            <li key={tab.href}>
+            <li key={tab.href} className="shrink-0">
               <Link
                 href={tab.href}
                 aria-current={isActive ? 'page' : undefined}
