@@ -264,6 +264,27 @@ function pickMostRecent(a: any, b: any, dateField: string): any {
   return aDate >= bDate ? a : b
 }
 
+/**
+ * Cheap COUNT of a tenant's managed families, for the dashboard header. Derived
+ * from the actual data (one aggregation query) rather than the separately
+ * maintained billing.currentFamilies seat counter, which drifts. (Reconciling
+ * that stored counter — used for seat-limit enforcement — is a Phase-4 billing
+ * concern; the header should always reflect reality.)
+ */
+export async function countManagedFamilies(tenantId: string): Promise<number> {
+  try {
+    const snap = await getAdminDb()
+      .collection('users')
+      .where('managedBy', 'array-contains', tenantId)
+      .count()
+      .get()
+    return snap.data().count
+  } catch (err) {
+    logger.error('[dashboard] failed to count managed families', err as Error, { tenantId })
+    return 0
+  }
+}
+
 export async function loadManagedFamilies(tenantId: string): Promise<ManagedFamily[]> {
   try {
     const db = getAdminDb()

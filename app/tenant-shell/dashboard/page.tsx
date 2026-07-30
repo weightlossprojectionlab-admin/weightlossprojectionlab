@@ -596,29 +596,24 @@ function FamilySnapshotCard({ family }: { family: FranchiseFamilySnapshot }) {
           </span>
         </div>
       </div>
+      {/* Household summary — a client is a household. Per-member health
+          (meals/weights/vitals/meds) lives in the client-detail view (click),
+          not aggregated onto this directory card. */}
       <div className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400">Active Medications:</span>
-          <span className="font-medium text-gray-900 dark:text-gray-100">{family.activeMedications}</span>
+          <span className="text-gray-500 dark:text-gray-400">Care recipients:</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100">{family.memberCount}</span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400">Last Meal:</span>
-          <span className="font-medium text-gray-900 dark:text-gray-100">
-            {family.lastMealAt ? `${formatDate(family.lastMealAt)}${family.lastMealName ? ` · ${family.lastMealName}` : ''}` : 'Never'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400">Last Vital Check:</span>
-          <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(family.lastVitalCheck)}</span>
-        </div>
-        {family.latestWeight && (
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500 dark:text-gray-400">Latest Weight:</span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {family.latestWeight.weight} {family.latestWeight.unit}
-            </span>
-          </div>
+        {family.memberNames.length > 0 && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {family.memberNames.slice(0, 3).join(', ')}
+            {family.memberNames.length > 3 ? ` +${family.memberNames.length - 3} more` : ''}
+          </p>
         )}
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500 dark:text-gray-400">Last activity:</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(family.lastActiveAt)}</span>
+        </div>
       </div>
       <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 text-right">
         <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">

@@ -17,6 +17,7 @@ import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { getTenantBySlug } from '@/lib/tenant-server'
 import { getPlanLimits } from '@/lib/franchise-plans'
+import { countManagedFamilies } from './_lib/load-families'
 import DashboardTabs from './DashboardTabs'
 
 export const dynamic = 'force-dynamic'
@@ -63,8 +64,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
       ? tenant.billing.maxSeats
       : planLimits.maxSeats
 
+  // Derive the family "used" count from the actual managed-families data, not
+  // the billing.currentFamilies seat counter (which drifts and showed a wrong
+  // "N / 200" in the header).
+  const managedFamilyCount = await countManagedFamilies(tenant.id)
   const familyLine = formatSeatLine(
-    tenant.billing?.currentFamilies,
+    managedFamilyCount,
     familyLimit,
     'family',
     'families'
