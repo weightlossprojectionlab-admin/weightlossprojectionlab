@@ -150,6 +150,40 @@ export interface ProposalRecord {
   createdBy: string          // uid
 }
 
+/**
+ * Appointment notes (white-label CRM). A visit's running record: staff log
+ * notes ON a specific appointment (prep → what happened → follow-up). Stored
+ * under users/{userId}/appointments/{apptId}/notes/{noteId} — the notes live on
+ * the appointment they're about, so there's never any question which visit a
+ * note belongs to.
+ *
+ * INTERNAL to the practice (staff/admin) for now; the family does not see these.
+ * (A future `visibility:'shared'` could open agency↔family notes on a visit.)
+ */
+export type AppointmentNoteAuthorRole = 'staff' | 'admin'
+
+/** A reply to a note — the back-and-forth on a visit message. */
+export interface AppointmentNoteReply {
+  id: string
+  authorUid: string
+  authorName: string
+  authorRole: AppointmentNoteAuthorRole
+  body: string
+  createdAt: string          // ISO date
+}
+
+export interface AppointmentNote {
+  id: string
+  authorUid: string
+  authorName: string
+  authorRole: AppointmentNoteAuthorRole
+  body: string
+  createdAt: string          // ISO date
+  replyCount: number
+  /** Hydrated for the workspace (oldest → newest). */
+  replies: AppointmentNoteReply[]
+}
+
 /** Role within a franchise tenant */
 export type TenantRole = 'franchise_admin' | 'staff' | 'user'
 

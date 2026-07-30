@@ -498,6 +498,24 @@ service cloud.firestore {
 
         // Delete: Owner can delete their appointments
         allow delete: if isOwner(userId);
+
+        // Visit notes (white-label CRM) — the practice's running record ON this
+        // appointment. Readable by the managing tenant's staff/admin
+        // (isTenantOfUser) and platform admins; INTERNAL, so not the owner/family.
+        // Writes are API-only (the appointment-notes route, admin SDK); server
+        // reads (workspace load + API) use the admin SDK and bypass these rules —
+        // this is defense-in-depth.
+        match /notes/{noteId} {
+          allow read: if isAdmin() || isTenantOfUser(userId);
+          allow write: if false;
+
+          // Replies to a note — the visit's back-and-forth. Same internal
+          // audience; writes API-only.
+          match /replies/{replyId} {
+            allow read: if isAdmin() || isTenantOfUser(userId);
+            allow write: if false;
+          }
+        }
       }
 
       // User-level providers subcollection (aggregated view)

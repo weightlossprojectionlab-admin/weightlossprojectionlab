@@ -13,6 +13,7 @@ import { getAdminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import type { VitalSign } from '@/types/medical'
 import type { WeightDataPoint } from '@/lib/chart-data-aggregator'
+import type { AppointmentNote, AppointmentNoteReply } from '@/types/tenant'
 
 // ─── Interfaces ──────────────────────────────────────────
 
@@ -493,6 +494,8 @@ export interface ClientAppointment {
   detail: string
   careContext: 'caregiver-visit' | 'member-medical'
   status: string
+  /** Visit notes logged ON this appointment (internal, oldest → newest). */
+  notes: AppointmentNote[]
 }
 
 /**
@@ -527,29 +530,90 @@ export async function loadClientAppointments(
       .get()
       .catch(() => null)
 
-    const rows: ClientAppointment[] = []
-    for (const doc of snap?.docs || []) {
+    const docs = (snap?.docs || []).filter(doc => {
       const a = doc.data() as any
-      if (a.status === 'cancelled') continue
-      const dateTime = normalizeDate(a.dateTime)
-      if (!dateTime) continue
-      const ctx = (a.careContext || 'member-medical') as 'caregiver-visit' | 'member-medical'
-      rows.push({
-        id: doc.id,
-        dateTime,
-        patientName: a.patientName || u?.name || 'Client',
-        appointmentType: a.type || 'other',
-        detail:
-          ctx === 'caregiver-visit'
-            ? a.reason || 'Care visit'
-            : [a.providerName, a.specialty].filter(Boolean).join(' · ') || 'External appointment',
-        careContext: ctx,
-        status: a.status || 'scheduled',
+      return a.status !== 'cancelled' && normalizeDate(a.dateTime)
+    })
+
+    // Load each appointment's notes in parallel (one small read per visit).
+    const rows: ClientAppointment[] = await Promise.all(
+      docs.map(async doc => {
+        const a = doc.data() as any
+        const ctx = (a.careContext || 'member-medical') as 'caregiver-visit' | 'member-medical'
+        const notes = await loadAppointmentNotes(doc.ref)
+        return {
+          id: doc.id,
+          dateTime: normalizeDate(a.dateTime) as string,
+          patientName: a.patientName || u?.name || 'Client',
+          appointmentType: a.type || 'other',
+          detail:
+            ctx === 'caregiver-visit'
+              ? a.reason || 'Care visit'
+              : [a.providerName, a.specialty].filter(Boolean).join(' · ') || 'External appointment',
+          careContext: ctx,
+          status: a.status || 'scheduled',
+          notes,
+        }
       })
-    }
+    )
     return rows
   } catch (err) {
     logger.error('[dashboard] failed to load client appointments', err as Error, { tenantId, userId })
+    return []
+  }
+}
+
+// ─── Appointment notes (the visit's running record; internal, staff-only) ───
+
+/** Map a notes/replies doc to the shared reply/note-author shape. */
+function mapNoteAuthored(id: string, n: any) {
+  return {
+    id,
+    authorUid: n.authorUid || '',
+    authorName: n.authorName || 'Staff',
+    authorRole: (n.authorRole === 'admin' ? 'admin' : 'staff') as 'admin' | 'staff',
+    body: n.body || '',
+    createdAt: normalizeDate(n.createdAt) || '',
+  }
+}
+
+/**
+ * Load the notes logged ON a single appointment (oldest → newest), each with
+ * its replies hydrated — a note is a message the care team can reply to. Reads
+ * the `notes` subcollection and every note's `replies`. Single-field
+ * orderBy(createdAt) → auto-indexed. Soft-fails to [] so one broken visit
+ * doesn't blank the appointments list.
+ */
+export async function loadAppointmentNotes(
+  apptRef: FirebaseFirestore.DocumentReference
+): Promise<AppointmentNote[]> {
+  try {
+    const snap = await apptRef
+      .collection('notes')
+      .orderBy('createdAt', 'asc')
+      .limit(100)
+      .get()
+      .catch(() => null)
+    return await Promise.all(
+      (snap?.docs || []).map(async d => {
+        const n = d.data() as any
+        const repliesSnap = await d.ref
+          .collection('replies')
+          .orderBy('createdAt', 'asc')
+          .limit(100)
+          .get()
+          .catch(() => null)
+        const replies: AppointmentNoteReply[] = (repliesSnap?.docs || []).map(r =>
+          mapNoteAuthored(r.id, r.data())
+        )
+        return {
+          ...mapNoteAuthored(d.id, n),
+          replyCount: typeof n.replyCount === 'number' ? n.replyCount : replies.length,
+          replies,
+        }
+      })
+    )
+  } catch {
     return []
   }
 }
