@@ -58,6 +58,22 @@ export default async function ClientDetailPage({ params }: PageProps) {
   const clientActive = isActive(client.lastActiveAt)
   const hasPatients = client.patients.length > 0
 
+  // Client-overview aggregates (from the already-loaded patients — no new
+  // queries): the workspace's at-a-glance summary of the household.
+  const members = client.patients
+  const humans = members.filter(p => p.type !== 'pet').length
+  const pets = members.filter(p => p.type === 'pet').length
+  const totalActiveMeds = members.reduce((n, p) => n + (p.health.activeMedicationsCount || 0), 0)
+  const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000
+  const memberLastMs = (p: (typeof members)[number]) =>
+    [p.health.lastMealAt, p.health.lastWeightAt, p.health.lastVitalAt]
+      .map(d => (d ? new Date(d).getTime() : 0))
+      .reduce((a, b) => Math.max(a, b), 0)
+  const activeMembers = members.filter(p => {
+    const t = memberLastMs(p)
+    return t > 0 && Date.now() - t < THIRTY_DAYS
+  }).length
+
   return (
     <FamiliesAuthGuard tenantId={tenant.id}>
       <div className="space-y-6">
@@ -114,6 +130,43 @@ export default async function ClientDetailPage({ params }: PageProps) {
             </div>
           )}
         </div>
+
+        {/* Client overview — at-a-glance household summary (aggregated from the
+            members below). Turns the detail page into a care-console workspace. */}
+        {hasPatients && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Care recipients</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{members.length}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                {humans} human{humans !== 1 ? 's' : ''}
+                {pets > 0 ? ` · ${pets} pet${pets !== 1 ? 's' : ''}` : ''}
+              </p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Active medications</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">{totalActiveMeds}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">across the household</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Active members</p>
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-100">
+                {activeMembers}
+                <span className="text-base font-normal text-gray-400"> of {members.length}</span>
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">logged in last 30 days</p>
+            </div>
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Last activity</p>
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-100">
+                {relativeTime(client.lastActiveAt)}
+              </p>
+              <p className={`text-xs ${clientActive ? 'text-green-600 dark:text-green-400' : 'text-gray-400'}`}>
+                {clientActive ? 'Active' : 'Inactive'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Family Members / Patients */}
         <section>
