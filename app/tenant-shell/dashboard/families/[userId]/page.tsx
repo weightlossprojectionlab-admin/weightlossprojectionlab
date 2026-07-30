@@ -16,7 +16,7 @@ import Link from 'next/link'
 import { headers } from 'next/headers'
 import { notFound } from 'next/navigation'
 import { getTenantBySlug } from '@/lib/tenant-server'
-import { loadClientDetail, formatDate, isActive } from '../../_lib/load-families'
+import { loadClientDetail, loadClientAppointments, formatDate, isActive } from '../../_lib/load-families'
 import FamiliesAuthGuard from '../FamiliesAuthGuard'
 import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 
@@ -54,6 +54,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
 
   const client = await loadClientDetail(tenant.id, userId)
   if (!client) notFound()
+
+  const appointments = await loadClientAppointments(tenant.id, userId)
 
   const clientActive = isActive(client.lastActiveAt)
   const hasPatients = client.patients.length > 0
@@ -166,6 +168,50 @@ export default async function ClientDetailPage({ params }: PageProps) {
               </p>
             </div>
           </div>
+        )}
+
+        {/* Upcoming appointments — reuses the tenant appointment source
+            (users/{userId}/appointments), scoped to this client. */}
+        {appointments.length > 0 && (
+          <section>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4">
+              Upcoming appointments
+            </h3>
+            <ul className="space-y-2">
+              {appointments.map(a => (
+                <li
+                  key={a.id}
+                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex items-center justify-between gap-3"
+                >
+                  <div className="min-w-0">
+                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                      {a.patientName} · {a.appointmentType}
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{a.detail}</p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {new Date(a.dateTime).toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </p>
+                    <span
+                      className={`inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                        a.careContext === 'caregiver-visit'
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200'
+                      }`}
+                    >
+                      {a.careContext === 'caregiver-visit' ? 'Care visit' : 'Coordinate'}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
 
         {/* Family Members / Patients */}

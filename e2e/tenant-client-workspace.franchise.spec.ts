@@ -58,6 +58,12 @@ test.describe('White-label CRM — client workspace overview', () => {
     await userRef.collection('patients').doc(`${UID}-b`).set({
       userId: UID, type: 'human', name: 'Member B', relationship: 'client', status: 'active', createdAt: now,
     })
+    // An upcoming appointment (tomorrow) for the workspace's "Upcoming appointments".
+    await userRef.collection('appointments').doc('appt1').set({
+      dateTime: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      careContext: 'caregiver-visit', patientName: 'Member A', type: 'wellness_check',
+      reason: 'Weekly check-in', status: 'scheduled',
+    })
   })
 
   test.afterAll(async () => {
@@ -77,5 +83,10 @@ test.describe('White-label CRM — client workspace overview', () => {
     await expect(page.getByText('across the household')).toBeVisible()
     await expect(page.getByText('Active members')).toBeVisible()
     await expect(page.getByText(/of 2/)).toBeVisible()               // "1 of 2" active (A active, B quiet)
+
+    // Upcoming appointments section (reuses the tenant appointment source).
+    await expect(page.getByText('Upcoming appointments')).toBeVisible()
+    await expect(page.getByText('Weekly check-in')).toBeVisible()
+    await expect(page.getByText('Care visit')).toBeVisible()
   })
 })

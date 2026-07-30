@@ -482,6 +482,78 @@ export async function loadClientDetail(
 
 /** A caregiver-visit the practice delivers — lands on the practitioner's
  *  OWN schedule. The forward-looking spine of their day. */
+// ─── Client appointments (upcoming, for the client workspace) ───
+
+export interface ClientAppointment {
+  id: string
+  dateTime: string
+  patientName: string
+  appointmentType: string
+  /** Reason (care visit) or provider · specialty (external appointment). */
+  detail: string
+  careContext: 'caregiver-visit' | 'member-medical'
+  status: string
+}
+
+/**
+ * Upcoming appointments for a SINGLE managed client, for the workspace's
+ * "Upcoming appointments" section. Same source + query pattern as
+ * loadTenantAppointments (users/{userId}/appointments, dateTime >= today),
+ * scoped to one client. Verifies the tenant manages the client first.
+ */
+export async function loadClientAppointments(
+  tenantId: string,
+  userId: string
+): Promise<ClientAppointment[]> {
+  try {
+    const db = getAdminDb()
+    const userSnap = await db.collection('users').doc(userId).get()
+    if (!userSnap.exists) return []
+    const u = userSnap.data() as any
+    const managedBy: string[] = Array.isArray(u?.managedBy) ? u.managedBy : []
+    if (!managedBy.includes(tenantId)) return []
+
+    const midnight = new Date()
+    midnight.setHours(0, 0, 0, 0)
+    const startOfToday = midnight.toISOString()
+
+    const snap = await db
+      .collection('users')
+      .doc(userId)
+      .collection('appointments')
+      .where('dateTime', '>=', startOfToday)
+      .orderBy('dateTime', 'asc')
+      .limit(20)
+      .get()
+      .catch(() => null)
+
+    const rows: ClientAppointment[] = []
+    for (const doc of snap?.docs || []) {
+      const a = doc.data() as any
+      if (a.status === 'cancelled') continue
+      const dateTime = normalizeDate(a.dateTime)
+      if (!dateTime) continue
+      const ctx = (a.careContext || 'member-medical') as 'caregiver-visit' | 'member-medical'
+      rows.push({
+        id: doc.id,
+        dateTime,
+        patientName: a.patientName || u?.name || 'Client',
+        appointmentType: a.type || 'other',
+        detail:
+          ctx === 'caregiver-visit'
+            ? a.reason || 'Care visit'
+            : [a.providerName, a.specialty].filter(Boolean).join(' · ') || 'External appointment',
+        careContext: ctx,
+        status: a.status || 'scheduled',
+      })
+    }
+    return rows
+  } catch (err) {
+    logger.error('[dashboard] failed to load client appointments', err as Error, { tenantId, userId })
+    return []
+  }
+}
+
 export interface ScheduledVisit {
   id: string
   clientId: string        // owning family/user — for the drill-in link
