@@ -1,12 +1,13 @@
 /**
  * Family Snapshot Card
  *
- * Server component. Shows avatar, name, email, Active/Inactive badge,
- * joined date, health snapshot (last meal, last weight, last vital,
- * active medications), and a Remove button.
- *
- * Mirrors the PatientSnapshotCard pattern from the consumer family-admin
- * dashboard, adapted for franchise context.
+ * Server component. A client is a HOUSEHOLD, so this is a household SUMMARY —
+ * avatar, name, email, Active/Inactive badge, joined date, a care-recipient
+ * count + names, last activity, and a Remove button. It deliberately does NOT
+ * show one member's meal/weight/vital/meds: a household doesn't have a single
+ * blood pressure. Per-member health lives in the client-detail view (click the
+ * card). (Earlier this mirrored the consumer PatientSnapshotCard and showed the
+ * primary patient's chart under the family name — a consumer-app leak.)
  */
 
 import { formatDate, isActive } from './_lib/load-families'
@@ -38,7 +39,8 @@ function relativeTime(iso: string | null): string {
 export default function FamilySnapshotCard({ family, tenantId }: Props) {
   const active = isActive(family.lastActiveAt)
   const initial = (family.name.charAt(0) || '?').toUpperCase()
-  const h = family.health
+  const names = family.memberNames || []
+  const extra = names.length > 3 ? names.length - 3 : 0
 
   return (
     <div className="rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all">
@@ -74,49 +76,32 @@ export default function FamilySnapshotCard({ family, tenantId }: Props) {
         </span>
       </div>
 
-      {/* Health snapshot rows */}
+      {/* Household summary — care recipients + last activity across the
+          household. Per-member health (meal/weight/vital/meds) is in the
+          client-detail view; a household summary doesn't show one member's chart. */}
       <div className="space-y-2 text-sm border-t border-gray-100 dark:border-gray-700 pt-3 mb-3">
         <div className="flex items-center justify-between">
           <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            <span className="text-base">🍽</span> Last meal
+            <span className="text-base">👥</span> Care recipients
           </span>
-          <span className="text-gray-700 dark:text-gray-300 text-right truncate max-w-[60%]">
-            {h.lastMealAt
-              ? `${relativeTime(h.lastMealAt)}${h.lastMealName ? ` · ${h.lastMealName}` : ''}`
-              : '—'}
+          <span className="text-gray-700 dark:text-gray-300 font-medium">
+            {family.memberCount}
           </span>
         </div>
 
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            <span className="text-base">⚖️</span> Weight
-          </span>
-          <span className="text-gray-700 dark:text-gray-300">
-            {h.lastWeightValue !== null
-              ? `${h.lastWeightValue} ${h.lastWeightUnit} · ${relativeTime(h.lastWeightAt)}`
-              : '—'}
-          </span>
-        </div>
+        {names.length > 0 && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {names.slice(0, 3).join(', ')}
+            {extra > 0 ? ` +${extra} more` : ''}
+          </p>
+        )}
 
         <div className="flex items-center justify-between">
           <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            <span className="text-base">❤️</span> Last vital
+            <span className="text-base">🕑</span> Last activity
           </span>
           <span className="text-gray-700 dark:text-gray-300">
-            {h.lastVitalAt
-              ? `${h.lastVitalType || 'Recorded'} · ${relativeTime(h.lastVitalAt)}`
-              : '—'}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            <span className="text-base">💊</span> Medications
-          </span>
-          <span className="text-gray-700 dark:text-gray-300">
-            {h.activeMedicationsCount > 0
-              ? `${h.activeMedicationsCount} active`
-              : '—'}
+            {relativeTime(family.lastActiveAt)}
           </span>
         </div>
       </div>

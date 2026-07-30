@@ -33,7 +33,18 @@ export interface ManagedFamily {
   email: string
   joinedPlatformAt: string | null
   lastActiveAt: string | null
+  /**
+   * Per-PRIMARY-patient health snapshot. Kept for the Overview stats API
+   * (app/api/tenant/[tenantId]/dashboard/stats), which aggregates across
+   * families. NOT for the roster card — a client is a HOUSEHOLD, and a
+   * household doesn't have a single blood pressure. The roster card uses the
+   * household rollup below; per-member health lives in the client-detail view.
+   */
   health: FamilyHealthSnapshot
+  /** Number of care recipients (patients) in this household. */
+  memberCount: number
+  /** Names of the care recipients (first few) for the roster card preview. */
+  memberNames: string[]
 }
 
 export interface PendingRequest {
@@ -219,6 +230,27 @@ async function loadHealthSnapshot(
   }
 }
 
+/**
+ * Household rollup for the roster card: how many care recipients (patients)
+ * this client has, and their names (first several for a preview). A client is
+ * a HOUSEHOLD — the roster card summarizes it; per-member health is in detail.
+ * One read per family (cheaper than the primary-patient health snapshot).
+ */
+async function loadHouseholdSummary(
+  db: FirebaseFirestore.Firestore,
+  userId: string
+): Promise<{ memberCount: number; memberNames: string[] }> {
+  try {
+    const snap = await db.collection('users').doc(userId).collection('patients').limit(25).get()
+    const names = snap.docs
+      .map(d => (d.data() as any)?.name)
+      .filter((n: unknown): n is string => typeof n === 'string' && n.trim().length > 0)
+    return { memberCount: snap.size, memberNames: names }
+  } catch {
+    return { memberCount: 0, memberNames: [] }
+  }
+}
+
 /** Given two docs from different collection paths, return the one with the
  *  more recent value for `dateField`. Handles null/undefined gracefully. */
 function pickMostRecent(a: any, b: any, dateField: string): any {
@@ -241,11 +273,15 @@ export async function loadManagedFamilies(tenantId: string): Promise<ManagedFami
       .limit(500)
       .get()
 
-    // Load health snapshots in parallel for all families.
+    // Per family: primary-patient health (for the Overview stats API) + a
+    // household rollup (member count + names) for the roster card.
     const families = await Promise.all(
       snap.docs.map(async doc => {
         const data = doc.data() as any
-        const health = await loadHealthSnapshot(db, doc.id)
+        const [health, household] = await Promise.all([
+          loadHealthSnapshot(db, doc.id),
+          loadHouseholdSummary(db, doc.id),
+        ])
         return {
           id: doc.id,
           name: data.name || data.displayName || data.email || 'Unnamed family',
@@ -253,6 +289,8 @@ export async function loadManagedFamilies(tenantId: string): Promise<ManagedFami
           joinedPlatformAt: normalizeDate(data.createdAt),
           lastActiveAt: normalizeDate(data.lastActiveAt),
           health,
+          memberCount: household.memberCount,
+          memberNames: household.memberNames,
         }
       })
     )

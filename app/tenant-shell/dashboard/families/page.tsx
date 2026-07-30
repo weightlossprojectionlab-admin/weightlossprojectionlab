@@ -19,6 +19,7 @@ import FamiliesAuthGuard from './FamiliesAuthGuard'
 import AddFamilyForm from './AddFamilyForm'
 import PendingRequestActions from './PendingRequestActions'
 import FamilySnapshotCard from '../FamilySnapshotCard'
+import ClientRoster from '@/components/tenant/ClientRoster'
 
 export const dynamic = 'force-dynamic'
 
@@ -106,41 +107,20 @@ export default async function FamiliesPage() {
 
         <AddFamilyForm tenantId={tenant.id} />
 
-        {/* Family snapshot cards */}
-        {families.length === 0 ? (
-          <div className="rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 p-12 text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={1.5}
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-            <p className="mt-4 text-sm font-medium text-gray-900 dark:text-gray-100">
-              No families yet
-            </p>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
-              Use the form above to add your first family by email. Their card
-              will appear here immediately.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {families.map(family => (
-              <FamilySnapshotCard
-                key={family.id}
-                family={family}
-                tenantId={tenant.id}
-              />
-            ))}
-          </div>
-        )}
+        {/* Client roster — searchable/filterable/sortable. Cards are
+            server-rendered here (FamilySnapshotCard is a Server Component) and
+            passed to the client roster, which filters the already-loaded list
+            instantly. */}
+        <ClientRoster
+          items={families.map(family => ({
+            id: family.id,
+            name: family.name,
+            email: family.email,
+            lastActiveAt: family.lastActiveAt,
+            joinedPlatformAt: family.joinedPlatformAt,
+            card: <FamilySnapshotCard key={family.id} family={family} tenantId={tenant.id} />,
+          }))}
+        />
       </section>
     </FamiliesAuthGuard>
   )
