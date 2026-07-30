@@ -10,6 +10,7 @@
  * primary patient's chart under the family name — a consumer-app leak.)
  */
 
+import Link from 'next/link'
 import { formatDate, isActive } from './_lib/load-families'
 import type { ManagedFamily } from './_lib/load-families'
 import RemoveFamilyButton from './families/RemoveFamilyButton'
@@ -106,8 +107,16 @@ export default function FamilySnapshotCard({ family, tenantId }: Props) {
         </div>
       </div>
 
-      {/* Remove button */}
-      <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-end">
+      {/* Open the client workspace (primary, large tap target) + Remove. The
+          Open action is a full-width button (~44px) so it's thumb-friendly;
+          the whole card can't be one link because it contains Remove. */}
+      <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3">
+        <Link
+          href={`/dashboard/families/${family.id}`}
+          className="flex-1 inline-flex items-center justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition"
+        >
+          Open workspace →
+        </Link>
         <RemoveFamilyButton
           tenantId={tenantId}
           familyId={family.id}

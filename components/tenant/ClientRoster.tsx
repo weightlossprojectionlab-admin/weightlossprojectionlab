@@ -97,7 +97,7 @@ export default function ClientRoster({ items }: { items: RosterItem[] }) {
           <button
             type="button"
             onClick={() => setStatus('inactive')}
-            className="text-sm font-medium text-amber-800 dark:text-amber-200 underline shrink-0 hover:no-underline"
+            className="shrink-0 inline-flex items-center rounded-lg px-3 py-2 text-sm font-medium bg-amber-100 dark:bg-amber-800/40 text-amber-900 dark:text-amber-100 hover:bg-amber-200 dark:hover:bg-amber-800/60 transition"
           >
             Show
           </button>
