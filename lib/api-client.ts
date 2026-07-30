@@ -48,6 +48,12 @@ class ApiClient {
   // Token cache to reduce getIdToken() calls (tokens expire after 1 hour, we cache for 55 min)
   private cachedToken: string | null = null
   private tokenExpiry: number = 0
+  // The uid the cached token belongs to. The cache MUST be scoped to the user —
+  // otherwise switching accounts (e.g. sign out of a consumer, sign in as a
+  // franchise operator) keeps serving the previous user's token, which 403s
+  // tenant APIs ("User is not part of a franchise") even though the client shows
+  // the new user signed in.
+  private cachedTokenUid: string | null = null
 
   constructor(baseUrl: string = '/api', options: ApiClientOptions = {}) {
     this.baseUrl = baseUrl
@@ -64,11 +70,6 @@ class ApiClient {
    */
   private async getAuthToken(): Promise<string | null> {
     try {
-      // Return cached token if still valid
-      if (this.cachedToken && Date.now() < this.tokenExpiry) {
-        return this.cachedToken
-      }
-
       const auth = getAuth()
       let user = auth.currentUser
 
@@ -79,13 +80,23 @@ class ApiClient {
         if (!user) return null
       }
 
-      // Force refresh if we're near expiry or have no cached token
-      const forceRefresh = !this.cachedToken || this.tokenExpiry <= Date.now()
+      // Return cached token only if it's unexpired AND belongs to the CURRENT
+      // user. The uid check is essential — without it, an account switch keeps
+      // serving the previous user's token.
+      if (this.cachedToken && Date.now() < this.tokenExpiry && this.cachedTokenUid === user.uid) {
+        return this.cachedToken
+      }
+
+      // Force refresh if we're near expiry, have no cached token, or the signed-in
+      // user changed since the cache was populated.
+      const forceRefresh =
+        !this.cachedToken || this.tokenExpiry <= Date.now() || this.cachedTokenUid !== user.uid
       const token = await user.getIdToken(forceRefresh)
 
       // Cache token for 55 minutes (tokens are valid for 60 minutes)
       this.cachedToken = token
       this.tokenExpiry = Date.now() + (55 * 60 * 1000)
+      this.cachedTokenUid = user.uid
 
       return token
     } catch (error) {
@@ -104,6 +115,7 @@ class ApiClient {
   clearTokenCache(): void {
     this.cachedToken = null
     this.tokenExpiry = 0
+    this.cachedTokenUid = null
   }
 
   /**
