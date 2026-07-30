@@ -67,6 +67,12 @@ export default function FranchiseDashboardOverview() {
     if (!auth) { router.replace('/login?next=/dashboard'); return }
     const unsub = onAuthStateChanged(auth, async user => {
       if (!user) { router.replace('/login?next=/dashboard'); return }
+      // Wait until tenantId is read from the DOM (set after mount) before
+      // deciding. A null tenantId fails the `claims.tenantId === tenantId`
+      // match below and bounces to /login, which the auth router bounces
+      // straight back to /dashboard → redirect loop. The effect re-runs when
+      // tenantId is set (it's a dependency) and re-checks correctly.
+      if (!tenantId) return
       try {
         const tokenResult = await user.getIdTokenResult()
         const claims = tokenResult.claims as any
