@@ -84,6 +84,30 @@ function OnboardingContent() {
   const searchParams = useSearchParams()
   const fromInvitation = searchParams.get('from') === 'invitation'
 
+  // A franchise operator (franchise_admin/staff) has no consumer onboarding —
+  // their setup is the tenant-shell dashboard — so if one ever lands here
+  // (e.g. a stale link), send them there. Agency CLIENTS are intaked by their
+  // agency (onboardingCompleted=true) and are never routed to onboarding, so
+  // no client-facing gate is needed. (The auth router encodes the same policy
+  // for router-driven navigations; this enforces it on the onboarding render
+  // path, which is AuthGuard-only and never consults the router.)
+  useEffect(() => {
+    if (!user) return
+    let cancelled = false
+    user
+      .getIdTokenResult()
+      .then(res => {
+        const role = (res.claims as any)?.tenantRole
+        if (!cancelled && (role === 'franchise_admin' || role === 'franchise_staff')) {
+          router.replace('/dashboard')
+        }
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [user, router])
+
   // Free-plan users can't add additional patients (the wizard at
   // /patients/new is gated behind the 'multiple-patients' feature),
   // so asking "Want to add someone now?" would dead-end them at an
