@@ -91,6 +91,65 @@ export interface Tenant {
   npiNumber?: string
 }
 
+/**
+ * Care-package pricing (white-label). A tenant (agency) builds its own tiered
+ * retainer packages to price ITS OWN clients — this is the agency's pricing of
+ * its families, NOT WPL's pricing of the agency. Stored under
+ * tenants/{tenantId}/carePackages/{packageId}.
+ */
+export type CarePackageTier = 'anchor' | 'core' | 'growth'
+
+export interface CarePackageCaps {
+  /** Scope revisions included per period (playbook: cap deliverables). */
+  revisions?: number
+  /** In-home / virtual visits included per month. */
+  visitsPerMonth?: number
+  /** Committed response time in hours. */
+  responseTimeHours?: number
+}
+
+export interface CarePackage {
+  id: string
+  name: string
+  tier?: CarePackageTier
+  /** Monthly retainer price in the smallest currency unit (cents). */
+  monthlyPrice: number
+  currency: string           // ISO 4217 lower-case, e.g. 'usd'
+  /** What the family gets (playbook: concrete, capped deliverables). */
+  included: string[]
+  /** Explicitly out of scope (playbook: write "Not included" first). */
+  excluded: string[]
+  caps: CarePackageCaps
+  active: boolean
+  /** Display order (anchor → core → growth). */
+  order: number
+  createdAt: string          // ISO date
+  updatedAt: string          // ISO date
+}
+
+/**
+ * A generated, client-facing proposal. Freezes the tiers at generation time
+ * (packagesSnapshot) so later edits to a package never mutate an already-sent
+ * proposal. `tenantId` is stored so the collection-group share-token lookup can
+ * resolve the tenant's branding server-side. Stored in the TOP-LEVEL
+ * `proposals` collection, keyed by shareToken (the doc id) so the public page
+ * resolves it with an O(1) direct get — no collection-group index needed.
+ */
+export interface ProposalRecord {
+  id: string
+  tenantId: string
+  /** Optional link to the agency's family/client this was built for. */
+  familyId?: string
+  /** Free-text client name shown on the proposal header. */
+  clientName?: string
+  packagesSnapshot: CarePackage[]
+  /** Unguessable token in the public share URL. */
+  shareToken: string
+  status: 'draft' | 'sent' | 'viewed' | 'accepted'
+  createdAt: string          // ISO date
+  createdBy: string          // uid
+}
+
 /** Role within a franchise tenant */
 export type TenantRole = 'franchise_admin' | 'staff' | 'user'
 

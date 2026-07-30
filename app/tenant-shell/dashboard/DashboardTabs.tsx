@@ -22,6 +22,7 @@ interface Tab {
 const TABS: Tab[] = [
   { href: '/dashboard', label: 'Overview', matchExact: true },
   { href: '/dashboard/families', label: 'Families' },
+  { href: '/dashboard/packages', label: 'Packages' },
   { href: '/dashboard/staff', label: 'Staff' },
   { href: '/dashboard/branding', label: 'Branding' },
 ]
