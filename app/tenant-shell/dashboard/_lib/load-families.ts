@@ -618,6 +618,80 @@ export async function loadAppointmentNotes(
   }
 }
 
+// ─── Client care tasks (household duties; read-only, Phase 1) ───
+
+export interface ClientDutyTask {
+  id: string
+  name: string
+  category: string
+  status: string
+  priority: string
+  nextDueAt: string | null
+  lastCompletedAt: string | null
+  overdue: boolean
+}
+
+/**
+ * A managed client's active household duties — the standing "care plan" the
+ * caregiver works during a visit. Read-only for now (Phase 1). Verifies the
+ * tenant manages the client, then reads household_duties keyed to the client's
+ * OWN userId (duties the family created). Single-field `where(userId)` → no
+ * composite index; active/not-done filter + overdue flag computed in code.
+ *
+ * Agency-authored duties (created by staff for a client) key to the creator's
+ * uid, not the client's — surfacing those is a later concern. Soft-fails to [].
+ */
+export async function loadClientDuties(tenantId: string, userId: string): Promise<ClientDutyTask[]> {
+  try {
+    const db = getAdminDb()
+    const userSnap = await db.collection('users').doc(userId).get()
+    if (!userSnap.exists) return []
+    const managedBy: string[] = Array.isArray((userSnap.data() as any)?.managedBy)
+      ? (userSnap.data() as any).managedBy
+      : []
+    if (!managedBy.includes(tenantId)) return []
+
+    const snap = await db
+      .collection('household_duties')
+      .where('userId', '==', userId)
+      .limit(200)
+      .get()
+      .catch(() => null)
+
+    const now = Date.now()
+    const tasks: ClientDutyTask[] = []
+    for (const doc of snap?.docs || []) {
+      const d = doc.data() as any
+      if (d.isActive === false) continue
+      const status = d.status || 'pending'
+      if (status === 'completed' || status === 'skipped') continue
+      const nextDueAt = normalizeDate(d.nextDueDate)
+      tasks.push({
+        id: doc.id,
+        name: d.name || 'Task',
+        category: d.category || 'custom',
+        status,
+        priority: d.priority || 'medium',
+        nextDueAt,
+        lastCompletedAt: normalizeDate(d.lastCompletedAt),
+        overdue: !!nextDueAt && new Date(nextDueAt).getTime() < now,
+      })
+    }
+    // Overdue first, then soonest-due, then the rest.
+    tasks.sort((a, b) => {
+      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1
+      if (a.nextDueAt && b.nextDueAt) return a.nextDueAt.localeCompare(b.nextDueAt)
+      if (a.nextDueAt) return -1
+      if (b.nextDueAt) return 1
+      return 0
+    })
+    return tasks
+  } catch (err) {
+    logger.error('[dashboard] failed to load client duties', err as Error, { tenantId, userId })
+    return []
+  }
+}
+
 export interface ScheduledVisit {
   id: string
   clientId: string        // owning family/user — for the drill-in link
