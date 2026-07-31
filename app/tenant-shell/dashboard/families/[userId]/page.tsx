@@ -19,6 +19,7 @@ import { getTenantBySlug } from '@/lib/tenant-server'
 import { loadClientDetail, loadClientAppointments, loadClientDuties, formatDate, isActive } from '../../_lib/load-families'
 import FamiliesAuthGuard from '../FamiliesAuthGuard'
 import ClientAppointments from '@/components/tenant/ClientAppointments'
+import ClientCareTasks from '@/components/tenant/ClientCareTasks'
 import { getPatientBadgeLabel } from '@/lib/life-stage-utils'
 
 export const dynamic = 'force-dynamic'
@@ -177,42 +178,8 @@ export default async function ClientDetailPage({ params }: PageProps) {
         <ClientAppointments tenantId={tenant.id} userId={userId} appointments={appointments} />
 
         {/* Due care tasks — the client's standing household duties (the care plan
-            a caregiver works during a visit). Read-only for now (Phase 1). */}
-        {careTasks.length > 0 && (
-          <section>
-            <h3 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-              Due care tasks
-            </h3>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-              This client&apos;s active household duties — the care plan for a visit.
-            </p>
-            <ul className="space-y-2">
-              {careTasks.map(t => (
-                <li
-                  key={t.id}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 flex items-center justify-between gap-3"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{t.name}</p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">
-                      {t.category.replace(/_/g, ' ')}
-                      {t.lastCompletedAt ? ` · last done ${relativeTime(t.lastCompletedAt)}` : ''}
-                    </p>
-                  </div>
-                  <span
-                    className={`shrink-0 px-2 py-0.5 rounded-full text-xs font-medium ${
-                      t.overdue
-                        ? 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
-                        : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300'
-                    }`}
-                  >
-                    {t.overdue ? 'Overdue' : t.nextDueAt ? `Due ${formatDate(t.nextDueAt)}` : 'As needed'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+            a caregiver works during a visit). Staff can mark one done (Phase 2). */}
+        <ClientCareTasks tenantId={tenant.id} userId={userId} tasks={careTasks} />
 
         {/* Family Members / Patients */}
         <section>
