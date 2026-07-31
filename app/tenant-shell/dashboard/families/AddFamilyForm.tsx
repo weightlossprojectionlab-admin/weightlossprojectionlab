@@ -9,8 +9,9 @@
  * is the only way to populate the Managed Families list.
  *
  * POSTs to /api/tenant/{tenantId}/managed-families with a Bearer token + CSRF
- * header. On success, calls router.refresh() so the server-rendered families
- * table re-fetches and shows the newly attached family.
+ * header. On success, calls onAdded() (the client-fetched FamiliesRoster's
+ * refetch) so the new family appears; falls back to router.refresh() if no
+ * callback is provided.
  */
 
 import { useState, useRef } from 'react'

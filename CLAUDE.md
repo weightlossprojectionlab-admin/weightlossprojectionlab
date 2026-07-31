@@ -11,6 +11,10 @@ Four pillars — each with the caveat that keeps it from biting when taken liter
 - **Optimize** — Target re-renders by narrowing state and context scope; code-split heavy views.
   - *Caveats:* Optimize where instrumented, never by guess. In Next.js the primary lever is React
     Server Components — fetch on the server and ship less client JavaScript.
+  - *Security caveat:* server-rendering is only "free" for PUBLIC or already-authorized data. On a route
+    with NO server-side viewer auth (e.g. the tenant-shell dashboard, guarded only by a client component),
+    fetching sensitive data in a server component serializes it into the RSC payload for anyone who
+    requests the URL. There, fetch it CLIENT-side behind a gated API + the guard instead.
 - **Single Source** — Maintain one canonical origin for schemas, API contracts, and core state;
   downstream components derive from it.
   - *Caveat:* Optimistic/local copies are permitted but must reconcile back to the canonical origin

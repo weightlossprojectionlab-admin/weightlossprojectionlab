@@ -5,7 +5,8 @@
  *
  * Inline two-step confirm: idle → confirming → removing. Once confirmed,
  * DELETEs /api/tenant/{tenantId}/managed-families/{familyId} with Bearer +
- * CSRF, then router.refresh() so the server-rendered families table re-fetches.
+ * CSRF, then onRemoved() (the client-fetched roster's refetch); falls back to
+ * router.refresh() if no callback is provided.
  *
  * No modal library, no portal — confirmation lives inline in the table cell.
  * Cleaner than window.confirm() and avoids pulling in a dialog dependency.

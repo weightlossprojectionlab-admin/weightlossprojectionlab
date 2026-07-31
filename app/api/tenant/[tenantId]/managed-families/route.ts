@@ -24,7 +24,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { verifyTenantStaffOrAdminAuth } from '@/lib/tenant-auth'
@@ -278,9 +277,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         ? 'franchise owner manual attach'
         : 'franchise staff manual attach',
     })
-
-    // Re-render the families list so the new row appears immediately.
-    revalidatePath('/tenant-shell/dashboard/families')
 
     logger.info('[managed-families] family attached', {
       tenantId,

@@ -14,7 +14,7 @@
  * Firestore directly. Money is entered in whole dollars and stored in cents.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import { logger } from '@/lib/logger'
 import { getCSRFToken } from '@/lib/csrf'
@@ -121,6 +121,14 @@ export default function CarePackageBuilder({ tenantId, initialPackages }: Props)
       logger.error('[CarePackageBuilder] refetch failed', err as Error)
     }
   }
+
+  // Load packages client-side on mount so the owner's pricing is fetched behind
+  // the gated GET (verifyTenantAdminAuth) rather than server-rendered into the
+  // RSC payload. initialPackages is empty now — the page is a thin server shell.
+  useEffect(() => {
+    void refetch()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tenantId])
 
   function draftToPayload(d: DraftForm) {
     const toList = (s: string) => s.split('\n').map(x => x.trim()).filter(Boolean)
