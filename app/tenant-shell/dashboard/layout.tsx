@@ -108,7 +108,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           </p>
         </header>
 
-        <DashboardTabs />
+        <DashboardTabs tenantId={tenant.id} />
 
         <div className="space-y-8">{children}</div>
       </div>

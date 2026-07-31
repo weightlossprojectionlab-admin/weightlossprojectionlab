@@ -163,6 +163,28 @@ export default defineConfig({
       testMatch: /\.franchise\.spec\.ts$/,
     },
     {
+      // Franchise STAFF (franchise_staff) specs — the scoped agency-worker actor
+      // UI. Same subdomain origin as chromium-franchise, different storage state.
+      name: 'setup-franchise-staff',
+      testMatch: /auth-franchise-staff\.setup\.ts/,
+      use: {
+        headless: true,
+        launchOptions: { slowMo: 0 },
+        baseURL: 'https://little-care-bears.localhost:3003',
+      },
+    },
+    {
+      name: 'chromium-franchise-staff',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/.auth/franchise-staff.json',
+        baseURL: 'https://little-care-bears.localhost:3003',
+        viewport: { width: 960, height: 940 },
+      },
+      dependencies: ['setup-franchise-staff'],
+      testMatch: /\.staff\.spec\.ts$/,
+    },
+    {
       // Multi-role specs verify the caregiver → owner real-time contract
       // by attaching BOTH storage states to a single browser via
       // newContext({ storageState }). Depends on both setups so both

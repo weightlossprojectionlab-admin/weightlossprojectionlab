@@ -3,14 +3,17 @@
 /**
  * Families Auth Guard
  *
- * Mirrors the auth-check pattern from BrandingEditor.tsx — verifies the
- * signed-in Firebase user has either super-admin role or franchise_admin
- * tenantRole matching this tenant. Bounces to /login on mismatch.
+ * Families is a SHARED tenant surface: authorizes super-admin OR any member of
+ * THIS tenant (franchise_admin OR franchise_staff). Bounces to /login otherwise.
+ * (Admin-only sections — staff/branding/packages — keep their own admin-only
+ * guards; this guard is intentionally staff-inclusive.)
  *
- * Lives next to the families page rather than in a shared lib because
- * (a) only one consumer today and (b) the BrandingEditor copy is the only
- * other instance — extraction to lib/ waits for the rule of three (next
- * dashboard page that needs it, e.g. /dashboard/staff in slice 4).
+ * NOTE (DOSI follow-up): the claims-resolution here is now duplicated across
+ * TenantAuthGuard / StaffAuthGuard / BrandingEditor / DashboardTabs / the
+ * Overview page — the rule of three has passed. Extract a shared
+ * useTenantRole(tenantId) hook and migrate all call sites so the role is
+ * defined ONCE (a single source would have prevented this guard drifting out
+ * of sync with the staff-inclusive Overview).
  */
 
 import { useEffect, useState, type ReactNode } from 'react'
@@ -42,9 +45,14 @@ export default function FamiliesAuthGuard({ tenantId, children }: Props) {
         const tokenResult = await user.getIdTokenResult()
         const claims = tokenResult.claims as any
         const isSuperAdmin = claims.role === 'admin'
-        const isFranchiseAdminForThis =
-          claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId
-        if (!isSuperAdmin && !isFranchiseAdminForThis) {
+        // Families is a SHARED surface (Overview + Families) — franchise_staff
+        // are meant to work the client roster/workspace (the managed-families
+        // APIs already allow verifyTenantStaffOrAdminAuth). Admin-only sections
+        // (packages/staff/branding) keep their own admin-only guards.
+        const isTenantMember =
+          (claims.tenantRole === 'franchise_admin' || claims.tenantRole === 'franchise_staff') &&
+          claims.tenantId === tenantId
+        if (!isSuperAdmin && !isTenantMember) {
           router.replace('/login?next=/dashboard/families')
           return
         }

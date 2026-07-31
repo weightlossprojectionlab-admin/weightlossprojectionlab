@@ -325,9 +325,15 @@ export default function FranchiseDashboardOverview() {
                   <ToolCard title="Shopping Lists" description="View and manage shopping for each family" icon={<span className="text-2xl">🛒</span>} href="/family-admin/shopping" color="lime" />
                   <ToolCard title="Kitchen Inventory" description="Track food inventory across all families" icon={<span className="text-2xl">📦</span>} href="/family-admin/inventory" color="emerald" />
                   <ToolCard title="Notifications" description="Stay updated on health events and reminders" icon={<BellIcon className="w-6 h-6" />} href="/notifications" color="pink" />
-                  {/* Franchise admin tools */}
-                  <ToolCard title="Staff Management" description="Invite and manage your practice staff" icon={<span className="text-2xl">👤</span>} href="/dashboard/staff" color="violet" />
-                  <ToolCard title="Branding & Logo" description="Customize your practice's appearance" icon={<PaintBrushIcon className="w-6 h-6" />} href="/dashboard/branding" color="orange" />
+                  {/* Franchise admin tools — owner-only (hidden from franchise_staff,
+                      matching the role-gated dashboard tabs). Their pages are
+                      admin-guarded too; this keeps the Overview consistent. */}
+                  {viewerIsAdmin && (
+                    <>
+                      <ToolCard title="Staff Management" description="Invite and manage your practice staff" icon={<span className="text-2xl">👤</span>} href="/dashboard/staff" color="violet" />
+                      <ToolCard title="Branding & Logo" description="Customize your practice's appearance" icon={<PaintBrushIcon className="w-6 h-6" />} href="/dashboard/branding" color="orange" />
+                    </>
+                  )}
                   <ToolCard title="Provider Directory" description="See how your practice appears to families" icon={<MagnifyingGlassIcon className="w-6 h-6" />} href="/find-a-provider" color="amber" />
                   <ToolCard title="Public Profile" description="Your practice's public about page" icon={<DocumentTextIcon className="w-6 h-6" />} href="/about" color="cyan" />
                 </div>
