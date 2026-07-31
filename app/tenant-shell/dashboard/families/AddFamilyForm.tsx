@@ -21,9 +21,10 @@ import { logger } from '@/lib/logger'
 
 interface Props {
   tenantId: string
+  onAdded?: () => void
 }
 
-export default function AddFamilyForm({ tenantId }: Props) {
+export default function AddFamilyForm({ tenantId, onAdded }: Props) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -76,7 +77,8 @@ export default function AddFamilyForm({ tenantId }: Props) {
       }
       setEmail('')
       // Re-fetch the server-rendered families table.
-      router.refresh()
+      if (onAdded) onAdded()
+      else router.refresh()
       // Keep focus in the input for rapid bulk-attach.
       inputRef.current?.focus()
     } catch (err) {

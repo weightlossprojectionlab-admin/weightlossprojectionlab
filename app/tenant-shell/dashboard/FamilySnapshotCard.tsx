@@ -1,23 +1,45 @@
+'use client'
+
 /**
  * Family Snapshot Card
  *
- * Server component. A client is a HOUSEHOLD, so this is a household SUMMARY —
- * avatar, name, email, Active/Inactive badge, joined date, a care-recipient
- * count + names, last activity, and a Remove button. It deliberately does NOT
- * show one member's meal/weight/vital/meds: a household doesn't have a single
- * blood pressure. Per-member health lives in the client-detail view (click the
- * card). (Earlier this mirrored the consumer PatientSnapshotCard and showed the
- * primary patient's chart under the family name — a consumer-app leak.)
+ * A client is a HOUSEHOLD, so this is a household SUMMARY — avatar, name, email,
+ * Active/Inactive badge, joined date, a care-recipient count + names, last
+ * activity, and a Remove button. It deliberately does NOT show one member's
+ * meal/weight/vital/meds: a household doesn't have a single blood pressure.
+ * Per-member health lives in the client-detail view (click the card).
+ *
+ * Client component: rendered by the client-side FamiliesRoster so the roster PII
+ * loads client-side (behind the gated managed-families GET) rather than in the
+ * RSC payload. Date helpers are inlined because _lib/load-families is admin-SDK/
+ * server-only; only its TYPE is imported.
  */
 
 import Link from 'next/link'
-import { formatDate, isActive } from './_lib/load-families'
 import type { ManagedFamily } from './_lib/load-families'
 import RemoveFamilyButton from './families/RemoveFamilyButton'
 
 interface Props {
   family: ManagedFamily
   tenantId: string
+  onRemoved?: () => void
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  try {
+    return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+  } catch {
+    return '—'
+  }
+}
+function isActive(iso: string | null): boolean {
+  if (!iso) return false
+  try {
+    return Date.now() - new Date(iso).getTime() < 30 * 24 * 60 * 60 * 1000
+  } catch {
+    return false
+  }
 }
 
 function relativeTime(iso: string | null): string {
@@ -37,7 +59,7 @@ function relativeTime(iso: string | null): string {
   }
 }
 
-export default function FamilySnapshotCard({ family, tenantId }: Props) {
+export default function FamilySnapshotCard({ family, tenantId, onRemoved }: Props) {
   const active = isActive(family.lastActiveAt)
   const initial = (family.name.charAt(0) || '?').toUpperCase()
   const names = family.memberNames || []
@@ -121,6 +143,7 @@ export default function FamilySnapshotCard({ family, tenantId }: Props) {
           tenantId={tenantId}
           familyId={family.id}
           familyName={family.name}
+          onRemoved={onRemoved}
         />
       </div>
     </div>
