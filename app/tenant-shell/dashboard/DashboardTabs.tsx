@@ -16,9 +16,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { auth } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { useTenantRole } from '@/hooks/useTenantRole'
 
 interface Tab {
   href: string
@@ -45,28 +43,10 @@ interface Props {
 export default function DashboardTabs({ tenantId }: Props) {
   const pathname = usePathname() || ''
 
-  // Owner-level = super admin OR this tenant's franchise_admin. Default false so
-  // franchise_staff never flash owner-only tabs; they reveal once confirmed.
-  const [isOwnerLevel, setIsOwnerLevel] = useState(false)
-  useEffect(() => {
-    if (!auth) return
-    const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) {
-        setIsOwnerLevel(false)
-        return
-      }
-      try {
-        const claims = (await user.getIdTokenResult()).claims as any
-        const isSuperAdmin = claims.role === 'admin'
-        const isFranchiseAdmin =
-          claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId
-        setIsOwnerLevel(isSuperAdmin || isFranchiseAdmin)
-      } catch {
-        setIsOwnerLevel(false)
-      }
-    })
-    return () => unsub()
-  }, [tenantId])
+  // Owner-level = super admin OR this tenant's franchise_admin. Until the role
+  // check resolves, useTenantRole reports isOwnerLevel=false, so franchise_staff
+  // never flash owner-only tabs; they reveal once confirmed owner.
+  const { isOwnerLevel } = useTenantRole(tenantId)
 
   const visibleTabs = TABS.filter(tab => !tab.ownerOnly || isOwnerLevel)
 

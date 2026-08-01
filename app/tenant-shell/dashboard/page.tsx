@@ -23,7 +23,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { useTenantRole } from '@/hooks/useTenantRole'
 import { useTenantDashboard, type FranchiseFamilySnapshot } from '@/hooks/useTenantDashboard'
 import type { ScheduledVisit, CoordinationAppointment } from '@/app/tenant-shell/dashboard/_lib/load-families'
 import { getCSRFToken } from '@/lib/csrf'
@@ -46,12 +46,6 @@ import { capitalizeName } from '@/lib/utils'
 
 export default function FranchiseDashboardOverview() {
   const [tenantId, setTenantId] = useState<string | null>(null)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [authorized, setAuthorized] = useState(false)
-  // Who's looking — decides whether "Today's Schedule" is the whole
-  // practice's board (admin) or just this person's route (staff).
-  const [viewerUid, setViewerUid] = useState<string | null>(null)
-  const [viewerIsAdmin, setViewerIsAdmin] = useState(false)
   const router = useRouter()
 
   // Read tenantId from the DOM (set by layout.tsx's data-tenant-id)
@@ -62,36 +56,21 @@ export default function FranchiseDashboardOverview() {
     }
   }, [])
 
-  // Auth check (same pattern as FamiliesAuthGuard)
+  // Viewer role via the shared hook (single source). tenantId is read from the
+  // DOM after mount, so GATE on it: don't treat the check as resolved or redirect
+  // until tenantId is known — a null tenantId would fail the claim match and
+  // bounce to /login, which the auth router bounces back to /dashboard (a loop).
+  const role = useTenantRole(tenantId || '')
+  const authChecked = !!tenantId && role.checked
+  const authorized = !!tenantId && role.isTenantMember
+  const viewerUid = role.uid
+  // Owner/super-admin sees the whole practice board; staff see only their visits.
+  const viewerIsAdmin = role.isOwnerLevel
   useEffect(() => {
-    if (!auth) { router.replace('/login?next=/dashboard'); return }
-    const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) { router.replace('/login?next=/dashboard'); return }
-      // Wait until tenantId is read from the DOM (set after mount) before
-      // deciding. A null tenantId fails the `claims.tenantId === tenantId`
-      // match below and bounces to /login, which the auth router bounces
-      // straight back to /dashboard → redirect loop. The effect re-runs when
-      // tenantId is set (it's a dependency) and re-checks correctly.
-      if (!tenantId) return
-      try {
-        const tokenResult = await user.getIdTokenResult()
-        const claims = tokenResult.claims as any
-        const isSuperAdmin = claims.role === 'admin'
-        const isFranchiseAdmin = claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId
-        const isFranchiseStaff = claims.tenantRole === 'franchise_staff' && claims.tenantId === tenantId
-        if (isSuperAdmin || isFranchiseAdmin || isFranchiseStaff) {
-          setAuthorized(true)
-          setViewerUid(user.uid)
-          // Owner/super-admin sees the whole practice board; a staff
-          // member sees only the visits assigned to them.
-          setViewerIsAdmin(isSuperAdmin || isFranchiseAdmin)
-        } else {
-          router.replace('/login?next=/dashboard')
-        }
-      } finally { setAuthChecked(true) }
-    })
-    return () => unsub()
-  }, [router, tenantId])
+    if (tenantId && role.checked && !role.isTenantMember) {
+      router.replace('/login?next=/dashboard')
+    }
+  }, [tenantId, role.checked, role.isTenantMember, router])
 
   const {
     stats,

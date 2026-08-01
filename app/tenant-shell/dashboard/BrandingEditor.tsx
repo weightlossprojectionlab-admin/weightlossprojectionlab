@@ -24,7 +24,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { auth, storage } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { useTenantRole } from '@/hooks/useTenantRole'
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { logger } from '@/lib/logger'
 import { getCSRFToken } from '@/lib/csrf'
@@ -60,8 +60,10 @@ const MAX_LOGO_BYTES = 5 * 1024 * 1024 // 5MB — must match storage.rules
 export default function BrandingEditor({ tenantId, initial }: Props) {
   const router = useRouter()
   const [state, setState] = useState<BrandingState>(initial)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [authorized, setAuthorized] = useState(false)
+  // Owner-level auth check via the shared hook (single source).
+  const role = useTenantRole(tenantId)
+  const authChecked = role.checked
+  const authorized = role.isOwnerLevel
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -71,32 +73,8 @@ export default function BrandingEditor({ tenantId, initial }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (!auth) {
-      router.replace('/login?next=/dashboard')
-      return
-    }
-    const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) {
-        router.replace('/login?next=/dashboard')
-        return
-      }
-      try {
-        const tokenResult = await user.getIdTokenResult()
-        const claims = tokenResult.claims as any
-        const isSuperAdmin = claims.role === 'admin'
-        const isFranchiseAdminForThis =
-          claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId
-        if (!isSuperAdmin && !isFranchiseAdminForThis) {
-          router.replace('/login?next=/dashboard')
-          return
-        }
-        setAuthorized(true)
-      } finally {
-        setAuthChecked(true)
-      }
-    })
-    return () => unsub()
-  }, [router, tenantId])
+    if (role.checked && !role.isOwnerLevel) router.replace('/login?next=/dashboard')
+  }, [role.checked, role.isOwnerLevel, router])
 
   const validateFile = (file: File): string | null => {
     if (!ACCEPTED_LOGO_TYPES.includes(file.type)) {
