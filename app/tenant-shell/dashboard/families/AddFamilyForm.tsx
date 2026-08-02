@@ -9,8 +9,9 @@
  * is the only way to populate the Managed Families list.
  *
  * POSTs to /api/tenant/{tenantId}/managed-families with a Bearer token + CSRF
- * header. On success, calls router.refresh() so the server-rendered families
- * table re-fetches and shows the newly attached family.
+ * header. On success, calls onAdded() (the client-fetched FamiliesRoster's
+ * refetch) so the new family appears; falls back to router.refresh() if no
+ * callback is provided.
  */
 
 import { useState, useRef } from 'react'
@@ -21,9 +22,10 @@ import { logger } from '@/lib/logger'
 
 interface Props {
   tenantId: string
+  onAdded?: () => void
 }
 
-export default function AddFamilyForm({ tenantId }: Props) {
+export default function AddFamilyForm({ tenantId, onAdded }: Props) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -76,7 +78,8 @@ export default function AddFamilyForm({ tenantId }: Props) {
       }
       setEmail('')
       // Re-fetch the server-rendered families table.
-      router.refresh()
+      if (onAdded) onAdded()
+      else router.refresh()
       // Keep focus in the input for rapid bulk-attach.
       inputRef.current?.focus()
     } catch (err) {
@@ -96,7 +99,7 @@ export default function AddFamilyForm({ tenantId }: Props) {
         htmlFor="add-family-email"
         className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
       >
-        Add a family by email
+        Add a client by email
       </label>
       <div className="flex flex-col sm:flex-row gap-2">
         <input
@@ -105,7 +108,7 @@ export default function AddFamilyForm({ tenantId }: Props) {
           type="email"
           value={email}
           onChange={e => setEmail(e.target.value)}
-          placeholder="family@example.com"
+          placeholder="client@example.com"
           autoComplete="email"
           disabled={submitting}
           className="flex-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 disabled:opacity-50"
@@ -115,11 +118,11 @@ export default function AddFamilyForm({ tenantId }: Props) {
           disabled={submitting || !email.trim()}
           className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
         >
-          {submitting ? 'Adding…' : 'Add Family'}
+          {submitting ? 'Adding…' : 'Add Client'}
         </button>
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-500 mt-2">
-        Enter any email address. If the family doesn&rsquo;t have a Wellness
+        Enter any email address. If the client doesn&rsquo;t have a Wellness
         Projection Lab account yet, we&rsquo;ll create one for them automatically.
         They&rsquo;ll appear in your list immediately.
       </p>

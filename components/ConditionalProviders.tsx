@@ -55,8 +55,10 @@ export function ConditionalProviders({ children, tenantSlug }: { children: React
                 {children}
               </div>
               <AppMenu />
-              {/* Dev/admin-only floating plan switcher (self-gates via shouldShow). */}
-              <SubscriptionSimulator />
+              {/* Dev-only floating plan switcher (self-gates to development). Hidden on
+                  white-label tenant surfaces — a WPL consumer-plan tool has no meaning
+                  there and shouldn't appear over a partner's brand. */}
+              {!tenantSlug && <SubscriptionSimulator />}
               <Toaster
               position="top-center"
               toastOptions={{

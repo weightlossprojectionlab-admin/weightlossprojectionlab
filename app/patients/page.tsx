@@ -22,6 +22,7 @@ import { UpgradeModal } from '@/components/subscription/UpgradeModal'
 import { useLockedAction } from '@/hooks/useLockedAction'
 import { LockClosedIcon } from '@heroicons/react/24/solid'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
+import { useTenant } from '@/contexts/TenantContext'
 import { useUserProfile } from '@/hooks/useUserProfile'
 import { useCanImport } from '@/hooks/useCanImport'
 import {
@@ -106,6 +107,10 @@ function PatientsContent() {
   const pageSubtitle = getTrackingPageSubtitle(userProfile as any)
   const addButtonText = getAddButtonText(userProfile as any)
   const terminology = getTrackingTerminology(userProfile as any)
+  // White-label: on a tenant subdomain, hide WPL's consumer plan/seat UI. A
+  // client of an agency isn't a WPL subscriber (the agency is), so a WPL plan
+  // badge + seat cap is a positioning leak under the partner's brand.
+  const { isFranchise } = useTenant()
 
   // Caregiver-only fallback. When the user's OWN subscription has ended but
   // they still have caregiver access to other households, hide their own
@@ -212,11 +217,12 @@ function PatientsContent() {
           </div>
         )}
 
-        {/* Member Limit Indicator — hidden in caregiver-only mode: the own
+        {/* Member Limit Indicator — hidden in caregiver-only mode (the own
             plan's seat count is irrelevant when we're showing only the people
-            they help under someone else's plan. */}
-        {subscription && !caregiverOnlyMode && (
-          <div className="mb-6 bg-card rounded-lg shadow-sm border border-border p-4">
+            they help under someone else's plan) AND on tenant surfaces (the
+            WPL consumer plan/seat UI has no meaning under a partner's brand). */}
+        {subscription && !caregiverOnlyMode && !isFranchise && (
+          <div data-testid="plan-seat-indicator" className="mb-6 bg-card rounded-lg shadow-sm border border-border p-4">
             <div className="flex items-center gap-3 mb-2">
               <p className="text-sm font-medium text-foreground flex items-center gap-2">
                 {terminology}: {current} of {(max ?? 0) >= 999 ? <span className="text-xl">∞</span> : max}

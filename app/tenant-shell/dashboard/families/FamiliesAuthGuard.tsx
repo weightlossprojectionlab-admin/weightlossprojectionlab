@@ -1,22 +1,19 @@
 'use client'
 
 /**
- * Families Auth Guard
+ * Families Auth Guard (tenant-member).
  *
- * Mirrors the auth-check pattern from BrandingEditor.tsx — verifies the
- * signed-in Firebase user has either super-admin role or franchise_admin
- * tenantRole matching this tenant. Bounces to /login on mismatch.
- *
- * Lives next to the families page rather than in a shared lib because
- * (a) only one consumer today and (b) the BrandingEditor copy is the only
- * other instance — extraction to lib/ waits for the rule of three (next
- * dashboard page that needs it, e.g. /dashboard/staff in slice 4).
+ * Families is a SHARED tenant surface: authorizes super-admin OR any member of
+ * THIS tenant (franchise_admin OR franchise_staff), bouncing others to /login.
+ * (Admin-only sections — staff/branding/packages — keep their own owner-level
+ * guards.) Role resolution is the shared useTenantRole hook — the single source
+ * that ended the drift which had this guard rejecting the staff the Overview
+ * authorized.
  */
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import { auth } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { useTenantRole } from '@/hooks/useTenantRole'
 
 interface Props {
   tenantId: string
@@ -25,44 +22,19 @@ interface Props {
 
 export default function FamiliesAuthGuard({ tenantId, children }: Props) {
   const router = useRouter()
-  const [authChecked, setAuthChecked] = useState(false)
-  const [authorized, setAuthorized] = useState(false)
+  const role = useTenantRole(tenantId)
 
   useEffect(() => {
-    if (!auth) {
-      router.replace('/login?next=/dashboard/families')
-      return
-    }
-    const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) {
-        router.replace('/login?next=/dashboard/families')
-        return
-      }
-      try {
-        const tokenResult = await user.getIdTokenResult()
-        const claims = tokenResult.claims as any
-        const isSuperAdmin = claims.role === 'admin'
-        const isFranchiseAdminForThis =
-          claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId
-        if (!isSuperAdmin && !isFranchiseAdminForThis) {
-          router.replace('/login?next=/dashboard/families')
-          return
-        }
-        setAuthorized(true)
-      } finally {
-        setAuthChecked(true)
-      }
-    })
-    return () => unsub()
-  }, [router, tenantId])
+    if (role.checked && !role.isTenantMember) router.replace('/login?next=/dashboard/families')
+  }, [role.checked, role.isTenantMember, router])
 
-  if (!authChecked) {
+  if (!role.checked) {
     return (
       <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-8 text-center text-gray-500">
         Loading&hellip;
       </div>
     )
   }
-  if (!authorized) return null
+  if (!role.isTenantMember) return null
   return <>{children}</>
 }

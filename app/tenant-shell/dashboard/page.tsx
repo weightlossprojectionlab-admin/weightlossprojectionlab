@@ -23,7 +23,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
-import { onAuthStateChanged } from 'firebase/auth'
+import { useTenantRole } from '@/hooks/useTenantRole'
 import { useTenantDashboard, type FranchiseFamilySnapshot } from '@/hooks/useTenantDashboard'
 import type { ScheduledVisit, CoordinationAppointment } from '@/app/tenant-shell/dashboard/_lib/load-families'
 import { getCSRFToken } from '@/lib/csrf'
@@ -46,12 +46,6 @@ import { capitalizeName } from '@/lib/utils'
 
 export default function FranchiseDashboardOverview() {
   const [tenantId, setTenantId] = useState<string | null>(null)
-  const [authChecked, setAuthChecked] = useState(false)
-  const [authorized, setAuthorized] = useState(false)
-  // Who's looking — decides whether "Today's Schedule" is the whole
-  // practice's board (admin) or just this person's route (staff).
-  const [viewerUid, setViewerUid] = useState<string | null>(null)
-  const [viewerIsAdmin, setViewerIsAdmin] = useState(false)
   const router = useRouter()
 
   // Read tenantId from the DOM (set by layout.tsx's data-tenant-id)
@@ -62,30 +56,21 @@ export default function FranchiseDashboardOverview() {
     }
   }, [])
 
-  // Auth check (same pattern as FamiliesAuthGuard)
+  // Viewer role via the shared hook (single source). tenantId is read from the
+  // DOM after mount, so GATE on it: don't treat the check as resolved or redirect
+  // until tenantId is known — a null tenantId would fail the claim match and
+  // bounce to /login, which the auth router bounces back to /dashboard (a loop).
+  const role = useTenantRole(tenantId || '')
+  const authChecked = !!tenantId && role.checked
+  const authorized = !!tenantId && role.isTenantMember
+  const viewerUid = role.uid
+  // Owner/super-admin sees the whole practice board; staff see only their visits.
+  const viewerIsAdmin = role.isOwnerLevel
   useEffect(() => {
-    if (!auth) { router.replace('/login?next=/dashboard'); return }
-    const unsub = onAuthStateChanged(auth, async user => {
-      if (!user) { router.replace('/login?next=/dashboard'); return }
-      try {
-        const tokenResult = await user.getIdTokenResult()
-        const claims = tokenResult.claims as any
-        const isSuperAdmin = claims.role === 'admin'
-        const isFranchiseAdmin = claims.tenantRole === 'franchise_admin' && claims.tenantId === tenantId
-        const isFranchiseStaff = claims.tenantRole === 'franchise_staff' && claims.tenantId === tenantId
-        if (isSuperAdmin || isFranchiseAdmin || isFranchiseStaff) {
-          setAuthorized(true)
-          setViewerUid(user.uid)
-          // Owner/super-admin sees the whole practice board; a staff
-          // member sees only the visits assigned to them.
-          setViewerIsAdmin(isSuperAdmin || isFranchiseAdmin)
-        } else {
-          router.replace('/login?next=/dashboard')
-        }
-      } finally { setAuthChecked(true) }
-    })
-    return () => unsub()
-  }, [router, tenantId])
+    if (tenantId && role.checked && !role.isTenantMember) {
+      router.replace('/login?next=/dashboard')
+    }
+  }, [tenantId, role.checked, role.isTenantMember, router])
 
   const {
     stats,
@@ -319,9 +304,15 @@ export default function FranchiseDashboardOverview() {
                   <ToolCard title="Shopping Lists" description="View and manage shopping for each family" icon={<span className="text-2xl">🛒</span>} href="/family-admin/shopping" color="lime" />
                   <ToolCard title="Kitchen Inventory" description="Track food inventory across all families" icon={<span className="text-2xl">📦</span>} href="/family-admin/inventory" color="emerald" />
                   <ToolCard title="Notifications" description="Stay updated on health events and reminders" icon={<BellIcon className="w-6 h-6" />} href="/notifications" color="pink" />
-                  {/* Franchise admin tools */}
-                  <ToolCard title="Staff Management" description="Invite and manage your practice staff" icon={<span className="text-2xl">👤</span>} href="/dashboard/staff" color="violet" />
-                  <ToolCard title="Branding & Logo" description="Customize your practice's appearance" icon={<PaintBrushIcon className="w-6 h-6" />} href="/dashboard/branding" color="orange" />
+                  {/* Franchise admin tools — owner-only (hidden from franchise_staff,
+                      matching the role-gated dashboard tabs). Their pages are
+                      admin-guarded too; this keeps the Overview consistent. */}
+                  {viewerIsAdmin && (
+                    <>
+                      <ToolCard title="Staff Management" description="Invite and manage your practice staff" icon={<span className="text-2xl">👤</span>} href="/dashboard/staff" color="violet" />
+                      <ToolCard title="Branding & Logo" description="Customize your practice's appearance" icon={<PaintBrushIcon className="w-6 h-6" />} href="/dashboard/branding" color="orange" />
+                    </>
+                  )}
                   <ToolCard title="Provider Directory" description="See how your practice appears to families" icon={<MagnifyingGlassIcon className="w-6 h-6" />} href="/find-a-provider" color="amber" />
                   <ToolCard title="Public Profile" description="Your practice's public about page" icon={<DocumentTextIcon className="w-6 h-6" />} href="/about" color="cyan" />
                 </div>
@@ -590,29 +581,24 @@ function FamilySnapshotCard({ family }: { family: FranchiseFamilySnapshot }) {
           </span>
         </div>
       </div>
+      {/* Household summary — a client is a household. Per-member health
+          (meals/weights/vitals/meds) lives in the client-detail view (click),
+          not aggregated onto this directory card. */}
       <div className="space-y-2 text-sm">
         <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400">Active Medications:</span>
-          <span className="font-medium text-gray-900 dark:text-gray-100">{family.activeMedications}</span>
+          <span className="text-gray-500 dark:text-gray-400">Care recipients:</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100">{family.memberCount}</span>
         </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400">Last Meal:</span>
-          <span className="font-medium text-gray-900 dark:text-gray-100">
-            {family.lastMealAt ? `${formatDate(family.lastMealAt)}${family.lastMealName ? ` · ${family.lastMealName}` : ''}` : 'Never'}
-          </span>
-        </div>
-        <div className="flex items-center justify-between">
-          <span className="text-gray-500 dark:text-gray-400">Last Vital Check:</span>
-          <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(family.lastVitalCheck)}</span>
-        </div>
-        {family.latestWeight && (
-          <div className="flex items-center justify-between">
-            <span className="text-gray-500 dark:text-gray-400">Latest Weight:</span>
-            <span className="font-medium text-gray-900 dark:text-gray-100">
-              {family.latestWeight.weight} {family.latestWeight.unit}
-            </span>
-          </div>
+        {family.memberNames.length > 0 && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+            {family.memberNames.slice(0, 3).join(', ')}
+            {family.memberNames.length > 3 ? ` +${family.memberNames.length - 3} more` : ''}
+          </p>
         )}
+        <div className="flex items-center justify-between">
+          <span className="text-gray-500 dark:text-gray-400">Last activity:</span>
+          <span className="font-medium text-gray-900 dark:text-gray-100">{formatDate(family.lastActiveAt)}</span>
+        </div>
       </div>
       <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 text-right">
         <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">

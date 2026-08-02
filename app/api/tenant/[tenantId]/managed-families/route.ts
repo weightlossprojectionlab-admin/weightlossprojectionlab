@@ -24,10 +24,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
 import { adminAuth, adminDb } from '@/lib/firebase-admin'
 import { FieldValue } from 'firebase-admin/firestore'
 import { verifyTenantStaffOrAdminAuth } from '@/lib/tenant-auth'
+import { loadManagedFamilies, loadPendingRequests } from '@/app/tenant-shell/dashboard/_lib/load-families'
 import { logAdminAction } from '@/lib/admin/audit'
 import { getPlanLimits } from '@/lib/franchise-plans'
 import { logger } from '@/lib/logger'
@@ -49,6 +49,41 @@ class SeatError extends Error {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+/**
+ * GET — the managed-families roster + pending requests, for the Families tab.
+ *
+ * SECURITY: this is how the roster loads its PII (family names/emails, care-
+ * recipient names, pending-request emails + messages) CLIENT-side, so it is NOT
+ * server-rendered into the RSC payload of a route with only a client-side guard.
+ * Gated by verifyTenantStaffOrAdminAuth + tenant match.
+ */
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    const { tenantId } = await context.params
+    if (!tenantId) {
+      return NextResponse.json({ error: 'tenantId is required' }, { status: 400 })
+    }
+    const verification = await verifyTenantStaffOrAdminAuth(request.headers.get('authorization'))
+    if (!verification.ok) {
+      return NextResponse.json({ error: verification.error || 'Forbidden' }, { status: 403 })
+    }
+    if (!verification.isSuperAdmin && verification.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Forbidden — wrong tenant' }, { status: 403 })
+    }
+    const [families, pendingRequests] = await Promise.all([
+      loadManagedFamilies(tenantId),
+      loadPendingRequests(tenantId),
+    ])
+    return NextResponse.json({ families, pendingRequests })
+  } catch (err) {
+    logger.error('[managed-families] GET failed', err as Error)
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : 'Internal error' },
+      { status: 500 }
+    )
+  }
+}
 
 export async function POST(request: NextRequest, context: RouteContext) {
   try {
@@ -242,9 +277,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
         ? 'franchise owner manual attach'
         : 'franchise staff manual attach',
     })
-
-    // Re-render the families list so the new row appears immediately.
-    revalidatePath('/tenant-shell/dashboard/families')
 
     logger.info('[managed-families] family attached', {
       tenantId,

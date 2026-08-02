@@ -93,6 +93,24 @@ export default function ProgressPage() {
   )
 }
 
+/**
+ * Start weight for goal math, resolved once: explicit goal start weight → first
+ * logged weight → current weight. Single source so the projection ETA and the
+ * goal-progress calc can't diverge on "where did they start". (The goal-based
+ * ETA doesn't actually read start weight — calculateWeightProjection uses it
+ * only for progressPercentage — but funnelling both through one resolver kills
+ * the two-implementations drift.)
+ */
+function resolveStartWeight(
+  goalStart: number | undefined,
+  firstLoggedWeight: number | undefined,
+  currentWeight: number | undefined,
+): number | undefined {
+  if (typeof goalStart === 'number' && goalStart > 0) return goalStart
+  if (typeof firstLoggedWeight === 'number' && firstLoggedWeight > 0) return firstLoggedWeight
+  return currentWeight
+}
+
 function ProgressContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -654,7 +672,7 @@ function ProgressContent() {
       { currentWeight: current } as UserProfile,
       {
         targetWeight: target,
-        startWeight: activeProfile?.goals?.startWeight ?? current,
+        startWeight: resolveStartWeight(activeProfile?.goals?.startWeight, weightData[0]?.weight, current),
         weeklyWeightLossGoal: rate,
       } as UserGoals,
       [], // no logs → goal-based projection only
@@ -667,7 +685,7 @@ function ProgressContent() {
       weeks: projection.weeksRemaining,
       lbsToGo: Math.abs(projection.weightToLose),
     }
-  }, [targetWeightEta, activeProfile, profileCurrentWeight])
+  }, [targetWeightEta, activeProfile, profileCurrentWeight, weightData])
 
   // Single source for the "Jul 28, 2026" projection-date label used by the ETA /
   // target-date strings below. Kept local rather than lib/date-utils.formatDate
@@ -834,27 +852,15 @@ function ProgressContent() {
 
     const currentWeight = weightData[weightData.length - 1].weight
 
-    // Resolve start weight: goals.startWeight → first weight log → currentWeight
-    let startWeight = activeProfile.goals.startWeight
-    if (!startWeight || startWeight <= 0) {
-      // Fallback to first weight log entry (oldest)
-      if (weightData.length > 0) {
-        startWeight = weightData[0].weight
-      }
-      // Final fallback to currentWeight from profile
-      if (!startWeight && activeProfile.profile?.currentWeight) {
-        startWeight = activeProfile.profile.currentWeight
-      }
-    }
-
-    // Debug logging
-    console.log('Progress page - Goal data:', {
-      startWeight: activeProfile.goals.startWeight,
-      weeklyWeightLossGoal: activeProfile.goals.weeklyWeightLossGoal,
-      targetWeight: activeProfile.goals.targetWeight,
-      currentWeight,
-      calculatedStartWeight: startWeight
-    })
+    // Start weight via the shared resolver (goal start → first log → current).
+    // Coalesce to the local currentWeight (a real number here — weightData is
+    // non-empty) so the value is always defined for calculateGoalProgress.
+    const startWeight =
+      resolveStartWeight(
+        activeProfile.goals.startWeight,
+        weightData[0]?.weight,
+        activeProfile.profile?.currentWeight,
+      ) ?? currentWeight
 
     // Convert WeightDataPoint[] to WeightLog[] format
     const weightLogs = weightData.map(w => ({
