@@ -43,6 +43,42 @@ export function getRateCard(tenantRateCard?: RateCardItem[] | null): RateCardIte
   return tenantRateCard && tenantRateCard.length > 0 ? tenantRateCard : DEFAULT_RATE_CARD
 }
 
+const VALID_UNITS = new Set<PricingUnit>(['hourly', 'flat', 'per_unit', 'mileage'])
+const VALID_CATEGORIES = new Set<DutyCategory>(DEFAULT_RATE_CARD.map(r => r.category))
+const MAX_RATE_CENTS = 1_000_000 // $10k/hr — a sanity ceiling, not a real price
+
+/**
+ * Validate + clean an untrusted rate card (from the save API). Returns null if
+ * the payload isn't a well-formed array of known-category items, so the route
+ * can reject it. Rates are clamped to non-negative integers under a sane
+ * ceiling; a rateRange is repaired to a sorted, non-negative pair.
+ */
+export function sanitizeRateCard(input: unknown): RateCardItem[] | null {
+  if (!Array.isArray(input) || input.length === 0) return null
+  const out: RateCardItem[] = []
+  for (const raw of input) {
+    if (!raw || typeof raw !== 'object') return null
+    const r = raw as Record<string, unknown>
+    if (!VALID_CATEGORIES.has(r.category as DutyCategory)) return null
+    if (!VALID_UNITS.has(r.unit as PricingUnit)) return null
+    const rate = Number(r.defaultRate)
+    if (!Number.isFinite(rate) || rate < 0 || rate > MAX_RATE_CENTS) return null
+    const range = Array.isArray(r.rateRange) ? r.rateRange : []
+    const rawMin = Number(range[0])
+    const rawMax = Number(range[1])
+    const min = Number.isFinite(rawMin) && rawMin >= 0 ? Math.round(rawMin) : 0
+    const max = Number.isFinite(rawMax) && rawMax >= min ? Math.round(rawMax) : min
+    out.push({
+      category: r.category as DutyCategory,
+      unit: r.unit as PricingUnit,
+      defaultRate: Math.round(rate),
+      rateRange: [min, max],
+      requiresCareTier: !!r.requiresCareTier,
+    })
+  }
+  return out
+}
+
 // ─── Estimate derivation ───────────────────────────────────────────────────
 
 export interface EstimateTask {

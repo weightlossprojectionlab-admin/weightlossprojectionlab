@@ -15,6 +15,7 @@ import { notFound } from 'next/navigation'
 import { getTenantBySlug } from '@/lib/tenant-server'
 import TenantAuthGuard from '@/components/tenant/TenantAuthGuard'
 import CarePackageBuilder from '@/components/tenant/CarePackageBuilder'
+import RateCardEditor from '@/components/tenant/RateCardEditor'
 
 export const dynamic = 'force-dynamic'
 
@@ -28,7 +29,10 @@ export default async function PackagesPage() {
 
   return (
     <TenantAuthGuard tenantId={tenant.id} nextPath="/dashboard/packages">
-      <CarePackageBuilder tenantId={tenant.id} initialPackages={[]} />
+      <div className="space-y-8">
+        <CarePackageBuilder tenantId={tenant.id} initialPackages={[]} />
+        <RateCardEditor tenantId={tenant.id} />
+      </div>
     </TenantAuthGuard>
   )
 }

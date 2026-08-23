@@ -1,4 +1,4 @@
-import { DEFAULT_RATE_CARD, getRateCard, estimateVisit } from './rate-card'
+import { DEFAULT_RATE_CARD, getRateCard, estimateVisit, sanitizeRateCard } from './rate-card'
 import type { DutyCategory } from '@/types/household-duties'
 
 // Every DutyCategory the app can assign must be priceable, or a task falls
@@ -144,5 +144,38 @@ describe('estimateVisit — robustness', () => {
     expect(e.lines).toHaveLength(0)
     expect(e.totalBillableCents).toBe(0)
     expect(e.coveredValueCents).toBe(0)
+  })
+})
+
+describe('sanitizeRateCard', () => {
+  const valid = [
+    { category: 'laundry', unit: 'per_unit', defaultRate: 1800, rateRange: [1000, 2500], requiresCareTier: false },
+  ]
+
+  it('accepts a well-formed card and rounds/coerces fields', () => {
+    const out = sanitizeRateCard([
+      { category: 'personal_care', unit: 'hourly', defaultRate: 3800.6, rateRange: [3000, 4500], requiresCareTier: 1 },
+    ])
+    expect(out).not.toBeNull()
+    expect(out![0].defaultRate).toBe(3801)
+    expect(out![0].requiresCareTier).toBe(true)
+  })
+
+  it('rejects non-arrays and empty arrays', () => {
+    expect(sanitizeRateCard(null)).toBeNull()
+    expect(sanitizeRateCard({})).toBeNull()
+    expect(sanitizeRateCard([])).toBeNull()
+  })
+
+  it('rejects unknown category / invalid unit / bad rate', () => {
+    expect(sanitizeRateCard([{ ...valid[0], category: 'bogus' }])).toBeNull()
+    expect(sanitizeRateCard([{ ...valid[0], unit: 'yearly' }])).toBeNull()
+    expect(sanitizeRateCard([{ ...valid[0], defaultRate: -5 }])).toBeNull()
+    expect(sanitizeRateCard([{ ...valid[0], defaultRate: 9_999_999 }])).toBeNull()
+  })
+
+  it('repairs a missing or reversed rateRange to a sorted, non-negative pair', () => {
+    expect(sanitizeRateCard([{ ...valid[0], rateRange: undefined }])![0].rateRange).toEqual([0, 0])
+    expect(sanitizeRateCard([{ ...valid[0], rateRange: [50, 10] }])![0].rateRange).toEqual([50, 50])
   })
 })
