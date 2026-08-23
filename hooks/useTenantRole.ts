@@ -53,6 +53,18 @@ export function useTenantRole(tenantId: string): TenantRole {
       setRole(SIGNED_OUT)
       return
     }
+    // Consumers (e.g. the dashboard Overview) read tenantId from the DOM AFTER
+    // mount, so it transitions '' → real id. While tenantId is unknown, or while
+    // re-evaluating for a changed tenantId, membership is INDETERMINATE: report
+    // not-checked (consumers show a loader) rather than a stale "checked, not-a-
+    // member" verdict. Emitting that verdict for the '' phase let a guard bounce
+    // a VALID member to /login, which /login → /auth → (franchise → dashboard)
+    // bounced back — an /auth ↔ /dashboard reload loop after fresh sign-in.
+    if (!tenantId) {
+      setRole(prev => (prev.checked ? { ...SIGNED_OUT, checked: false } : prev))
+      return
+    }
+    setRole(prev => (prev.checked ? { ...prev, checked: false } : prev))
     const unsub = onAuthStateChanged(auth, async user => {
       if (!user) {
         setRole(SIGNED_OUT)
