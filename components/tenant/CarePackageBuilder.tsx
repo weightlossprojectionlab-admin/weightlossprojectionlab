@@ -28,7 +28,10 @@ import {
   TIER_META,
   TIER_ORDER,
 } from '@/lib/care-packages'
-import type { CarePackage, CarePackageTier } from '@/types/tenant'
+import type { CarePackage, CarePackageTier, RateCardItem } from '@/types/tenant'
+import type { DutyCategory } from '@/types/household-duties'
+import { DUTY_CATEGORY_LABEL, ALL_DUTY_CATEGORIES } from '@/lib/duty-categories'
+import { DEFAULT_RATE_CARD, estimateVisit, getRateCard, type EstimateTask } from '@/lib/rate-card'
 
 interface Props {
   tenantId: string
@@ -42,6 +45,7 @@ interface DraftForm {
   priceDollars: string
   included: string // one per line
   excluded: string // one per line
+  includedCategories: DutyCategory[] // structured coverage — powers the estimate
   visitsPerMonth: string
   responseTimeHours: string
   active: boolean
@@ -53,10 +57,20 @@ const EMPTY_DRAFT: DraftForm = {
   priceDollars: '',
   included: '',
   excluded: '',
+  includedCategories: [],
   visitsPerMonth: '',
   responseTimeHours: '',
   active: true,
 }
+
+// A representative visit used only to preview a package's coverage live in the
+// builder — "covers ~$X of a sample visit; ~$Y billed on top."
+const SAMPLE_VISIT: EstimateTask[] = [
+  { category: 'cleaning_bathroom', quantity: 1 },
+  { category: 'laundry', quantity: 2 },
+  { category: 'meal_preparation', quantity: 1 },
+  { category: 'grocery_shopping', quantity: 1, passThroughCents: 6000 },
+]
 
 // Smart-default deliverables per tier (playbook: concrete, capped, and
 // "Not included" made explicit). Inlined — the builder is the only consumer.
@@ -97,6 +111,9 @@ export default function CarePackageBuilder({ tenantId, initialPackages }: Props)
   // Proposal state
   const [clientName, setClientName] = useState('')
   const [proposalUrl, setProposalUrl] = useState<string | null>(null)
+  // The agency's rate card — powers the live coverage/estimate preview. Falls
+  // back to the shipped defaults until the gated fetch lands.
+  const [rateCard, setRateCard] = useState<RateCardItem[]>(DEFAULT_RATE_CARD)
 
   async function authedFetch(url: string, method: string, body?: any): Promise<Response> {
     if (!auth?.currentUser) throw new Error('You are not signed in.')
@@ -122,11 +139,22 @@ export default function CarePackageBuilder({ tenantId, initialPackages }: Props)
     }
   }
 
-  // Load packages client-side on mount so the owner's pricing is fetched behind
-  // the gated GET (verifyTenantAdminAuth) rather than server-rendered into the
-  // RSC payload. initialPackages is empty now — the page is a thin server shell.
+  async function loadRateCard() {
+    try {
+      const res = await authedFetch(`/api/tenant/${tenantId}/rate-card`, 'GET')
+      const json = await res.json().catch(() => ({}))
+      if (res.ok && json?.data?.rateCard) setRateCard(getRateCard(json.data.rateCard))
+    } catch (err) {
+      logger.error('[CarePackageBuilder] rate-card load failed', err as Error)
+    }
+  }
+
+  // Load packages + rate card client-side on mount so the owner's pricing is
+  // fetched behind the gated GET (verifyTenantAdminAuth) rather than server-
+  // rendered into the RSC payload. initialPackages is empty — thin server shell.
   useEffect(() => {
     void refetch()
+    void loadRateCard()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tenantId])
 
@@ -139,6 +167,7 @@ export default function CarePackageBuilder({ tenantId, initialPackages }: Props)
       currency: 'usd',
       included: toList(d.included),
       excluded: toList(d.excluded),
+      includedCategories: d.includedCategories,
       caps: {
         visitsPerMonth: d.visitsPerMonth ? Number(d.visitsPerMonth) : undefined,
         responseTimeHours: d.responseTimeHours ? Number(d.responseTimeHours) : undefined,
@@ -266,6 +295,7 @@ export default function CarePackageBuilder({ tenantId, initialPackages }: Props)
       priceDollars: String(centsToDollars(pkg.monthlyPrice)),
       included: (pkg.included || []).join('\n'),
       excluded: (pkg.excluded || []).join('\n'),
+      includedCategories: pkg.includedCategories || [],
       visitsPerMonth: pkg.caps?.visitsPerMonth != null ? String(pkg.caps.visitsPerMonth) : '',
       responseTimeHours: pkg.caps?.responseTimeHours != null ? String(pkg.caps.responseTimeHours) : '',
       active: pkg.active !== false,
@@ -476,6 +506,60 @@ export default function CarePackageBuilder({ tenantId, initialPackages }: Props)
                 onChange={e => setDraft({ ...draft, excluded: e.target.value })}
                 className={inputClass}
               />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Covered categories
+              </label>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                Which duty categories this plan includes. Anything unchecked is billed à la carte from the rate card.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {ALL_DUTY_CATEGORIES.map(cat => {
+                  const on = draft.includedCategories.includes(cat)
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setDraft({
+                          ...draft,
+                          includedCategories: on
+                            ? draft.includedCategories.filter(c => c !== cat)
+                            : [...draft.includedCategories, cat],
+                        })
+                      }
+                      className={`inline-flex items-center min-h-[44px] px-3 rounded-full border text-sm transition-colors ${
+                        on
+                          ? 'border-blue-600 bg-blue-600 text-white'
+                          : 'border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400'
+                      }`}
+                    >
+                      {DUTY_CATEGORY_LABEL[cat]}
+                    </button>
+                  )
+                })}
+              </div>
+              {(() => {
+                const est = estimateVisit(SAMPLE_VISIT, rateCard, {
+                  includedCategories: draft.includedCategories,
+                })
+                const fmt = (c: number) => `$${(c / 100).toFixed(0)}`
+                return (
+                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300" data-testid="coverage-preview">
+                    <span className="font-medium">Sample visit:</span> covers{' '}
+                    <span className="font-semibold text-green-700 dark:text-green-300">
+                      {fmt(est.coveredValueCents)}
+                    </span>{' '}
+                    of the work &middot;{' '}
+                    <span className="font-semibold text-gray-900 dark:text-gray-100">
+                      {fmt(est.totalBillableCents)}
+                    </span>{' '}
+                    billed on top.
+                  </p>
+                )
+              })()}
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

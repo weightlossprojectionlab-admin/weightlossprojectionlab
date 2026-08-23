@@ -13,25 +13,8 @@ import { useEffect, useState } from 'react'
 import { auth } from '@/lib/firebase'
 import { getCSRFToken } from '@/lib/csrf'
 import { logger } from '@/lib/logger'
-import type { DutyCategory } from '@/types/household-duties'
 import type { PricingUnit, RateCardItem } from '@/types/tenant'
-
-const CATEGORY_LABEL: Record<DutyCategory, string> = {
-  laundry: 'Laundry',
-  shopping: 'Shopping',
-  cleaning_bedroom: 'Bedroom cleaning',
-  cleaning_bathroom: 'Bathroom cleaning',
-  cleaning_kitchen: 'Kitchen cleaning',
-  cleaning_living_areas: 'Living areas cleaning',
-  meal_preparation: 'Meal preparation',
-  grocery_shopping: 'Grocery run',
-  medication_pickup: 'Medication pickup',
-  transportation: 'Transportation',
-  personal_care: 'Personal care',
-  pet_care: 'Pet care',
-  yard_work: 'Yard work',
-  custom: 'Custom / other',
-}
+import { DUTY_CATEGORY_LABEL } from '@/lib/duty-categories'
 
 const UNIT_SUFFIX: Record<PricingUnit, string> = {
   hourly: '/ hr',
@@ -147,7 +130,7 @@ export default function RateCardEditor({ tenantId }: Props) {
           <li key={it.category} className="flex items-center gap-3 py-3">
             <div className="flex-1 min-w-0">
               <p className="font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                {CATEGORY_LABEL[it.category]}
+                {DUTY_CATEGORY_LABEL[it.category]}
                 {it.requiresCareTier && (
                   <span className="inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300">
                     Care
@@ -164,7 +147,7 @@ export default function RateCardEditor({ tenantId }: Props) {
                 type="number"
                 min={0}
                 inputMode="numeric"
-                aria-label={`${CATEGORY_LABEL[it.category]} rate in dollars`}
+                aria-label={`${DUTY_CATEGORY_LABEL[it.category]} rate in dollars`}
                 value={toDollars(it.defaultRate)}
                 onChange={e => setRate(i, e.target.value)}
                 className="w-20 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 text-right text-gray-900 dark:text-gray-100"

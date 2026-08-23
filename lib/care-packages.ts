@@ -27,6 +27,8 @@
  */
 
 import type { CarePackage, CarePackageTier } from '@/types/tenant'
+import type { DutyCategory } from '@/types/household-duties'
+import { ALL_DUTY_CATEGORIES } from './duty-categories'
 
 // ── Playbook multipliers (relative to Core) ──
 export const CORE_TO_ANCHOR = 0.6
@@ -169,6 +171,15 @@ export function normalizePackageInput(body: any):
   const cleanCaps: Record<string, number> = {}
   for (const [k, val] of Object.entries(caps)) if (val !== undefined) cleanCaps[k] = val
 
+  // Structured coverage — which duty categories this package includes (dedup,
+  // known categories only), so the estimate engine can derive covered-vs-billable.
+  const validCats = new Set<DutyCategory>(ALL_DUTY_CATEGORIES)
+  const includedCategories = Array.isArray(body?.includedCategories)
+    ? (Array.from(new Set(body.includedCategories)).filter(c =>
+        validCats.has(c as DutyCategory)
+      ) as DutyCategory[])
+    : []
+
   return {
     ok: true,
     value: {
@@ -178,6 +189,7 @@ export function normalizePackageInput(body: any):
       currency: typeof body?.currency === 'string' && body.currency ? body.currency.toLowerCase() : 'usd',
       included: toStringList(body?.included),
       excluded: toStringList(body?.excluded),
+      includedCategories,
       caps: cleanCaps,
       active: body?.active !== false, // default active
       order: typeof body?.order === 'number' && Number.isFinite(body.order) ? body.order : (tier ? TIER_META[tier].order : 99),
