@@ -789,7 +789,12 @@ export async function loadTenantAppointments(tenantId: string): Promise<TenantAp
 
           if (ctx === 'caregiver-visit') {
             myVisits.push({
-              id: doc.id,
+              // Namespace by client: appointment doc ids are only unique WITHIN
+              // a family's subcollection, but myVisits aggregates across families
+              // (and demo seeds reuse fixed ids like `appt-cv-demo`), so a raw
+              // doc.id collides in the merged list — duplicate React keys. `id`
+              // is render-key-only here; `clientId` carries the drill-in link.
+              id: `${userDoc.id}:${doc.id}`,
               clientId: userDoc.id,
               clientName,
               patientId: a.patientId || null,
@@ -804,7 +809,8 @@ export async function loadTenantAppointments(tenantId: string): Promise<TenantAp
             })
           } else {
             familyAppointments.push({
-              id: doc.id,
+              // Namespaced for the same cross-family uniqueness reason as myVisits.
+              id: `${userDoc.id}:${doc.id}`,
               clientId: userDoc.id,
               clientName,
               patientId: a.patientId || null,
