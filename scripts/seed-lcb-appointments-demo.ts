@@ -98,6 +98,8 @@ async function main() {
       displayName: 'Henderson Family',
       email: 'henderson.demo@littlecarebears.test',
       phone: '+15555550142',
+      // Home-care agency has no office — this is where the caregiver visits.
+      address: { street: '128 Maple Ave', city: 'Riverton', state: 'NJ', zipCode: '08077', country: 'US' },
       managedBy: [tenantId],
       createdAt: daysAgo(120),
       lastActiveAt: nowIso,
@@ -296,11 +298,33 @@ async function main() {
     .where('managedBy', 'array-contains', tenantId)
     .get()
 
+  // Demo home addresses — this is a home-care agency (no office), so each
+  // family needs a home for the caregiver to visit. Assigned round-robin.
+  const DEMO_ADDRESSES = [
+    { street: '742 Evergreen Terrace', city: 'Riverton', state: 'NJ', zipCode: '08077', country: 'US' },
+    { street: '19 Birchwood Ln', city: 'Delran', state: 'NJ', zipCode: '08075', country: 'US' },
+    { street: '55 Coventry Rd', city: 'Cinnaminson', state: 'NJ', zipCode: '08077', country: 'US' },
+    { street: '304 Hollybush Dr', city: 'Moorestown', state: 'NJ', zipCode: '08057', country: 'US' },
+    { street: '88 Larchmont Blvd', city: 'Mount Laurel', state: 'NJ', zipCode: '08054', country: 'US' },
+    { street: '2 Sycamore Ct', city: 'Maple Shade', state: 'NJ', zipCode: '08052', country: 'US' },
+    { street: '417 Kings Hwy', city: 'Haddonfield', state: 'NJ', zipCode: '08033', country: 'US' },
+    { street: '9 Tanglewood Way', city: 'Marlton', state: 'NJ', zipCode: '08053', country: 'US' },
+  ]
+
   let i = 0
   for (const fam of others.docs) {
     if (fam.id === CLIENT_UID) continue // Henderson handled above
     const f = fam.data() as any
     const famName = f.name || f.displayName || f.email || 'Client'
+
+    // Give each demo family a home address if it has none — the caregiver's
+    // destination. Won't clobber a real address already on file.
+    if (!f.address) {
+      await fam.ref.set(
+        { address: DEMO_ADDRESSES[i % DEMO_ADDRESSES.length] },
+        { merge: true }
+      )
+    }
 
     // First active patient, if any — else the account holder.
     const patSnap = await fam.ref.collection('patients').where('status', '==', 'active').limit(1).get().catch(() => null)
@@ -323,7 +347,9 @@ async function main() {
       practiceStaffName: STAFF_ME && i % 2 === 0 ? STAFF_ME_NAME : 'Nurse Carla',
       type: 'routine-checkup',
       reason: 'Initial wellness visit',
-      location: 'In office',
+      // Home-care agency — no office. The visit is at the client's home; the
+      // caregiver's "where" is the family's address (set on the user doc below).
+      location: 'Home visit',
       dateTime: at(0, 11 + i, 0),
       status: 'scheduled',
       requiresDriver: false,

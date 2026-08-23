@@ -707,6 +707,11 @@ export interface ScheduledVisit {
   appointmentType: string // clinical type (orthogonal to careContext)
   dateTime: string
   location: string | null
+  // The client's home address. This is a home-care agency with no office, so
+  // every caregiver-visit happens at the client's home — this is where the
+  // staff member actually needs to go. Derived from the client profile at load
+  // (a denormalized copy that re-derives each read), null if not on file.
+  address: string | null
   status: string
 }
 
@@ -752,6 +757,15 @@ export interface TenantAppointments {
  *
  * Soft-fails to empty so one broken family can't crash the dashboard.
  */
+/** Format a client's structured home Address into a concise one-line string for
+ *  the caregiver's agenda — "street unit, city, state". Null when absent. */
+function formatHomeAddress(addr: any): string | null {
+  if (!addr || typeof addr !== 'object') return null
+  const street = [addr.street, addr.unit].filter(Boolean).join(' ')
+  const parts = [street, addr.city, addr.state].filter(Boolean)
+  return parts.length ? parts.join(', ') : null
+}
+
 export async function loadTenantAppointments(tenantId: string): Promise<TenantAppointments> {
   const myVisits: ScheduledVisit[] = []
   const familyAppointments: CoordinationAppointment[] = []
@@ -805,6 +819,7 @@ export async function loadTenantAppointments(tenantId: string): Promise<TenantAp
               appointmentType: a.type || 'other',
               dateTime,
               location: a.location || null,
+              address: formatHomeAddress(u.address),
               status: a.status || 'scheduled',
             })
           } else {

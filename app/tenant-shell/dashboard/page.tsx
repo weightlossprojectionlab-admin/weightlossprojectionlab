@@ -33,6 +33,7 @@ import {
   ClipboardDocumentListIcon,
   ExclamationTriangleIcon,
   CalendarDaysIcon,
+  MapPinIcon,
   BellIcon,
   ChartBarIcon,
   PaintBrushIcon,
@@ -451,9 +452,14 @@ function NextVisitCard({ visit }: { visit: ScheduledVisit }) {
               : ''}
           </p>
           <p className="text-sm text-gray-600 dark:text-gray-300 truncate mt-0.5">
-            {visit.reason || 'Visit'}
-            {visit.location ? ` · ${visit.location}` : ''}
+            {visit.reason || 'Home visit'}
           </p>
+          {(visit.address || visit.location) && (
+            <p className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate mt-1">
+              <MapPinIcon className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
+              <span className="truncate">{visit.address || visit.location}</span>
+            </p>
+          )}
         </div>
         <span className="shrink-0 inline-flex items-center justify-center min-h-[44px] px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold">
           Open &rarr;
@@ -481,9 +487,14 @@ function VisitRow({ visit, showStaff }: { visit: ScheduledVisit; showStaff: bool
             {visit.patientName && visit.patientName !== visit.clientName ? ` · ${capitalizeName(visit.patientName)}` : ''}
           </p>
           <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-            {visit.reason || 'Visit'}
-            {visit.location ? ` · ${visit.location}` : ''}
+            {visit.reason || 'Home visit'}
           </p>
+          {(visit.address || visit.location) && (
+            <p className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
+              <MapPinIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{visit.address || visit.location}</span>
+            </p>
+          )}
         </div>
         {showStaff && visit.staffName && (
           <span className="hidden sm:inline whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">
