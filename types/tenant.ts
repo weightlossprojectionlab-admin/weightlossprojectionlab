@@ -6,6 +6,8 @@
  * who licenses the WPL platform under their own brand.
  */
 
+import type { DutyCategory } from './household-duties'
+
 export interface TenantBranding {
   logoUrl: string
   faviconUrl?: string
@@ -120,11 +122,43 @@ export interface CarePackage {
   /** Explicitly out of scope (playbook: write "Not included" first). */
   excluded: string[]
   caps: CarePackageCaps
+  /**
+   * Duty categories this package COVERS — the structured half of `included`,
+   * so the estimate engine can derive covered-vs-billable per task. A task
+   * whose category is here is "included" (no à-la-carte charge); anything else
+   * is priced off the rate card. (`included`/`excluded` stay as the human-
+   * readable proposal copy.)
+   */
+  includedCategories?: DutyCategory[]
   active: boolean
   /** Display order (anchor → core → growth). */
   order: number
   createdAt: string          // ISO date
   updatedAt: string          // ISO date
+}
+
+/**
+ * How a rate-card line is billed. `hourly` × estimated duration; `flat` per
+ * occurrence; `per_unit` × count (e.g. loads of laundry); `mileage` × miles.
+ */
+export type PricingUnit = 'hourly' | 'flat' | 'per_unit' | 'mileage'
+
+/**
+ * One line of an agency's rate card — the à-la-carte price for a duty category
+ * NOT covered by the family's package. Money is in the smallest currency unit
+ * (cents), matching CarePackage.monthlyPrice. Defaults ship in code
+ * (DEFAULT_RATE_CARD, seeded from market research); a tenant may override.
+ */
+export interface RateCardItem {
+  category: DutyCategory
+  unit: PricingUnit
+  /** Baseline rate in cents (per hour / per occurrence / per unit / per mile). */
+  defaultRate: number
+  /** [min, max] cents — market bounds for UI sliders + out-of-range warnings. */
+  rateRange: [number, number]
+  /** Liability/clinical categories (personal care, meds, transport) that a
+   *  "care-certified" tier may mark up. */
+  requiresCareTier: boolean
 }
 
 /**
