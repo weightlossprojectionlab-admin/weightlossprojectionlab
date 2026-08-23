@@ -20,6 +20,13 @@ export interface CompleteDutyRequest {
   photos?: string[]
   subtasksCompleted?: string[]
   notes?: string
+  /**
+   * Skip the "completer must be assigned to / own this duty" check. Set ONLY by
+   * a caller that has already authorized the completer through another path —
+   * e.g. the tenant duties API, where a franchise staff/admin managing the
+   * client (not in the duty's assignedTo) completes a duty during a visit.
+   */
+  skipAssignmentCheck?: boolean
 }
 
 export interface CompleteDutyResult {
@@ -55,8 +62,13 @@ export async function completeDuty(
 
     const duty = dutyDoc.data() as HouseholdDuty
 
-    // Verify user is assigned to this duty or is the creator
-    if (!duty.assignedTo.includes(request.completedBy) && duty.userId !== request.completedBy) {
+    // Verify user is assigned to this duty or is the creator — unless the caller
+    // authorized the completer through another path (e.g. the tenant duties API).
+    if (
+      !request.skipAssignmentCheck &&
+      !duty.assignedTo.includes(request.completedBy) &&
+      duty.userId !== request.completedBy
+    ) {
       return {
         success: false,
         error: 'User not assigned to this duty'

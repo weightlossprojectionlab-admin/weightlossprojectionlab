@@ -22,9 +22,10 @@ import { logger } from '@/lib/logger'
 interface Props {
   tenantId: string
   requestId: string
+  onActed?: () => void
 }
 
-export default function PendingRequestActions({ tenantId, requestId }: Props) {
+export default function PendingRequestActions({ tenantId, requestId, onActed }: Props) {
   const router = useRouter()
   const [busy, setBusy] = useState<'approve' | 'decline' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +54,8 @@ export default function PendingRequestActions({ tenantId, requestId }: Props) {
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || `${action} failed (${res.status})`)
       }
-      router.refresh()
+      if (onActed) onActed()
+      else router.refresh()
     } catch (err) {
       logger.error('[PendingRequestActions] failed', err as Error, { action })
       setError(err instanceof Error ? err.message : `${action} failed.`)

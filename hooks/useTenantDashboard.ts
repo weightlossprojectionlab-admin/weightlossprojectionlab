@@ -33,6 +33,10 @@ export interface FranchiseFamilySnapshot extends PatientSnapshot {
   lastMealAt: string | null
   lastMealName: string | null
   joinedPlatformAt: string | null
+  // Household rollup — a client is a household, so the Overview card shows a
+  // summary (count + names + last activity), not one member's telemetry.
+  memberCount: number
+  memberNames: string[]
 }
 
 export interface PendingRequest {

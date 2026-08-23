@@ -15,7 +15,7 @@
 import { config as loadEnv } from 'dotenv'
 loadEnv({ path: '.env.local' })
 
-import { adminDb } from '../lib/firebase-admin'
+import { adminDb, adminAuth } from '../lib/firebase-admin'
 
 const SLUG = 'little-care-bears'
 const CLIENT_UID = 'demo-henderson-lcb'
@@ -68,6 +68,28 @@ async function main() {
   })
   console.log('✓ 2 staff (Nurse Carla, Coach Dan)')
 
+  // 1c. The REAL staff login (E2E_FRANCHISE_STAFF_EMAIL) gets a day too — so
+  // signing in as staff shows a populated "My day" agenda, not an empty one.
+  // Resolve their uid from Auth; skip gracefully if the account isn't present.
+  let STAFF_ME: string | null = null
+  let STAFF_ME_NAME = 'Staff Member'
+  const staffEmail = process.env.E2E_FRANCHISE_STAFF_EMAIL
+  if (staffEmail) {
+    try {
+      const staffUser = await adminAuth.getUserByEmail(staffEmail)
+      STAFF_ME = staffUser.uid
+      STAFF_ME_NAME = staffUser.displayName || 'Staff Member'
+      await invites.doc(STAFF_ME).set({
+        name: STAFF_ME_NAME, email: staffEmail, role: 'franchise_staff',
+        status: 'accepted', uid: STAFF_ME, invitedAt: daysAgo(30), acceptedAt: daysAgo(29),
+        seedSource: 'lcb-appointments-demo',
+      })
+      console.log(`✓ staff login ${staffEmail} = ${STAFF_ME} (gets today's visits)`)
+    } catch {
+      console.log(`⚠ staff login ${staffEmail} not found in Auth — skipping their visits`)
+    }
+  }
+
   // 2. The managed client (family account).
   const userRef = adminDb.collection('users').doc(CLIENT_UID)
   await userRef.set(
@@ -76,6 +98,8 @@ async function main() {
       displayName: 'Henderson Family',
       email: 'henderson.demo@littlecarebears.test',
       phone: '+15555550142',
+      // Home-care agency has no office — this is where the caregiver visits.
+      address: { street: '128 Maple Ave', city: 'Riverton', state: 'NJ', zipCode: '08077', country: 'US' },
       managedBy: [tenantId],
       createdAt: daysAgo(120),
       lastActiveAt: nowIso,
@@ -274,11 +298,34 @@ async function main() {
     .where('managedBy', 'array-contains', tenantId)
     .get()
 
+  // Demo home addresses — this is a home-care agency (no office), so each
+  // family needs a home for the caregiver to visit. Assigned round-robin.
+  const DEMO_ADDRESSES = [
+    { street: '742 Evergreen Terrace', city: 'Riverton', state: 'NJ', zipCode: '08077', country: 'US' },
+    { street: '19 Birchwood Ln', city: 'Delran', state: 'NJ', zipCode: '08075', country: 'US' },
+    { street: '55 Coventry Rd', city: 'Cinnaminson', state: 'NJ', zipCode: '08077', country: 'US' },
+    { street: '304 Hollybush Dr', city: 'Moorestown', state: 'NJ', zipCode: '08057', country: 'US' },
+    { street: '88 Larchmont Blvd', city: 'Mount Laurel', state: 'NJ', zipCode: '08054', country: 'US' },
+    { street: '2 Sycamore Ct', city: 'Maple Shade', state: 'NJ', zipCode: '08052', country: 'US' },
+    { street: '417 Kings Hwy', city: 'Haddonfield', state: 'NJ', zipCode: '08033', country: 'US' },
+    { street: '9 Tanglewood Way', city: 'Marlton', state: 'NJ', zipCode: '08053', country: 'US' },
+  ]
+
   let i = 0
   for (const fam of others.docs) {
     if (fam.id === CLIENT_UID) continue // Henderson handled above
     const f = fam.data() as any
     const famName = f.name || f.displayName || f.email || 'Client'
+
+    // Give each demo family a home address + contact phone if missing — the
+    // caregiver's destination, and the number to call if there's an issue.
+    // Won't clobber real data already on file.
+    const patch: Record<string, any> = {}
+    if (!f.address) patch.address = DEMO_ADDRESSES[i % DEMO_ADDRESSES.length]
+    if (!f.phone) patch.phone = `+1555555${String(1000 + i).slice(-4)}`
+    if (Object.keys(patch).length) {
+      await fam.ref.set(patch, { merge: true })
+    }
 
     // First active patient, if any — else the account holder.
     const patSnap = await fam.ref.collection('patients').where('status', '==', 'active').limit(1).get().catch(() => null)
@@ -295,11 +342,15 @@ async function main() {
       patientName,
       careContext: 'caregiver-visit',
       tenantId,
-      practiceStaffId: STAFF_CARLA,
-      practiceStaffName: 'Nurse Carla',
+      // Alternate coverage: the real staff login takes every other family (so
+      // "My day" is populated when you sign in as staff); Carla covers the rest.
+      practiceStaffId: STAFF_ME && i % 2 === 0 ? STAFF_ME : STAFF_CARLA,
+      practiceStaffName: STAFF_ME && i % 2 === 0 ? STAFF_ME_NAME : 'Nurse Carla',
       type: 'routine-checkup',
       reason: 'Initial wellness visit',
-      location: 'In office',
+      // Home-care agency — no office. The visit is at the client's home; the
+      // caregiver's "where" is the family's address (set on the user doc below).
+      location: 'Home visit',
       dateTime: at(0, 11 + i, 0),
       status: 'scheduled',
       requiresDriver: false,
@@ -328,7 +379,8 @@ async function main() {
       createdBy: 'seed',
       updatedAt: nowIso,
     })
-    console.log(`✓ ${famName}: +1 caregiver-visit (Carla, today) +1 member-medical (upcoming)`)
+    const cover = STAFF_ME && i % 2 === 0 ? STAFF_ME_NAME : 'Nurse Carla'
+    console.log(`✓ ${famName}: +1 caregiver-visit (${cover}, today) +1 member-medical (upcoming)`)
     i++
   }
 

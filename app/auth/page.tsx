@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import type { User } from 'firebase/auth'
 import { signIn, signUp, signInWithGoogle, signInWithGoogleRedirect, checkSignInMethods, checkRedirectResult } from '@/lib/auth'
+import { useTenant } from '@/contexts/TenantContext'
 import { logger } from '@/lib/logger'
 import {
   isBiometricSupported,
@@ -35,6 +36,18 @@ function AuthContent() {
   const isInvitationFlow = searchParams.get('invitation') === 'true'
   const refCode = searchParams.get('ref')
   const [isSignUp, setIsSignUp] = useState(isInvitationFlow) // Default to signup for invitations
+
+  // White-label: self-registration is closed on a tenant subdomain (agency-
+  // intake model — the agency creates its client accounts; a stranger can't
+  // mint a self-serve account under the partner's brand and get dropped into
+  // consumer onboarding). The one exception is an invitation flow
+  // (?invitation=true) — that's how an agency-invited family legitimately
+  // signs up. When closed, force sign-in mode and hide the signup toggle.
+  const { isFranchise, branding } = useTenant()
+  const selfSignupClosed = isFranchise && !isInvitationFlow
+  useEffect(() => {
+    if (selfSignupClosed && isSignUp) setIsSignUp(false)
+  }, [selfSignupClosed, isSignUp])
 
   // Store referral code for attribution after signup
   useEffect(() => {
@@ -717,24 +730,34 @@ function AuthContent() {
           </div>
             </form>
 
-            {/* Toggle Sign Up/Sign In */}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp)
-                  setSuggestedAuthMethod(null)
-                  setError('')
-                }}
-                className="text-sm text-accent hover:text-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-                aria-label={isSignUp ? 'Switch to sign in' : 'Switch to sign up'}
-              >
-                {isSignUp
-                  ? 'Already have an account? Sign in'
-                  : "Don't have an account? Sign up"
-                }
-              </button>
-            </div>
+            {/* Toggle Sign Up/Sign In — hidden on a tenant subdomain outside an
+                invitation flow, where self-registration is closed (agency-intake
+                only). Existing clients/operators sign in; new clients are set up
+                by their agency. */}
+            {selfSignupClosed ? (
+              <div className="text-center text-sm text-muted-foreground">
+                New here? {branding?.companyName || 'Your care team'} sets up your account — reach
+                out to them to get started.
+              </div>
+            ) : (
+              <div className="text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp)
+                    setSuggestedAuthMethod(null)
+                    setError('')
+                  }}
+                  className="text-sm text-accent hover:text-accent-hover focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                  aria-label={isSignUp ? 'Switch to sign in' : 'Switch to sign up'}
+                >
+                  {isSignUp
+                    ? 'Already have an account? Sign in'
+                    : "Don't have an account? Sign up"
+                  }
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

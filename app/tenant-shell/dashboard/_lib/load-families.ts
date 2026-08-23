@@ -13,6 +13,7 @@ import { getAdminDb } from '@/lib/firebase-admin'
 import { logger } from '@/lib/logger'
 import type { VitalSign } from '@/types/medical'
 import type { WeightDataPoint } from '@/lib/chart-data-aggregator'
+import type { AppointmentNote, AppointmentNoteReply } from '@/types/tenant'
 
 // ─── Interfaces ──────────────────────────────────────────
 
@@ -33,7 +34,18 @@ export interface ManagedFamily {
   email: string
   joinedPlatformAt: string | null
   lastActiveAt: string | null
+  /**
+   * Per-PRIMARY-patient health snapshot. Kept for the Overview stats API
+   * (app/api/tenant/[tenantId]/dashboard/stats), which aggregates across
+   * families. NOT for the roster card — a client is a HOUSEHOLD, and a
+   * household doesn't have a single blood pressure. The roster card uses the
+   * household rollup below; per-member health lives in the client-detail view.
+   */
   health: FamilyHealthSnapshot
+  /** Number of care recipients (patients) in this household. */
+  memberCount: number
+  /** Names of the care recipients (first few) for the roster card preview. */
+  memberNames: string[]
 }
 
 export interface PendingRequest {
@@ -219,6 +231,27 @@ async function loadHealthSnapshot(
   }
 }
 
+/**
+ * Household rollup for the roster card: how many care recipients (patients)
+ * this client has, and their names (first several for a preview). A client is
+ * a HOUSEHOLD — the roster card summarizes it; per-member health is in detail.
+ * One read per family (cheaper than the primary-patient health snapshot).
+ */
+async function loadHouseholdSummary(
+  db: FirebaseFirestore.Firestore,
+  userId: string
+): Promise<{ memberCount: number; memberNames: string[] }> {
+  try {
+    const snap = await db.collection('users').doc(userId).collection('patients').limit(25).get()
+    const names = snap.docs
+      .map(d => (d.data() as any)?.name)
+      .filter((n: unknown): n is string => typeof n === 'string' && n.trim().length > 0)
+    return { memberCount: snap.size, memberNames: names }
+  } catch {
+    return { memberCount: 0, memberNames: [] }
+  }
+}
+
 /** Given two docs from different collection paths, return the one with the
  *  more recent value for `dateField`. Handles null/undefined gracefully. */
 function pickMostRecent(a: any, b: any, dateField: string): any {
@@ -232,6 +265,27 @@ function pickMostRecent(a: any, b: any, dateField: string): any {
   return aDate >= bDate ? a : b
 }
 
+/**
+ * Cheap COUNT of a tenant's managed families, for the dashboard header. Derived
+ * from the actual data (one aggregation query) rather than the separately
+ * maintained billing.currentFamilies seat counter, which drifts. (Reconciling
+ * that stored counter — used for seat-limit enforcement — is a Phase-4 billing
+ * concern; the header should always reflect reality.)
+ */
+export async function countManagedFamilies(tenantId: string): Promise<number> {
+  try {
+    const snap = await getAdminDb()
+      .collection('users')
+      .where('managedBy', 'array-contains', tenantId)
+      .count()
+      .get()
+    return snap.data().count
+  } catch (err) {
+    logger.error('[dashboard] failed to count managed families', err as Error, { tenantId })
+    return 0
+  }
+}
+
 export async function loadManagedFamilies(tenantId: string): Promise<ManagedFamily[]> {
   try {
     const db = getAdminDb()
@@ -241,11 +295,15 @@ export async function loadManagedFamilies(tenantId: string): Promise<ManagedFami
       .limit(500)
       .get()
 
-    // Load health snapshots in parallel for all families.
+    // Per family: primary-patient health (for the Overview stats API) + a
+    // household rollup (member count + names) for the roster card.
     const families = await Promise.all(
       snap.docs.map(async doc => {
         const data = doc.data() as any
-        const health = await loadHealthSnapshot(db, doc.id)
+        const [health, household] = await Promise.all([
+          loadHealthSnapshot(db, doc.id),
+          loadHouseholdSummary(db, doc.id),
+        ])
         return {
           id: doc.id,
           name: data.name || data.displayName || data.email || 'Unnamed family',
@@ -253,6 +311,8 @@ export async function loadManagedFamilies(tenantId: string): Promise<ManagedFami
           joinedPlatformAt: normalizeDate(data.createdAt),
           lastActiveAt: normalizeDate(data.lastActiveAt),
           health,
+          memberCount: household.memberCount,
+          memberNames: household.memberNames,
         }
       })
     )
@@ -423,6 +483,215 @@ export async function loadClientDetail(
 
 /** A caregiver-visit the practice delivers — lands on the practitioner's
  *  OWN schedule. The forward-looking spine of their day. */
+// ─── Client appointments (upcoming, for the client workspace) ───
+
+export interface ClientAppointment {
+  id: string
+  dateTime: string
+  patientName: string
+  appointmentType: string
+  /** Reason (care visit) or provider · specialty (external appointment). */
+  detail: string
+  careContext: 'caregiver-visit' | 'member-medical'
+  status: string
+  /** Visit notes logged ON this appointment (internal, oldest → newest). */
+  notes: AppointmentNote[]
+}
+
+/**
+ * Upcoming appointments for a SINGLE managed client, for the workspace's
+ * "Upcoming appointments" section. Same source + query pattern as
+ * loadTenantAppointments (users/{userId}/appointments, dateTime >= today),
+ * scoped to one client. Verifies the tenant manages the client first.
+ */
+export async function loadClientAppointments(
+  tenantId: string,
+  userId: string
+): Promise<ClientAppointment[]> {
+  try {
+    const db = getAdminDb()
+    const userSnap = await db.collection('users').doc(userId).get()
+    if (!userSnap.exists) return []
+    const u = userSnap.data() as any
+    const managedBy: string[] = Array.isArray(u?.managedBy) ? u.managedBy : []
+    if (!managedBy.includes(tenantId)) return []
+
+    const midnight = new Date()
+    midnight.setHours(0, 0, 0, 0)
+    const startOfToday = midnight.toISOString()
+
+    const snap = await db
+      .collection('users')
+      .doc(userId)
+      .collection('appointments')
+      .where('dateTime', '>=', startOfToday)
+      .orderBy('dateTime', 'asc')
+      .limit(20)
+      .get()
+      .catch(() => null)
+
+    const docs = (snap?.docs || []).filter(doc => {
+      const a = doc.data() as any
+      return a.status !== 'cancelled' && normalizeDate(a.dateTime)
+    })
+
+    // Load each appointment's notes in parallel (one small read per visit).
+    const rows: ClientAppointment[] = await Promise.all(
+      docs.map(async doc => {
+        const a = doc.data() as any
+        const ctx = (a.careContext || 'member-medical') as 'caregiver-visit' | 'member-medical'
+        const notes = await loadAppointmentNotes(doc.ref)
+        return {
+          id: doc.id,
+          dateTime: normalizeDate(a.dateTime) as string,
+          patientName: a.patientName || u?.name || 'Client',
+          appointmentType: a.type || 'other',
+          detail:
+            ctx === 'caregiver-visit'
+              ? a.reason || 'Care visit'
+              : [a.providerName, a.specialty].filter(Boolean).join(' · ') || 'External appointment',
+          careContext: ctx,
+          status: a.status || 'scheduled',
+          notes,
+        }
+      })
+    )
+    return rows
+  } catch (err) {
+    logger.error('[dashboard] failed to load client appointments', err as Error, { tenantId, userId })
+    return []
+  }
+}
+
+// ─── Appointment notes (the visit's running record; internal, staff-only) ───
+
+/** Map a notes/replies doc to the shared reply/note-author shape. */
+function mapNoteAuthored(id: string, n: any) {
+  return {
+    id,
+    authorUid: n.authorUid || '',
+    authorName: n.authorName || 'Staff',
+    authorRole: (n.authorRole === 'admin' ? 'admin' : 'staff') as 'admin' | 'staff',
+    body: n.body || '',
+    createdAt: normalizeDate(n.createdAt) || '',
+  }
+}
+
+/**
+ * Load the notes logged ON a single appointment (oldest → newest), each with
+ * its replies hydrated — a note is a message the care team can reply to. Reads
+ * the `notes` subcollection and every note's `replies`. Single-field
+ * orderBy(createdAt) → auto-indexed. Soft-fails to [] so one broken visit
+ * doesn't blank the appointments list.
+ */
+export async function loadAppointmentNotes(
+  apptRef: FirebaseFirestore.DocumentReference
+): Promise<AppointmentNote[]> {
+  try {
+    const snap = await apptRef
+      .collection('notes')
+      .orderBy('createdAt', 'asc')
+      .limit(100)
+      .get()
+      .catch(() => null)
+    return await Promise.all(
+      (snap?.docs || []).map(async d => {
+        const n = d.data() as any
+        const repliesSnap = await d.ref
+          .collection('replies')
+          .orderBy('createdAt', 'asc')
+          .limit(100)
+          .get()
+          .catch(() => null)
+        const replies: AppointmentNoteReply[] = (repliesSnap?.docs || []).map(r =>
+          mapNoteAuthored(r.id, r.data())
+        )
+        return {
+          ...mapNoteAuthored(d.id, n),
+          replyCount: typeof n.replyCount === 'number' ? n.replyCount : replies.length,
+          replies,
+        }
+      })
+    )
+  } catch {
+    return []
+  }
+}
+
+// ─── Client care tasks (household duties; read-only, Phase 1) ───
+
+export interface ClientDutyTask {
+  id: string
+  name: string
+  category: string
+  status: string
+  priority: string
+  nextDueAt: string | null
+  lastCompletedAt: string | null
+  overdue: boolean
+}
+
+/**
+ * A managed client's active household duties — the standing "care plan" the
+ * caregiver works during a visit. Read-only for now (Phase 1). Verifies the
+ * tenant manages the client, then reads household_duties keyed to the client's
+ * OWN userId (duties the family created). Single-field `where(userId)` → no
+ * composite index; active/not-done filter + overdue flag computed in code.
+ *
+ * Agency-authored duties (created by staff for a client) key to the creator's
+ * uid, not the client's — surfacing those is a later concern. Soft-fails to [].
+ */
+export async function loadClientDuties(tenantId: string, userId: string): Promise<ClientDutyTask[]> {
+  try {
+    const db = getAdminDb()
+    const userSnap = await db.collection('users').doc(userId).get()
+    if (!userSnap.exists) return []
+    const managedBy: string[] = Array.isArray((userSnap.data() as any)?.managedBy)
+      ? (userSnap.data() as any).managedBy
+      : []
+    if (!managedBy.includes(tenantId)) return []
+
+    const snap = await db
+      .collection('household_duties')
+      .where('userId', '==', userId)
+      .limit(200)
+      .get()
+      .catch(() => null)
+
+    const now = Date.now()
+    const tasks: ClientDutyTask[] = []
+    for (const doc of snap?.docs || []) {
+      const d = doc.data() as any
+      if (d.isActive === false) continue
+      const status = d.status || 'pending'
+      if (status === 'completed' || status === 'skipped') continue
+      const nextDueAt = normalizeDate(d.nextDueDate)
+      tasks.push({
+        id: doc.id,
+        name: d.name || 'Task',
+        category: d.category || 'custom',
+        status,
+        priority: d.priority || 'medium',
+        nextDueAt,
+        lastCompletedAt: normalizeDate(d.lastCompletedAt),
+        overdue: !!nextDueAt && new Date(nextDueAt).getTime() < now,
+      })
+    }
+    // Overdue first, then soonest-due, then the rest.
+    tasks.sort((a, b) => {
+      if (a.overdue !== b.overdue) return a.overdue ? -1 : 1
+      if (a.nextDueAt && b.nextDueAt) return a.nextDueAt.localeCompare(b.nextDueAt)
+      if (a.nextDueAt) return -1
+      if (b.nextDueAt) return 1
+      return 0
+    })
+    return tasks
+  } catch (err) {
+    logger.error('[dashboard] failed to load client duties', err as Error, { tenantId, userId })
+    return []
+  }
+}
+
 export interface ScheduledVisit {
   id: string
   clientId: string        // owning family/user — for the drill-in link
@@ -438,7 +707,26 @@ export interface ScheduledVisit {
   appointmentType: string // clinical type (orthogonal to careContext)
   dateTime: string
   location: string | null
+  // The client's home address. This is a home-care agency with no office, so
+  // every caregiver-visit happens at the client's home — this is where the
+  // staff member actually needs to go. Derived from the client profile at load
+  // (a denormalized copy that re-derives each read), null if not on file.
+  address: string | null
+  // The client/family contact number — so the caregiver can call from the
+  // agenda if there's an issue (no answer at the door, running late). A tel:
+  // link; null if none on file.
+  clientPhone: string | null
   status: string
+  // Visit verification (EVV, phase A) — the check-in/out lifecycle. `id` is
+  // namespaced for React keys, so keep the RAW appointment doc id here for the
+  // verify API. visitStatus drives the on-track / payroll derivations.
+  appointmentId: string
+  // scheduled → en_route (trip started, travel/payroll clock) → in_progress
+  // (checked in, visit clock) → completed (checked out).
+  visitStatus: 'scheduled' | 'en_route' | 'in_progress' | 'completed'
+  tripStartedAt: string | null
+  checkInAt: string | null
+  checkOutAt: string | null
 }
 
 /** A member-medical appointment — a family member's OWN external visit.
@@ -483,6 +771,15 @@ export interface TenantAppointments {
  *
  * Soft-fails to empty so one broken family can't crash the dashboard.
  */
+/** Format a client's structured home Address into a concise one-line string for
+ *  the caregiver's agenda — "street unit, city, state". Null when absent. */
+function formatHomeAddress(addr: any): string | null {
+  if (!addr || typeof addr !== 'object') return null
+  const street = [addr.street, addr.unit].filter(Boolean).join(' ')
+  const parts = [street, addr.city, addr.state].filter(Boolean)
+  return parts.length ? parts.join(', ') : null
+}
+
 export async function loadTenantAppointments(tenantId: string): Promise<TenantAppointments> {
   const myVisits: ScheduledVisit[] = []
   const familyAppointments: CoordinationAppointment[] = []
@@ -520,7 +817,12 @@ export async function loadTenantAppointments(tenantId: string): Promise<TenantAp
 
           if (ctx === 'caregiver-visit') {
             myVisits.push({
-              id: doc.id,
+              // Namespace by client: appointment doc ids are only unique WITHIN
+              // a family's subcollection, but myVisits aggregates across families
+              // (and demo seeds reuse fixed ids like `appt-cv-demo`), so a raw
+              // doc.id collides in the merged list — duplicate React keys. `id`
+              // is render-key-only here; `clientId` carries the drill-in link.
+              id: `${userDoc.id}:${doc.id}`,
               clientId: userDoc.id,
               clientName,
               patientId: a.patientId || null,
@@ -531,11 +833,19 @@ export async function loadTenantAppointments(tenantId: string): Promise<TenantAp
               appointmentType: a.type || 'other',
               dateTime,
               location: a.location || null,
+              address: formatHomeAddress(u.address),
+              clientPhone: u.phone || null,
               status: a.status || 'scheduled',
+              appointmentId: doc.id,
+              visitStatus: (a.visitStatus as any) || 'scheduled',
+              tripStartedAt: a.tripStartedAt || null,
+              checkInAt: a.checkInAt || null,
+              checkOutAt: a.checkOutAt || null,
             })
           } else {
             familyAppointments.push({
-              id: doc.id,
+              // Namespaced for the same cross-family uniqueness reason as myVisits.
+              id: `${userDoc.id}:${doc.id}`,
               clientId: userDoc.id,
               clientName,
               patientId: a.patientId || null,

@@ -89,9 +89,12 @@ export async function determineUserDestination(
     const tokenResult = await user.getIdTokenResult()
     const claims = tokenResult.claims as any
     if (claims.tenantRole === 'franchise_admin' || claims.tenantRole === 'franchise_staff') {
-      // If they're on /auth, send them to /dashboard. Otherwise stay put.
-      if (currentPath === '/auth' || currentPath === '/login') {
-        logger.debug('[AuthRouter] Franchise user on /auth - redirecting to dashboard')
+      // Franchise operators have no consumer onboarding — they're provisioned
+      // server-side and their setup is the tenant-shell dashboard. Bounce them
+      // off the consumer entry points (/auth, /login, /onboarding) to
+      // /dashboard; otherwise let them stay wherever they are.
+      if (currentPath === '/auth' || currentPath === '/login' || currentPath === '/onboarding') {
+        logger.debug('[AuthRouter] Franchise user on consumer entry point - redirecting to dashboard', { currentPath })
         return { type: 'dashboard', reason: 'Franchise user - redirect to dashboard' }
       }
       logger.debug('[AuthRouter] Franchise user - skipping consumer routing')

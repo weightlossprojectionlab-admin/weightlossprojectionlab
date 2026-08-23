@@ -19,9 +19,12 @@ import { logger } from '@/lib/logger'
 
 interface Props {
   tenantId: string
+  // Called after a successful invite so the parent can refetch its (client-side)
+  // invitation list. Falls back to router.refresh() when not provided.
+  onInvited?: () => void
 }
 
-export default function InviteStaffForm({ tenantId }: Props) {
+export default function InviteStaffForm({ tenantId, onInvited }: Props) {
   const router = useRouter()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -66,7 +69,8 @@ export default function InviteStaffForm({ tenantId }: Props) {
         text: `Invitation sent to ${trimmed}. They have 7 days to accept.`,
       })
       setEmail('')
-      router.refresh()
+      if (onInvited) onInvited()
+      else router.refresh()
       inputRef.current?.focus()
     } catch (err) {
       logger.error('[InviteStaffForm] failed', err as Error)
