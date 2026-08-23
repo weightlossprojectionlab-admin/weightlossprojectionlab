@@ -15,7 +15,7 @@
 import { config as loadEnv } from 'dotenv'
 loadEnv({ path: '.env.local' })
 
-import { adminDb } from '../lib/firebase-admin'
+import { adminDb, adminAuth } from '../lib/firebase-admin'
 
 const SLUG = 'little-care-bears'
 const CLIENT_UID = 'demo-henderson-lcb'
@@ -67,6 +67,28 @@ async function main() {
     seedSource: 'lcb-appointments-demo',
   })
   console.log('✓ 2 staff (Nurse Carla, Coach Dan)')
+
+  // 1c. The REAL staff login (E2E_FRANCHISE_STAFF_EMAIL) gets a day too — so
+  // signing in as staff shows a populated "My day" agenda, not an empty one.
+  // Resolve their uid from Auth; skip gracefully if the account isn't present.
+  let STAFF_ME: string | null = null
+  let STAFF_ME_NAME = 'Staff Member'
+  const staffEmail = process.env.E2E_FRANCHISE_STAFF_EMAIL
+  if (staffEmail) {
+    try {
+      const staffUser = await adminAuth.getUserByEmail(staffEmail)
+      STAFF_ME = staffUser.uid
+      STAFF_ME_NAME = staffUser.displayName || 'Staff Member'
+      await invites.doc(STAFF_ME).set({
+        name: STAFF_ME_NAME, email: staffEmail, role: 'franchise_staff',
+        status: 'accepted', uid: STAFF_ME, invitedAt: daysAgo(30), acceptedAt: daysAgo(29),
+        seedSource: 'lcb-appointments-demo',
+      })
+      console.log(`✓ staff login ${staffEmail} = ${STAFF_ME} (gets today's visits)`)
+    } catch {
+      console.log(`⚠ staff login ${staffEmail} not found in Auth — skipping their visits`)
+    }
+  }
 
   // 2. The managed client (family account).
   const userRef = adminDb.collection('users').doc(CLIENT_UID)
@@ -295,8 +317,10 @@ async function main() {
       patientName,
       careContext: 'caregiver-visit',
       tenantId,
-      practiceStaffId: STAFF_CARLA,
-      practiceStaffName: 'Nurse Carla',
+      // Alternate coverage: the real staff login takes every other family (so
+      // "My day" is populated when you sign in as staff); Carla covers the rest.
+      practiceStaffId: STAFF_ME && i % 2 === 0 ? STAFF_ME : STAFF_CARLA,
+      practiceStaffName: STAFF_ME && i % 2 === 0 ? STAFF_ME_NAME : 'Nurse Carla',
       type: 'routine-checkup',
       reason: 'Initial wellness visit',
       location: 'In office',
@@ -328,7 +352,8 @@ async function main() {
       createdBy: 'seed',
       updatedAt: nowIso,
     })
-    console.log(`✓ ${famName}: +1 caregiver-visit (Carla, today) +1 member-medical (upcoming)`)
+    const cover = STAFF_ME && i % 2 === 0 ? STAFF_ME_NAME : 'Nurse Carla'
+    console.log(`✓ ${famName}: +1 caregiver-visit (${cover}, today) +1 member-medical (upcoming)`)
     i++
   }
 

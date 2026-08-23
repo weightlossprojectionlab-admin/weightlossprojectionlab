@@ -142,6 +142,24 @@ export default function FranchiseDashboardOverview() {
     )
   }
 
+  // Staff (non-owner) get a focused "My day" agenda instead of the owner
+  // dashboard: their visits, time-ordered — not practice-wide stats, other
+  // families, or owner tools. Owners fall through to the full dashboard below.
+  if (!viewerIsAdmin) {
+    return (
+      <div className="space-y-6">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-gray-500 dark:text-gray-400">Loading your day&hellip;</p>
+          </div>
+        ) : (
+          <StaffDayView visits={todaysVisits} />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       {loading ? (
@@ -353,6 +371,96 @@ interface StatCardProps {
   subtext?: string
   color: 'blue' | 'red' | 'yellow' | 'purple' | 'green' | 'teal'
   highlight?: boolean
+}
+
+// ─── Staff "My day" — the field caregiver's start-of-day agenda ───────────
+// A focused, mobile-first view of the signed-in staff member's OWN visits for
+// today: who, when, where — leading with the next visit — instead of the
+// practice-wide owner dashboard. Reuses VisitRow for the list rows (DRY).
+function StaffDayView({ visits }: { visits: ScheduledVisit[] }) {
+  const today = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
+  // Time-ordered so the day reads top-to-bottom the way it happens.
+  const sorted = [...visits].sort(
+    (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+  )
+  // "Next up" = the earliest visit still ahead of now; if all are past, the
+  // day's visits are done (the highlight simply drops away).
+  const now = Date.now()
+  const next = sorted.find(v => new Date(v.dateTime).getTime() >= now)
+
+  return (
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My day</h1>
+        <p className="text-gray-500 dark:text-gray-400 mt-1">
+          {today} &middot;{' '}
+          {visits.length === 0
+            ? 'no visits'
+            : `${visits.length} visit${visits.length !== 1 ? 's' : ''}`}
+        </p>
+      </header>
+
+      {next && <NextVisitCard visit={next} />}
+
+      <section className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <CalendarDaysIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">Today&rsquo;s visits</h2>
+        </div>
+        {sorted.length === 0 ? (
+          <p className="text-sm text-gray-500 dark:text-gray-400 py-6 text-center">
+            No visits scheduled today. Enjoy the day.
+          </p>
+        ) : (
+          <ul className="divide-y divide-gray-100 dark:divide-gray-700">
+            {sorted.map(v => (
+              <VisitRow key={v.id} visit={v} showStaff={false} />
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  )
+}
+
+// The single most important thing at the start of a shift: where to go next.
+// Big tap target (min 44px), links straight into the client workspace.
+function NextVisitCard({ visit }: { visit: ScheduledVisit }) {
+  const time = new Date(visit.dateTime).toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+  return (
+    <Link
+      href={`/dashboard/families/${visit.clientId}`}
+      className="block rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-5 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
+    >
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300 mb-1">
+            Next up
+          </p>
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+            {time} &middot; {capitalizeName(visit.clientName)}
+            {visit.patientName && visit.patientName !== visit.clientName
+              ? ` · ${capitalizeName(visit.patientName)}`
+              : ''}
+          </p>
+          <p className="text-sm text-gray-600 dark:text-gray-300 truncate mt-0.5">
+            {visit.reason || 'Visit'}
+            {visit.location ? ` · ${visit.location}` : ''}
+          </p>
+        </div>
+        <span className="shrink-0 inline-flex items-center justify-center min-h-[44px] px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold">
+          Open &rarr;
+        </span>
+      </div>
+    </Link>
+  )
 }
 
 function VisitRow({ visit, showStaff }: { visit: ScheduledVisit; showStaff: boolean }) {
