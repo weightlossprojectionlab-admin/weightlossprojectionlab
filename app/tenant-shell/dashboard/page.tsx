@@ -34,6 +34,7 @@ import {
   ExclamationTriangleIcon,
   CalendarDaysIcon,
   MapPinIcon,
+  MapIcon,
   BellIcon,
   ChartBarIcon,
   PaintBrushIcon,
@@ -428,24 +429,60 @@ function StaffDayView({ visits }: { visits: ScheduledVisit[] }) {
   )
 }
 
-// The single most important thing at the start of a shift: where to go next.
-// Big tap target (min 44px), links straight into the client workspace.
+// Open the device's maps app with turn-by-turn to the destination. Google's
+// UNIVERSAL https directions URL (not a geo:/maps: scheme) works everywhere the
+// app runs: browser, installed PWA, and — via OS app-links — the native maps
+// app inside a Capacitor shell. No maps API key needed. Only meaningful for a
+// real street address. (When Capacitor lands, ensure external origins open in
+// the system browser/maps app, not the in-app WebView — a one-time config.)
+function directionsHref(address: string): string {
+  return `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}`
+}
+
+// Tap-to-navigate. `full` = a labelled, full-width button (the Next-up card);
+// otherwise a 44px icon button (a visit row). Sibling of the row's workspace
+// link, never nested inside it (no nested anchors).
+function DirectionsButton({ address, full = false }: { address: string; full?: boolean }) {
+  const base =
+    'inline-flex items-center justify-center gap-1.5 min-h-[44px] rounded-lg text-blue-700 dark:text-blue-300 hover:bg-blue-100/60 dark:hover:bg-blue-900/30 transition-colors'
+  return (
+    <a
+      href={directionsHref(address)}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={`Directions to ${address}`}
+      title="Directions"
+      onClick={e => e.stopPropagation()}
+      className={
+        full
+          ? `${base} mt-3 w-full border border-blue-300 dark:border-blue-700 text-sm font-semibold`
+          : `${base} shrink-0 w-11`
+      }
+    >
+      <MapIcon className="w-5 h-5" />
+      {full && <span>Directions</span>}
+    </a>
+  )
+}
+
+// The single most important thing at the start of a shift: where to go next,
+// and how to get there. Big tap targets (min 44px). The info + "Open" link into
+// the client workspace; "Directions" launches the maps app.
 function NextVisitCard({ visit }: { visit: ScheduledVisit }) {
   const time = new Date(visit.dateTime).toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
   })
+  const where = visit.address || visit.location
+  const workspace = `/dashboard/families/${visit.clientId}`
   return (
-    <Link
-      href={`/dashboard/families/${visit.clientId}`}
-      className="block rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-5 hover:border-blue-400 dark:hover:border-blue-600 transition-colors"
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300 mb-1">
-            Next up
-          </p>
-          <p className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate">
+    <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300 mb-1">
+        Next up
+      </p>
+      <div className="flex items-start justify-between gap-4">
+        <Link href={workspace} className="min-w-0 flex-1 group">
+          <p className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate group-hover:underline">
             {time} &middot; {capitalizeName(visit.clientName)}
             {visit.patientName && visit.patientName !== visit.clientName
               ? ` · ${capitalizeName(visit.patientName)}`
@@ -454,18 +491,22 @@ function NextVisitCard({ visit }: { visit: ScheduledVisit }) {
           <p className="text-sm text-gray-600 dark:text-gray-300 truncate mt-0.5">
             {visit.reason || 'Home visit'}
           </p>
-          {(visit.address || visit.location) && (
+          {where && (
             <p className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-200 truncate mt-1">
               <MapPinIcon className="w-4 h-4 shrink-0 text-blue-600 dark:text-blue-400" />
-              <span className="truncate">{visit.address || visit.location}</span>
+              <span className="truncate">{where}</span>
             </p>
           )}
-        </div>
-        <span className="shrink-0 inline-flex items-center justify-center min-h-[44px] px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold">
+        </Link>
+        <Link
+          href={workspace}
+          className="shrink-0 inline-flex items-center justify-center min-h-[44px] px-4 rounded-lg bg-blue-600 text-white text-sm font-semibold"
+        >
           Open &rarr;
-        </span>
+        </Link>
       </div>
-    </Link>
+      {visit.address && <DirectionsButton address={visit.address} full />}
+    </div>
   )
 }
 
@@ -473,10 +514,10 @@ function VisitRow({ visit, showStaff }: { visit: ScheduledVisit; showStaff: bool
   const fmtTime = (iso: string) =>
     new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
   return (
-    <li>
+    <li className="flex items-center gap-1">
       <Link
         href={`/dashboard/families/${visit.clientId}`}
-        className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+        className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors flex-1 min-w-0"
       >
         <span className="w-20 shrink-0 text-sm font-semibold text-blue-600 dark:text-blue-400">
           {fmtTime(visit.dateTime)}
@@ -502,6 +543,7 @@ function VisitRow({ visit, showStaff }: { visit: ScheduledVisit; showStaff: bool
           </span>
         )}
       </Link>
+      {visit.address && <DirectionsButton address={visit.address} />}
     </li>
   )
 }
