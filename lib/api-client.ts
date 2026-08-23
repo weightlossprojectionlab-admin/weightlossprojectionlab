@@ -9,7 +9,7 @@
  */
 
 import { z } from 'zod'
-import { getAuth } from 'firebase/auth'
+import { getAuth, onAuthStateChanged } from 'firebase/auth'
 import { ErrorHandler } from './utils/error-handler'
 import { getCSRFToken } from './csrf'
 import { requireWriteAccess, isSubscriptionExemptWrite } from './access-guards'
@@ -54,6 +54,12 @@ class ApiClient {
   // tenant APIs ("User is not part of a franchise") even though the client shows
   // the new user signed in.
   private cachedTokenUid: string | null = null
+  // Resolves on the first onAuthStateChanged emission — Firebase fires it once
+  // persistence is restored (with a user, or null when signed out). Cached so
+  // concurrent first-load requests share ONE listener. Replaces a fixed 200ms
+  // sleep that lost the race on cold loads: the dashboard fetch fired before
+  // auth rehydrated, got no token, and 401'd with "Missing authentication token".
+  private authReadyPromise: Promise<void> | null = null
 
   constructor(baseUrl: string = '/api', options: ApiClientOptions = {}) {
     this.baseUrl = baseUrl
@@ -66,6 +72,43 @@ class ApiClient {
   }
 
   /**
+   * Wait until Firebase Auth has restored its session from persistence.
+   * Resolves on the first onAuthStateChanged emission — a real user OR null
+   * (signed out) — so callers block only as long as auth actually takes, never
+   * a fixed guess. A 5s cap guards against an SDK that never emits (misconfig).
+   * One shared listener across concurrent callers; unsubscribes after first emit.
+   */
+  private waitForAuthReady(): Promise<void> {
+    if (!this.authReadyPromise) {
+      this.authReadyPromise = new Promise<void>(resolve => {
+        let settled = false
+        const done = () => {
+          if (!settled) {
+            settled = true
+            resolve()
+          }
+        }
+        const auth = getAuth()
+        const timer = setTimeout(done, 5000)
+        const unsub = onAuthStateChanged(
+          auth,
+          () => {
+            clearTimeout(timer)
+            unsub()
+            done()
+          },
+          () => {
+            clearTimeout(timer)
+            unsub()
+            done()
+          }
+        )
+      })
+    }
+    return this.authReadyPromise
+  }
+
+  /**
    * Get Firebase ID token for authenticated requests (with caching)
    */
   private async getAuthToken(): Promise<string | null> {
@@ -74,8 +117,11 @@ class ApiClient {
       let user = auth.currentUser
 
       if (!user) {
-        // Wait briefly for Firebase Auth to initialize, then retry
-        await new Promise(resolve => setTimeout(resolve, 200))
+        // Wait for Firebase Auth to restore the session from persistence, then
+        // retry once. Deterministic (resolves the instant auth settles) instead
+        // of a 200ms guess that lost the cold-load race; returns null fast for a
+        // genuinely signed-out viewer because the first emission is null.
+        await this.waitForAuthReady()
         user = auth.currentUser
         if (!user) return null
       }
