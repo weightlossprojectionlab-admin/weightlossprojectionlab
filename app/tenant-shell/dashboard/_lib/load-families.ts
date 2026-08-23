@@ -712,7 +712,21 @@ export interface ScheduledVisit {
   // staff member actually needs to go. Derived from the client profile at load
   // (a denormalized copy that re-derives each read), null if not on file.
   address: string | null
+  // The client/family contact number — so the caregiver can call from the
+  // agenda if there's an issue (no answer at the door, running late). A tel:
+  // link; null if none on file.
+  clientPhone: string | null
   status: string
+  // Visit verification (EVV, phase A) — the check-in/out lifecycle. `id` is
+  // namespaced for React keys, so keep the RAW appointment doc id here for the
+  // verify API. visitStatus drives the on-track / payroll derivations.
+  appointmentId: string
+  // scheduled → en_route (trip started, travel/payroll clock) → in_progress
+  // (checked in, visit clock) → completed (checked out).
+  visitStatus: 'scheduled' | 'en_route' | 'in_progress' | 'completed'
+  tripStartedAt: string | null
+  checkInAt: string | null
+  checkOutAt: string | null
 }
 
 /** A member-medical appointment — a family member's OWN external visit.
@@ -820,7 +834,13 @@ export async function loadTenantAppointments(tenantId: string): Promise<TenantAp
               dateTime,
               location: a.location || null,
               address: formatHomeAddress(u.address),
+              clientPhone: u.phone || null,
               status: a.status || 'scheduled',
+              appointmentId: doc.id,
+              visitStatus: (a.visitStatus as any) || 'scheduled',
+              tripStartedAt: a.tripStartedAt || null,
+              checkInAt: a.checkInAt || null,
+              checkOutAt: a.checkOutAt || null,
             })
           } else {
             familyAppointments.push({

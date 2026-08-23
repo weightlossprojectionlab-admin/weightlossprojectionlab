@@ -19,7 +19,7 @@
  * the server-rendered layout.tsx.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { auth } from '@/lib/firebase'
@@ -28,6 +28,7 @@ import { useTenantDashboard, type FranchiseFamilySnapshot } from '@/hooks/useTen
 import type { ScheduledVisit, CoordinationAppointment } from '@/app/tenant-shell/dashboard/_lib/load-families'
 import { getCSRFToken } from '@/lib/csrf'
 import { logger } from '@/lib/logger'
+import { apiClient } from '@/lib/api-client'
 import {
   UserGroupIcon,
   ClipboardDocumentListIcon,
@@ -35,6 +36,7 @@ import {
   CalendarDaysIcon,
   MapPinIcon,
   MapIcon,
+  PhoneIcon,
   BellIcon,
   ChartBarIcon,
   PaintBrushIcon,
@@ -156,7 +158,7 @@ export default function FranchiseDashboardOverview() {
             <p className="text-gray-500 dark:text-gray-400">Loading your day&hellip;</p>
           </div>
         ) : (
-          <StaffDayView visits={todaysVisits} />
+          <StaffDayView visits={todaysVisits} tenantId={tenantId} onChange={refetch} />
         )}
       </div>
     )
@@ -379,7 +381,15 @@ interface StatCardProps {
 // A focused, mobile-first view of the signed-in staff member's OWN visits for
 // today: who, when, where — leading with the next visit — instead of the
 // practice-wide owner dashboard. Reuses VisitRow for the list rows (DRY).
-function StaffDayView({ visits }: { visits: ScheduledVisit[] }) {
+function StaffDayView({
+  visits,
+  tenantId,
+  onChange,
+}: {
+  visits: ScheduledVisit[]
+  tenantId: string
+  onChange: () => void | Promise<void>
+}) {
   const today = new Date().toLocaleDateString(undefined, {
     weekday: 'long',
     month: 'long',
@@ -389,15 +399,24 @@ function StaffDayView({ visits }: { visits: ScheduledVisit[] }) {
   const sorted = [...visits].sort(
     (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
   )
-  // "Next up" = the earliest visit still ahead of now; if all are past, the
-  // day's visits are done (the highlight simply drops away).
+  // The highlighted visit = the one to act on now: an in-progress visit (so
+  // "End visit" is front-and-centre), else the next upcoming one not yet done,
+  // else any remaining unfinished visit. Drops away once the day is complete.
   const now = Date.now()
-  const next = sorted.find(v => new Date(v.dateTime).getTime() >= now)
+  const next =
+    sorted.find(v => v.visitStatus === 'in_progress' || v.visitStatus === 'en_route') ||
+    sorted.find(v => v.visitStatus !== 'completed' && new Date(v.dateTime).getTime() >= now) ||
+    sorted.find(v => v.visitStatus !== 'completed')
+  // One trip at a time: while a visit is en route or in progress, other visits
+  // can't have their trip started.
+  const hasActiveVisit = sorted.some(
+    v => v.visitStatus === 'en_route' || v.visitStatus === 'in_progress'
+  )
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My day</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">My Day</h1>
         <p className="text-gray-500 dark:text-gray-400 mt-1">
           {today} &middot;{' '}
           {visits.length === 0
@@ -406,7 +425,14 @@ function StaffDayView({ visits }: { visits: ScheduledVisit[] }) {
         </p>
       </header>
 
-      {next && <NextVisitCard visit={next} />}
+      {next && (
+        <NextVisitCard
+          visit={next}
+          tenantId={tenantId}
+          onChange={onChange}
+          hasActiveVisit={hasActiveVisit}
+        />
+      )}
 
       <section className="bg-white dark:bg-gray-800 rounded-lg border-2 border-gray-200 dark:border-gray-700 p-6">
         <div className="flex items-center gap-2 mb-4">
@@ -420,7 +446,19 @@ function StaffDayView({ visits }: { visits: ScheduledVisit[] }) {
         ) : (
           <ul className="divide-y divide-gray-100 dark:divide-gray-700">
             {sorted.map(v => (
-              <VisitRow key={v.id} visit={v} showStaff={false} />
+              <VisitRow
+                key={v.id}
+                visit={v}
+                showStaff={false}
+                action={
+                  <VisitCheckInControl
+                    visit={v}
+                    tenantId={tenantId}
+                    onChange={onChange}
+                    hasActiveVisit={hasActiveVisit}
+                  />
+                }
+              />
             ))}
           </ul>
         )}
@@ -465,10 +503,44 @@ function DirectionsButton({ address, full = false }: { address: string; full?: b
   )
 }
 
+// Call the client/family from the agenda if there's an issue (no answer at the
+// door, running late). A tel: link — dials from browser/PWA/Capacitor, no key.
+// `full` = labelled, full-width; otherwise a 44px icon button.
+function CallButton({ phone, full = false }: { phone: string; full?: boolean }) {
+  const base =
+    'inline-flex items-center justify-center gap-1.5 min-h-[44px] rounded-lg text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors'
+  return (
+    <a
+      href={`tel:${phone.replace(/[^\d+]/g, '')}`}
+      aria-label={`Call ${phone}`}
+      title="Call"
+      onClick={e => e.stopPropagation()}
+      className={
+        full
+          ? `${base} w-full border border-gray-300 dark:border-gray-600 text-sm font-semibold`
+          : `${base} shrink-0 w-11`
+      }
+    >
+      <PhoneIcon className="w-5 h-5" />
+      {full && <span>Call</span>}
+    </a>
+  )
+}
+
 // The single most important thing at the start of a shift: where to go next,
 // and how to get there. Big tap targets (min 44px). The info + "Open" link into
 // the client workspace; "Directions" launches the maps app.
-function NextVisitCard({ visit }: { visit: ScheduledVisit }) {
+function NextVisitCard({
+  visit,
+  tenantId,
+  onChange,
+  hasActiveVisit,
+}: {
+  visit: ScheduledVisit
+  tenantId: string
+  onChange: () => void | Promise<void>
+  hasActiveVisit: boolean
+}) {
   const time = new Date(visit.dateTime).toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
@@ -477,9 +549,12 @@ function NextVisitCard({ visit }: { visit: ScheduledVisit }) {
   const workspace = `/dashboard/families/${visit.clientId}`
   return (
     <div className="rounded-xl border-2 border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300 mb-1">
-        Next up
-      </p>
+      <div className="flex items-center justify-between gap-2 mb-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">
+          Next up
+        </p>
+        <VisitStatusChip visit={visit} />
+      </div>
       <div className="flex items-start justify-between gap-4">
         <Link href={workspace} className="min-w-0 flex-1 group">
           <p className="text-lg font-bold text-gray-900 dark:text-gray-100 truncate group-hover:underline">
@@ -505,44 +580,328 @@ function NextVisitCard({ visit }: { visit: ScheduledVisit }) {
           Open &rarr;
         </Link>
       </div>
-      {visit.address && <DirectionsButton address={visit.address} full />}
+      <div className="mt-3 flex items-center gap-2">
+        <VisitCheckInControl
+          visit={visit}
+          tenantId={tenantId}
+          onChange={onChange}
+          hasActiveVisit={hasActiveVisit}
+          full
+        />
+        {visit.address && visit.visitStatus !== 'scheduled' && visit.visitStatus !== 'completed' && (
+          <DirectionsButton address={visit.address} />
+        )}
+        {visit.clientPhone && <CallButton phone={visit.clientPhone} />}
+      </div>
     </div>
   )
 }
 
-function VisitRow({ visit, showStaff }: { visit: ScheduledVisit; showStaff: boolean }) {
+// ─── Visit verification (EVV, phase A) — check-in / check-out + status ─────
+const LATE_GRACE_MIN = 15
+// How early (before the scheduled time) a caregiver may start the trip — guards
+// against clocking travel for a visit that isn't due yet.
+const TRIP_WINDOW_LEAD_MIN = 120
+
+// Read-only chip describing where the visit is in its lifecycle — shown to staff
+// AND admins (early oversight): completed + duration, in-progress + elapsed, or
+// "running late" once past scheduled + grace. On-time scheduled shows nothing,
+// keeping the agenda calm.
+function VisitStatusChip({ visit }: { visit: ScheduledVisit }) {
+  const mins = (fromIso: string, toMs: number) =>
+    Math.max(0, Math.round((toMs - new Date(fromIso).getTime()) / 60000))
+
+  if (visit.visitStatus === 'completed' && visit.checkInAt && visit.checkOutAt) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">
+        <CheckCircleIcon className="w-3.5 h-3.5" />
+        Completed &middot; {mins(visit.checkInAt, new Date(visit.checkOutAt).getTime())}m
+      </span>
+    )
+  }
+  if (visit.visitStatus === 'en_route' && visit.tripStartedAt) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-semibold text-indigo-800 dark:text-indigo-200">
+        <MapIcon className="w-3.5 h-3.5" />
+        En route &middot; {mins(visit.tripStartedAt, Date.now())}m
+      </span>
+    )
+  }
+  if (visit.visitStatus === 'in_progress' && visit.checkInAt) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:text-blue-200">
+        <ClockIcon className="w-3.5 h-3.5" />
+        In progress &middot; {mins(visit.checkInAt, Date.now())}m
+      </span>
+    )
+  }
+  const late = new Date(visit.dateTime).getTime() + LATE_GRACE_MIN * 60000 < Date.now()
+  if (late) {
+    return (
+      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-xs font-semibold text-amber-800 dark:text-amber-200">
+        <ExclamationTriangleIcon className="w-3.5 h-3.5" />
+        Running late
+      </span>
+    )
+  }
+  return null
+}
+
+// Arrival-confirmation gate. Check-in must NOT be a stray tap from home in the
+// morning — the caregiver explicitly attests they've arrived at the home before
+// the visit clock starts. (A later phase upgrades this attestation to GPS/QR-
+// verified arrival.) Mobile-first: a bottom sheet on phones, centred on larger.
+function ArrivalConfirmModal({
+  visit,
+  onConfirm,
+  onCancel,
+  busy,
+}: {
+  visit: ScheduledVisit
+  onConfirm: () => void
+  onCancel: () => void
+  busy: boolean
+}) {
+  const where = visit.address || visit.location
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/50 p-4"
+      onClick={onCancel}
+    >
+      <div
+        className="w-full max-w-sm rounded-2xl bg-white dark:bg-gray-800 p-6 shadow-xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2 mb-3">
+          <MapPinIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100">Confirm arrival</h3>
+        </div>
+        <p className="text-sm text-gray-600 dark:text-gray-300">
+          Only start the visit once you&rsquo;re at {capitalizeName(visit.clientName)}&rsquo;s home
+          {where ? (
+            <>
+              {' '}&mdash;{' '}
+              <span className="font-medium text-gray-900 dark:text-gray-100">{where}</span>
+            </>
+          ) : (
+            ''
+          )}
+          . This starts the visit clock.
+        </p>
+        <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-sm font-semibold text-gray-700 dark:text-gray-200 disabled:opacity-60"
+          >
+            Not yet
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="inline-flex items-center justify-center gap-1 min-h-[44px] px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-semibold disabled:opacity-60"
+          >
+            <CheckCircleIcon className="w-5 h-5" />
+            {busy ? 'Starting…' : "I've arrived — start visit"}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Staff-facing check-in / check-out. Check-in is gated behind the arrival
+// confirmation above; both write to the verify API (single source on the
+// appointment) then refetch so the chip + payroll data reflect it. Completed
+// visits show a static confirmation, not another button.
+function VisitCheckInControl({
+  visit,
+  tenantId,
+  onChange,
+  hasActiveVisit = false,
+  full = false,
+}: {
+  visit: ScheduledVisit
+  tenantId: string
+  onChange: () => void | Promise<void>
+  hasActiveVisit?: boolean
+  full?: boolean
+}) {
+  const [busy, setBusy] = useState<'start-trip' | 'check-in' | 'check-out' | null>(null)
+  const [confirming, setConfirming] = useState(false)
+
+  const post = async (action: 'start-trip' | 'check-in' | 'check-out') => {
+    setBusy(action)
+    try {
+      await apiClient.post(`/tenant/${tenantId}/visits/verify`, {
+        userId: visit.clientId,
+        appointmentId: visit.appointmentId,
+        action,
+      })
+      await onChange()
+    } catch (err) {
+      logger.error('[VisitCheckInControl] verify failed', err as Error)
+    } finally {
+      setBusy(null)
+      setConfirming(false)
+    }
+  }
+
+  const sizing = full ? 'w-full' : 'shrink-0 px-3'
+  const btn = `inline-flex items-center justify-center min-h-[44px] rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${sizing}`
+
+  if (visit.visitStatus === 'completed') {
+    return (
+      <span
+        className={`inline-flex items-center justify-center gap-1 min-h-[44px] text-sm font-semibold text-green-700 dark:text-green-300 ${
+          full ? 'w-full' : 'shrink-0 px-3'
+        }`}
+      >
+        <CheckCircleIcon className="w-5 h-5" /> Done
+      </span>
+    )
+  }
+  if (visit.visitStatus === 'in_progress') {
+    return (
+      <button
+        type="button"
+        onClick={() => post('check-out')}
+        disabled={busy !== null}
+        className={`${btn} bg-amber-500 hover:bg-amber-600 text-white`}
+      >
+        {busy === 'check-out' ? 'Saving…' : 'End visit'}
+      </button>
+    )
+  }
+  // En route — arrived at the home: check in (gated by arrival confirmation).
+  if (visit.visitStatus === 'en_route') {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          disabled={busy !== null}
+          className={`${btn} bg-green-600 hover:bg-green-700 text-white`}
+        >
+          Start visit
+        </button>
+        {confirming && (
+          <ArrivalConfirmModal
+            visit={visit}
+            busy={busy === 'check-in'}
+            onCancel={() => {
+              if (busy === null) setConfirming(false)
+            }}
+            onConfirm={() => post('check-in')}
+          />
+        )}
+      </>
+    )
+  }
+  // Scheduled — starting the trip begins the travel/payroll clock AND opens
+  // navigation (one tap: go + navigate, so scheduled rows need no separate
+  // Directions button). Disabled until the visit is in its window and no other
+  // visit is active — one trip at a time.
+  const tooEarly =
+    Date.now() < new Date(visit.dateTime).getTime() - TRIP_WINDOW_LEAD_MIN * 60000
+  const blocked = hasActiveVisit || tooEarly
+  const startTrip = () => {
+    if (visit.address) window.open(directionsHref(visit.address), '_blank', 'noopener')
+    post('start-trip')
+  }
+  return (
+    <button
+      type="button"
+      onClick={startTrip}
+      disabled={busy !== null || blocked}
+      title={
+        hasActiveVisit
+          ? 'Finish your current visit first'
+          : tooEarly
+            ? "Too early — this visit isn't due yet"
+            : 'Start trip & open directions'
+      }
+      className={`${btn} bg-blue-600 hover:bg-blue-700 text-white`}
+    >
+      {busy === 'start-trip' ? 'Starting…' : 'Start trip'}
+    </button>
+  )
+}
+
+function VisitRow({
+  visit,
+  showStaff,
+  action,
+}: {
+  visit: ScheduledVisit
+  showStaff: boolean
+  action?: ReactNode
+}) {
   const fmtTime = (iso: string) =>
     new Date(iso).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  const where = visit.address || visit.location
+
+  const info = (
+    <Link
+      href={`/dashboard/families/${visit.clientId}`}
+      className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors flex-1 min-w-0"
+    >
+      <span className="w-16 sm:w-20 shrink-0 text-sm font-semibold text-blue-600 dark:text-blue-400">
+        {fmtTime(visit.dateTime)}
+      </span>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+          {capitalizeName(visit.clientName)}
+          {visit.patientName && visit.patientName !== visit.clientName ? ` · ${capitalizeName(visit.patientName)}` : ''}
+        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
+          {visit.reason || 'Home visit'}
+        </p>
+        {where && (
+          <p className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 min-w-0 mt-0.5">
+            <MapPinIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{where}</span>
+          </p>
+        )}
+        <div className="mt-1 empty:hidden">
+          <VisitStatusChip visit={visit} />
+        </div>
+      </div>
+      {showStaff && visit.staffName && (
+        <span className="hidden sm:inline whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">
+          {visit.staffName}
+        </span>
+      )}
+    </Link>
+  )
+
+  // Staff rows carry a check-in action — stack the actions on a bar below so the
+  // visit info keeps full width on a phone. Admin rows (no action) stay compact
+  // with Directions inline.
+  if (action) {
+    return (
+      <li className="py-1">
+        {info}
+        <div className="flex items-center justify-end gap-2 pb-2">
+          {visit.clientPhone && <CallButton phone={visit.clientPhone} />}
+          {/* Scheduled visits navigate via "Start trip"; show Directions only
+              once en route / on site, to keep the scheduled row uncluttered. */}
+          {visit.address &&
+            visit.visitStatus !== 'scheduled' &&
+            visit.visitStatus !== 'completed' && (
+              <DirectionsButton address={visit.address} />
+            )}
+          {action}
+        </div>
+      </li>
+    )
+  }
   return (
     <li className="flex items-center gap-1">
-      <Link
-        href={`/dashboard/families/${visit.clientId}`}
-        className="flex items-center gap-4 py-3 px-2 -mx-2 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors flex-1 min-w-0"
-      >
-        <span className="w-20 shrink-0 text-sm font-semibold text-blue-600 dark:text-blue-400">
-          {fmtTime(visit.dateTime)}
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
-            {capitalizeName(visit.clientName)}
-            {visit.patientName && visit.patientName !== visit.clientName ? ` · ${capitalizeName(visit.patientName)}` : ''}
-          </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
-            {visit.reason || 'Home visit'}
-          </p>
-          {(visit.address || visit.location) && (
-            <p className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
-              <MapPinIcon className="w-3.5 h-3.5 shrink-0" />
-              <span className="truncate">{visit.address || visit.location}</span>
-            </p>
-          )}
-        </div>
-        {showStaff && visit.staffName && (
-          <span className="hidden sm:inline whitespace-nowrap text-xs text-gray-400 dark:text-gray-500">
-            {visit.staffName}
-          </span>
-        )}
-      </Link>
+      {info}
+      {visit.clientPhone && <CallButton phone={visit.clientPhone} />}
       {visit.address && <DirectionsButton address={visit.address} />}
     </li>
   )

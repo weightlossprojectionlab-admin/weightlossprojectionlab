@@ -19,6 +19,7 @@ import { getTenantBySlug } from '@/lib/tenant-server'
 import { getPlanLimits } from '@/lib/franchise-plans'
 import { countManagedFamilies } from './_lib/load-families'
 import DashboardTabs from './DashboardTabs'
+import TenantHeaderStats from '@/components/tenant/TenantHeaderStats'
 
 export const dynamic = 'force-dynamic'
 
@@ -91,21 +92,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             {tenant.slug}.wellnessprojectionlab.com
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-            <span className="inline-flex items-center gap-1.5">
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-              {familyLine}
-            </span>
-            <span className="mx-2 text-gray-300 dark:text-gray-600">·</span>
-            <span className="inline-flex items-center gap-1.5">
-              <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              {staffLine}
-            </span>
-          </p>
+          {/* Practice-capacity readout is owner-only — hidden from staff, who
+              get the focused "My Day" caregiver view. Gated client-side. */}
+          <TenantHeaderStats tenantId={tenant.id} familyLine={familyLine} staffLine={staffLine} />
         </header>
 
         <DashboardTabs tenantId={tenant.id} />

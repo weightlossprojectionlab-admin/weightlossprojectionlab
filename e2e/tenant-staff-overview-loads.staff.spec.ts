@@ -25,24 +25,27 @@ test.describe('Staff actor UI — Overview loads without the auth-token race', (
   // auth error's absence, not latency, so we wait the fetch out.
   test.setTimeout(4 * 60_000)
 
-  test('cold-load Overview renders data, not the "Missing authentication token" error', async ({ page }) => {
+  test('cold-load "My day" renders, not the "Missing authentication token" error', async ({ page }) => {
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
-    // Auth has resolved once the (scoped) tab bar renders.
-    await expect(page.getByTestId('dashboard-tabs')).toBeVisible({ timeout: 90_000 })
+    // Staff land on "My day" (not the owner dashboard). The heading renders as
+    // soon as the DOM-read tenantId resolves.
+    await expect(page.getByRole('heading', { name: 'My Day' })).toBeVisible({ timeout: 90_000 })
 
-    // Wait for the fetch to actually resolve — the spinner detaches on success
-    // OR error. Long timeout absorbs dev cold-compile of the stats route.
-    await expect(page.getByText('Loading dashboard...')).toHaveCount(0, { timeout: 180_000 })
+    // Wait for the visit fetch to resolve — the spinner detaches on success OR
+    // error. Long timeout absorbs dev cold-compile of the stats route.
+    await expect(page.getByText(/Loading your day/)).toHaveCount(0, { timeout: 180_000 })
 
-    // The auth-token failure card (the bug) must be absent...
+    // The auth-token failure card (the bug) must be absent. On an auth-token
+    // error the page renders this error BEFORE the staff branch, so it guards
+    // "My day" too — this is still the auth-race regression guard.
     await expect(page.getByText('Missing authentication token')).toHaveCount(0)
     await expect(page.getByText('Error Loading Dashboard')).toHaveCount(0)
 
-    // ...and the real payoff: Overview content rendered. "Family Health Snapshots"
-    // only appears once the stats fetch succeeds.
+    // The agenda rendered: the "Today's visits" section appears once the fetch
+    // resolves (whether or not there are visits).
     await expect(
-      page.getByRole('heading', { name: /Family Health Snapshots/i })
+      page.getByRole('heading', { name: /Today.s visits/i })
     ).toBeVisible({ timeout: 30_000 })
   })
 })

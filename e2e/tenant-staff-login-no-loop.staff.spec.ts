@@ -44,9 +44,10 @@ test.describe('Staff interactive login — no /auth ↔ /dashboard loop', () => 
     await page.getByRole('button', { name: /^sign in$/i }).click()
 
     // Lands on the dashboard and renders real content — not bounced to /login.
+    // Staff land on the "My Day" agenda (not the owner dashboard).
     await expect(page).toHaveURL(/\/dashboard/, { timeout: 60_000 })
     await expect(
-      page.getByRole('heading', { name: /Family Health Snapshots/i })
+      page.getByRole('heading', { name: 'My Day' })
     ).toBeVisible({ timeout: 90_000 })
 
     // Settle, then confirm it stayed put — the loop's signature is bouncing back

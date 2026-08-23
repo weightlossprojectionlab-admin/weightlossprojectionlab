@@ -139,7 +139,15 @@ export async function requireWriteAccess(): Promise<void> {
  * request URL, so both client choke points can share one predicate.
  */
 export function isSubscriptionExemptWrite(endpointOrUrl: string): boolean {
-  return /\/invitations\/[^/]+\/(accept|decline)(\?|$)/.test(endpointOrUrl)
+  return (
+    /\/invitations\/[^/]+\/(accept|decline)(\?|$)/.test(endpointOrUrl) ||
+    // Tenant/franchise operations (e.g. visit check-in/out) are gated
+    // server-side by tenant RBAC (verifyTenantStaffOrAdmin*), NOT by the
+    // CALLER's consumer subscription. A franchise admin/staff has no consumer
+    // plan, so the consumer write-gate would wrongly block every tenant write.
+    /^\/tenant\//.test(endpointOrUrl) ||
+    /\/api\/tenant\//.test(endpointOrUrl)
+  )
 }
 
 /**

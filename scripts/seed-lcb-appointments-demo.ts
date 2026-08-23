@@ -317,13 +317,14 @@ async function main() {
     const f = fam.data() as any
     const famName = f.name || f.displayName || f.email || 'Client'
 
-    // Give each demo family a home address if it has none — the caregiver's
-    // destination. Won't clobber a real address already on file.
-    if (!f.address) {
-      await fam.ref.set(
-        { address: DEMO_ADDRESSES[i % DEMO_ADDRESSES.length] },
-        { merge: true }
-      )
+    // Give each demo family a home address + contact phone if missing — the
+    // caregiver's destination, and the number to call if there's an issue.
+    // Won't clobber real data already on file.
+    const patch: Record<string, any> = {}
+    if (!f.address) patch.address = DEMO_ADDRESSES[i % DEMO_ADDRESSES.length]
+    if (!f.phone) patch.phone = `+1555555${String(1000 + i).slice(-4)}`
+    if (Object.keys(patch).length) {
+      await fam.ref.set(patch, { merge: true })
     }
 
     // First active patient, if any — else the account holder.

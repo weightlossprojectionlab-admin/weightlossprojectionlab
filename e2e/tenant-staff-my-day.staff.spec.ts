@@ -21,11 +21,14 @@ test.describe('Staff actor UI — "My day" agenda replaces the owner dashboard',
     await page.goto('/dashboard', { waitUntil: 'domcontentloaded' })
 
     // The focused staff agenda.
-    await expect(page.getByRole('heading', { name: 'My day' })).toBeVisible({ timeout: 90_000 })
+    await expect(page.getByRole('heading', { name: 'My Day' })).toBeVisible({ timeout: 90_000 })
     await expect(page.getByRole('heading', { name: /Today.s visits/i })).toBeVisible()
 
     // Owner-only surfaces must NOT appear for staff.
     await expect(page.getByRole('heading', { name: /Family Health Snapshots/i })).toHaveCount(0)
     await expect(page.getByText('Management Tools')).toHaveCount(0)
+    // The owner's practice-capacity readout (families/staff seat counts) is
+    // hidden from staff too.
+    await expect(page.getByText(/\d+ \/ \d+ families/)).toHaveCount(0)
   })
 })
