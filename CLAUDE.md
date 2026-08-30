@@ -35,10 +35,17 @@ Stripe / Capacitor). Full capability catalog + competitive teardown: `docs/PLATF
   canonical key + an end-to-end constraint/flag path.
   - *Deliberate exceptions (correct, not oversights):* (1) `constraints.allergens` still seeds `[]` —
     allergen gating fires at cook-time via `RecipeModal`, and the recipe/product/profile allergen
-    vocabularies aren't reconciled yet; a half-mapped list would pass unsafe recipes. (2)
-    `questionnaireResponses` (CKD stage / GFR / sodium limit) are not yet threaded from `/recipes` +
-    `RecipeView` into the engine — the apply* functions fall back to clinically-conservative defaults, so
-    this is safe; threading precise per-patient limits is the follow-up. (3) Added a heart-disease sodium
-    cap to `CONDITION_CAPS` for consistency with the recipe engine (which restricts sodium for cardiac);
-    conservative (reduces portion), safe direction.
+    vocabularies aren't reconciled yet; a half-mapped list would pass unsafe recipes. (2) Added a
+    heart-disease sodium cap to `CONDITION_CAPS` for consistency with the recipe engine (which restricts
+    sodium for cardiac); conservative (reduces portion), safe direction.
+
+- **2026-08-30 — Finish the conditions story: precise limits + 3rd site (I + S).** Threaded
+  `PatientProfile.conditionDetails` (per-condition questionnaire responses — CKD stage/GFR/sodium/potassium
+  limits) from `/recipes` + `RecipeView` into the engine via new `flattenConditionResponses()` (in the same
+  single source); the engine now applies the doctor's actual limits instead of conservative defaults. Typed
+  `conditionDetails` onto `PatientProfile` (was written by the patient route but untyped — I-caveat). Folded
+  the third dead condition site, `app/api/shopping/suggestions/route.ts` (was exact `.includes('diabetes')`,
+  never matched stored `'Diabetes'`), onto `normalizeConditions` for the nutrient conditions; kept celiac as
+  its own `/celiac|gluten/i` check rather than forcing a gluten concern into `DietaryCondition` (S-caveat:
+  don't build the wrong abstraction). +3 unit tests (flatten + precise-limit override); e2e regression green.
 </content>

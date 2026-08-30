@@ -186,6 +186,15 @@ export interface PatientProfile {
   foodAllergies?: string[] // e.g., ['peanuts', 'shellfish', 'dairy']
 
   /**
+   * Per-condition questionnaire responses, keyed by conditionKey → { questionId:
+   * value } (e.g. { 'kidney-disease-ckd': { ckd_stage: 'stage-4', ckd_gfr: 28 } }).
+   * Captured by HealthConditionModal, persisted by the patient PUT route. Feeds
+   * the recipe engine's precise per-patient nutrient limits — flatten it with
+   * `flattenConditionResponses` (lib/condition-dietary-rules) before passing in.
+   */
+  conditionDetails?: Record<string, Record<string, unknown>>
+
+  /**
    * DRUG / medication allergies — DISTINCT from foodAllergies. This is the
    * question a paramedic asks first ("allergic to any medications?"), and it
    * was previously unmodeled: the only allergy fields were for food. Drug

@@ -92,3 +92,22 @@ export function normalizeConditions(raw: string[] | undefined | null): DietaryCo
   }
   return out
 }
+
+/**
+ * Flatten per-condition questionnaire responses (`PatientProfile.conditionDetails`,
+ * keyed by conditionKey → { questionId: value }) into the single flat object the
+ * recipe engine's `apply*` functions read (`responses.ckd_stage`, `responses.ckd_gfr`,
+ * …). Question ids are condition-prefixed, so merging is collision-free. Returns
+ * `undefined` when there's nothing to pass, so the engine falls back to its
+ * clinically-conservative defaults rather than an empty object.
+ */
+export function flattenConditionResponses(
+  conditionDetails: Record<string, Record<string, unknown>> | undefined | null,
+): Record<string, unknown> | undefined {
+  if (!conditionDetails) return undefined
+  const merged: Record<string, unknown> = {}
+  for (const responses of Object.values(conditionDetails)) {
+    if (responses && typeof responses === 'object') Object.assign(merged, responses)
+  }
+  return Object.keys(merged).length ? merged : undefined
+}

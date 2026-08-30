@@ -1,4 +1,9 @@
-import { normalizeCondition, normalizeConditions, type DietaryCondition } from './condition-dietary-rules'
+import {
+  normalizeCondition,
+  normalizeConditions,
+  flattenConditionResponses,
+  type DietaryCondition,
+} from './condition-dietary-rules'
 import { buildMedicalConstraints, evaluateRecipeSafety } from './medical-recipe-engine'
 import type { PatientProfile } from '@/types/medical'
 import type { MealSuggestion } from './meal-suggestions'
@@ -64,6 +69,23 @@ describe('normalizeConditions — array normalization', () => {
   })
 })
 
+describe('flattenConditionResponses — conditionDetails → flat responses', () => {
+  it('merges per-condition maps into one flat object (prefixed keys, no collision)', () => {
+    const flat = flattenConditionResponses({
+      'kidney-disease-ckd': { ckd_stage: 'stage-4', ckd_gfr: 28 },
+      'cancer-active-or-recent-treatment': { cancer_appetite: 'very-poor' },
+    })
+    expect(flat).toEqual({ ckd_stage: 'stage-4', ckd_gfr: 28, cancer_appetite: 'very-poor' })
+  })
+
+  it('returns undefined when there is nothing to pass (so the engine uses defaults)', () => {
+    expect(flattenConditionResponses(undefined)).toBeUndefined()
+    expect(flattenConditionResponses(null)).toBeUndefined()
+    expect(flattenConditionResponses({})).toBeUndefined()
+    expect(flattenConditionResponses({ 'kidney-disease-ckd': {} })).toBeUndefined()
+  })
+})
+
 // Integration: prove the flagship link is actually wired end-to-end — a stored
 // free-text label now flows through buildMedicalConstraints into real nutrient
 // limits, and a violating recipe is flagged. Before this change the constraints
@@ -89,6 +111,17 @@ describe('buildMedicalConstraints fires for real stored labels', () => {
     const c = buildMedicalConstraints(patient(['Asthma']), [], [])
     expect(c.sodiumLimitMg).toBeUndefined()
     expect(c.carbLimitG).toBeUndefined()
+  })
+
+  it('applies PRECISE per-patient limits from questionnaire responses (not defaults)', () => {
+    // conditionDetails-style responses the CKD questionnaire captures. Without
+    // them, applyCKDConstraints falls back to sodium 1500 / potassium 2000.
+    const responses = flattenConditionResponses({
+      'kidney-disease-ckd': { ckd_stage: 'stage-4', ckd_sodium_limit: 1200, ckd_potassium_limit: 1800 },
+    })
+    const c = buildMedicalConstraints(patient(['Kidney Disease']), [], [], responses)
+    expect(c.sodiumLimitMg).toBe(1200) // the doctor's limit, not the 1500 default
+    expect(c.potassiumLimitMg).toBe(1800)
   })
 
   it('flags a high-sodium recipe as unsafe for a CKD patient', () => {

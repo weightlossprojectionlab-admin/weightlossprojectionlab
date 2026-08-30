@@ -6,6 +6,7 @@ import { useRecipes } from '@/hooks/useRecipes'
 import { RecipeImageCarousel } from '@/components/RecipeImageCarousel'
 import { VideoCameraIcon, ShieldCheckIcon, ExclamationTriangleIcon, SparklesIcon } from '@heroicons/react/24/outline'
 import { getMemberRecipeSuggestions, type MemberRecipeSuggestion } from '@/lib/member-recipe-engine'
+import { flattenConditionResponses } from '@/lib/condition-dietary-rules'
 import { medicalOperations } from '@/lib/medical-operations'
 import { getHouseholdInventory, enrichInventoryWithNutrition } from '@/lib/household-shopping-operations'
 import { requiresCooking } from '@/lib/meal-suggestions'
@@ -106,6 +107,7 @@ export function RecipeView({ patientId, patientName }: RecipeViewProps) {
             patient: profile,
             medications: meds || [],
             recentVitals: vitals || [],
+            questionnaireResponses: flattenConditionResponses(profile.conditionDetails),
             householdInventory: enrichedHousehold || [], // Use the enriched household inventory
             mealType: selectedMealType === 'all' ? 'breakfast' : selectedMealType,
             maxResults: 100,
