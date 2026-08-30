@@ -13,6 +13,7 @@
 
 import type { MealSuggestion } from './meal-suggestions'
 import type { PatientProfile, PatientMedication, VitalSign } from '@/types/medical'
+import { normalizeConditions } from './condition-dietary-rules'
 import { logger } from './logger'
 
 // ==================== MEDICAL CONSTRAINTS ====================
@@ -84,29 +85,33 @@ export function buildMedicalConstraints(
   questionnaireResponses?: Record<string, any>
 ): MedicalRecipeConstraints {
   const constraints: MedicalRecipeConstraints = {
+    // Allergen gating fires at cook-time via RecipeModal's hard-block; seeding
+    // it here is deferred until the recipe/product/profile allergen vocabularies
+    // are reconciled (tracked separately) — a half-mapped list would silently
+    // pass unsafe recipes, worse than deferring.
     allergens: []
   }
 
-  // Extract conditions from patient profile
-  // Note: healthConditions not in PatientProfile type - would need to fetch separately
-  const conditions: string[] = [] // TODO: Fetch conditions from separate collection
+  // Normalize the patient's stored conditions to the canonical dietary set.
+  // `healthConditions` holds free-text labels ('Diabetes', 'Kidney Disease');
+  // the normalizer maps every capture vocabulary onto the keys this switch
+  // handles, so the condition rules actually fire for real patients.
+  const conditions = normalizeConditions(patient.healthConditions)
 
-  // Process each condition
-  conditions.forEach((condition: string) => {
+  // Process each condition (exhaustive over DietaryCondition)
+  conditions.forEach((condition) => {
     switch (condition) {
-      case 'kidney-disease-ckd':
+      case 'ckd':
         applyCKDConstraints(constraints, questionnaireResponses)
         break
-      case 'diabetes-type-1':
-      case 'diabetes-type-2':
-      case 'pre-diabetes':
+      case 'diabetes':
         applyDiabetesConstraints(constraints, questionnaireResponses, recentVitals)
         break
-      case 'hypertension-high-blood-pressure':
+      case 'hypertension':
       case 'heart-disease':
         applyHeartConstraints(constraints, recentVitals)
         break
-      case 'cancer-active-or-recent-treatment':
+      case 'cancer-treatment':
         applyCancerConstraints(constraints, questionnaireResponses)
         break
       case 'high-cholesterol':

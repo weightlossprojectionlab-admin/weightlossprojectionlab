@@ -19,6 +19,7 @@
 
 import type { MealSuggestion, MealType } from './meal-suggestions'
 import type { PatientProfile } from '@/types/medical'
+import { normalizeConditions, type DietaryCondition } from './condition-dietary-rules'
 
 export type PortionLimitingFactor =
   | 'calories'
@@ -56,22 +57,18 @@ const DEFAULT_DAILY_CALORIE_TARGET = 1800
 /**
  * Hard caps by medical condition. Conservative defaults — these
  * are not personalized clinical guidance, just safety guardrails
- * for the recommendation. Real clinical caps come from the
- * patient's `medicalConditions[].caps` field once that schema is
- * populated (Commit B of the family-meal PRD); until then we use
- * these condition-name lookups against `healthConditions: string[]`.
+ * for the recommendation. Keyed by canonical `DietaryCondition`
+ * (see `condition-dietary-rules`), so the stored free-text labels
+ * ('Diabetes', 'Kidney Disease') resolve here instead of silently
+ * missing — the same single source the recipe engine reads.
  */
-const CONDITION_CAPS: Record<
-  string,
-  { carbsG?: number; sodiumMg?: number; proteinG?: number }
+const CONDITION_CAPS: Partial<
+  Record<DietaryCondition, { carbsG?: number; sodiumMg?: number; proteinG?: number }>
 > = {
   diabetes: { carbsG: 60 }, // per meal — ADA general guidance
-  'type-2-diabetes': { carbsG: 60 },
-  'type-1-diabetes': { carbsG: 60 },
-  renal: { sodiumMg: 600, proteinG: 25 },
-  'chronic-kidney-disease': { sodiumMg: 600, proteinG: 25 },
-  hypertension: { sodiumMg: 600 },
   ckd: { sodiumMg: 600, proteinG: 25 },
+  hypertension: { sodiumMg: 600 },
+  'heart-disease': { sodiumMg: 600 },
 }
 
 /**
@@ -126,7 +123,7 @@ export function computeRecommendedServings(
 
   // 2) Apply medical-condition caps when present. Each condition
   //    yields a candidate cap; the smallest cap wins.
-  const conditions = (profile.healthConditions ?? []).map((c) => c.toLowerCase())
+  const conditions = normalizeConditions(profile.healthConditions)
   let cappedServings = calorieServings
   let limitingFactor: PortionLimitingFactor = 'calories'
 
