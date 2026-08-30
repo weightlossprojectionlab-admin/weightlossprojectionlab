@@ -113,7 +113,9 @@ test.describe.serial('Onboarding — Household path persists correctly', () => {
     expect(pet!.data().species, 'pet species').toBe('dog')
 
     const userDoc = (await db.collection('users').doc(uid).get()).data()
-    expect(userDoc?.familyLastName, 'household name stored').toBe('House')
+    // familyLastName is persisted under `profile` (the household surname lives on
+    // user.profile alongside firstName/onboardingCompleted), not at the top level.
+    expect(userDoc?.profile?.familyLastName, 'household name stored').toBe('House')
 
     console.log(`→ household onboarding OK (self-block skipped): human + pet(dog), household=House`)
   })
