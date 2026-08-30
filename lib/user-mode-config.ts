@@ -109,15 +109,18 @@ export function getUIConfig(
       groups: true
     },
     household: {
-      weightLoss: true,
+      // Care-focused: no personal weight-loss / coaching / missions — those are
+      // the self-logger (single) surfaces from the weight-loss era. Care features
+      // (meals, shopping, inventory, recipes, medical, family) stay on.
+      weightLoss: false,
       mealLogging: true,
       shopping: true,
       inventory: true,
       recipes: true,
       medical: true,
       family: true,
-      coaching: true,
-      missions: true,
+      coaching: false,
+      missions: false,
       groups: true
     },
     caregiver: {
@@ -192,9 +195,17 @@ function getHiddenRoutes(userMode: UserMode, features: UIConfig['features']): st
   if (!features.groups) hidden.push('/groups')
   if (!features.coaching) hidden.push('/coaching')
 
-  // Caregiver mode: hide personal weight loss features
-  if (userMode === 'caregiver') {
-    hidden.push('/log-weight', '/log-steps', '/weight-history', '/progress')
+  // Personal weight-loss surfaces belong to the self-logger only — the legacy
+  // weight-loss era. userMode 'single' IS the self-logger (onboarding "just_me");
+  // household AND caregiver both resolve to non-'single', so gating on !== 'single'
+  // hides these for every care user (and sidesteps the onboarding-caregiver →
+  // 'household' quirk). These routes are deletion candidates once traffic confirms
+  // they're dead (Phase 3).
+  if (userMode !== 'single') {
+    hidden.push(
+      '/progress', '/log-weight', '/log-steps', '/weight-history',
+      '/gallery', '/meal-gallery'
+    )
   }
 
   return hidden

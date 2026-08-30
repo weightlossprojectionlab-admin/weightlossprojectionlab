@@ -6,6 +6,8 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useMenu } from '@/contexts/MenuContext'
 import { useLazyAuth } from '@/hooks/useLazyAuth'
 import { useSubscription } from '@/hooks/useSubscription'
+import { useUIConfig } from '@/hooks/useUIConfig'
+import { isRouteVisible } from '@/lib/user-mode-config'
 import { PlanBadge } from '@/components/subscription/PlanBadge'
 import { AccountSwitcher } from '@/components/ui/AccountSwitcher'
 import { signOut } from '@/lib/auth'
@@ -55,6 +57,7 @@ export function AppMenu() {
   const { isOpen, closeMenu } = useMenu()
   const { user } = useLazyAuth()
   const { subscription } = useSubscription()
+  const { config } = useUIConfig()
   const pathname = usePathname()
   const router = useRouter()
 
@@ -207,13 +210,20 @@ export function AppMenu() {
 
         {/* Menu Content */}
         <div className="overflow-y-auto h-[calc(100%-130px)] p-4">
-          {menuSections.map((section) => (
+          {menuSections.map((section) => {
+            // Hide legacy/disabled routes for this user's mode — SAME source of
+            // truth as the tab nav (isRouteVisible over the userMode config), so a
+            // route hidden for care users is hidden in BOTH navs (DRY). During the
+            // brief config load, isRouteVisible(null, …) is true, so nothing flashes.
+            const items = section.items.filter((item) => isRouteVisible(config, item.href))
+            if (items.length === 0) return null
+            return (
             <div key={section.title} className="mb-6">
               <h3 className="text-xs font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-wider mb-2 px-2">
                 {section.title}
               </h3>
               <nav className="space-y-1">
-                {section.items.map((item) => {
+                {items.map((item) => {
                   // "You are here" when the path is the item's route, a sub-route
                   // of it, or one of the section's other owned prefixes (e.g.
                   // Family owns /patients). Marked aria-current so it reads as the
@@ -241,7 +251,8 @@ export function AppMenu() {
                 })}
               </nav>
             </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Footer */}
