@@ -109,6 +109,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       lastMealAt: f.health.lastMealAt,
       lastMealName: f.health.lastMealName,
       joinedPlatformAt: f.joinedPlatformAt,
+      // Household rollup for the Overview card (household summary, not one
+      // member's telemetry).
+      memberCount: f.memberCount,
+      memberNames: f.memberNames,
     }))
 
     const stats = {

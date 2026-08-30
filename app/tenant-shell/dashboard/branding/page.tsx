@@ -20,6 +20,11 @@ export default async function BrandingPage() {
   const tenant = await getTenantBySlug(tenantSlug)
   if (!tenant) notFound()
 
+  // Branding is public config (logo/color/company name are shown to every
+  // visitor on the branded pages), so server-rendering it is fine. The only
+  // sensitive value was the tenant.contact.adminEmail FALLBACK for supportEmail
+  // — the owner's account email — which must not be server-rendered into the
+  // payload. Drop it: supportEmail defaults to empty (the owner sets it here).
   return (
     <BrandingEditor
       tenantId={tenant.id}
@@ -27,7 +32,7 @@ export default async function BrandingPage() {
         logoUrl: tenant.branding?.logoUrl || '',
         primaryColor: tenant.branding?.primaryColor || '262 83% 58%',
         companyName: tenant.branding?.companyName || tenant.name,
-        supportEmail: tenant.branding?.supportEmail || tenant.contact?.adminEmail || '',
+        supportEmail: tenant.branding?.supportEmail || '',
       }}
     />
   )

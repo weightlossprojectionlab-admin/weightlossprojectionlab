@@ -51,6 +51,14 @@ setup('sign in franchise admin', async ({ page }) => {
 
   const emailInput = page.getByLabel('Email address')
   await emailInput.waitFor({ state: 'visible', timeout: 90_000 })
+  // The /auth page DEFAULTS to sign-up ("Create account"). If that form is
+  // showing, switch to sign-in first — otherwise the exact "Sign in" submit
+  // isn't present and we sit on the signup form until timeout. (Mirrors the
+  // apex e2e/auth.setup.ts, which already handles this; this setup was stale.)
+  if (await page.getByRole('button', { name: 'Create account', exact: true }).isVisible().catch(() => false)) {
+    await page.getByRole('button', { name: /Switch to sign in/i }).click()
+    await page.getByRole('button', { name: 'Sign in', exact: true }).waitFor({ state: 'visible', timeout: 15_000 })
+  }
   await emailInput.fill(email)
   await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()

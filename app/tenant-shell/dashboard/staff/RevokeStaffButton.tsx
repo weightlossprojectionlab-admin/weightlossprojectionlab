@@ -19,6 +19,9 @@ interface Props {
   invitationId: string
   invitedEmail: string
   status: 'pending' | 'accepted'
+  // Called after a successful revoke so the parent can refetch its (client-side)
+  // invitation list. Falls back to router.refresh() when not provided.
+  onRevoked?: () => void
 }
 
 export default function RevokeStaffButton({
@@ -26,6 +29,7 @@ export default function RevokeStaffButton({
   invitationId,
   invitedEmail,
   status,
+  onRevoked,
 }: Props) {
   const router = useRouter()
   const [state, setState] = useState<'idle' | 'confirming' | 'removing'>('idle')
@@ -55,7 +59,11 @@ export default function RevokeStaffButton({
         const data = await res.json().catch(() => ({}))
         throw new Error(data.error || `Revoke failed (${res.status})`)
       }
-      router.refresh()
+      // The revoke already succeeded — reset the button before the parent
+      // refetches so it never gets stuck at "Working…" if the refetch fails.
+      setState('idle')
+      if (onRevoked) onRevoked()
+      else router.refresh()
     } catch (err) {
       logger.error('[RevokeStaffButton] failed', err as Error)
       setError(err instanceof Error ? err.message : 'Revoke failed.')

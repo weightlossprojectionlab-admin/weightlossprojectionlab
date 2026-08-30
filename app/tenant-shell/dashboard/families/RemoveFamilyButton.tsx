@@ -5,7 +5,8 @@
  *
  * Inline two-step confirm: idle → confirming → removing. Once confirmed,
  * DELETEs /api/tenant/{tenantId}/managed-families/{familyId} with Bearer +
- * CSRF, then router.refresh() so the server-rendered families table re-fetches.
+ * CSRF, then onRemoved() (the client-fetched roster's refetch); falls back to
+ * router.refresh() if no callback is provided.
  *
  * No modal library, no portal — confirmation lives inline in the table cell.
  * Cleaner than window.confirm() and avoids pulling in a dialog dependency.
@@ -21,9 +22,10 @@ interface Props {
   tenantId: string
   familyId: string
   familyName: string
+  onRemoved?: () => void
 }
 
-export default function RemoveFamilyButton({ tenantId, familyId, familyName }: Props) {
+export default function RemoveFamilyButton({ tenantId, familyId, familyName, onRemoved }: Props) {
   const router = useRouter()
   const [state, setState] = useState<'idle' | 'confirming' | 'removing'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -53,7 +55,8 @@ export default function RemoveFamilyButton({ tenantId, familyId, familyName }: P
         throw new Error(data.error || `Remove failed (${res.status})`)
       }
       // Re-fetch the table. The row will be gone after this.
-      router.refresh()
+      if (onRemoved) onRemoved()
+      else router.refresh()
     } catch (err) {
       logger.error('[RemoveFamilyButton] failed', err as Error)
       setError(err instanceof Error ? err.message : 'Remove failed.')

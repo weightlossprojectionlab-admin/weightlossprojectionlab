@@ -6,6 +6,8 @@
  * who licenses the WPL platform under their own brand.
  */
 
+import type { DutyCategory } from './household-duties'
+
 export interface TenantBranding {
   logoUrl: string
   faviconUrl?: string
@@ -89,6 +91,131 @@ export interface Tenant {
   entityType?: string
   licenseNumber?: string
   npiNumber?: string
+}
+
+/**
+ * Care-package pricing (white-label). A tenant (agency) builds its own tiered
+ * retainer packages to price ITS OWN clients — this is the agency's pricing of
+ * its families, NOT WPL's pricing of the agency. Stored under
+ * tenants/{tenantId}/carePackages/{packageId}.
+ */
+export type CarePackageTier = 'anchor' | 'core' | 'growth'
+
+export interface CarePackageCaps {
+  /** Scope revisions included per period (playbook: cap deliverables). */
+  revisions?: number
+  /** In-home / virtual visits included per month. */
+  visitsPerMonth?: number
+  /** Committed response time in hours. */
+  responseTimeHours?: number
+}
+
+export interface CarePackage {
+  id: string
+  name: string
+  tier?: CarePackageTier
+  /** Monthly retainer price in the smallest currency unit (cents). */
+  monthlyPrice: number
+  currency: string           // ISO 4217 lower-case, e.g. 'usd'
+  /** What the family gets (playbook: concrete, capped deliverables). */
+  included: string[]
+  /** Explicitly out of scope (playbook: write "Not included" first). */
+  excluded: string[]
+  caps: CarePackageCaps
+  /**
+   * Duty categories this package COVERS — the structured half of `included`,
+   * so the estimate engine can derive covered-vs-billable per task. A task
+   * whose category is here is "included" (no à-la-carte charge); anything else
+   * is priced off the rate card. (`included`/`excluded` stay as the human-
+   * readable proposal copy.)
+   */
+  includedCategories?: DutyCategory[]
+  active: boolean
+  /** Display order (anchor → core → growth). */
+  order: number
+  createdAt: string          // ISO date
+  updatedAt: string          // ISO date
+}
+
+/**
+ * How a rate-card line is billed. `hourly` × estimated duration; `flat` per
+ * occurrence; `per_unit` × count (e.g. loads of laundry); `mileage` × miles.
+ */
+export type PricingUnit = 'hourly' | 'flat' | 'per_unit' | 'mileage'
+
+/**
+ * One line of an agency's rate card — the à-la-carte price for a duty category
+ * NOT covered by the family's package. Money is in the smallest currency unit
+ * (cents), matching CarePackage.monthlyPrice. Defaults ship in code
+ * (DEFAULT_RATE_CARD, seeded from market research); a tenant may override.
+ */
+export interface RateCardItem {
+  category: DutyCategory
+  unit: PricingUnit
+  /** Baseline rate in cents (per hour / per occurrence / per unit / per mile). */
+  defaultRate: number
+  /** [min, max] cents — market bounds for UI sliders + out-of-range warnings. */
+  rateRange: [number, number]
+  /** Liability/clinical categories (personal care, meds, transport) that a
+   *  "care-certified" tier may mark up. */
+  requiresCareTier: boolean
+}
+
+/**
+ * A generated, client-facing proposal. Freezes the tiers at generation time
+ * (packagesSnapshot) so later edits to a package never mutate an already-sent
+ * proposal. `tenantId` is stored so the collection-group share-token lookup can
+ * resolve the tenant's branding server-side. Stored in the TOP-LEVEL
+ * `proposals` collection, keyed by shareToken (the doc id) so the public page
+ * resolves it with an O(1) direct get — no collection-group index needed.
+ */
+export interface ProposalRecord {
+  id: string
+  tenantId: string
+  /** Optional link to the agency's family/client this was built for. */
+  familyId?: string
+  /** Free-text client name shown on the proposal header. */
+  clientName?: string
+  packagesSnapshot: CarePackage[]
+  /** Unguessable token in the public share URL. */
+  shareToken: string
+  status: 'draft' | 'sent' | 'viewed' | 'accepted'
+  createdAt: string          // ISO date
+  createdBy: string          // uid
+}
+
+/**
+ * Appointment notes (white-label CRM). A visit's running record: staff log
+ * notes ON a specific appointment (prep → what happened → follow-up). Stored
+ * under users/{userId}/appointments/{apptId}/notes/{noteId} — the notes live on
+ * the appointment they're about, so there's never any question which visit a
+ * note belongs to.
+ *
+ * INTERNAL to the practice (staff/admin) for now; the family does not see these.
+ * (A future `visibility:'shared'` could open agency↔family notes on a visit.)
+ */
+export type AppointmentNoteAuthorRole = 'staff' | 'admin'
+
+/** A reply to a note — the back-and-forth on a visit message. */
+export interface AppointmentNoteReply {
+  id: string
+  authorUid: string
+  authorName: string
+  authorRole: AppointmentNoteAuthorRole
+  body: string
+  createdAt: string          // ISO date
+}
+
+export interface AppointmentNote {
+  id: string
+  authorUid: string
+  authorName: string
+  authorRole: AppointmentNoteAuthorRole
+  body: string
+  createdAt: string          // ISO date
+  replyCount: number
+  /** Hydrated for the workspace (oldest → newest). */
+  replies: AppointmentNoteReply[]
 }
 
 /** Role within a franchise tenant */

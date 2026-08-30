@@ -3,6 +3,31 @@
 Multi-tenant white-label home-care / wellness platform (Next.js / TypeScript / Firebase-Firestore /
 Stripe / Capacitor). Full capability catalog + competitive teardown: `docs/PLATFORM_CAPABILITIES.md`.
 
+## DOSI Code Standard
+
+Four pillars — each with the caveat that keeps it from biting when taken literally.
+
+- **DRY** — Centralize domain logic and validation into shared utilities and custom hooks; build
+  composable UI shells over copy-paste blocks.
+  - *Caveat (rule-of-three):* Tolerate duplication over a premature or incorrect abstraction — extract
+    only after a pattern repeats a third time.
+- **Optimize** — Target re-renders by narrowing state and context scope; code-split heavy views.
+  - *Caveats:* Optimize where instrumented, never by guess. In Next.js the primary lever is React
+    Server Components — fetch on the server and ship less client JavaScript.
+  - *Security caveat:* server-rendering is only "free" for PUBLIC or already-authorized data. On a route
+    with NO server-side viewer auth (e.g. the tenant-shell dashboard, guarded only by a client component),
+    fetching sensitive data in a server component serializes it into the RSC payload for anyone who
+    requests the URL. There, fetch it CLIENT-side behind a gated API + the guard instead.
+- **Single Source** — Maintain one canonical origin for schemas, API contracts, and core state;
+  downstream components derive from it.
+  - *Caveat:* Optimistic/local copies are permitted but must reconcile back to the canonical origin
+    (Firestore) — e.g. the notes component does an optimistic append, then a reload reads Firestore back.
+- **Semantic Intent** — File paths, folders, and names mirror the domain; explicit types;
+  self-documenting code over dense abstractions.
+- **Config-driven behavior** — Phase definitions, permission schemas, and structural rules live in ONE
+  constants/config module (e.g. `PREDEFINED_DUTIES` in `types/household-duties.ts`), never scattered
+  across components.
+
 ## Single Source (concern → canonical origin)
 
 | Concern | Canonical origin |
@@ -12,6 +37,7 @@ Stripe / Capacitor). Full capability catalog + competitive teardown: `docs/PLATF
 | Franchise plans / tiers / seat caps | `lib/franchise-plans.ts` |
 | Tenant creation state machine | `lib/tenant-create.ts` |
 | Consumer plan feature-gates | `lib/feature-gates.ts` (`PLAN_CAPS`) |
+| Agency tenant role (franchise_admin / franchise_staff) | `useTenantRole` hook |
 | Allergen tags (from OFF) | `lib/allergen-parser.ts` |
 
 ## Domain landmines (fail silently)
@@ -22,6 +48,9 @@ Stripe / Capacitor). Full capability catalog + competitive teardown: `docs/PLATF
   through `normalizeConditions()` — never string-match raw labels.
 - Three allergen vocabularies (recipe `AllergyTag` vs product `CanonicalAllergen` vs shopping map) —
   sesame unrepresentable recipe-side; not yet reconciled. Do NOT half-seed allergen gating.
+- **Tenant-shell RSC / PHI** — tenant-shell routes have no server-side viewer auth (client-guarded), so
+  server-fetching sensitive data serializes PII/PHI into the RSC payload (see the Optimize security
+  caveat). Fetch client-side behind a gated API on those routes.
 
 ## DOSI ledger
 
@@ -48,4 +77,9 @@ Stripe / Capacitor). Full capability catalog + competitive teardown: `docs/PLATF
   never matched stored `'Diabetes'`), onto `normalizeConditions` for the nutrient conditions; kept celiac as
   its own `/celiac|gluten/i` check rather than forcing a gluten concern into `DietaryCondition` (S-caveat:
   don't build the wrong abstraction). +3 unit tests (flatten + precise-limit override); e2e regression green.
-</content>
+
+- **2026-08-30 — Reconcile local `main` with `origin/main` (white-label/EVV foundation).** Merged origin's
+  40-commit white-label/tenant/EVV/agency-CRM body of work (PR #36) into local `main` (onboarding + nutrition
+  flagship). Histories were complementary; only `CLAUDE.md` conflicted (both authored a standards section —
+  resolved to this one file) and `onboarding/page.tsx` auto-merged (verified semantically: origin's
+  franchise-operator / tenant-subdomain gating coexists with local's archetype removal + `tracksSelf`).
