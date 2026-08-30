@@ -183,8 +183,8 @@ function OnboardingContent() {
   // Visibility parser. Minimal — string-match against known forms.
   function isScreenVisible(screen: OnboardingScreen): boolean {
     // Archetype gating: the self-health block runs only for the self-logger
-    // (role "just_me"). Household + caregiver owners are setting up for OTHERS,
-    // so they skip the weight/body/goal screens entirely. Which screens belong to
+    // (role "just_me"). Household owners are coordinating care for OTHERS, so
+    // they skip the weight/body/goal screens entirely. Which screens belong to
     // that block is CONFIG-DRIVEN — they carry visibleIf: "tracksSelf" in
     // UNIFIED_PRD.json (single source), not a hardcoded id list here.
     const tracksSelf = answers.role_selection === 'just_me'
@@ -354,14 +354,13 @@ function OnboardingContent() {
     const updatedAnswers: Record<string, any> = { ...answers, [questionId]: value }
 
     if (questionId === 'role_selection') {
-      // Self-vs-others is the ONLY axis that gates the flow. Whether an "other"
-      // is family or a pet is a per-member fact captured in the roster — not an
-      // account-level choice — so the archetype is mutually exclusive.
-      //   just_me   → tracks self, no household
-      //   household → tracks self AND others
-      //   caregiver → tracks others, NOT self
-      updatedAnswers.userMode =
-        value === 'household' || value === 'caregiver' ? 'household' : 'single'
+      // Consumer onboarding sets up an ACCOUNT OWNER: either tracking themselves
+      // (just_me → 'single') or coordinating care for their family/household
+      // (household → 'household'). "Caregiver" is NOT a self-serve archetype — a
+      // caregiver role is GRANTED by an invitation (family invite → familyRole /
+      // userMode 'caregiver') or by an agency (franchise_staff), never
+      // self-declared here. (See project_onboarding_archetype_model.)
+      updatedAnswers.userMode = value === 'household' ? 'household' : 'single'
     }
 
     // Normalize the goal-direction option ("Lose weight" / "Maintain

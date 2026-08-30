@@ -7,11 +7,10 @@
         "id": "role_selection",
         "question": "Who are you setting up for?",
         "subtitle": "This picks the right flow — you'll add the specific people and pets next.",
-        "options": ["just_me", "household", "caregiver"],
+        "options": ["just_me", "household"],
         "optionDescriptions": {
           "just_me": "My own health and goals",
-          "household": "Me, plus the family and pets I care for",
-          "caregiver": "Family or pets — I'm not tracking my own health"
+          "household": "My family and the people or pets I care for"
         },
         "sets": "userMode"
       },
