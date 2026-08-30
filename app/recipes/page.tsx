@@ -17,6 +17,7 @@ import { HelpLink } from '@/components/ui/HelpLink'
 import { PencilSquareIcon, VideoCameraIcon, PlusCircleIcon, ShieldCheckIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { RecipeImportModal } from '@/components/admin/RecipeImportModal'
 import { getMemberRecipeSuggestions, type MemberRecipeSuggestion } from '@/lib/member-recipe-engine'
+import { flattenConditionResponses } from '@/lib/condition-dietary-rules'
 import { medicalOperations } from '@/lib/medical-operations'
 import { useShopping } from '@/hooks/useShopping'
 import { auth } from '@/lib/firebase'
@@ -115,6 +116,7 @@ export default function RecipeIndexPage() {
             patient: profile,
             medications: meds || [],
             recentVitals: vitals || [],
+            questionnaireResponses: flattenConditionResponses(profile.conditionDetails),
             householdInventory: inventoryItems,
             mealType: selectedMealType === 'all' ? 'breakfast' : selectedMealType,
             maxResults: 100, // Get all, we'll filter in UI
@@ -127,7 +129,7 @@ export default function RecipeIndexPage() {
           logger.info('[Recipes] Generated member recipes', {
             memberId,
             count: suggestions.length,
-            // conditions: profile.healthConditions?.length || 0 // healthConditions not in PatientProfile
+            conditions: profile.healthConditions?.length || 0
           })
         }
       } catch (error) {

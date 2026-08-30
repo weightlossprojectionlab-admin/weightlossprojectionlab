@@ -16,6 +16,7 @@ import type {
   ProductCategory
 } from '@/types/shopping'
 import type { PatientProfile } from '@/types/medical'
+import { normalizeConditions } from '@/lib/condition-dietary-rules'
 import { ShoppingSuggestionsResponseSchema } from '@/lib/validations/shopping'
 import { generateGeminiJSON, validateGeminiConfig } from '@/lib/ai/gemini-client'
 import { rateLimit } from '@/lib/rate-limit'
@@ -188,20 +189,23 @@ function analyzePatientHealth(
     priorities.set('high_blood_glucose', 'high')
   }
 
-  // Check conditions
-  if (patient.healthConditions) {
-    if (patient.healthConditions.includes('diabetes')) {
-      needs.push('diabetes')
-      priorities.set('diabetes', 'high')
-    }
-    if (patient.healthConditions.includes('hypertension')) {
-      needs.push('hypertension')
-      priorities.set('hypertension', 'high')
-    }
-    if (patient.healthConditions.includes('celiac')) {
-      needs.push('celiac')
-      priorities.set('celiac', 'high')
-    }
+  // Check conditions. Resolve nutrient conditions through the canonical
+  // normalizer (single source) — the stored labels are Title-case ('Diabetes'),
+  // so the old exact `.includes('diabetes')` matched nothing for real patients.
+  const canonicalConditions = normalizeConditions(patient.healthConditions)
+  if (canonicalConditions.includes('diabetes')) {
+    needs.push('diabetes')
+    priorities.set('diabetes', 'high')
+  }
+  if (canonicalConditions.includes('hypertension')) {
+    needs.push('hypertension')
+    priorities.set('hypertension', 'high')
+  }
+  // Celiac is a gluten concern, not a nutrient rule the recipe engine models,
+  // so it stays out of DietaryCondition — but robustify its match too.
+  if (patient.healthConditions?.some(c => /celiac|gluten/i.test(c))) {
+    needs.push('celiac')
+    priorities.set('celiac', 'high')
   }
 
   // Check dietary preferences - Note: PatientProfile doesn't have structured dietary preferences
