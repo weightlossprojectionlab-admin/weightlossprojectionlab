@@ -118,7 +118,7 @@ function OnboardingContent() {
 
   // Pre-fill name fields from Firebase Auth's displayName (set by
   // OAuth signups, sometimes by email/password signups). Auth gives
-  // a single string ("Percy Rice") — first token seeds your_name,
+  // a single string ("Alex Johnson") — first token seeds your_name,
   // last token seeds family_last_name when present. Only seeds the
   // fields that are currently empty; never overwrites typing.
   useEffect(() => {
@@ -182,20 +182,19 @@ function OnboardingContent() {
 
   // Visibility parser. Minimal — string-match against known forms.
   function isScreenVisible(screen: OnboardingScreen): boolean {
-    // Archetype gating (slice 2): the self-health block runs only when the
-    // owner is tracking their own health. Household screens are still handled
-    // by the binary visibleIf strings below via the derived userMode.
-    const role = answers.role_selection
-    const tracksSelf = role === 'just_me' || role === 'household'
-    const SELF_BLOCK = [
-      'your_last_name', 'date_of_birth', 'biological_sex', 'your_height',
-      'current_weight', 'goal_direction', 'goal_weight', 'weekly_pace',
-    ]
-    if (role && !tracksSelf && SELF_BLOCK.includes(screen.id)) {
-      return false
-    }
+    // Archetype gating: the self-health block runs only for the self-logger
+    // (role "just_me"). Household + caregiver owners are setting up for OTHERS,
+    // so they skip the weight/body/goal screens entirely. Which screens belong to
+    // that block is CONFIG-DRIVEN — they carry visibleIf: "tracksSelf" in
+    // UNIFIED_PRD.json (single source), not a hardcoded id list here.
+    const tracksSelf = answers.role_selection === 'just_me'
 
     if (!screen.visibleIf) return true
+    if (screen.visibleIf === 'tracksSelf') return tracksSelf
+    // Goal weight + pace: self-logger only, and meaningless for a maintain goal.
+    if (screen.visibleIf === "tracksSelf && goalDirection != 'maintain'") {
+      return tracksSelf && answers.goalDirection !== 'maintain'
+    }
     if (screen.visibleIf === "userMode != 'myself'") {
       return answers.userMode !== 'single'
     }

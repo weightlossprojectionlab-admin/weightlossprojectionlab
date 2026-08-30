@@ -45,7 +45,7 @@
         "subtitle": "We'll use this to greet you. You can fill in the rest of your profile later from your account.",
         "options": [],
         "inputType": "text",
-        "placeholder": "e.g. Percy",
+        "placeholder": "e.g. Alex",
         "maxLength": 60,
         "sets": "firstName"
       },
@@ -55,9 +55,10 @@
         "subtitle": "So your records read with your full name. You can change it later.",
         "options": [],
         "inputType": "text",
-        "placeholder": "e.g. Rice",
+        "placeholder": "e.g. Johnson",
         "maxLength": 60,
         "optional": true,
+        "visibleIf": "tracksSelf",
         "sets": "lastName"
       },
       {
@@ -66,6 +67,7 @@
         "subtitle": "Used to personalize your calorie targets and surface age-related health risks early. More precise than age — and you'll never have to update it.",
         "options": [],
         "inputType": "date",
+        "visibleIf": "tracksSelf",
         "sets": "dateOfBirth"
       },
       {
@@ -77,6 +79,7 @@
           "female": "",
           "male": ""
         },
+        "visibleIf": "tracksSelf",
         "sets": "gender"
       },
       {
@@ -85,6 +88,7 @@
         "subtitle": "We pair this with your weight to track BMI and surface any health risks early. You can change it later.",
         "options": [],
         "inputType": "height",
+        "visibleIf": "tracksSelf",
         "sets": "height"      },
       {
         "id": "current_weight",
@@ -94,6 +98,7 @@
         "inputType": "number",
         "placeholder": "e.g. 180",
         "maxLength": 6,
+        "visibleIf": "tracksSelf",
         "sets": "currentWeight"      },
       {
         "id": "goal_direction",
@@ -105,6 +110,7 @@
           "Maintain weight": "Stay around where you are now",
           "Gain weight": "Move toward a higher target weight"
         },
+        "visibleIf": "tracksSelf",
         "sets": "goalDirection"      },
       {
         "id": "goal_weight",
@@ -114,7 +120,7 @@
         "inputType": "goal",
         "placeholder": "e.g. 160",
         "maxLength": 6,
-        "visibleIf": "goalDirection != 'maintain'",
+        "visibleIf": "tracksSelf && goalDirection != 'maintain'",
         "sets": "goalWeight"      },
       {
         "id": "weekly_pace",
@@ -127,7 +133,7 @@
           "1.5 lb/week": "Faster — takes more focus",
           "2 lb/week": "Aggressive — the healthy maximum"
         },
-        "visibleIf": "goalDirection != 'maintain'",
+        "visibleIf": "tracksSelf && goalDirection != 'maintain'",
         "sets": "weeklyPace"      },
       {
         "id": "household_roster",
